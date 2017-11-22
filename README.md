@@ -1,6 +1,6 @@
 # Pecan
-Peacn is designed to help with the development of parsers.  Currently, only
-a packed Java version and the documentation are available:
+Pecan is designed to help with the development of parsers.  A Java program
+is available as a jar file, and there is documentation on the project web site:
 
 - [pecan.jar](//csijh.github.io/pecan/pecan.jar)
 - [documentation](//csijh.github.io/pecan/)
