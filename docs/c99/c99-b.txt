@@ -1,4 +1,5 @@
 // A parser for C99, assuming the source has been pre-processed and scanned.
+// A second prototype, extended to include declarations.
 
 // ---------- External definitions (C99 standard A.2.4) -----------------------
 
