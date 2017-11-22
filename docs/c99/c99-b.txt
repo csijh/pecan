@@ -1,0 +1,139 @@
+// A parser for C99, assuming the source has been pre-processed and scanned.
+
+// ---------- External definitions (C99 standard A.2.4) -----------------------
+
+translation-unit = @0list external-declaration+ ``
+
+// Combine declarations and function definitions to avoid lookahead
+external-declaration = declaration-specifiers (
+    `;` @1declaration /
+    declarator (
+        (`=` initializer)? (`,` init-declarator)* `;` @1declaration /
+        declaration-list? compound-statement @1definition
+    )
+)
+
+declaration-list = declaration+
+
+// ---------- Declarations (C99 standard A.2.2) -------------------------------
+
+declaration =
+    declaration-specifiers init-declarator-list? `;` @1declaration
+
+declaration-specifiers =
+    (storage-class-specifier / type-specifier / type-qualifier / function-specifier)+
+
+init-declarator-list = init-declarator (`,` init-declarator)*
+init-declarator = declarator (`=` initializer)?
+
+storage-class-specifier = `typedef` / `extern` / `static` / `auto` / `register`
+
+type-specifier =
+    `void` / `char` / `short` / `int` / `long` / `float` / `double` /
+    `signed` / `unsigned` / `Bool` / `Complex` /
+    struct-or-union-specifier / enum-specifier / typedef-name
+
+type-qualifier = `const` / `restrict` / `volatile`
+
+function-specifier = `inline`
+
+struct-or-union-specifier = struct-or-union (
+    identifier (`{` struct-declaration-list `}`)? /
+    `{` struct-declaration-list `}`
+)
+
+struct-or-union = `struct` / `union`
+
+struct-declaration-list = struct-declaration+
+
+struct-declaration = specifier-qualifier-list struct-declarator-list `;`
+
+specifier-qualifier-list = (type-specifier / type-qualifier)+
+
+struct-declarator-list = struct-declarator (`,` struct-declarator)*
+
+struct-declarator =
+    declarator (`:` constant-expression)? /
+    `:` constant-expression
+
+enum-specifier = `enum` (
+    identifier (`{` enumerator-list `,`? `}`)? /
+    `{` enumerator-list `,`? `}`
+)
+
+enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
+
+enumerator = enumeration-constant (`=` constant-expression)?
+
+declarator = pointer? direct-declarator
+
+direct-declarator = (identifier / `(` declarator `)`) (
+    `[` (
+        type-qualifier-list (`static`? assignment-expression / `*`?) /
+        assignment-expression /
+        `static` type-qualifier-list? assignment-expression /
+        `*`?
+    ) `]` /
+    `(` (identifier& identifier-list)? / parameter-type-list `)`
+)*
+
+pointer = (`*` type-qualifier-list?)+
+
+type-qualifier-list = type-qualifier+
+
+parameter-type-list = parameter-list (`,` `...`)?
+
+parameter-list = parameter-declaration ((`,` `...`)! `,` parameter-declaration)*
+
+parameter-declaration = declaration-specifiers (
+    ((`*` / type-qualifier / `(`)* `identifier`)& declarator /
+    abstract-declarator?
+)
+
+identifier-list = identifier (`,` identifier)*
+
+type-name = specifier-qualifier-list abstract-declarator?
+
+abstract-declarator =
+    pointer direct-abstract-declarator? /
+    direct-abstract-declarator
+
+direct-abstract-declarator = `(` abstract-declarator `)` (
+    `[` (
+        type-qualifier-list (`static`? assignment-expression)? /
+        assignment-expression /
+        `static` type-qualifier-list? assignment-expression /
+        `*`?
+    ) `]` /
+    `(` parameter-type-list? `)`
+)*
+
+// ---------- Temporary definitions -------------------------------------------
+
+typedef-name = `type`
+identifier = `id`
+initializer = `init`
+compound-statement = `{` `}`
+constant-expression = `ce`
+assignment-expression = `ae`
+enumeration-constant = identifier
+==========
+int;
+----------
+list
+declaration
+==========
+int id;
+----------
+list
+declaration
+==========
+int id();
+----------
+list
+declaration
+==========
+int id() { }
+----------
+list
+definition

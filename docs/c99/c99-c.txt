@@ -1,0 +1,117 @@
+// A parser for C99, assuming the source has been pre-processed and scanned.
+
+// External definitions (C99 standard A.2.4)
+// -----------------------------------------
+
+translationUnit = @0list externalDeclaration+ %END
+
+// Combine declarations and function definitions to avoid lookahead
+externalDeclaration = declarationSpecifiers (
+    %SEMICOLON @1declaration /
+    declarator (
+        ("=" initializer)? ("," initDeclarator)* ";" @1declaration
+        declarationList? compound-statement @1definition /
+    )
+)
+
+declarationList = declaration+
+
+functionDefinitionOrDeclaration =
+    declarationSpecifiers declarator declarationList? compound-statement /
+    declarationSpecifiers initDeclaratorList? %SEMICOLON
+=   declarationSpecifiers (
+        declarator declarationList? compound-statement /
+        initDeclaratorList %SEMICOLON /
+        %SEMICOLON
+    )
+=   declarationSpecifiers (
+        declarator declarationList? compound-statement /
+        declarator (%EQ initializer)? (%COMMA initDeclarator)* %SEMICOLON
+        %SEMICOLON
+    )
+=   declarationSpecifiers (
+        declarator (
+            declarationList? compound-statement /
+            (%EQ initializer)? (%COMMA initDeclarator)* %SEMICOLON
+        )
+    )
+
+
+// Declarations (C99 A.2.2)
+// ------------------------
+
+declaration = declarationSpecifiers initDeclaratorList? %SEMICOLON
+
+declarationSpecifiers =
+    (storageClassSpecifier / typeSpecifier / typeQualifier / functionSpecifier)+
+storageClassSpecifier = %typedef / %extern / %static / %auto / %register
+typeSpecifier =
+    %void / %char / %short / %int / %long / %float / %double /
+    %signed / %unsigned / %Bool / %Complex /
+    structOrUnionSpecifier / enumSpecifier / typedefName
+typeQualifier = %const / %restrict / %volatile
+functionSpecifier = %inline
+typedefName = %TYPEDEFNAME
+
+initDeclaratorList = initDeclarator (%COMMA initDeclarator)*
+initDeclarator = declarator (%EQ initializer)?
+
+structOrUnionSpecifier = structOrUnion (
+    identifier (%OPENC structDeclarationList %CLOSEC)? /
+    %OPENC structDeclarationList %CLOSEC )
+structOrUnion = %struct / %union
+structDeclarationList = structDeclaration+
+structDeclaration = specifierQualifierList structDeclaratorList %SEMICOLON
+specifierQualifierList = (typeSpecifier / typeQualifier)+
+structDeclaratorList = structDeclarator (%COMMA structDeclarator)*
+structDeclarator =
+    declarator (%COLON constantExpression) / %COLON constantExpression
+
+enumSpecifier = %enum (
+    identifier (%OPENC enumeratorList %COMMA? %CLOSEC)? /
+    %OPENC enumeratorList %COMMA? %CLOSEC )
+enumeratorList = enumerator (%COMMA enumerator)*
+enumerator = enumerationConstant (%EQ constantExpression)?
+
+declarator = pointer? directDeclarator
+pointer = (%STAR typeQualifierList?)+
+typeQualifierList = typeQualifier+
+directDeclarator = (identifier / %OPENR declarator %CLOSER)? bracket*
+bracket = %OPENS bracket1 %CLOSES / %OPENR bracket2 %CLOSER
+bracket1 =
+    typeQualifierList (%static? assignmentExpression / %star?) /
+    assignmentExpression /
+    %static (typeQualifierList? assignmentExpression) /
+    %star?
+bracket2 = identifier& identifierList / parameterTypeList?
+identifierList = identifier (%COMMA identifier)*
+parameterTypeList =
+    parameterDeclaration ([%COMMA %DOTDOTDOT] / (%COMMA parameterTypeList)?)
+parameterDeclaration =
+    declarationSpecifiers maybeAbstractDeclarator
+
+// TODO
+
+identifier = %ID
+constantExpression = %CE
+enumerationConstant = %ID
+initializer = %INIT
+assignmentExpression = %AE
+maybeAbstractDeclarator = %M
+
+compound-statement = %OPENC blockItemList? %CLOSEC
+blockItemList = blockItem+
+blockItem = declaration / statement
+statement = %ST
+==========
+%DEC
+%EOF
+----------
+list
+decl
+==========
+%DEF
+%EOF
+----------
+list
+defn

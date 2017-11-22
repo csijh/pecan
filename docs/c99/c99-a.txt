@@ -1,0 +1,46 @@
+// A partial C99 parser, assuming the source has been pre-processed and scanned.
+
+// ---------- External definitions (C99 standard A.2.4) -----------------------
+
+translation-unit = @0list external-declaration+ ``
+
+// Combine declarations and function definitions to avoid lookahead
+external-declaration = declaration-specifiers (
+    `;` @1declaration /
+    declarator (
+        (`=` initializer)? (`,` init-declarator)* `;` @1declaration /
+        declaration-list? compound-statement @1definition
+    )
+)
+
+declaration-list = declaration+
+
+// ---------- Temporary definitions -------------------------------------------
+
+declaration = declaration-specifiers init-declarator-list? `;`
+declaration-specifiers = `int`
+declarator = `id` (`(` `)`)?
+initializer = `init`
+init-declarator-list = init-declarator (`,` init-declarator)*
+init-declarator = `initd`
+compound-statement = `{` `}`
+==========
+int;
+----------
+list
+declaration
+==========
+int id;
+----------
+list
+declaration
+==========
+int id();
+----------
+list
+declaration
+==========
+int id() {}
+----------
+list
+definition
