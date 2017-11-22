@@ -1,0 +1,159 @@
+// Empty
+x = ""
+----------
+RULE x 1000
+  STRING "" 1000
+==========
+// Nonempty
+x = ''
+----------
+RULE x 0010
+  SET '' 0010
+==========
+// Number
+x = 42
+----------
+RULE x 0110
+  CHAR 42 0110
+==========
+// String
+x = "a"
+----------
+RULE x 0110
+  STRING "a" 0110
+==========
+// Set
+x = 'a'
+----------
+RULE x 0110
+  SET 'a' 0110
+==========
+// Empty and empty
+x = "" ""
+----------
+RULE x 1000
+  AND "" "" 1000
+    STRING "" 1000
+    STRING "" 1000
+==========
+// Normal rule
+x = 'a'
+----------
+RULE x 0110
+  SET 'a' 0110
+==========
+// Simple left recursive rule
+x = x 'a'
+----------
+Error on line 2: potential infinite loop
+x = x 'a'
+    ^
+==========
+// Mutual recursion
+x = y "abc"
+z = "123"
+y = x "ABC"
+----------
+Error on line 2: potential infinite loop
+x = y "abc"
+    ^
+==========
+// Mutual recursion masked by optional
+x = "a" ? y
+y = "A" ? x "ABC"
+----------
+Error on line 2: potential infinite loop
+x = "a" ? y
+          ^
+==========
+// Mutual recursion masked by remote optional
+x = a y
+z = "123"
+y = "A" ? x "ABC"
+a = b
+b = c
+c = "a" ?
+----------
+Error on line 2: potential infinite loop
+x = a y
+      ^
+==========
+// Was a check for error: query while backtracking
+// Now a check for error: text and tokens
+x = [%a] 'b'
+----------
+Error on line 3: there is both text and token input
+x = [%a] 'b'
+    ^^^^^^^^
+==========
+// Was a check for error: query while looking ahead
+x = (%a)& 'b'
+----------
+Error on line 2: there is both text and token input
+x = (%a)& 'b'
+    ^^^^^^^^^
+==========
+// Was a check for error: query while looking ahead
+x = (%a)! 'b'
+----------
+Error on line 2: there is both text and token input
+x = (%a)! 'b'
+    ^^^^^^^^^
+==========
+// Action on left of choice
+x = @a 'a' / 'b'
+----------
+Error on line 2: alternative can act without progressing
+x = @a 'a' / 'b'
+    ^^^^^^
+==========
+// Expressions
+exp = term ('+' term @2add / '-' term @2sub)* 'eof'
+term = factor ('*' factor @2mul / '/' factor @2div)*
+factor = primary ('^' factor @2pow)?
+primary = 'number' @number / '(' exp ')'
+----------
+RULE exp 0111
+  AND term ('+' term @2add / '-' term @2sub)* 'eof' 0111
+    ID term 0111
+    MANY ('+' term @2add / '-' term @2sub)* 1101
+      OR '+' term @2add / '-' term @2sub 0111
+        AND '+' term @2add 0111
+          SET '+' 0110
+          ID term 0111
+          ACT @2add 1000
+        AND '-' term @2sub 0111
+          SET '-' 0110
+          ID term 0111
+          ACT @2sub 1000
+    SET 'eof' 0110
+RULE term 0111
+  AND factor ('*' factor @2mul / '/' factor @2div)* 0111
+    ID factor 0111
+    MANY ('*' factor @2mul / '/' factor @2div)* 1101
+      OR '*' factor @2mul / '/' factor @2div 0111
+        AND '*' factor @2mul 0111
+          SET '*' 0110
+          ID factor 0111
+          ACT @2mul 1000
+        AND '/' factor @2div 0111
+          SET '/' 0110
+          ID factor 0111
+          ACT @2div 1000
+RULE factor 0111
+  AND primary ('^' factor @2pow)? 0111
+    ID primary 0111
+    OPT ('^' factor @2pow)? 1101
+      AND '^' factor @2pow 0111
+        SET '^' 0110
+        ID factor 0111
+        ACT @2pow 1000
+RULE primary 0111
+  OR 'number' @number / '(' exp ')' 0111
+    AND 'number' @number 0110
+      SET 'number' 0110
+      ACT @number 1000
+    AND '(' exp ')' 0111
+      SET '(' 0110
+      ID exp 0111
+      SET ')' 0110

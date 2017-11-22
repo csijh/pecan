@@ -1,0 +1,106 @@
+// Simple case of one output item
+x = @ID @
+----------
+RULE x 1,0
+  AND @ID @ 1,0
+    ACT @ID 1,0
+    DROP @ 0,0
+==========
+// Two items
+x = @ID @ID @1add
+----------
+Error on line 2: parser produces 2 output items, not 1
+x = @ID @ID @1add
+^
+==========
+// Well-formed but non-terminating grammar
+x = 'a' x @b
+----------
+Error on line 2: unable to calculate number of output items produced
+x = 'a' x @b
+        ^
+==========
+// Low water mark continually decreasing
+x = 'a' @a / 'b' @2c x @d
+----------
+Error on line 2: outputs may underflow
+x = 'a' @a / 'b' @2c x @d
+^
+==========
+// Choice
+exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP
+----------
+RULE exp 1,0
+  OR 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP 1,0
+    AND 'a' @NUM 1,0
+      SET 'a' 0,0
+      ACT @NUM 1,0
+    AND "(" @OPEN exp ")" @CLOSE @3EXP 1,0
+      STRING "(" 0,0
+      ACT @OPEN 1,0
+      ID exp 1,0
+      STRING ")" 0,0
+      ACT @CLOSE 1,0
+      ACT @3EXP -2,-3
+==========
+// Expressions
+sum = exp
+exp = term ("+" term @2add / "-" term @2sub)*
+term = factor ("*" factor @2mul / "/" factor @2div)*
+factor = primary ("^" factor @2pow)?
+primary = number / "(" exp ")"
+number = digit+ @number
+digit = "0" .. "9"
+----------
+RULE sum 1,0
+  ID exp 1,0
+RULE exp 1,0
+  AND term ("+" term @2add / "-" term @2sub)* 1,0
+    ID term 1,0
+    MANY ("+" term @2add / "-" term @2sub)* 0,-1
+      OR "+" term @2add / "-" term @2sub 0,-1
+        AND "+" term @2add 0,-1
+          STRING "+" 0,0
+          ID term 1,0
+          ACT @2add -1,-2
+        AND "-" term @2sub 0,-1
+          STRING "-" 0,0
+          ID term 1,0
+          ACT @2sub -1,-2
+RULE term 1,0
+  AND factor ("*" factor @2mul / "/" factor @2div)* 1,0
+    ID factor 1,0
+    MANY ("*" factor @2mul / "/" factor @2div)* 0,-1
+      OR "*" factor @2mul / "/" factor @2div 0,-1
+        AND "*" factor @2mul 0,-1
+          STRING "*" 0,0
+          ID factor 1,0
+          ACT @2mul -1,-2
+        AND "/" factor @2div 0,-1
+          STRING "/" 0,0
+          ID factor 1,0
+          ACT @2div -1,-2
+RULE factor 1,0
+  AND primary ("^" factor @2pow)? 1,0
+    ID primary 1,0
+    OPT ("^" factor @2pow)? 0,-1
+      AND "^" factor @2pow 0,-1
+        STRING "^" 0,0
+        ID factor 1,0
+        ACT @2pow -1,-2
+RULE primary 1,0
+  OR number / "(" exp ")" 1,0
+    ID number 1,0
+    AND "(" exp ")" 1,0
+      STRING "(" 0,0
+      ID exp 1,0
+      STRING ")" 0,0
+RULE number 1,0
+  AND digit+ @number 1,0
+    SOME digit+ 0,0
+      ID digit 0,0
+    ACT @number 1,0
+RULE digit 0,0
+  RANGE "0" .. "9" 0,0
+    STRING "0" 0,0
+    STRING "9" 0,0

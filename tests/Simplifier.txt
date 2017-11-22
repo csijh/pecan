@@ -1,0 +1,84 @@
+// Try with no actions
+x = @x ['a'] 'b'
+----------
+RULE x
+  AND @x ['a'] 'b'
+    ACT @x
+    TRY ['a']
+      SET 'a'
+    SET 'b'
+==========
+// Try with actions
+x = ['a' @a] 'b'
+----------
+RULE x
+  AND ['a' @a] 'b'
+    AND ['a' @a]
+      HAS ['a' @a]
+        SET 'a'
+      ID 'a' @a
+    SET 'b'
+==========
+// Deactivate x& or x!: nothing to do
+x = ('a')& "ab" @x
+----------
+RULE x
+  AND ('a')& "ab" @x
+    HAS ('a')&
+      SET 'a'
+    STRING "ab"
+    ACT @x
+==========
+// Deactivate: simple removal
+x = ('a' @y)& @x
+----------
+RULE x
+  AND ('a' @y)& @x
+    HAS ('a' @y)&
+      SET 'a'
+    ACT @x
+==========
+// Deactivate: removal from another rule
+x = y& @x
+y = 'a' @y
+----------
+RULE x
+  AND y& @x
+    HAS y&
+      ID $y
+    ACT @x
+RULE y
+  AND 'a' @y
+    SET 'a'
+    ACT @y
+RULE $y
+  SET 'a'
+==========
+// Tutorial step 5 (3rd test doesn't discard "+")
+sum = [number "+"] number @2add / number
+number = ("0".."9")+ @number
+----------
+RULE sum
+  OR [number "+"] number @2add / number
+    AND [number "+"] number @2add
+      AND [number "+"]
+        HAS [number "+"]
+          AND number "+"
+            ID $number
+            STRING "+"
+        ID number "+"
+      ID number
+      ACT @2add
+    ID number
+RULE number
+  AND ("0".."9")+ @number
+    SOME ("0".."9")+
+      RANGE "0".."9"
+        STRING "0"
+        STRING "9"
+    ACT @number
+RULE $number
+  SOME ("0".."9")+
+    RANGE "0".."9"
+      STRING "0"
+      STRING "9"

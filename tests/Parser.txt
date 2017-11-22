@@ -1,0 +1,811 @@
+// One-liner
+x = x
+----------
+RULE x
+  ID x
+==========
+// Choice
+x = x / x
+----------
+RULE x
+  OR x / x
+    ID x
+    ID x
+==========
+// Bracket
+x = (y / z)
+----------
+RULE x
+  OR y / z
+    ID y
+    ID z
+==========
+----------
+Error on line 1: expecting rule
+
+^
+==========
+// Expecting equals
+x
+----------
+Error on line 2: expecting =
+x
+ ^
+==========
+// Normal \n line endings
+x = x
+y = y
+---------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Mac \r line endings
+x=x\13\
+y=y\13\
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Windows \r\n line endings
+x=x\13\10\
+y=y\13\10\
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Line containing only spaces is a comment
+// comment
+
+x = x
+----------
+RULE x
+  ID x
+==========
+// Trailing spaces
+x = x
+
+y = y
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Trailing blank line
+x = x
+y = y
+
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Trailing blank lines
+x = x
+y = y
+
+
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// No final newline
+x = x
+y = y\
+----------
+Error on line 3: expecting newline
+y = y
+     ^
+==========
+// No final newline
+x = x
+// comment\
+----------
+Error on line 3: expecting newline
+// comment
+          ^
+==========
+// Varied comments and empty lines
+// initial comment
+
+x = y
+
+// middle comment
+y = z
+
+// end comment
+----------
+RULE x
+  ID y
+RULE y
+  ID z
+==========
+// Scanner error
+x = <y>
+----------
+Error on line 2: expecting expression
+x = <y>
+    ^
+==========
+// Incomplete string
+x = "abc
+----------
+Error on line 2: expecting visible character or "
+x = "abc
+        ^
+==========
+// Incomplete set
+x = 'abc
+----------
+Error on line 2: expecting visible character or '
+x = 'abc
+        ^
+==========
+// One rule
+x = "a"
+----------
+RULE x
+  STRING "a"
+==========
+// Two rules
+x = "a"
+y = "b"
+----------
+RULE x
+  STRING "a"
+RULE y
+  STRING "b"
+==========
+// Expecting equals
+x
+----------
+Error on line 2: expecting =
+x
+ ^
+==========
+// Expecting atom
+x = /
+----------
+Error on line 2: expecting expression
+x = /
+    ^
+==========
+// Missing close bracket
+x = (y
+y = z
+----------
+Error on line 2: expecting )
+x = (y
+      ^
+==========
+// Dot in the wrong place
+x = .
+----------
+Error on line 2: expecting expression
+x = .
+    ^
+==========
+// Incomplete dot dot
+x = 'x'.
+----------
+Error on line 2: expecting dot
+x = 'x'.
+        ^
+==========
+// Incomplete action
+x = @3
+----------
+Error on line 2: expecting letter
+x = @3
+      ^
+==========
+// Tag
+x = %x
+----------
+RULE x
+  TAG %x
+==========
+// Bad handler
+x = 'x' #3
+----------
+Error on line 2: expecting letter
+x = 'x' #3
+         ^
+==========
+// Continuation lines
+x =
+y /
+z
+x =
+(
+a) [
+c]
+x
+= y
+/ z
+x
+= y (a
+) [c
+]
+----------
+RULE x
+  OR y /...
+    ID y
+    ID z
+RULE x
+  AND (...
+    ID a
+    TRY [...
+      ID c
+RULE x
+  OR y...
+    ID y
+    ID z
+RULE x
+  AND y (a...
+    ID y
+    ID a
+    TRY [c...
+      ID c
+==========
+// Brackets
+exp = (exp) end
+exp = [exp] end
+----------
+RULE exp
+  AND (exp) end
+    ID exp
+    ID end
+RULE exp
+  AND [exp] end
+    TRY [exp]
+      ID exp
+    ID end
+==========
+// The +, *, ? postfix operators
+exp = exp* exp+ exp? end
+----------
+RULE exp
+  AND exp* exp+ exp? end
+    MANY exp*
+      ID exp
+    SOME exp+
+      ID exp
+    OPT exp?
+      ID exp
+    ID end
+==========
+// Complete scan-parser grammar for sums
+exp = term ("+" term @2add / "-" term @2sub)* ''
+term = factor ("*" factor @2mul / "/" factor @2div)*
+factor = primary ("^" factor @2pow)?
+primary = number / "(" exp ")"
+number = digit+ @number
+digit = '0123456789'
+----------
+RULE exp
+  AND term ("+" term @2add / "-" term @2sub)* ''
+    ID term
+    MANY ("+" term @2add / "-" term @2sub)*
+      OR "+" term @2add / "-" term @2sub
+        AND "+" term @2add
+          STRING "+"
+          ID term
+          ACT @2add
+        AND "-" term @2sub
+          STRING "-"
+          ID term
+          ACT @2sub
+    SET ''
+RULE term
+  AND factor ("*" factor @2mul / "/" factor @2div)*
+    ID factor
+    MANY ("*" factor @2mul / "/" factor @2div)*
+      OR "*" factor @2mul / "/" factor @2div
+        AND "*" factor @2mul
+          STRING "*"
+          ID factor
+          ACT @2mul
+        AND "/" factor @2div
+          STRING "/"
+          ID factor
+          ACT @2div
+RULE factor
+  AND primary ("^" factor @2pow)?
+    ID primary
+    OPT ("^" factor @2pow)?
+      AND "^" factor @2pow
+        STRING "^"
+        ID factor
+        ACT @2pow
+RULE primary
+  OR number / "(" exp ")"
+    ID number
+    AND "(" exp ")"
+      STRING "("
+      ID exp
+      STRING ")"
+RULE number
+  AND digit+ @number
+    SOME digit+
+      ID digit
+    ACT @number
+RULE digit
+  SET '0123456789'
+==========
+// Error markers
+assignment = left #equals "=" right
+----------
+RULE assignment
+  AND left #equals "=" right
+    ID left
+    MARK #equals
+    STRING "="
+    ID right
+==========
+// Error on second line
+x = y /
+z / /
+----------
+Error on line 3: expecting expression
+z / /
+    ^
+==========
+// Line 1 of scanner for pecan itself
+tokens = skip token*
+----------
+RULE tokens
+  AND skip token*
+    ID skip
+    MANY token*
+      ID token
+==========
+// Next line of pecan scanner
+token = number / id / string / set / matcher / action / handler / key
+----------
+RULE token
+  OR number / id / string / set / matcher / action / handler / key
+    ID number
+    ID id
+    ID string
+    ID set
+    ID matcher
+    ID action
+    ID handler
+    ID key
+==========
+// Next line of pecan scanner
+number = ('0' hex* / digit+) @NUMBER skip1
+----------
+RULE number
+  AND ('0' hex* / digit+) @NUMBER skip1
+    OR '0' hex* / digit+
+      AND '0' hex*
+        SET '0'
+        MANY hex*
+          ID hex
+      SOME digit+
+        ID digit
+    ACT @NUMBER
+    ID skip1
+==========
+// Next line of pecan scanner
+id = name @ID skip1
+----------
+RULE id
+  AND name @ID skip1
+    ID name
+    ACT @ID
+    ID skip1
+==========
+// Next line of pecan scanner
+string = '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
+----------
+RULE string
+  AND '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
+    SET '"'
+    MANY ('"'! visible)*
+      AND '"'! visible
+        NOT '"'!
+          SET '"'
+        ID visible
+    MARK #BADSTRING
+    SET '"'
+    ACT @STRING
+    ID skip1
+==========
+// Next line of pecan scanner
+set = "'" ("'"! visible)* #BADSET "'" @SET skip1
+----------
+RULE set
+  AND "'" ("'"! visible)* #BADSET "'" @SET skip1
+    STRING "'"
+    MANY ("'"! visible)*
+      AND "'"! visible
+        NOT "'"!
+          STRING "'"
+        ID visible
+    MARK #BADSET
+    STRING "'"
+    ACT @SET
+    ID skip1
+==========
+// Next line of pecan scanner
+action = "@" (digit+ name @ACT / name @READ / @DROP) skip1
+----------
+RULE action
+  AND "@" (digit+ name @ACT / name @READ / @DROP) skip1
+    STRING "@"
+    OR digit+ name @ACT / name @READ / @DROP
+      AND digit+ name @ACT
+        SOME digit+
+          ID digit
+        ID name
+        ACT @ACT
+      AND name @READ
+        ID name
+        ACT @READ
+      ACT @DROP
+    ID skip1
+==========
+// Next line of pecan scanner
+handler = "#" name @HANDLE skip1
+----------
+RULE handler
+  AND "#" name @HANDLE skip1
+    STRING "#"
+    ID name
+    ACT @HANDLE
+    ID skip1
+==========
+// Next line of pecan scanner
+key
+= "!" @EM skip1 / "=" @RULE skip2 / "/" @SL skip2 / "?" @QM skip1
+/ "+" @PL skip1 / "*" @ST skip1 / "(" @RB skip2 / ")" @RE skip1
+/ "[" @SB skip2 / "]" @SE skip1 / "<" @AB skip2 / ">" @AE skip1
+/ ".." @DD skip2
+/ #BADSET Uc skip1
+----------
+RULE key
+  OR "!" @EM skip1 / "=" @RULE skip2 / "/" @SL skip2 / "?" @QM skip1...
+    AND "!" @EM skip1
+      STRING "!"
+      ACT @EM
+      ID skip1
+    AND "=" @RULE skip2
+      STRING "="
+      ACT @RULE
+      ID skip2
+    AND "/" @SL skip2
+      STRING "/"
+      ACT @SL
+      ID skip2
+    AND "?" @QM skip1
+      STRING "?"
+      ACT @QM
+      ID skip1
+    AND "+" @PL skip1
+      STRING "+"
+      ACT @PL
+      ID skip1
+    AND "*" @ST skip1
+      STRING "*"
+      ACT @ST
+      ID skip1
+    AND "(" @RB skip2
+      STRING "("
+      ACT @RB
+      ID skip2
+    AND ")" @RE skip1
+      STRING ")"
+      ACT @RE
+      ID skip1
+    AND "[" @SB skip2
+      STRING "["
+      ACT @SB
+      ID skip2
+    AND "]" @SE skip1
+      STRING "]"
+      ACT @SE
+      ID skip1
+    AND "<" @AB skip2
+      STRING "<"
+      ACT @AB
+      ID skip2
+    AND ">" @AE skip1
+      STRING ">"
+      ACT @AE
+      ID skip1
+    AND ".." @DD skip2
+      STRING ".."
+      ACT @DD
+      ID skip2
+    AND #BADSET Uc skip1
+      MARK #BADSET
+      ID Uc
+      ID skip1
+==========
+// Next line of pecan scanner
+skip = (space / comment / newline)* @
+----------
+RULE skip
+  AND (space / comment / newline)* @
+    MANY (space / comment / newline)*
+      OR space / comment / newline
+        ID space
+        ID comment
+        ID newline
+    DROP @
+==========
+// Next line of pecan scanner
+skip1 = space @ (newline ([space (letter / newline)]& @NL)? skip)?
+----------
+RULE skip1
+  AND space @ (newline ([space (letter / newline)]& @NL)? skip)?
+    ID space
+    DROP @
+    OPT (newline ([space (letter / newline)]& @NL)? skip)?
+      AND newline ([space (letter / newline)]& @NL)? skip
+        ID newline
+        OPT ([space (letter / newline)]& @NL)?
+          AND [space (letter / newline)]& @NL
+            HAS [space (letter / newline)]&
+              TRY [space (letter / newline)]
+                AND space (letter / newline)
+                  ID space
+                  OR letter / newline
+                    ID letter
+                    ID newline
+            ACT @NL
+        ID skip
+==========
+// Next line of pecan scanner
+skip2 = space (newline space)? @
+----------
+RULE skip2
+  AND space (newline space)? @
+    ID space
+    OPT (newline space)?
+      AND newline space
+        ID newline
+        ID space
+    DROP @
+==========
+// Next line of pecan scanner
+name = letter alpha*
+----------
+RULE name
+  AND letter alpha*
+    ID letter
+    MANY alpha*
+      ID alpha
+==========
+// Next line of pecan scanner
+hex = digit / 'A'..'F' / 'a'..'f'
+----------
+RULE hex
+  OR digit / 'A'..'F' / 'a'..'f'
+    ID digit
+    RANGE 'A'..'F'
+      SET 'A'
+      SET 'F'
+    RANGE 'a'..'f'
+      SET 'a'
+      SET 'f'
+==========
+// Unicode letters and digits and numbers
+x = abc\960
+y = 123\1636
+z = 1114111 / 0ffff
+----------
+RULE x
+  ID abc\960
+RULE y
+  CHAR 123\1636
+RULE z
+  OR 1114111 / 0ffff
+    CHAR 1114111
+    CHAR 0ffff
+==========
+// Strings, character sets, unicode
+x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+pi = "\960"
+----------
+RULE x
+  AND "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+    STRING "abc"
+    STRING " !#$%^&*()_-=+[]`{};:'@#~"
+RULE y
+  AND 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+    SET 'abc'
+    SET ' !#$%^&*()_-=+[]`{};:"@#~'
+RULE pi
+  STRING "\960"
+==========
+// Actions, tests, numbers and errors
+x = %x @0x @1x @ @x
+y = 0 1 2 10 12 123
+z = 0ffff 01ABCDEF23 0FG
+u = #err ''
+----------
+RULE x
+  AND %x @0x @1x @ @x
+    TAG %x
+    ACT @0x
+    ACT @1x
+    DROP @
+    ACT @x
+RULE y
+  AND 0 1 2 10 12 123
+    CHAR 0
+    CHAR 1
+    CHAR 2
+    CHAR 10
+    CHAR 12
+    CHAR 123
+RULE z
+  AND 0ffff 01ABCDEF23 0FG
+    CHAR 0ffff
+    CHAR 01ABCDEF23
+    CHAR 0F
+    ID G
+RULE u
+  AND #err ''
+    MARK #err
+    SET ''
+==========
+// Brackets and operators
+x = (y / z) / y?
+x = (y/z)+ / y*
+x = y z w ! / y
+x = [y z] / w
+----------
+RULE x
+  OR (y / z) / y?
+    OR y / z
+      ID y
+      ID z
+    OPT y?
+      ID y
+RULE x
+  OR (y/z)+ / y*
+    SOME (y/z)+
+      OR y/z
+        ID y
+        ID z
+    MANY y*
+      ID y
+RULE x
+  OR y z w ! / y
+    AND y z w !
+      ID y
+      ID z
+      NOT w !
+        ID w
+    ID y
+RULE x
+  OR [y z] / w
+    TRY [y z]
+      AND y z
+        ID y
+        ID z
+    ID w
+==========
+// Full dot-dot
+x = 'a'..'z'
+----------
+RULE x
+  RANGE 'a'..'z'
+    SET 'a'
+    SET 'z'
+==========
+// Comments before and after continuation lines
+x =
+ // comment not allowed
+ y /
+ // comment not allowed
+ z
+x
+ // Comment not allowed
+= y
+ // Comment not allowed
+/ z
+----------
+RULE x
+  OR y /...
+    ID y
+    ID z
+RULE x
+  OR y...
+    ID y
+    ID z
+==========
+// String with supplementary unicode character 195101/2fa1d (last letter)
+range = "\55422\56861" / '\55422\56861'
+----------
+RULE range
+  OR "\55422\56861" / '\55422\56861'
+    STRING "\55422\56861"
+    SET '\55422\56861'
+==========
+// Line from Parser.txt
+set = "'" (<"'"> visible)* ("'" @SET / #BADSET) skip1
+----------
+Error on line 2: expecting expression
+set = "'" (<"'"> visible)* ("'" @SET / #BADSET) skip1
+           ^
+==========
+// Check NEL line endings
+x=x\133y=y\133\
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Check \r NEL line endings
+x=x\13\133y=y\13\133\
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+// Check LS line endings
+x=x\8232y=y\8232\
+----------
+RULE x
+  ID x
+RULE y
+  ID y
+==========
+end = #end Uc!
+----------
+RULE end
+  AND #end Uc!
+    MARK #end
+    NOT Uc!
+      ID Uc
+==========
+// Underscore
+a_b = xy_
+----------
+RULE a_b
+  ID xy_
+==========
+// Hyphen
+a-b = xy-
+----------
+RULE a-b
+  ID xy-
+==========
+// Tag with backquotes
+x = `++`
+----------
+RULE x
+  TAG `++`
+==========
+// End-of-file tags
+end1 = %
+end2 = ``
+----------
+RULE end1
+  TAG %
+RULE end2
+  TAG ``
+==========
+// Backslash in quotes
+bs = '\\'
+----------
+RULE bs
+  SET '\\'

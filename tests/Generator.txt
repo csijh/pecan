@@ -1,0 +1,108 @@
+x = @x
+----------
+0, 1,               // 0: START STOP
+2, 0, 0,            // 2: RULE 0
+24, 0, 0,           // 5: ACT 0
+==========
+x = @x ("x" / "y")
+----------
+0, 1,               // 0: START STOP
+2, 0, 2,            // 2: RULE 2
+6, 7, 0, 12,        // 5: BOTH AND 12
+24, 0, 0,           // 9: ACT 0
+4, 5, 0, 19,        // 12: EITHER OR 19
+17, 1, 120,         // 16: STRING "x"
+17, 1, 121,         // 19: STRING "y"
+==========
+// Tutorial step 1
+digit = "0".."9" @number
+----------
+0, 1,               // 0: START STOP
+2, 0, 1,            // 2: RULE 1
+6, 7, 0, 14,        // 5: BOTH AND 14
+19, 1, 48, 1, 57,   // 9: RANGE "0" "9"
+24, 0, 0,           // 14: ACT 0
+==========
+// Tutorial step 2
+number = ("0".."9")+ @number
+----------
+0, 1,               // 0: START STOP
+2, 0, 3,            // 2: RULE 3
+6, 7, 0, 18,        // 5: BOTH AND 18
+11, 12, 8, 10,      // 9: DO THEN REPEAT MANY
+19, 1, 48, 1, 57,   // 13: RANGE "0" "9"
+24, 0, 0,           // 18: ACT 0
+==========
+// Tutorial step 3 (3rd test fails: parses only 1st number)
+sum = number / number "+" number @2add
+number = ("0".."9")+ @number
+----------
+0, 1,               // 0: START STOP
+2, 0, 2,            // 2: RULE 2
+4, 5, 0, 12,        // 5: EITHER OR 12
+3, 0, 38,           // 9: GO 38
+6, 7, 0, 19,        // 12: BOTH AND 19
+3, 0, 38,           // 16: GO 38
+6, 7, 0, 26,        // 19: BOTH AND 26
+17, 1, 43,          // 23: STRING "+"
+6, 7, 0, 33,        // 26: BOTH AND 33
+3, 0, 38,           // 30: GO 38
+24, 0, 1,           // 33: ACT 1
+0, 1,               // 36: START STOP
+2, 0, 3,            // 38: RULE 3
+6, 7, 0, 54,        // 41: BOTH AND 54
+11, 12, 8, 10,      // 45: DO THEN REPEAT MANY
+19, 1, 48, 1, 57,   // 49: RANGE "0" "9"
+24, 0, 0,           // 54: ACT 0
+==========
+// Tutorial step 4 (1st test fails: expecting plus or digit)
+sum = number "+" number @2add / number
+number = ("0".."9")+ @number
+----------
+0: STOP RULE . 3 EITHER . 11 OR GO .
+10: 29 BOTH . 29 AND BOTH . 26 AND BOTH
+20: . 29 AND ACT . 1 STRING 1 '+' RULE
+30: . 3 BOTH . 39 AND ACT . 0 BOTH
+40: . 45 AND REPEAT MANY RANGE 1 '0' 1 '9'
+==========
+// Tutorial step 5 (3rd test doesn't discard "+")
+sum = [number "+"] number @2add / number
+number = ("0".."9")+ @number
+----------
+0: STOP RULE . 8 EITHER . 11 OR GO .
+10: 38 BOTH . 22 AND BOTH . 38 AND ACT
+20: . 1 BOTH . 29 AND GO . 0 LOOK
+30: HAS BOTH . 59 AND STRING 1 '+' RULE .
+40: 3 BOTH . 48 AND ACT . 0 BOTH .
+50: 54 AND REPEAT MANY RANGE 1 '0' 1 '9' RULE
+60: . 2 BOTH . 54 AND REPEAT MANY RANGE 1
+70: '0' 1 '9'
+
+1:RULE sum
+4 OR [number "+"] number @2add / number
+11  AND [number "+"] number @2add
+22    AND [number "+"]
+29      HAS [number "+"]
+31        AND number "+"
+            ID $number
+            STRING "+"
+        ID number "+"
+26*   ID number
+19    ACT @2add
+8   ID number
+38:RULE number
+  AND ("0".."9")+ @number
+    AND ("0".."9")+
+      ID "0".."9"
+      MANY ("0".."9")+
+        RANGE "0".."9"
+          STRING "0"
+          STRING "9"
+    ACT @number
+59:RULE $number
+  AND ("0".."9")+
+    ID $"0".."9"
+    MANY ("0".."9")+
+      RANGE "0".."9"
+        STRING "0"
+        STRING "9"

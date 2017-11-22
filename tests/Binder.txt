@@ -1,0 +1,503 @@
+// One rule
+x = "a"
+----------
+RULE x
+  STRING "a" 97
+==========
+// One call action
+x = "x" @1act
+----------
+RULE x
+  AND "x" @1act
+    STRING "x" 120
+    ACT @1act 0
+==========
+// Brackets
+exp = (exp) END
+END = 10
+----------
+RULE exp
+  AND (exp) END
+    ID exp
+    ID END
+RULE END
+  CHAR 10 10
+==========
+// Set with duplicate character
+s = 'abcdefcghi'
+----------
+Error on line 2: set contains duplicate character
+s = 'abcdefcghi'
+    ^^^^^^^^^^^^
+==========
+// Number too big
+m = 1114111
+n = 1114112
+----------
+Error on line 3: number too big
+n = 1114112
+    ^^^^^^^
+==========
+// Number too big
+m = 010ffff
+n = 0110000
+----------
+Error on line 3: number too big
+n = 0110000
+    ^^^^^^^
+==========
+// Unicode supplementary characters (beyond 16 bits)
+//numbers = "\1114109" / '\1114109'
+//----------
+//RULE numbers
+//  OR "\1114109" / '\1114109'
+//    STRING "\1114109" 1114109
+//    SET '\1114109' 1114109
+x = "x"
+----------
+RULE x
+  STRING "x" 120
+==========
+// Bad range
+s = 'ab'..'c'
+----------
+Error on line 2: expecting single character
+s = 'ab'..'c'
+    ^^^^
+==========
+// Bad range
+s = 'a'..'bc'
+----------
+Error on line 2: expecting single character
+s = 'a'..'bc'
+         ^^^^
+==========
+// Bad range
+s = ''..'a'
+----------
+Error on line 2: expecting single character
+s = ''..'a'
+    ^^
+==========
+// Bad range
+s = 'a'..''
+----------
+Error on line 2: expecting single character
+s = 'a'..''
+         ^^
+==========
+// Bad range
+s = 'b'..'a'
+----------
+Error on line 2: empty range
+s = 'b'..'a'
+    ^^^^^^^^
+==========
+// Bad range
+s = 33..32
+----------
+Error on line 2: empty range
+s = 33..32
+    ^^^^^^
+==========
+// Just OK range
+s = 33..33
+----------
+RULE s
+  RANGE 33..33
+    CHAR 33 33
+    CHAR 33 33
+==========
+// Name clash
+x = @2add @3add
+----------
+Error on line 2: clashes with @2add
+x = @2add @3add
+          ^^^^^
+==========
+// Complete scanner/parser grammar for sums
+exp = term ("+" term @2add / "-" term @2sub)* ''
+term = factor ("*" factor @2mul / "/" factor @2div)*
+factor = primary ("^" factor @2pow)?
+primary = number / "(" exp ")"
+number = digit+ @number
+digit = '0123456789'
+----------
+RULE exp
+  AND term ("+" term @2add / "-" term @2sub)* ''
+    ID term
+    MANY ("+" term @2add / "-" term @2sub)*
+      OR "+" term @2add / "-" term @2sub
+        AND "+" term @2add
+          STRING "+" 43
+          ID term
+          ACT @2add 1
+        AND "-" term @2sub
+          STRING "-" 45
+          ID term
+          ACT @2sub 2
+    SET ''
+RULE term
+  AND factor ("*" factor @2mul / "/" factor @2div)*
+    ID factor
+    MANY ("*" factor @2mul / "/" factor @2div)*
+      OR "*" factor @2mul / "/" factor @2div
+        AND "*" factor @2mul
+          STRING "*" 42
+          ID factor
+          ACT @2mul 3
+        AND "/" factor @2div
+          STRING "/" 47
+          ID factor
+          ACT @2div 4
+RULE factor
+  AND primary ("^" factor @2pow)?
+    ID primary
+    OPT ("^" factor @2pow)?
+      AND "^" factor @2pow
+        STRING "^" 94
+        ID factor
+        ACT @2pow 5
+RULE primary
+  OR number / "(" exp ")"
+    ID number
+    AND "(" exp ")"
+      STRING "(" 40
+      ID exp
+      STRING ")" 41
+RULE number
+  AND digit+ @number
+    SOME digit+
+      ID digit
+    ACT @number 0
+RULE digit
+  SET '0123456789'
+==========
+// Unknown rule name
+x = z
+y = "a"
+----------
+Error on line 2: unknown name
+x = z
+    ^
+==========
+// Duplicate rule names
+x = "x"
+y = "y"
+x = "z"
+----------
+Error on line 4: x is already defined
+x = "z"
+^
+==========
+// Example sum3.pecan
+sum = number / number "+" number @2add
+number = ('0123456789')+ @read
+----------
+RULE sum
+  OR number / number "+" number @2add
+    ID number
+    AND number "+" number @2add
+      ID number
+      STRING "+" 43
+      ID number
+      ACT @2add 1
+RULE number
+  AND ('0123456789')+ @read
+    SOME ('0123456789')+
+      SET '0123456789'
+    ACT @read 0
+==========
+// Error handling
+string = '"' visible* #badstring '"'
+visible = "x"
+----------
+RULE string
+  AND '"' visible* #badstring '"'
+    SET '"' 34
+    MANY visible*
+      ID visible
+    MARK #badstring 0
+    SET '"' 34
+RULE visible
+  STRING "x" 120
+==========
+// Unicode category
+upper = Lu
+----------
+RULE upper
+  CAT Lu 2
+==========
+// Attempt to redefine category
+Lu = 'x'
+----------
+Error on line 2: Lu is a unicode id
+Lu = 'x'
+^^
+==========
+// Number too big
+big = 1114112
+----------
+Error on line 2: number too big
+big = 1114112
+      ^^^^^^^
+==========
+// Complete scanner for pecan itself
+tokens = skip token*
+token = id / number / set / string / matcher / action / handler / key / bad
+id = name @ID skip1
+number = ('0' hex* / digit+) @CHAR skip1
+set = "'" ("'"! visible)* #BADSET "'" @SET skip1
+string = '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
+matcher = "%" name @MATCH skip1
+action = "@" (digit+ name @ACT / name @READ / @DROP) skip1
+handler = "#" name @HANDLE skip1
+key = prefix skip2 / infix skip2 / postfix skip1
+prefix = "(" @RB / "[" @SB / "<" @AB
+infix = "=" @ID / "/" @SL / ".." @DD
+postfix = "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
+bad =  #BADSET Uc skip1
+skip = (space / comment / newline)* @
+skip1 = space @ (newline ([space (letter / newline)] @NL)? skip)?
+skip2 = space (newline space)? @
+name = letter alpha*
+hex = digit / 'A'..'F' / 'a'..'f'
+digit = '0'..'9'
+letter = 'A'..'Z' / 'a'..'z'
+alpha = letter / digit / '_-'
+newline = 10 / 133 / 8232 / 13 10 / 13 133 / 13
+visible = ' '..'~'
+comment = "//" visible*
+space = " "*
+----------
+RULE tokens
+  AND skip token*
+    ID skip
+    MANY token*
+      ID token
+RULE token
+  OR id / number / set / string / matcher / action / handler / key / bad
+    ID id
+    ID number
+    ID set
+    ID string
+    ID matcher
+    ID action
+    ID handler
+    ID key
+    ID bad
+RULE id
+  AND name @ID skip1
+    ID name
+    ACT @ID 0
+    ID skip1
+RULE number
+  AND ('0' hex* / digit+) @CHAR skip1
+    OR '0' hex* / digit+
+      AND '0' hex*
+        SET '0' 48
+        MANY hex*
+          ID hex
+      SOME digit+
+        ID digit
+    ACT @CHAR 1
+    ID skip1
+RULE set
+  AND "'" ("'"! visible)* #BADSET "'" @SET skip1
+    STRING "'" 39
+    MANY ("'"! visible)*
+      AND "'"! visible
+        NOT "'"!
+          STRING "'" 39
+        ID visible
+    MARK #BADSET 0
+    STRING "'" 39
+    ACT @SET 2
+    ID skip1
+RULE string
+  AND '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
+    SET '"' 34
+    MANY ('"'! visible)*
+      AND '"'! visible
+        NOT '"'!
+          SET '"' 34
+        ID visible
+    MARK #BADSTRING 1
+    SET '"' 34
+    ACT @STRING 3
+    ID skip1
+RULE matcher
+  AND "%" name @MATCH skip1
+    STRING "%" 37
+    ID name
+    ACT @MATCH 4
+    ID skip1
+RULE action
+  AND "@" (digit+ name @ACT / name @READ / @DROP) skip1
+    STRING "@" 64
+    OR digit+ name @ACT / name @READ / @DROP
+      AND digit+ name @ACT
+        SOME digit+
+          ID digit
+        ID name
+        ACT @ACT 5
+      AND name @READ
+        ID name
+        ACT @READ 6
+      ACT @DROP 7
+    ID skip1
+RULE handler
+  AND "#" name @HANDLE skip1
+    STRING "#" 35
+    ID name
+    ACT @HANDLE 8
+    ID skip1
+RULE key
+  OR prefix skip2 / infix skip2 / postfix skip1
+    AND prefix skip2
+      ID prefix
+      ID skip2
+    AND infix skip2
+      ID infix
+      ID skip2
+    AND postfix skip1
+      ID postfix
+      ID skip1
+RULE prefix
+  OR "(" @RB / "[" @SB / "<" @AB
+    AND "(" @RB
+      STRING "(" 40
+      ACT @RB 9
+    AND "[" @SB
+      STRING "[" 91
+      ACT @SB 10
+    AND "<" @AB
+      STRING "<" 60
+      ACT @AB 11
+RULE infix
+  OR "=" @ID / "/" @SL / ".." @DD
+    AND "=" @ID
+      STRING "=" 61
+      ACT @ID 0
+    AND "/" @SL
+      STRING "/" 47
+      ACT @SL 12
+    AND ".." @DD
+      STRING ".."
+      ACT @DD 13
+RULE postfix
+  OR "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
+    AND "!" @EM
+      STRING "!" 33
+      ACT @EM 14
+    AND "?" @QM
+      STRING "?" 63
+      ACT @QM 15
+    AND "+" @PL
+      STRING "+" 43
+      ACT @PL 16
+    AND "*" @ST
+      STRING "*" 42
+      ACT @ST 17
+    AND ")" @RE
+      STRING ")" 41
+      ACT @RE 18
+    AND "]" @SE
+      STRING "]" 93
+      ACT @SE 19
+    AND ">" @AE
+      STRING ">" 62
+      ACT @AE 20
+RULE bad
+  AND #BADSET Uc skip1
+    MARK #BADSET 0
+    CAT Uc -268435457
+    ID skip1
+RULE skip
+  AND (space / comment / newline)* @
+    MANY (space / comment / newline)*
+      OR space / comment / newline
+        ID space
+        ID comment
+        ID newline
+    DROP @
+RULE skip1
+  AND space @ (newline ([space (letter / newline)] @NL)? skip)?
+    ID space
+    DROP @
+    OPT (newline ([space (letter / newline)] @NL)? skip)?
+      AND newline ([space (letter / newline)] @NL)? skip
+        ID newline
+        OPT ([space (letter / newline)] @NL)?
+          AND [space (letter / newline)] @NL
+            TRY [space (letter / newline)]
+              AND space (letter / newline)
+                ID space
+                OR letter / newline
+                  ID letter
+                  ID newline
+            ACT @NL 21
+        ID skip
+RULE skip2
+  AND space (newline space)? @
+    ID space
+    OPT (newline space)?
+      AND newline space
+        ID newline
+        ID space
+    DROP @
+RULE name
+  AND letter alpha*
+    ID letter
+    MANY alpha*
+      ID alpha
+RULE hex
+  OR digit / 'A'..'F' / 'a'..'f'
+    ID digit
+    RANGE 'A'..'F'
+      SET 'A' 65
+      SET 'F' 70
+    RANGE 'a'..'f'
+      SET 'a' 97
+      SET 'f' 102
+RULE digit
+  RANGE '0'..'9'
+    SET '0' 48
+    SET '9' 57
+RULE letter
+  OR 'A'..'Z' / 'a'..'z'
+    RANGE 'A'..'Z'
+      SET 'A' 65
+      SET 'Z' 90
+    RANGE 'a'..'z'
+      SET 'a' 97
+      SET 'z' 122
+RULE alpha
+  OR letter / digit / '_-'
+    ID letter
+    ID digit
+    SET '_-'
+RULE newline
+  OR 10 / 133 / 8232 / 13 10 / 13 133 / 13
+    CHAR 10 10
+    CHAR 133 133
+    CHAR 8232 8232
+    AND 13 10
+      CHAR 13 13
+      CHAR 10 10
+    AND 13 133
+      CHAR 13 13
+      CHAR 133 133
+    CHAR 13 13
+RULE visible
+  RANGE ' '..'~'
+    SET ' ' 32
+    SET '~' 126
+RULE comment
+  AND "//" visible*
+    STRING "//"
+    MANY visible*
+      ID visible
+RULE space
+  MANY " "*
+    STRING " " 32
