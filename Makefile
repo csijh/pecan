@@ -65,4 +65,4 @@ interpreter:
 pecan:
 	javac source/Pecan.java -d .
 jar:
-	jar cfm pecan.jar manifest.txt pecan source tests
+	jar cfe pecan.jar pecan.Pecan pecan source tests
