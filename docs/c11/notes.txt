@@ -1,0 +1,30 @@
+Notes on the C11 Standard
+=========================
+
+These notes mostly relate to scanning and parsing, rather than execution.
+
+4.5 For max portability, programs need to be 'strictly conforming'.
+4.6 An embedded ('freestanding') C need not have complex or libraries.
+4.8 Where is the document specifying implementation/locale-defined stuff?
+
+5.1.1.2 Let's say the phases are prepare, scan, pre-process, parse, link.
+  1 prepare: assume UTF-8, convert line endings to '\n', handle trigraphs
+  2 prepare: eliminate '\\' '\n' by splicing, ensure final newline
+  3 scan: divide into 'preprocessing tokens' and white-space/comment gaps
+  4 pre-process
+  5 parse: escape sequences, graphemes, illegal characters in literals
+  6 parse: adjacent string literals are concatenated
+  7 parse: make token stream, do parsing proper
+  8 link
+5.1.2.1 In embedded C, you don't have to start at 'main'.
+5.1.2.2.1 Rules for main (preference for lower case command lines)
+5.1.2.2.3 Exceptionally, main returns 0 even without a return statement
+5.1.2.3/4 Execution model includes concurrent thread issues
+
+5.2.1 Character sets - just stick to UTF-8.  Control character meanings.
+5.2.1.1 Trigraphs.  Should be dead.
+5.2.4.1 Translation limits such as nesting - what should the attitude be?
+5.3.4.2 Minimum sizes for integer types, characteristics of floats
+
+6.2.1 Scopes, 6.2.2 Linkage, 6.2.3 Name spaces, 6.2.4 Storage durations.
+6.2.5 Types, 6.2.6 Representations, 6.2.7 Compatibility
