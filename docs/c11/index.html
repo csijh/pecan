@@ -4,7 +4,7 @@
 <title>Pecan Tutorial: C</title>
 <style>
   pre, .indent { margin-left: 40px; }
-  pre, code { color: #00a; }
+  pre.c11, code.c11 { color: #00a; }
   pre.pecan, code.pecan { color: #060; }
 </style>
 </head>
@@ -18,18 +18,26 @@
 <p>The development of a scanner and parser for C11 presented here is based on
 the <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf">C11
 standard</a>. It demonstrates the use of Pecan and, in particular, the use of
-(manual) transformation as a way of developing parsers.</p>
+(manual) grammar transformation as a way of developing parsers.</p>
 
 <p>The result is simply a literal translation of the official C11 grammar into
 the Pecan notation.  It does not take into account common extensions or other
 variations to the C11 language, or differing interpretations of the standard,
 nor does it attempt to deal with all of the practical issues that arise in real
-C compilers. It has also only been lightly tested - it is not intended to be a
-compiler-grade parser.</p>
+C compilers. It has also only been lightly tested. It is not intended to be a
+compiler-grade parser, merely a starting point for experimentation.  It captures
+the official grammar in a more convenient executable form.</p>
+
+<p>Infamously, parsing of C requires type names introduced using
+<code>typedef</code> to be differentiated from other identifiers.  This cannot
+be done during scanning.  Instead, token tags must be altered during parsing,
+which must include some form of symbol table construction.  Pecan parsers allows
+for this in their interaction with external code.  It is assumed that suitable
+external code will be added to the parser to achieve this.</p>
 
 <p>The rules from the C11 standard are presented with a few obvious cosmetic
-changes to the notation for compatibilty with Pecan.  Terminal symbols in bold
-such as <b><code>int</code></b> are quoted <code>"int"</code> instead.
+changes to the notation for compatibility with Pecan.  Terminal symbols in bold
+such as <b><code>int</code></b> are quoted as <code>"int"</code> instead.
 Definitions <code>x: y</code> have the colon replaced by an equal sign to give
 <code>x = y</code>, the optional suffix <code>x<sub>opt</sub></code> is replaced
 by a question mark <code>x?</code>, and choices which are implicit from the
@@ -41,12 +49,13 @@ clearly be distinguished by the PEG operator <code>/</code> instead, so that the
 <code>|</code> operator can be eliminated.</p>
 
 <p>Rules taken from the standard, or needing more transformation work, are
-displayed in <code>blue</code>, whereas final Pecan rules are displayed in <code
-class="pecan">green</code>.</p>
+displayed in <code class="c11">blue</code>, whereas final Pecan rules are
+displayed in <code class="pecan">green</code>.</p>
 
 <p>The development described here amounts to translating the C11 syntax into a
-near-recursive-descent form, which has been done before, perhaps most notably in
-the clang compiler.</p>
+nearly-recursive-descent form, which has been done before, perhaps most notably
+in the clang compiler.  The difference is that a potentially reusable grammar
+has been produced rather than a one-off parser for a specific purpose.</p>
 
 <h2>Scanner</h2>
 
@@ -72,16 +81,16 @@ tokens. Thereafter, as each token is recognized, an action adds the token to the
 list. The end of file is recognized using <code class="pecan">Uc!</code>. The
 original rule for a token from the standard is:</p>
 
-<pre>token = keyword | identifier | constant | string-literal | punctuator
+<pre class="c11">token = keyword | identifier | constant | string-literal | punctuator
 </pre>
 
 <p>In order to take a uniform approach to scanning, white space and comments,
 described elsewhere in the standard, are included, so that all of the text is
 processed.  Also, the order is changed to recognise string literals and
-constants before keywords or identifiers, because of the possibility of a letter
-<code>L</code> prefix at the start of a string literal or character constant.
-Keywords are recognized before identifiers, to keep the definition of
-identifiers simple, as in the original grammar.  So the translated rule is:</p>
+constants before keywords or identifiers, because of the possibility of an
+encoding prefix at the start of a string literal or character constant. Keywords
+are recognized before identifiers, to keep the definition of identifiers simple,
+as in the original grammar.  So the translated rule is:</p>
 
 <pre class="pecan">token =
     gap / comment / constant / string-literal /
@@ -101,7 +110,7 @@ comment =
 <p>Leaving constants until later, string literals are described in the original
 grammar by:</p>
 
-<pre>string-literal = encoding-prefix? '"' s-char-sequence? '"'
+<pre class="c11">string-literal = encoding-prefix? '"' s-char-sequence? '"'
 
 encoding-prefix = "u8" | "u" | "U" | "L"
 </pre>
@@ -116,11 +125,11 @@ encoding-prefix = "u8" / "u" / "U" / "L"
 </pre>
 
 <p>The try construct <code class="pecan">[encoding-prefix '"']</code> ensures
-that a prefix such as <code class="pecan">u8</code> on its own does not match.
+that a prefix such as <code>u8</code> on its own does not match.
 The characters inside a string literal are described in the original grammar
 by:</p>
 
-<pre>s-char-sequence =
+<pre class="c11">s-char-sequence =
     s-char |
     s-char-sequence s-char
 </pre>
@@ -187,7 +196,7 @@ in length order.</p>
 
 <p>Constants are described in the original grammar by:</p>
 
-<pre>constant =
+<pre class="c11">constant =
     integer-constant | floating-constant |
     enumeration-constant | character-constant
 </pre>
@@ -201,7 +210,7 @@ cause a problem, because both integer and floating constants can start with
 digits.  It is possible to translate directly into a Pecan grammar rule by using
 lookahead to try one alternative and then the other:</p>
 
-<pre>constant =
+<pre class="c11">constant =
     character-constant / [integer-constant] / floating-constant
 </pre>
 
@@ -223,7 +232,7 @@ is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
 
 <p>The original rule for <code>integer-constant</code> is:</p>
 
-<pre>integer-constant =
+<pre class="c11">integer-constant =
     decimal-constant integer-suffix? |
     octal-constant integer-suffix? |
     hexadecimal-constant integer-suffix?
@@ -244,7 +253,7 @@ hexadecimal case should be checked first:</p>
 <p>One of the alternatives for a floating constant is a decimal floating
 constant, with this original rule:</p>
 
-<pre>decimal-floating-constant:
+<pre class="c11">decimal-floating-constant:
     fractional-constant exponent-part? floating-suffix? |
     digit-sequence exponent-part floating-suffix?
 </pre>
@@ -252,7 +261,7 @@ constant, with this original rule:</p>
 <p>The alternatives have possible initial digits in common, so this needs some
 work.  The original rule for <code>fractional-constant</code> is:</p>
 
-<pre>fractional-constant =
+<pre class="c11">fractional-constant =
     digit-sequence? '.' digit-sequence |
     digit-sequence '.'
 </pre>
@@ -262,7 +271,7 @@ reasonably easy to transform away using routine transformations.  The first
 alternative can be expanded into two alternatives, according to whether the
 optional <code>digit-sequence</code> is absent or present:</p>
 
-<pre>fractional-constant =
+<pre class="c11">fractional-constant =
     '.' digit-sequence |
     digit-sequence '.' digit-sequence |
     digit-sequence '.'
@@ -271,7 +280,7 @@ optional <code>digit-sequence</code> is absent or present:</p>
 <p>Then the last two alternatives can be combined, and the choice operator
 changed:</p>
 
-<pre>fractional-constant =
+<pre class="c11">fractional-constant =
     '.' digit-sequence /
     digit-sequence '.' digit-sequence?
 </pre>
@@ -291,31 +300,28 @@ has had the effect of exposing and resolving some issues.</p>
 
 <h2>Parser: external definitions</h2>
 
-<hr/>
-<p><b>Not yet updated from C99</b></p>
-<hr/>
+<p>A first prototype of the grammar, just demonstrating the handling of
+top level definitions and declarations, is:</p>
 
-<p>Infamously, parsing of C requires type names introduced using
-<code>typedef</code> to be differentiated from other identifiers.  This cannot
-be done during scanning.  Instead, token tags are altered during parsing, which
-must include symbol table construction.</p>
+<p class="indent"><a href="c-parse-a.txt">c-parse-a.txt</a></p>
 
-<p>With a few obvious cosmetic changes to the notation for compatibilty with
+<p>With a few obvious cosmetic changes to the notation for compatibility with
 Pecan, the CFG-based grammar in the C11 standard (A.2.4) begins with:</p>
 
-<pre>translation-unit =
+<pre class="c11">translation-unit =
     external-declaration | translation-unit external-declaration
 </pre>
 
-<p>Removing the left recursion, and adding end-of-file detection, this can be
-translated into:</p>
+<p>Removing the left recursion, adding an action to initialize an empty list of
+external declarations, and adding end-of-file detection, this can be translated
+into:</p>
 
-<pre>translation-unit = external-declaration+ ``
+<pre class="pecan">translation-unit = @0list external-declaration+ ``
 </pre>
 
 <p>The original grammar continues with:</p>
 
-<pre>external-declaration = function-definition | declaration
+<pre class="c11">external-declaration = function-definition | declaration
 </pre>
 
 <p>The two alternatives are disjoint, because the grammar is unambiguous, but it
@@ -323,7 +329,7 @@ isn't immediately clear how to distinguish them. If it is just assumed that
 there is no ambiguous overlap, then there is a direct translation into a Pecan
 grammar rule by using lookahead to try one alternative and then the other:</p>
 
-<pre>external-declaration = [function-definition] / declaration
+<pre class="c11">external-declaration = [function-definition] / declaration
 </pre>
 
 <p>However, since replacing the body of a function definition by a semicolon
@@ -333,7 +339,7 @@ transformation approach can be used to reach an equivalent form with no
 lookahead needed. The relevant rules from the original grammar needed during the
 transformation, with left recursion removed, are:</p>
 
-<pre>function-definition =
+<pre class="c11">function-definition =
     declaration-specifiers declarator declaration-list? compound-statement
 
 declaration =
@@ -348,17 +354,17 @@ init-declarator = declarator (`=` initializer)?
 <p>This allows us to transform the rule for external declarations by expanding
 <code>function-definition</code> and <code>declaration</code> to give:</p>
 
-<pre>external-declaration =
+<pre class="c11">external-declaration =
     declaration-specifiers declarator declaration-list? compound-statement |
     declaration-specifiers init-declarator-list? `;` |
     static_assert-declaration
 </pre>
 
-<p>The <code>static_assert-declaration</code> clause can be ut first because it
+<p>The <code>static_assert-declaration</code> clause can be put first because it
 begins with a distinctive keyword, and the common left factor
 <code>declaration-specifiers</code> can be taken out, to yield:</p>
 
-<pre>external-declaration =
+<pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
@@ -368,7 +374,7 @@ begins with a distinctive keyword, and the common left factor
 
 <p>Expanding <code>init-declarator-list</code> gives:</p>
 
-<pre>external-declaration =
+<pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
@@ -378,7 +384,7 @@ begins with a distinctive keyword, and the common left factor
 
 <p>Expanding the first <code>init-declarator</code> gives:</p>
 
-<pre>external-declaration =
+<pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
@@ -390,7 +396,7 @@ begins with a distinctive keyword, and the common left factor
 alternative, which has the form <code>(x)? `;`</code>, can be replaced by
 <code>x `;` / `;`</code> to give:</p>
 
-<pre>external-declaration =
+<pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
@@ -402,7 +408,7 @@ alternative, which has the form <code>(x)? `;`</code>, can be replaced by
 <p>Taking out the left factor <code>declarator</code> from the first two
 alternatives gives:</p>
 
-<pre>external-declaration =
+<pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator (
@@ -421,7 +427,7 @@ cannot start with any of these, so no lookahead is necessary any more.</p>
 <p>Converting to Pecan notation, adding some actions, and rearranging a bit,
 gives:</p>
 
-<pre>external-declaration =
+<pre class="pecan">external-declaration =
     static_assert-declaration @1declaration /
     declaration-specifiers (
         `;` @1declaration /
@@ -432,10 +438,11 @@ gives:</p>
     )
 </pre>
 
-<p>A first prototype of the grammar, just demonstrating the handling of
-definitions and declarations, is:</p>
-
-<p class="indent"><a href="c-parse-a.txt">c-parse-a.txt</a></p>
+<p>It is worth pointing out that, since <code class="pecan">declarator</code>
+includes function declarators, this grammar does not preclude a declaration of
+the form <code>int f() = 3;</code>.  A brief investigation of actual C compilers
+suggests that this error is normally detected after, rather than during,
+parsing.</p>
 
 <p>The next stage is to deal with declarations</p>
 
@@ -445,14 +452,14 @@ definitions and declarations, is:</p>
 example, the original grammar rule from the C11 standard (A.2.2) for a struct or
 union specifier is:</p>
 
-<pre>struct-or-union-specifier =
+<pre class="c11">struct-or-union-specifier =
     struct-or-union identifier? `{` struct-declaration-list `}` |
     struct-or-union identifier
 </pre>
 
 <p>Rearranging to remove the common left factors gives:</p>
 
-<pre>struct-or-union-specifier = struct-or-union (
+<pre class="pecan">struct-or-union-specifier = struct-or-union (
     identifier (`{` struct-declaration-list `}`)? /
     `{` struct-declaration-list `}`
 )
@@ -460,17 +467,17 @@ union specifier is:</p>
 
 <p>The original grammar rules for enumeration specifiers are:</p>
 
-<pre>enum-specifier =
+<pre class="c11">enum-specifier =
     `enum` identifier? `{` enumerator-list `}`
     `enum` identifier? `{` enumerator-list `,` `}`
     `enum` identifier
 
-enumerator-list = enumerator (`,` enumerator)
+enumerator-list = enumerator (`,` enumerator)*
 </pre>
 
 <p>Perhaps the most obvious way to translate the first definition is:</p>
 
-<pre>enum-specifier = `enum` (
+<pre class="pecan">enum-specifier = `enum` (
     identifier (`{` enumerator-list `,`? `}`)? /
     `{` enumerator-list `,`? `}`
 )
@@ -479,60 +486,87 @@ enumerator-list = enumerator (`,` enumerator)
 <p>However, having a final optional comma means that care is needed to prevent
 it from being matched in the second rule:</p>
 
-<pre>enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
+<pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
 </pre>
 
 <p>The original rule for <code>direct-declarator</code> is:</p>
 
-<pre>direct-declarator:
+<pre class="c11">direct-declarator:
     identifier |
     `(` declarator `)` |
     direct-declarator `[` type-qualifier-list? assignment-expression? `]` |
-    direct-declarator `[` static type-qualifier-list? assignment-expression `]` |
-    direct-declarator `[` type-qualifier-list static assignment-expression `]` |
+    direct-declarator `[` `static` type-qualifier-list? assignment-expression `]` |
+    direct-declarator `[` type-qualifier-list `static` assignment-expression `]` |
     direct-declarator `[` type-qualifier-list? `*` `]` |
     direct-declarator `(` parameter-type-list `)` |
     direct-declarator `(` identifier-list? `)` |
 </pre>
 
-<p>Removing the left recursion and combining the contents of each kind of
-bracket yields:</p>
+<p>Removing the left recursion, inventing an extra <code>bracket</code> rule for
+clarity, combining the contents of each kind of bracket, and tidying up,
+yields:</p>
 
-<pre>direct-declarator = (identifier / `(` declarator `)`) (
+<pre class="pecan">direct-declarator =
+    (identifier / `(` declarator `)`) bracket*
+
+bracket =
+    `(` (identifier&amp; identifier-list)? / parameter-type-list `)` /
     `[` (
-        type-qualifier-list (`static`? assignment-expression / `*`?) /
-        assignment-expression /
+        type-qualifier-list (
+            assignment-expression /
+            `static` assignment-expression /
+            `*`
+        )? /
         `static` type-qualifier-list? assignment-expression /
-        `*`?
-    ) `]` /
-    `(` (identifier&amp; identifier-list)? / parameter-type-list `)`
-)*
+        assignment-expression /
+        `*`
+    )? `]`
 </pre>
 
-<p>Similarly, the original rule for <code>direct-abstract-declarator</code> can
-be translated into:</p>
+<p>The original rule for <code>direct-declarator</code> is:</p>
 
-<pre>direct-abstract-declarator = `(` abstract-declarator `)` (
-    `[` (
-        type-qualifier-list (`static`? assignment-expression)? /
-        assignment-expression /
-        `static` type-qualifier-list? assignment-expression /
-        `*`?
-    ) `]` /
-    `(` parameter-type-list? `)`
-)*
+<pre class="c11">direct-abstract-declarator =
+    `(` abstract-declarator `)` |
+    direct-abstract-declarator? `[` type-qualifier-list? assignment-expression? `]` |
+    direct-abstract-declarator? `[` `static` type-qualifier-list? assignment-expression `]` |
+    direct-abstract-declarator? `[` type-qualifier-list `static` assignment-expression `]` |
+    direct-abstract-declarator? `[` `*` `]` |
+    direct-abstract-declarator? `(` parameter-type-list? `)`
 </pre>
+
+<p>Removing the left recursion, adding an extra rule
+<code>abstract-bracket</code>, combining and tidying, yields:</p>
+
+<pre class="pecan">direct-abstract-declarator =
+    `(` abstract-declarator `)` abstract-bracket* / abstract-bracket+
+
+abstract-bracket =
+    `(` parameter-type-list? `)` /
+    `[` (
+        type-qualifier-list (
+            assignment-expression /
+            `static` assignment-expression
+        )?
+        `static` type-qualifier-list? assignment-expression /
+        assignment-expression /
+        `*`?
+    ) `]`
+</pre>
+
+<hr/>
+<p><b>Not yet updated from C99</b></p>
+<hr/>
 
 <p>The original rule for <code>parameter-declaration</code> is:</p>
 
-<pre>parameter-declaration =
+<pre class="c11">parameter-declaration =
     declaration-specifiers declarator |
     declaration-specifiers abstract-declarator?
 </pre>
 
 <p>Taking out the common left factor, this becomes:</p>
 
-<pre>parameter-declaration = declaration-specifiers (
+<pre class="c11">parameter-declaration = declaration-specifiers (
     declarator |
     abstract-declarator?
 )
@@ -548,7 +582,7 @@ identifier.  Checking the possibilities, only <code>`*`</code> or
 identifier. On the other hand, in an <code>abstract-declarator</code>, a close
 bracket must appear before the end.  This leads to:</p>
 
-<pre>parameter-declaration = declaration-specifiers (
+<pre class="pecan">parameter-declaration = declaration-specifiers (
     ((`*` / type-qualifier / `(`)* `identifier`)&amp; declarator /
     abstract-declarator?
 )

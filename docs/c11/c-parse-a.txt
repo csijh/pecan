@@ -1,4 +1,5 @@
-// A partial C99 parser, assuming the source has been pre-processed and scanned.
+// A partial C11 parser, assuming the source has been pre-processed and scanned.
+// This version is a first prototype illustrating external definitions only.
 
 // ---------- External definitions (C11 standard A.2.4) -----------------------
 
