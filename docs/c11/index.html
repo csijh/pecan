@@ -326,7 +326,9 @@ transformation, with left recursion removed, are:</p>
 <pre>function-definition =
     declaration-specifiers declarator declaration-list? compound-statement
 
-declaration = declaration-specifiers init-declarator-list? `;`
+declaration =
+    declaration-specifiers init-declarator-list? `;` |
+    static_assert-declaration
 
 init-declarator-list = init-declarator (`,` init-declarator)*
 
@@ -338,55 +340,67 @@ init-declarator = declarator (`=` initializer)?
 
 <pre>external-declaration =
     declaration-specifiers declarator declaration-list? compound-statement |
-    declaration-specifiers init-declarator-list? `;`
+    declaration-specifiers init-declarator-list? `;` |
+    static_assert-declaration
 </pre>
 
-<p>The common left factor <code>declaration-specifiers</code> can be
-taken out, to yield:</p>
+<p>The <code>static_assert-declaration</code> clause can be ut first because it
+begins with a distinctive keyword, and the common left factor
+<code>declaration-specifiers</code> can be taken out, to yield:</p>
 
-<pre>external-declaration = declaration-specifiers (
-    declarator declaration-list? compound-statement |
-    init-declarator-list? `;`
-)
+<pre>external-declaration =
+    static_assert-declaration /
+    declaration-specifiers (
+        declarator declaration-list? compound-statement |
+        init-declarator-list? `;`
+    )
 </pre>
 
 <p>Expanding <code>init-declarator-list</code> gives:</p>
 
-<pre>external-declaration = declaration-specifiers (
-    declarator declaration-list? compound-statement |
-    (init-declarator (`,` init-declarator)*)? `;`
-)
+<pre>external-declaration =
+    static_assert-declaration /
+    declaration-specifiers (
+        declarator declaration-list? compound-statement |
+        (init-declarator (`,` init-declarator)*)? `;`
+    )
 </pre>
 
 <p>Expanding the first <code>init-declarator</code> gives:</p>
 
-<pre>external-declaration = declaration-specifiers (
-    declarator declaration-list? compound-statement |
-    (declarator (`=` initializer)? (`,` init-declarator)*)? `;`
-)
+<pre>external-declaration =
+    static_assert-declaration /
+    declaration-specifiers (
+        declarator declaration-list? compound-statement |
+        (declarator (`=` initializer)? (`,` init-declarator)*)? `;`
+    )
 </pre>
 
 <p>In order to get at the common left factor <code>declarator</code>, the second
 alternative, which has the form <code>(x)? `;`</code>, can be replaced by
 <code>x `;` / `;`</code> to give:</p>
 
-<pre>external-declaration = declaration-specifiers (
-    declarator declaration-list? compound-statement |
-    declarator (`=` initializer)? (`,` init-declarator)* `;` |
-    `;`
-)
+<pre>external-declaration =
+    static_assert-declaration /
+    declaration-specifiers (
+        declarator declaration-list? compound-statement |
+        declarator (`=` initializer)? (`,` init-declarator)* `;` |
+        `;`
+    )
 </pre>
 
 <p>Taking out the left factor <code>declarator</code> from the first two
 alternatives gives:</p>
 
-<pre>external-declaration = declaration-specifiers (
-    declarator (
-        declaration-list? compound-statement |
-        (`=` initializer)? (`,` init-declarator)* `;`
-    ) |
-    `;`
-)
+<pre>external-declaration =
+    static_assert-declaration /
+    declaration-specifiers (
+        declarator (
+            declaration-list? compound-statement |
+            (`=` initializer)? (`,` init-declarator)* `;`
+        ) |
+        `;`
+    )
 </pre>
 
 <p>Looking at the two innermost alternatives, the second can clearly only start
@@ -397,19 +411,21 @@ cannot start with any of these, so no lookahead is necessary any more.</p>
 <p>Converting to Pecan notation, adding some actions, and rearranging a bit,
 gives:</p>
 
-<pre>external-declaration = declaration-specifiers (
-    `;` @1declaration /
-    declarator (
-        (`=` initializer)? (`,` init-declarator)* `;` @1declaration /
-        declaration-list? compound-statement @1definition
+<pre>external-declaration =
+    static_assert-declaration @1declaration /
+    declaration-specifiers (
+        `;` @1declaration /
+        declarator (
+            (`=` initializer)? (`,` init-declarator)* `;` @1declaration /
+            declaration-list? compound-statement @1definition
+        )
     )
-)
 </pre>
 
 <p>A first prototype of the grammar, just demonstrating the handling of
 definitions and declarations, is:</p>
 
-<p class="indent"><a href="c11-a.txt">c11-a.txt</a></p>
+<p class="indent"><a href="c-parse-a.txt">c-parse-a.txt</a></p>
 
 <p>The next stage is to deal with declarations</p>
 

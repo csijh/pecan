@@ -236,6 +236,7 @@ tokens
 string "abc"
 string L"abc"
 string ""
+string "abcxyz"
 ==========
 // Keywords and identifiers
 int x intx
