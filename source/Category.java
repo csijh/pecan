@@ -130,7 +130,6 @@ Java). */
             for (int j=0; j<nblocks; j++) {
                 if (! Arrays.equals(block, table2[j])) continue;
                 table1[i] = (byte) j;
-            if (i == 42) System.out.println("42 " + j);
                 done = true;
                 break;
             }

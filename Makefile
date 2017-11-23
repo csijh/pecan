@@ -1,11 +1,14 @@
 .PHONY: \
-	default category op node pecanexception test reader binder checker \
+	default Category op node pecanexception test reader binder checker \
 	stacker simplifier generator interpreter pecan jar
 default: pecan
 
-CATEGORY = source/Category.java
-category:
-	javac $(CATEGORY) -d .
+category: Category
+
+Category:
+	javac -sourcepath source -d . source/$@.java
+	cp source/UnicodeData.txt pecan
+	java -cp . pecan.$@
 
 TEST = source/Test.java
 test:
