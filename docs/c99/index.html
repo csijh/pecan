@@ -28,16 +28,17 @@ C compilers.  It has also only been lightly tested - it is not intended to be a
 compiler-grade parser.</p>
 
 <p>The rules from the C99 standard are presented with a few obvious cosmetic
-changes to the notation for compatibility with Pecan.  Definitions <code>x:
-y</code> have the colon replaced by an equal sign to give <code>x = y</code>,
-the optional suffix <code>x<sub>opt</sub></code> is replaced by a question mark
-<code>x?</code>, and choices which are implicit from the layout have explicit
-choice operators <code>|</code> added.  Rules are effectively presented in a
-mythical language which is Pecan with an extra <code>|</code> operator having
-CFG semantics. The aim is to apply transformations until the alternatives of any
-<code>|</code> operator can clearly be distinguished by the PEG operator
-<code>/</code> instead, so that the <code>|</code> operator can be
-eliminated.</p>
+changes to the notation for compatibility with Pecan.  Terminal symbols in bold
+such as <b><code>int</code></b> are quoted <code>"int"</code> instead.
+Definitions <code>x: y</code> have the colon replaced by an equal sign to give
+<code>x = y</code>, the optional suffix <code>x<sub>opt</sub></code> is replaced
+by a question mark <code>x?</code>, and choices which are implicit from the
+layout have explicit choice operators <code>|</code> added.  Rules are
+effectively presented in a mythical language which is Pecan with an extra
+<code>|</code> operator having CFG semantics. The aim is to apply
+transformations until the alternatives of any <code>|</code> operator can
+clearly be distinguished by the PEG operator <code>/</code> instead, so that the
+<code>|</code> operator can be eliminated.</p>
 
 <p>Rules taken from the standard, or needing more transformation work, are
 displayed in <code>blue</code>, whereas final Pecan rules are displayed in <code
@@ -56,11 +57,11 @@ the file:</p>
 
 <p>The scanner is based on the lexical grammar which is gathered together in
 appendix A.1 of the standard.  It is assumed that the implementation-defined
-source character set consists of the visible unicode characters. It is assumed
-that preprocessing, conversion of all newlines to <code>\n</code>, translation
-of trigraphs, and splicing of lines which end in <code>\</code>, have already
-been done.  Scanning does not then involve any changes to the source text.  The
-initial rule of the scanner is:</p>
+source character set consists of the visible Unicode characters. It is assumed
+that the character encoding is UTF-8, and that conversion of all newlines to
+<code>\n</code>, translation of trigraphs, splicing of lines which end in
+<code>\</code> and preprocessing have already been done.  Scanning does not then
+involve any changes to the source text.  The initial rule of the scanner is:</p>
 
 <pre class="pecan">tokens = @tokens token* Uc!
 </pre>
@@ -151,6 +152,22 @@ explicitly in the rule for keywords, lookahead is used:</p>
     ["_Imaginary" more!] @1Imaginary
 </pre>
 
+<p>Identifiers include type names introduced using <code>typedef</code>, and
+enumeration constants, which can't be distinguished in the scanner.  They are
+recognized during parsing.  The rules for identifiers are:</p>
+
+<pre class="pecan">identifier = identifier-nondigit more* @1id
+identifier-nondigit = nondigit / universal-character-name
+more = identifier-nondigit / digit
+nondigit = '_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+digit = '0123456789'
+universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
+hex-quad =
+    hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
+hexadecimal-digit = '0123456789abcdefABCDEF'
+</pre>
+
+
 <p>Punctuators are easier to recognize than keywords, because it doesn't matter
 what they are followed by. However, they have to be ordered so that if one is a
 prefix of another, the longer one is recognized preferentially, according to the
@@ -165,21 +182,6 @@ in length order.</p>
     "->" @1migt /
     ...
     "#" @1hs
-</pre>
-
-<p>Identifiers include type names introduced using <code>typedef</code>, and
-enumeration constants, which can't be distinguished in the scanner.  They are
-recognized during parsing.  The rules for identifiers are:</p>
-
-<pre class="pecan">identifier = identifier-nondigit more* @1id
-identifier-nondigit = nondigit / universal-character-name
-more = identifier-nondigit / digit
-nondigit = '_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-digit = '0123456789'
-universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
-hex-quad =
-    hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
-hexadecimal-digit = '0123456789abcdefABCDEF'
 </pre>
 
 <p>Constants are described in the original grammar by:</p>
@@ -238,7 +240,7 @@ hexadecimal case should be checked first:</p>
     decimal-constant integer-suffix? @1decimal
 </pre>
 
-<p>One of the alternatives for a decimal constant is a decimal floating
+<p>One of the alternatives for a floating constant is a decimal floating
 constant, with this original rule:</p>
 
 <pre>decimal-floating-constant:
@@ -255,7 +257,7 @@ work.  The original rule for <code>fractional-constant</code> is:</p>
 </pre>
 
 <p>This is typical of many rules where there is a common left factor which is
-reasonably easy to tranform away using routine transformations.  The first
+reasonably easy to transform away using routine transformations.  The first
 alternative can be expanded into two alternatives, according to whether the
 optional <code>digit-sequence</code> is absent or present:</p>
 

@@ -5,6 +5,7 @@
 <style>
   pre, .indent { margin-left: 40px; }
   pre, code { color: #00a; }
+  pre.pecan, code.pecan { color: #060; }
 </style>
 </head>
 <body>
@@ -16,12 +17,15 @@
 
 <p>The development of a scanner and parser for C11 presented here is based on
 the <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf">C11
-standard</a>. It is simply a literal translation of the official C11 grammar
-into the Pecan notation.  It does not take into account common extensions or
-other variations to the C11 language, or differing interpretations of the
-standard, nor does it attempt to deal with all of the practical issues that
-arise in real C compilers.  It has also only been lightly tested - it is not
-intended to be a compiler-grade parser.</p>
+standard</a>. It demonstrates the use of Pecan and, in particular, the use of
+(manual) transformation as a way of developing parsers.</p>
+
+<p>The result is simply a literal translation of the official C11 grammar into
+the Pecan notation.  It does not take into account common extensions or other
+variations to the C11 language, or differing interpretations of the standard,
+nor does it attempt to deal with all of the practical issues that arise in real
+C compilers. It has also only been lightly tested - it is not intended to be a
+compiler-grade parser.</p>
 
 <p>The rules from the C11 standard are presented with a few obvious cosmetic
 changes to the notation for compatibilty with Pecan.  Terminal symbols in bold
@@ -35,6 +39,10 @@ effectively presented in a mythical language which is Pecan with an extra
 transformations until the alternatives of any <code>|</code> operator can
 clearly be distinguished by the PEG operator <code>/</code> instead, so that the
 <code>|</code> operator can be eliminated.</p>
+
+<p>Rules taken from the standard, or needing more transformation work, are
+displayed in <code>blue</code>, whereas final Pecan rules are displayed in <code
+class="pecan">green</code>.</p>
 
 <p>The development described here amounts to translating the C11 syntax into a
 near-recursive-descent form, which has been done before, perhaps most notably in
@@ -55,14 +63,14 @@ that the character encoding is UTF-8, and that conversion of all newlines to
 <code>\</code> and preprocessing have already been done.  Scanning does not then
 involve any changes to the source text.  The initial rule of the scanner is:</p>
 
-<pre>tokens = @tokens token* Uc!
+<pre class="pecan">tokens = @tokens token* Uc!
 </pre>
 
 <p>To ensure that the scanner produces a single output, there is an initial
-action <code>@tokens</code> which produces an empty list of tokens. Thereafter,
-as each token is recognized, an action adds the token to the list. The end of
-file is recognized using <code>Uc!</code>. The original rule for a token from
-the standard is:</p>
+action <code class="pecan">@tokens</code> which produces an empty list of
+tokens. Thereafter, as each token is recognized, an action adds the token to the
+list. The end of file is recognized using <code class="pecan">Uc!</code>. The
+original rule for a token from the standard is:</p>
 
 <pre>token = keyword | identifier | constant | string-literal | punctuator
 </pre>
@@ -75,7 +83,7 @@ constants before keywords or identifiers, because of the possibility of a letter
 Keywords are recognized before identifiers, to keep the definition of
 identifiers simple, as in the original grammar.  So the translated rule is:</p>
 
-<pre>token =
+<pre class="pecan">token =
     gap / comment / constant / string-literal /
     keyword / identifier / punctuator
 </pre>
@@ -83,7 +91,7 @@ identifiers simple, as in the original grammar.  So the translated rule is:</p>
 <p>White space and comments can be recognized as tokens, and then discarded,
 like this:</p>
 
-<pre>gap = (' ' / newline / tab / vtab / formfeed)+ @
+<pre class="pecan">gap = (' ' / newline / tab / vtab / formfeed)+ @
 
 comment =
     "//" (newline! visible)* @ /
@@ -100,16 +108,17 @@ encoding-prefix = "u8" | "u" | "U" | "L"
 
 <p>This can be translated into:</p>
 
-<pre>string-literal =
+<pre class="pecan">string-literal =
     '"' s-char-sequence? '"' @1string /
     [encoding-prefix '"'] s-char-sequence? '"' @1string
 
 encoding-prefix = "u8" / "u" / "U" / "L"
 </pre>
 
-<p>The try construct <code>[encoding-prefix '"']</code> ensures that a prefix
-such as <code>u8</code> on its own does not match. The characters inside a
-string literal are described in the original grammar by:</p>
+<p>The try construct <code class="pecan">[encoding-prefix '"']</code> ensures
+that a prefix such as <code class="pecan">u8</code> on its own does not match.
+The characters inside a string literal are described in the original grammar
+by:</p>
 
 <pre>s-char-sequence =
     s-char |
@@ -120,7 +129,7 @@ string literal are described in the original grammar by:</p>
 express repetition.  Such rules can usually be translated in a routine way using
 repetition operators like this:</p>
 
-<pre>s-char-sequence = s-char+
+<pre class="pecan">s-char-sequence = s-char+
 </pre>
 
 <p>In C, as in many languages, a word like <code>int</code> is not recognized as
@@ -134,7 +143,7 @@ be resolved using a greedy convention, sometimes called maximal munch, where it
 is assumed that the longest alternative is the one intended. To deal with this
 explicitly in the rule for keywords, lookahead is used:</p>
 
-<pre>keyword =
+<pre class="pecan">keyword =
     ["alignof" more!] @1alignof /
     ["auto" more!] @1auto /
     ["break" more!] @1break /
@@ -148,7 +157,7 @@ the scanner.  Those are recognized during parsing.  Using Unicode letters in
 place of "other implementation-defined characters", the translated rules for
 identifiers are:</p>
 
-<pre>identifier = identifier-nondigit more* @1id
+<pre class="pecan">identifier = identifier-nondigit more* @1id
 identifier-nondigit = nondigit / universal-character-name / other
 more = identifier-nondigit / digit
 nondigit = '_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -166,7 +175,7 @@ prefix of another, the longer one is recognized preferentially, according to the
 greedy convention.  Perhaps the easiest way to be sure of that is to list them
 in length order.</p>
 
-<pre>punctuator =
+<pre class="pecan">punctuator =
     "%:%:" @1hshs /
     "&lt;&lt;=" @1ltlteq /
     ">>=" @1gtgteq /
@@ -185,7 +194,7 @@ in length order.</p>
 
 <p>Enumeration constants can't be distinguished from identifiers in the scanner,
 so they need to be removed from this rule and dealt with in the parser.
-Character constants can have a prefix before the <code>"'"</code>, and can be
+Character constants may have a prefix before the <code>"'"</code>, and can be
 recognised in a similar way to string literals. It is convenient to deal with
 them as the first alternative to get them out of the way.  Numerical constants
 cause a problem, because both integer and floating constants can start with
@@ -200,12 +209,13 @@ lookahead to try one alternative and then the other:</p>
 to find an equivalent form where no lookahead is needed.  However, this turns
 out to be impossible. That's because, for example, <code>08</code> is
 technically two tokens because <code>8</code> is not an octal digit, whereas
-<code>08.</code> is a single floating constant.  Detection of non-octal digits
-in octal constants could be left until a later semantic pass, but perhaps a
-better approach is to find a cheap lookahead which looks for the first
-non-digit.</p>
+<code>08.</code> is a single floating constant.  That means, after accepting the
+<code>0</code>, lookahead is needed at least as far as the dot before knowing
+whether the token has ended.  Detection of non-octal digits in octal constants
+could be left until a later semantic pass, but perhaps a better approach is to
+find a cheap lookahead which looks for the first non-digit.</p>
 
-<pre>constant =
+<pre class="pecan">constant =
     character-constant / is-float! integer-constant / floating-constant
 
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
@@ -225,7 +235,7 @@ the source text contains <code>0x1</code> then this could match
 match <code>octal-constant</code>.  The greedy convention suggests that the
 hexadecimal case should be checked first:</p>
 
-<pre>integer-constant =
+<pre class="pecan">integer-constant =
     hexadecimal-constant integer-suffix? @1hex /
     octal-constant integer-suffix? @1octal /
     decimal-constant integer-suffix? @1decimal
@@ -248,7 +258,7 @@ work.  The original rule for <code>fractional-constant</code> is:</p>
 </pre>
 
 <p>This is typical of many rules where there is a common left factor which is
-reasonably easy to tranform away using routine transformations.  The first
+reasonably easy to transform away using routine transformations.  The first
 alternative can be expanded into two alternatives, according to whether the
 optional <code>digit-sequence</code> is absent or present:</p>
 
@@ -269,15 +279,15 @@ changed:</p>
 <p>This can now be substituted into the <code>decimal-floating-constant</code>
 rule, and similar transformations applied to the result, to give:</p>
 
-<pre>decimal-floating-constant:
+<pre class="pecan">decimal-floating-constant:
     '.' digit-sequence exponent-part? floating-suffix? /
     digit-sequence ('.' digit-sequence?)? exponent-part? floating-suffix?
 </pre>
 
 <p>The same approach can be taken to the remaining original rules.</p>
 
-<p>Although the translation has involved some work, it has had the effect of
-exposing and resolving some issues.</p>
+<p>Although this translation of the C11 lexical rules has involved some work, it
+has had the effect of exposing and resolving some issues.</p>
 
 <h2>Parser: external definitions</h2>
 
