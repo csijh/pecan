@@ -300,13 +300,14 @@ has had the effect of exposing and resolving some issues.</p>
 
 <h2>Parser: external definitions</h2>
 
-<p>A first prototype of the grammar, just demonstrating the handling of
-top level definitions and declarations, is:</p>
+<p>The remainder of the C11 grammar covering the parser rules will be tackled in
+sections.  A first prototype of the grammar, just demonstrating the handling of
+external definitions in section A.2.4 of the standard, is:</p>
 
 <p class="indent"><a href="c-parse-a.txt">c-parse-a.txt</a></p>
 
 <p>With a few obvious cosmetic changes to the notation for compatibility with
-Pecan, the CFG-based grammar in the C11 standard (A.2.4) begins with:</p>
+Pecan, the CFG-based grammar begins with:</p>
 
 <pre class="c11">translation-unit =
     external-declaration | translation-unit external-declaration
@@ -448,6 +449,11 @@ parsing.</p>
 
 <h2>Parser: declarations</h2>
 
+<p>A second prototype of the grammar, demonstrating the full range of
+declarations from appendix section A.2.2 of the C11 standard, is:</p>
+
+<p class="indent"><a href="c-parse-b.txt">c-parse-b.txt</a></p>
+
 <p>Most of the problems faced in parsing declarations are fairly easy.  For
 example, the original grammar rule from the C11 standard (A.2.2) for a struct or
 union specifier is:</p>
@@ -505,28 +511,34 @@ being matched in the second rule:</p>
     direct-declarator `(` identifier-list? `)` |
 </pre>
 
-<p>Removing the left recursion, inventing an extra <code>bracket</code> rule for
-clarity, combining the contents of each kind of bracket, and tidying up,
-yields:</p>
+<p>Removing the left recursion, combining the contents of each kind of bracket,
+disambiguating alternatives <code>parameter-type-list</code> and
+<code>identifier-list</code> by reversing the alternatives and using lookahead
+to check for the first identifier, inventing extra rules for clarity, and
+tidying up, yields:</p>
 
 <pre class="pecan">direct-declarator =
-    (identifier / `(` declarator `)`) bracket*
+    (identifier / `(` declarator `)`) dd-bracket*
 
-bracket =
-    `(` (identifier&amp; identifier-list)? / parameter-type-list `)` /
-    `[` (
-        type-qualifier-list (
-            assignment-expression /
-            `static` assignment-expression /
-            `*`
-        )? /
-        `static` type-qualifier-list? assignment-expression /
-        assignment-expression /
-        `*`
-    )? `]`
+dd-bracket =
+    `(` dd-parameters? `)` / `[` dd-array-size? `]`
+
+dd-parameters =
+    identifier&amp; identifier-list / parameter-type-list
+
+dd-array-size =
+    `*` /
+    `static` type-qualifier-list? assignment-expression /
+    type-qualifier-list dd-simple-array-size? /
+    assignment-expression
+
+dd-simple-array-size =
+    `*` /
+    `static` assignment-expression /
+    assignment-expression
 </pre>
 
-<p>The original rule for <code>direct-declarator</code> is:</p>
+<p>The original rule for <code>direct-abstract-declarator</code> is:</p>
 
 <pre class="c11">direct-abstract-declarator =
     `(` abstract-declarator `)` |
@@ -537,28 +549,23 @@ bracket =
     direct-abstract-declarator? `(` parameter-type-list? `)`
 </pre>
 
-<p>Removing the left recursion, adding an extra rule
-<code>abstract-bracket</code>, combining and tidying, yields:</p>
+<p>Going through a similar sequence of small transformations yields:</p>
 
 <pre class="pecan">direct-abstract-declarator =
-    `(` abstract-declarator `)` abstract-bracket* / abstract-bracket+
+    `(` abstract-declarator `)` dad-bracket* / dad-bracket+
 
-abstract-bracket =
-    `(` parameter-type-list? `)` /
-    `[` (
-        type-qualifier-list (
-            assignment-expression /
-            `static` assignment-expression
-        )?
-        `static` type-qualifier-list? assignment-expression /
-        assignment-expression /
-        `*`?
-    ) `]`
+dad-bracket =
+    `(` parameter-type-list? `)` / `[` dad-array-size? `]`
+
+dad-array-size =
+    `*` /
+    `static` type-qualifier-list? assignment-expression /
+    type-qualifier-list dad-simple-array-size? /
+    assignment-expression
+
+dad-simple-array-size =
+    assignment-expression / `static` assignment-expression
 </pre>
-
-<hr/>
-<p><b>Not yet updated from C99</b></p>
-<hr/>
 
 <p>The original rule for <code>parameter-declaration</code> is:</p>
 
@@ -578,47 +585,95 @@ abstract-bracket =
 <p>The approach taken earlier to combine alternatives by transformation to find
 their common prefixes doesn't work here, because recursion intervenes before the
 issue is resolved.  So, it is better to use lookahead.  However, it is worth
-finding a 'cheap' lookahead, not involving actions or complexities.  The main
-difference between the alternatives is that <code>declarator</code> includes an
-identifier.  Checking the possibilities, only <code>`*`</code> or
-<code>type-qualifier</code> or <code>`(`</code> tokens can occur before the
-identifier. On the other hand, in an <code>abstract-declarator</code>, a close
-bracket must appear before the end.  This leads to:</p>
+finding a 'cheap' lookahead.  The main difference between the alternatives is
+that <code>declarator</code> includes an identifier.  Checking the
+possibilities, only <code>`*`</code> or <code>type-qualifier</code> or
+<code>`(`</code> tokens can occur before the identifier. On the other hand, in
+an <code>abstract-declarator</code>, a close bracket must appear before the end.
+This leads to:</p>
 
 <pre class="pecan">parameter-declaration = declaration-specifiers (
-    ((`*` / type-qualifier / `(`)* `identifier`)&amp; declarator /
+    has-identifier&amp; declarator /
     abstract-declarator?
 )
+
+has-identifier =
+    (`*` / type-qualifier / `(`)* `identifier`
 </pre>
 
-<p><b><i>discussion incomplete</i></b>  Files which illustrate some further
-steps are:</p>
+<p>The transformation of the remainder of the declaration rules is relatively
+straightforward.</p>
 
-<p class="indent"><a href="c11-b.txt">c11-b.txt</a><br/>
-<a href="c11-c.txt">c11-c.txt</a></p>
+<h2>Parser: statements</h2>
 
+<hr/>
+<p><b>Development incomplete</b></p>
+<hr/>
 
-<!--
-<pre>
-    direct-declarator = (identifier / `(` declarator `)`) dd*
-    dd = `[` dd1 `]` / `(` dd2 `)`
-    dd1 =
-        type-qualifier-list (`static`? assignment-expression / `*`?) /
-        assignment-expression /
-        `static` type-qualifier-list? assignment-expression /
-        `*`?
-    dd2 = (identifier&amp; identifier-list)? / parameter-type-list
+<p>A third prototype, adding statement rules from A.2.3 of the standard, is</p>
 
-    direct-abstract-declarator = `(` abstract-declarator `)` dad*
-    dad = `[` dad1 `]` / `(` dad2 `)`
-    dad1 =
-        type-qualifier-list (`static`? assignment-expression)? /
-        assignment-expression /
-        `static` type-qualifier-list? assignment-expression /
-        `*`?
-    dad2 = parameter-type-list?
+<p class="indent"><a href="c-parse-c.txt">c-parse-c.txt</a></p>
+
+<p>The original main rule for statements is:</p>
+
+<pre class="c11">
+statement =
+    labeled-statement |
+    compound-statement |
+    expression-statement |
+    selection-statement |
+    iteration-statement |
+    jump-statement
 </pre>
--->
+
+<p>Most statements begin with a distinctive keyword. A simple check reveals that
+the only overlap of first tokens is that <code>labeled-statement</code> and
+<code>expression-statement</code> can both start with an identifier.  However,
+only in the <code>labeled-statement</code> case is it immediately followed by a
+colon.  Thus the above rule can be translated trivially, and
+<code>labeled-statement</code> can be given a simple two-token lookahead:</p>
+
+<pre class="pecan">
+statement =
+    labeled-statement /
+    compound-statement /
+    expression-statement /
+    selection-statement /
+    iteration-statement /
+    jump-statement
+
+labeled-statement =
+    [identifier `:`] statement /
+    `case` constant-expression `:` statement /
+    `default` `:` statement
+
+compound-statement =
+    `{` block-item* `}`
+
+*** block-item:
+    declaration /
+    statement
+
+expression-statement =
+    expression? `;`
+
+*** selection-statement =
+    `if` `(` expression `)` statement /
+    `if` `(` expression `)` statement `else` statement /
+    `switch` `(` expression `)` statement
+
+*** iteration-statement =
+    `while` `(` expression `)` statement /
+    `do` statement `while` `(` expression `)` `;` /
+    `for` `(` expression? `;` expression? `;` expression? `)` statement /
+    `for` `(` declaration expression? `;` expression? `)` statement
+
+jump-statement =
+    `goto` identifier `;` /
+    `continue` `;` /
+    `break` `;` /
+    `return` expression? `;`
+</pre>
 
 </body>
 </html>

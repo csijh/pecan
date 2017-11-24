@@ -148,6 +148,28 @@ dad-array-size =
 dad-simple-array-size =
     assignment-expression / `static` assignment-expression
 
+// ---------- Statements (C11 standard A.2.3) -------------------------------
+
+statement =
+    labeled-statement /
+    compound-statement /
+    expression-statement /
+    selection-statement /
+    iteration-statement /
+    jump-statement
+
+labeled-statement =
+    [identifier `:`] statement /
+    `case` constant-expression `:` statement /
+    `default` `:` statement
+
+// label       ... identifier : ... case const : ... default :
+// compound    ... {
+// expression  ...
+// select      ... if ... switch
+// iterate     ... while ... do ... for
+// jump        ... goto ... continue ... break ... return
+
 // ---------- Temporary definitions -------------------------------------------
 
 typedef-name = `type`
