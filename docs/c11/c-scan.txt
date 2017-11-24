@@ -229,14 +229,14 @@ tokens
 id x
 id y
 ==========
-// String literals: TODO: Investigate possible bug
-"abc" L"abc" "\"" "abc\"xyz"
+// String literals: note escaped backslashes in input and expected output
+"abc" L"abc" "\\"" "abc\\"xyz"
 ----------
 tokens
 string "abc"
 string L"abc"
-string ""
-string "abcxyz"
+string "\\""
+string "abc\\"xyz"
 ==========
 // Keywords and identifiers
 int x intx
