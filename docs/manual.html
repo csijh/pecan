@@ -43,12 +43,6 @@
 </ul>
 </li>
 <li><a href="#testing">Testing</a></li>
-<li><a href="#java">Generating Code</a>
-<ul>
-<li><a href="#code">Bytecode</a></li>
-</ul>
-</li>
-<li><a href="#side">Side Effects</a></li>
 <li><a href="#checks">Consistency Checks</a>
 <ul>
 <li><a href="#type">Type Checking</a></li>
@@ -56,6 +50,12 @@
 <li><a href="#token">Token Checking</a></li>
 <li><a href="#output">Output Checking</a></li>
 </ul>
+<li><a href="#java">Generating Code</a>
+<ul>
+<li><a href="#code">Bytecode</a></li>
+</ul>
+</li>
+<li><a href="#side">Side Effects</a></li>
 </li>
 <li><a href="#transforms">Transforms</a></li>
 <li><a href="#pecan">The Pecan grammar</a></li>
@@ -893,6 +893,162 @@ is the five characters <code>\960x</code></li>
 is a line ending in CR instead of LF</li>
 </ul>
 
+<h2 id="checks">Consistency Checks</h2>
+
+<p>A number of checks are performed on a grammar which help to ensure
+correctness, or at least consistency. As well as obvious checks, such as syntax
+checking of the grammar, and checking that each rule name is defined exactly
+once, the following further checks are done:</p>
+
+<h3 id="type">Type Checking</h3>
+
+<p>A grammar is checked to see if it contains character notations, or tags, but
+not both.  If it contains character notations (<code>"..."</code> or
+<code>'...'</code> or numbers or ranges) then the input to be parsed by the
+grammar is text. If the grammar contains tags, then the input to be parsed
+consists of tokens.</p>
+
+<p>If the range operator is used, there is a check that each operand is a
+character, i.e. a one-character string or one-character set, or a name which
+refers to one of those:</p>
+
+<pre>digit = "0" .. "9"
+letter = 'a' .. 'z' / 'A' .. 'Z'
+control = NUL .. US
+NUL = 0
+US = 31
+</pre>
+
+<p>These checks are implemented by classifying every expression in the grammar
+according to whether or not it refers to a single character.</p>
+
+<h3 id="loop">Loop Checking</h3>
+
+<p>Pecan checks that the grammar contains no obvious infinite loops.  More
+precisely, Pecan checks for left recursion.  The simplest example is where a
+rule mentions its own name at the start of its right hand side, or at the start
+of one of its alternatives:</p>
+
+<pre>sum = sum "+" term / term
+</pre>
+
+<p>In a Pecan grammar, a rule of this form leads to an immediate infinite loop,
+and so is reported as an error.</p>
+
+<p>Indirect left recursion is also detected.  That is where two or more rules
+mention each other at the beginning:</p>
+
+<pre>expression1 = expression2 ...
+expression2 = expression1 ...
+</pre>
+
+<p>Some less obvious cases of left recursion are also detected, e.g.</p>
+
+<pre>statement = label* statement
+</pre>
+
+<p>Although <code>statement</code> does not mention itself right at the
+beginning, the expression <code>label*</code> may succeed without any input
+being matched, and therefore an infinite loop ensues.</p>
+
+<p>This check is implemented by finding out for each expression in the grammar
+whether or not it is optional, i.e. whether it can succeed without making any
+progress by matching some input.  Then, for each rule, the rule names which it
+starts with are recorded, taking account of initial optional expressions.
+Finally, any loops within these recorded names are detected.</p>
+
+<!--
+<h3 id="token">Token Checking</h3>
+
+<p>For grammars which have text as input, a check is made that all tokens
+produced are non-empty, so that continual progress is made through the
+characters in the input.  For example:</p>
+
+<pre>id = letter+ @identifier
+letter = 'a' .. 'z'
+</pre>
+
+<p>Here, it is clear that by the time the accept action
+<code>@identifier</code> is reached, at least one letter has been matched from
+the input.  On the other hand, suppose the <code>id</code> rule was:</p>
+
+<pre>id = letter* @identifier
+</pre>
+
+<p>This causes an error message, because <code>@identifer</code> can be reached
+without matching any input characters.  However, if this <code>id</code> rule
+is always used in a context where at least one character has already been
+matched, i.e. the <code>id</code> rule refers to the remainder of a token
+rather than a whole token, then there is no error.</p>
+
+<p>This check is implemented by making as many deductions as possible about
+positions in the grammar at which input characters have definitely been matched
+since the previous token.  This is a conservative check - it is possible for a
+pathological grammar to produce an error message even though no empty token
+would ever be created in practice.</p>
+
+<p>There is a further check that a scanner makes no attempt to read past the
+end of the input.  For example, suppose there is a scanner rule like
+this:</p>
+
+<pre>tokens = token+ '' @end
+token =  space / identifier / keyword / operator / punctuation
+</pre>
+
+<p>This is fine, because all that follows the end of text <code>''</code> is an
+action, not any attempt to match any characters.  However, suppose the
+rule is:</p>
+
+<pre>tokens = token+
+token = space / identifier / keyword / operator / punctuation / end
+end = '' @end
+</pre>
+
+<p>This does cause an error, because after recognising the end of text, the
+scanner could continue to look for more tokens.</p>
+-->
+<h3 id="output">Output Checking</h3>
+
+<p>Actions are assumed to treat output items in a stack-like manner.  Checks are
+made to guarantee consistent handling of output items.  One check is that, at
+the end of processing, there is exactly one output item.  For example:</p>
+
+<pre>example = "1" @n "2" @n "3" @n @2add
+</pre>
+
+<p>In this case, three items are pushed onto the stack, and two of them are
+combined into one by the <code>add</code> action, but that leaves two items on
+the stack at the end of processing, so an error is reported.</p>
+
+<p>A second check is that the stack never underflows.  For example:</p>
+
+<pre>example = "1" @n @2add
+</pre>
+
+<p>Here, when the <code>add</code>action is reached, there is only one output
+item on the stack, whereas two previous output items are supposed to be passed
+to <code>add</code>, so an error is reported.</p>
+
+<p>To implement these checks, Pecan calculates the overall number of items added
+to the stack, possibly negative, for each expression in the grammar.  It also
+calculates a low water mark value for every expression in the grammar,
+representing the number of items that are needed on the stack during processing
+of the expression.  It then checks that for the first rule in the grammar, which
+represents the final result, one item is added, and the low water mark isn't
+negative.</p>
+
+<p>In order to carry out these checks, a very uniform approach to actions has
+to be taken.  For example, Pecan checks that each alternative in a choice adds
+the same number of items to the stack, and that where there is a repetition
+operator, e.g. <code>x?</code> or <code>x*</code> or <code>x+</code>, the
+subexpression <code>x</code> has no overall effect on the number of items on
+the stack, so that the number of times <code>x</code> is repeated doesn't
+have any overall effect on the stack size.</p>
+
+<p>These checks are conservative, i.e. there could be pathological grammars
+which always correctly produce one output item in practice, but which don't
+pass the checks.</p>
+
 <h2 id="java">Generating Code</h2>
 
 <p><b><i>The rest of this manual has not been updated from Pecan version 3.  In
@@ -1188,217 +1344,26 @@ categories as well as simple ascii characters.</p>
 
 <h2 id="side">Side Effects</h2>
 
-<p>If the methods provided for carrying out actions are pure functions,
-i.e. each one just evaluates or builds a result from its arguments, no problems
-arise.  If, however, the actions affect global data, e.g. a symbol table is
-built during scanning or parsing, the methods are said to have side effects.
-Side effects can cause unexpected problems if a grammar contains backtracking
-or lookahead.</p>
+<p>A grammar is linked with external code to make a practical parser.  The
+actions in the grammar become calls to this external code.  As well as
+manipulating the stack of output items, the external code may very well maintain
+a state of some kind, and the actions may have side effects on that state.</p>
 
-<p>As well as returning to a previous position in the input, backtracking needs
-to undo any effects caused by output actions.  To handle this, the programmer
-must provide an external function <code>undo</code> which reverses the side
-effects associated with the most recent actions.</p>
+<p>Such side effects are awkward, because they interact badly with lookahead. On
+the face of it, some system of undoing side effects would have to implemented,
+so that backtracking could be guaranteed to have the right effect.  As well as
+returning to a previous position in the input, backtracking would need to undo
+any effects caused by actions. In Pecan, at present, this isn't done. Instead,
+actions are switched off during lookahead. It is assumed that lookahead is only
+used to ask simple syntactic questions, in order to resolve ambiguities.</p>
 
-<p>In parsers, though not scanners, side effects can make a difference to
-subsequent parsing.  This can be used to solve awkward context-sensitive
-features of some languages, e.g. the problem of type synonyms introduced by
-the <code>typedef</code> keyword in C and C++.</p>
-
-<p>This effect is possible because an external function <code>tag</code> is
-called to find the type of a token, and the result returned by this function
-could depend on some global state.  For example, a symbol table could be
-constructed during parsing, and the type of a token could depend on looking it
-up in the symbol table.  To support correct backtracking or lookahead in this
-situation, the provided <code>undo</code> function must remove recent entries
-in the symbol table.  A single token in the input could be processed multiple
-times and need not be given the same type each time, so Pecan calls
-the <code>tag</code> method each time.  Also, since side effects could change
-the progress of parsing during lookahead, Pecan continues to make external
-action calls during lookahead, just as with backtracking, and calls
-<code>undo</code> when the lookahead is complete.</p>
-
-<h2 id="checks">Consistency Checks</h2>
-
-<p>A number of checks are performed on a grammar which help to ensure
-correctness, or at least consistency.  As well as obvious checks, such as
-syntax checking of the grammar, and checking that each rule name is defined
-exactly once, the following further checks are done:</p>
-
-<h3 id="type">Type Checking</h3>
-
-<p>If a request is made to generate a scanner (or combined scanner-parser),
-then there is a check that the grammar contains character handling notation.
-If a request is made to generate a parser, on the other hand, then there is a
-check that there is no character handling notation.</p>
-
-<p>If the range operator is used, there is a check that each operand is an
-ASCII character, i.e. a one-character string or one-character set, or a name
-which refers to one of those:</p>
-
-<pre>digit = "0" .. "9"
-letter = 'a' .. 'z' / 'A' .. 'Z'
-control = NUL .. US
-NUL = 0
-US = 31
-</pre>
-
-<p>The set difference operator is also checked to make sure each operand is a
-character set, i.e. an explicitly listed set, or a choice involving just
-characters and sets, or name which refers to one of those:</p>
-
-<pre>nonAsciiDigit = Nd - '0123456789'
-nonAsciiDigit2 = Nd - ('0'..'9')
-inString = visible - '"'
-visible = ' ' .. '~'
-</pre>
-
-<p>These checks are implemented by classifying every expression in the grammar
-as referring to a character, or a character set, or neither.</p>
-
-<h3 id="loop">Loop Checking</h3>
-
-<p>Pecan checks that the grammar contains no obvious infinite loops.  More
-precisely, Pecan checks for left recursion.  The simplest example is where a
-rule mentions its own name at the start of its right hand side, or at the start
-of one of its alternatives:</p>
-
-<pre>sum = sum "+" term / term
-</pre>
-
-<p>In a Pecan grammar, a rule of this form leads to an immediate infinite loop,
-and so is reported as an error.  For more information on recursion, see the
-tutorial.</p>
-
-<p>Indirect left recursion is also detected.  That is where two or more rules
-mention each other at the beginning:</p>
-
-<pre>expression1 = expression2 ...
-expression2 = expression1 ...
-</pre>
-
-<p>Some less obvious cases of left recursion are also detected, e.g.</p>
-
-<pre>statement = label* statement
-</pre>
-
-<p>Although <code>statement</code> does not mention itself right at the
-beginning, the expression <code>label*</code> may succeed without any input
-being matched, and therefore an infinite loop ensues.</p>
-
-<p>This check is implemented by finding out for each expression in the grammar
-whether or not it is optional, i.e. whether it can succeed without making any
-progress by matching some input.  Then, for each rule, the rule names which it
-starts with, possibly excluding initial optional expressions, are recorded.
-Finally, any loops within these recorded names are detected.</p>
-
-<h3 id="token">Token Checking</h3>
-
-<p>For scanners, which have text as input, a check is made that all tokens
-produced are non-empty, so that continual progress is made through the
-characters in the input.  For example:</p>
-
-<pre>id = letter+ @identifier
-letter = 'a' .. 'z'
-</pre>
-
-<p>Here, it is clear that by the time the accept action
-<code>@identifier</code> is reached, at least one letter has been matched from
-the input.  On the other hand, suppose the <code>id</code> rule was:</p>
-
-<pre>id = letter* @identifier
-</pre>
-
-<p>This causes an error message, because <code>@identifer</code> can be reached
-without matching any input characters.  However, if this <code>id</code> rule
-is always used in a context where at least one character has already been
-matched, i.e. the <code>id</code> rule refers to the remainder of a token
-rather than a whole token, then there is no error.</p>
-
-<p>An exception is made for a sentinel token that marks the end of the
-input.  For example, consider:</p>
-
-<pre>expression = sum '' @end
-</pre>
-
-<p>For the purposes of carrying out the check, the empty set <code>''</code>
-which matches the end of the input is treated as if it matched an input
-character, and no error is given.  However, no characters are actually matched,
-and an empty character sequence is passed to the <code>end</code> action.</p>
-
-<p>This check is implemented by making as many deductions as possible about
-positions in the grammar at which input characters have definitely been matched
-since the previous token.  This is a conservative check - it is possible for a
-pathological grammar to produce an error message even though no empty token
-would ever be created in practice.</p>
-
-<p>There is a further check that a scanner makes no attempt to read past the
-end of the input.  For example, suppose there is a scanner rule like
-this:</p>
-
-<pre>tokens = token+ '' @end
-token =  space / identifier / keyword / operator / punctuation
-</pre>
-
-<p>This is fine, because all that follows the end of text <code>''</code> is an
-action, not any attempt to match any characters.  However, suppose the
-rule is:</p>
-
-<pre>tokens = token+
-token = space / identifier / keyword / operator / punctuation / end
-end = '' @end
-</pre>
-
-<p>This does cause an error, because after recognising the end of text, the
-scanner could continue to look for more tokens.</p>
-
-<h3 id="output">Output Checking</h3>
-
-<p>If the grammar contains any combine actions, they are assumed to treat
-output items in a stack-like manner.  This stack is managed by Pecan, so that
-checks can be made to guarantee consistent handling of output items.  One check
-is that, at the end of processing, there is exactly one output item.  For
-example:</p>
-
-<pre>example = "1" @n "2" @n "3" @n @2add
-</pre>
-
-<p>In this case, three items are pushed onto the stack, and two of them are
-combined into one by the <code>add</code> action, but that leaves two items on
-the stack at the end of processing, so an error is reported.</p>
-
-<p>This check is not made, of course, if there are no combine actions in the
-grammar.  It is assumed that the result is intended to be an array of tokens of
-arbitrary length.</p>
-
-<p>A second check is that the stack never underflows.  For example:</p>
-
-<pre>example = "1" @n @2add
-</pre>
-
-<p>Here, when the <code>add</code>action is reached, there is only one output
-item on the stack, whereas two previous output items are supposed to be passed
-to <code>add</code>, so an error is reported.</p>
-
-<p>To implement these checks, Pecan calculates the overall number of items
-added to or subtracted from the stack, for each expression in the grammar.  It
-also calculates a lower water mark value for every expression in the grammar,
-representing the number of items that are needed on the stack during processing
-of the expression.  It then checks that for the first rule in the grammar,
-which represents the final result, one item is added, and the low water mark
-isn't negative.</p>
-
-<p>In order to carry out these checks, a very uniform approach to actions has
-to be taken.  For example, Pecan checks that each alternative in a choice adds
-the same number of items to the stack, and that where there is a repetition
-operator, e.g. <code>x?</code> or <code>x*</code> or <code>x+</code>, the
-subexpression <code>x</code> has no overall effect on the number of items on
-the stack, so that the number of times <code>x</code> is repeated doesn't
-have any overall effect on the stack size.</p>
-
-<p>These checks are conservative, i.e. there could be pathological grammars
-which always correctly produce one output item in practice, but which don't
-pass the checks.</p>
+<p>On the other hand, if side effects were not allowed to have any effect on
+parsing, some features of some languages couldn't be handled.  The most infamous
+example is the C and C++ languages, where type names introduced using
+<code>typedef</code> need to be categorized properly to parse programs, and yet
+they can only be recognised after parsing their definitions, by maintaining a
+symbol table during parsing.  This is handled in Pecan by allowing side effects
+to change the types of tokens which haven't yet been read.</p>
 
 <h2 id="transforms">Transforms</h2>
 

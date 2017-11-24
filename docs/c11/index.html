@@ -457,7 +457,8 @@ union specifier is:</p>
     struct-or-union identifier
 </pre>
 
-<p>Rearranging to remove the common left factors gives:</p>
+<p>Expanding the first alternative, then rearranging to remove the common left
+factors gives:</p>
 
 <pre class="pecan">struct-or-union-specifier = struct-or-union (
     identifier (`{` struct-declaration-list `}`)? /
@@ -475,7 +476,8 @@ union specifier is:</p>
 enumerator-list = enumerator (`,` enumerator)*
 </pre>
 
-<p>Perhaps the most obvious way to translate the first definition is:</p>
+<p>Perhaps the most obvious way to translate the first definition, expanding,
+rearranging and combining left factors as before, is:</p>
 
 <pre class="pecan">enum-specifier = `enum` (
     identifier (`{` enumerator-list `,`? `}`)? /
@@ -483,8 +485,9 @@ enumerator-list = enumerator (`,` enumerator)*
 )
 </pre>
 
-<p>However, having a final optional comma means that care is needed to prevent
-it from being matched in the second rule:</p>
+<p>However, the fact that there is an optional final comma before the close
+curly bracket causes a problem.  It means that care is needed to prevent it from
+being matched in the second rule:</p>
 
 <pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
 </pre>
