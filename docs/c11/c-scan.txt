@@ -1,8 +1,10 @@
 // A scanner for C11.  It is assumed that the implementation-defined source
-// character set is Unicode and that the source text has been prepared so that
-// it is in UTF-8, that newlines have been converted to \n, trigraphs have been
-// expanded, lines ending with \ have been spliced and preprocessing has
-// already been done.
+// character set is Unicode in the UTF-8 encoding, and that the source text has
+// been prepared by converting newlines to \n, expanding trigraphs, splicing
+// lines ending with \, eliding consecutive string literals, and carrying out
+// preprocessing.
+
+//  ----- A.1.1 Tokens -----
 
 tokens = @tokens token* Uc!
 
@@ -22,30 +24,10 @@ comment =
     "/*" ("*/"! visible)* "*/" @
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc / newline
 
-string-literal =
-    '"' s-char-sequence? '"' @1string /
-    [encoding-prefix '"'] s-char-sequence? '"' @1string
+// ----- A.1.2 Keywords -----
 
-encoding-prefix = "u8" / "u" / "U" / "L"
-
-s-char-sequence = s-char+
-s-char = ('"' / '\' / newline)! visible / escape-sequence
-
-escape-sequence =
-    simple-escape-sequence / octal-escape-sequence /
-    hex-escape-sequence / universal-character-name
-
-simple-escape-sequence =
-    "\'" / ["\" '"'] / "\?" / "\\" /
-    "\a" / "\b" / "\f" / "\n" / "\r" / "\t" / "\v"
-
-octal-escape-sequence = ["\" octal-digit] (octal-digit octal-digit?)?
-
-hex-escape-sequence = "\x" hexadecimal-digit+
-
-universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
-hex-quad =
-    hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
+// Check that keyword doesn't continue with this to form an identifier
+more = identifier-nondigit / digit
 
 keyword =
     ["alignof" more!] @1alignof /
@@ -93,13 +75,129 @@ keyword =
     ["_Static_assert" more!] @1StaticAssert /
     ["_Thread_local" more!] @1ThreadLocal
 
+// ----- A.1.3 Identifiers -----
+
 // Assume keywords have already been excluded.  Include Unicode letters.
-identifier = identifier-nondigit more* @1id
+identifier = identifier-nondigit (identifier-nondigit / digit)* @1id
+
 identifier-nondigit = nondigit / universal-character-name / other
-more = identifier-nondigit / digit
+
 nondigit = '_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+
 digit = '0123456789'
+
 other = Lu / Ll / Lt / Lm / Lo
+
+// ----- A.1.4 Universal character names -----
+
+universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
+
+hex-quad =
+    hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
+
+// ----- A.1.5 Constants -----
+
+// Omit enumeration constants.
+constant =
+    character-constant / is-float! integer-constant / floating-constant
+
+// Look ahead to see if a number is floating or not
+is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
+
+integer-constant =
+    hexadecimal-constant integer-suffix? @1hex /
+    octal-constant integer-suffix? @1octal /
+    decimal-constant integer-suffix? @1decimal
+
+decimal-constant = nonzero-digit digit*
+
+octal-constant = '0' octal-digit*
+
+hexadecimal-constant = hexadecimal-prefix hexadecimal-digit+
+
+hexadecimal-prefix = "0x" / "0X"
+
+nonzero-digit = '123456789'
+
+octal-digit = '01234567'
+
+hexadecimal-digit = '0123456789abcdefABCDEF'
+
+integer-suffix =
+    unsigned-suffix (long-long-suffix / long-suffix)? /
+    long-long-suffix unsigned-suffix? /
+    long-suffix unsigned-suffix?
+
+unsigned-suffix = 'uU'
+
+long-suffix = 'lL'
+
+long-long-suffix = "ll" / "LL"
+
+floating-constant =
+    hexadecimal-floating-constant @1hexfloat /
+    decimal-floating-constant @1float
+
+decimal-floating-constant =
+    '.' digit-sequence exponent-part? floating-suffix? /
+    digit-sequence ('.' digit-sequence?)? exponent-part? floating-suffix?
+
+hexadecimal-floating-constant = hexadecimal-prefix hex-part1 hex-part2
+hex-part1 =
+    '.' hexadecimal-digit-sequence /
+    hexadecimal-digit-sequence ('.' hexadecimal-digit-sequence?)?
+hex-part2 = binary-exponent-part floating-suffix?
+
+// Fractional constants have been absorbed into the above rules.
+
+exponent-part = 'eE' sign? digit-sequence
+
+sign = '+-'
+
+digit-sequence = digit+
+
+binary-exponent-part = 'pP' sign? digit-sequence
+
+// Hexadecimal fractional constants have been absorbed into the above rules.
+// Binary exponent parts have been absorbed into the above rules.
+
+hexadecimal-digit-sequence = hexadecimal-digit+
+
+floating-suffix = 'flFL'
+
+// Enumeration constants have been omitted - they are recognised during parsing.
+
+character-constant = ("'" / "L'" / "u'" / "U'") c-char-sequence "'" @1char
+
+c-char-sequence = c-char+
+
+c-char = ("'" / '\' / newline)! visible / escape-sequence
+
+escape-sequence =
+    simple-escape-sequence / octal-escape-sequence /
+    hex-escape-sequence / universal-character-name
+
+simple-escape-sequence =
+    "\'" / ["\" '"'] / "\?" / "\\" /
+    "\a" / "\b" / "\f" / "\n" / "\r" / "\t" / "\v"
+
+octal-escape-sequence = ["\" octal-digit] (octal-digit octal-digit?)?
+
+hex-escape-sequence = "\x" hexadecimal-digit+
+
+// ----- A.1.6 String literals -----
+
+string-literal =
+    '"' s-char-sequence? '"' @1string /
+    [encoding-prefix '"'] s-char-sequence? '"' @1string
+
+encoding-prefix = "u8" / "u" / "U" / "L"
+
+s-char-sequence = s-char+
+
+s-char = ('"' / '\' / newline)! visible / escape-sequence
+
+// ----- A.1.7 Punctuators -----
 
 punctuator =
     "%:%:" @1hshs /
@@ -157,62 +255,7 @@ punctuator =
     "," @1co /
     "#" @1hs
 
-// Omit enumeration constants.
-constant =
-    character-constant / is-float! integer-constant / floating-constant
-
-character-constant = ("'" / "L'" / "u'" / "U'") c-char-sequence "'" @1char
-
-c-char-sequence = c-char+
-c-char = ("'" / '\' / newline)! visible / escape-sequence
-
-// Look ahead to see if a number is floating or not
-is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
-
-integer-constant =
-    hexadecimal-constant integer-suffix? @1hex /
-    octal-constant integer-suffix? @1octal /
-    decimal-constant integer-suffix? @1decimal
-
-decimal-constant = nonzero-digit digit*
-octal-constant = '0' octal-digit*
-hexadecimal-constant = hexadecimal-prefix hexadecimal-digit+
-hexadecimal-prefix = "0x" / "0X"
-nonzero-digit = '123456789'
-octal-digit = '01234567'
-hexadecimal-digit = '0123456789abcdefABCDEF'
-
-integer-suffix =
-    unsigned-suffix (long-long-suffix / long-suffix)? /
-    long-long-suffix unsigned-suffix? /
-    long-suffix unsigned-suffix?
-
-unsigned-suffix = 'uU'
-long-suffix = 'lL'
-long-long-suffix = "ll" / "LL"
-
-floating-constant =
-    hexadecimal-floating-constant @1hexfloat /
-    decimal-floating-constant @1float
-
-decimal-floating-constant =
-    '.' digit-sequence exponent-part? floating-suffix? /
-    digit-sequence ('.' digit-sequence?)? exponent-part? floating-suffix?
-
-hexadecimal-floating-constant = hexadecimal-prefix hex-part1 hex-part2
-hex-part1 =
-    '.' hexadecimal-digit-sequence /
-    hexadecimal-digit-sequence ('.' hexadecimal-digit-sequence?)?
-hex-part2 = binary-exponent-part floating-suffix?
-
-exponent-part = 'eE' sign? digit-sequence
-sign = '+-'
-digit-sequence = digit+
-binary-exponent-part = 'pP' sign? digit-sequence
-hexadecimal-digit-sequence = hexadecimal-digit+
-floating-suffix = 'flFL'
-
-test = "x"? / "y"
+// Testing
 ==========
 x // comment
 y

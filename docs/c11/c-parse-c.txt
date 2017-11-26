@@ -1,5 +1,5 @@
 // A parser for C11, assuming the source has been pre-processed and scanned.
-// A second prototype, extended to include declarations.
+// A third prototype, extended to include statements.
 
 // ---------- External definitions (C11 standard A.2.4) -----------------------
 
@@ -21,9 +21,6 @@ declaration-list = declaration+
 declaration =
     static_assert-declaration @1declaration /
     declaration-specifiers init-declarator-list? `;` @1declaration
-
-static_assert-declaration =
-    `_Static_assert` `(` constant-expression `,` string-literal `)` `;`
 
 declaration-specifiers = declaration-specifier+
 
@@ -148,6 +145,26 @@ dad-array-size =
 dad-simple-array-size =
     assignment-expression / `static` assignment-expression
 
+initializer =
+    assignment-expression /
+    `{` initializer-list `,`? `}`
+
+initializer-list =
+    designation? initializer (`,` designation? initializer)*
+
+designation =
+    designator-list `=`
+
+designator-list =
+    designator +
+
+designator =
+    `[` constant-expression `]` /
+    `.` identifier
+
+static_assert-declaration =
+    `_Static_assert` `(` constant-expression `,` string-literal `)` `;`
+
 // ---------- Statements (C11 standard A.2.3) -------------------------------
 
 statement =
@@ -163,21 +180,37 @@ labeled-statement =
     `case` constant-expression `:` statement /
     `default` `:` statement
 
-// label       ... identifier : ... case const : ... default :
-// compound    ... {
-// expression  ...
-// select      ... if ... switch
-// iterate     ... while ... do ... for
-// jump        ... goto ... continue ... break ... return
+compound-statement = `{` block-item* `}`
+
+block-item = declaration / statement
+
+expression-statement = expression? `;`
+
+// Note: the dangling else problem doesn't arise with the / operator
+selection-statement =
+    `if` `(` expression `)` statement (`else` statement)? /
+    `switch` `(` expression `)` statement
+
+iteration-statement =
+    `while` `(` expression `)` statement /
+    `do` statement `while` `(` expression `)` `;` /
+    `for` `(` for-start expression? `;` expression? `)` statement
+
+for-start = declaration / expression? `;`
+
+jump-statement =
+    `goto` identifier `;` /
+    `continue` `;` /
+    `break` `;` /
+    `return` expression? `;`
 
 // ---------- Temporary definitions -------------------------------------------
 
 typedef-name = `type`
 identifier = `id`
-initializer = `init`
-compound-statement = `{` `}`
 constant-expression = `ce`
 assignment-expression = `ae`
+expression = `e`
 enumeration-constant = identifier
 string-literal = `"..."`
 ==========
