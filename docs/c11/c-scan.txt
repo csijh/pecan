@@ -78,7 +78,8 @@ keyword =
 // ----- A.1.3 Identifiers -----
 
 // Assume keywords have already been excluded.  Include Unicode letters.
-identifier = identifier-nondigit (identifier-nondigit / digit)* @1id
+identifier =
+    identifier-nondigit (identifier-nondigit / digit)* @1id
 
 identifier-nondigit = nondigit / universal-character-name / other
 
@@ -167,7 +168,9 @@ floating-suffix = 'flFL'
 
 // Enumeration constants have been omitted - they are recognised during parsing.
 
-character-constant = ("'" / "L'" / "u'" / "U'") c-char-sequence "'" @1char
+// A notation such as "L'" represents a two-character lookahead.
+character-constant =
+    ("'" / "L'" / "u'" / "U'") c-char-sequence "'" @1char
 
 c-char-sequence = c-char+
 

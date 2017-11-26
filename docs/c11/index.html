@@ -31,7 +31,7 @@ official grammar.</p>
 <p>Infamously, parsing of C requires type names introduced using
 <code>typedef</code> to be differentiated from other identifiers.  This cannot
 be done during scanning.  Instead, token tags must be altered during parsing,
-which must include some form of symbol table construction.  Pecan parsers allows
+which must include some form of symbol table construction.  Pecan parsers allow
 for this in their interaction with external code.  It is assumed that suitable
 external code will be added to the parser to achieve this.</p>
 
@@ -65,7 +65,9 @@ appearance in appendix A of the C11 standard, and the result will be presented
 as a separate scanner and parser. Below, rules taken from the standard, or
 needing more transformation work, are displayed in <code
 class="c11">blue</code>, whereas final Pecan rules are displayed in <code
-class="pecan">green</code>.</p>
+class="pecan">green</code>.  In describing transformations, only the first
+example of each straightforward technique, plus difficult issues, will be
+described.</p>
 
 <h2>The Scanner</h2>
 
@@ -101,19 +103,21 @@ original rule for a token from the standard is:</p>
 
 <p>In order to take a uniform approach to scanning, white space and comments,
 described elsewhere in the standard, are included, so that all of the text is
-processed.  Also, the order is changed to recognise string literals and
-constants before keywords or identifiers, because of the possibility of an
-encoding prefix at the start of a string literal or character constant. Keywords
-are recognized before identifiers, to keep the definition of identifiers simple,
-as in the original grammar.  So the translated rule is:</p>
+processed.  (Technically, these are supposed to handled during preprocessing,
+but they have been left in here for illustrative purposes.)</p>
+
+<p>The order of the alternatives is changed to recognise string literals and
+constants before keywords or identifiers, because of the ambiguity between
+encoding prefixes and identifiers. And keywords are recognized before
+identifiers, to keep the definition of identifiers simple, as in the original
+grammar.  So the translated rule is:</p>
 
 <pre class="pecan">token =
     gap / comment / constant / string-literal /
     keyword / identifier / punctuator
 </pre>
 
-<p>White space and comments can be recognized as tokens, and then discarded,
-like this:</p>
+<p>White space and comments can be recognized as tokens, and then discarded:</p>
 
 <pre class="pecan">gap = (' ' / newline / tab / vtab / formfeed)+ @
 
@@ -134,7 +138,7 @@ clearer to resolve them locally.  Many such ambiguities, including this one, can
 be resolved using a greedy convention, sometimes called maximal munch, where it
 is assumed that the longest alternative is the one intended. To deal with this,
 a rule is added to represent letters and digits which shouldn't follow the end
-of a keyword, then lookahead is used to check it for each keyword:</p>
+of a keyword, then lookahead is used to check each keyword:</p>
 
 <pre class="pecan">more = identifier-nondigit / digit
 
@@ -146,15 +150,39 @@ keyword =
     ["_Thread_local" more!] @1ThreadLocal
 </pre>
 
+<p>A naive translation of this grammar into a parser as a series of tests would
+be inefficient. If the translation involves switches to recognise characters,
+the efficiency would be much better.  However, each word would potentially still
+be examined twice, once as a possible keyword, and then again as an identifier.
+The traditional way to improve the efficiency further is to move the keyword
+checking from the grammar into the externally attached code, which looks up
+words in a hash table to decide if they are keywords or identifiers.</p>
+
 <h4>Identifiers</h4>
 
-<p>Identifiers exclude the keywords, and include type names introduced using
-<code>typedef</code>, and enumeration constants, which can't be distinguished in
-the scanner.  Those are recognized during parsing.  Using Unicode letters in
-place of "other implementation-defined characters", the translated rules for
-identifiers are:</p>
+<p>Identifiers exclude the keywords, which have already been matched. They
+include type names introduced using <code>typedef</code>, and enumeration
+constants, which can't be distinguished in the scanner, and must be recognized
+later during parsing. The original rule for identifiers is:</p>
 
-<pre class="pecan">identifier = identifier-nondigit (identifier-nondigit / digit)* @1id
+<pre class="c11">identifier =
+    identifier-nondigit |
+    identifier identifier-nondigit |
+    identifier digit
+</pre>
+
+<p>Many of the original grammar rules use left recursion in this simple way to
+express repetition.  Such rules can usually be translated in a routine way using
+repetition operators like this:</p>
+
+<pre class="pecan">identifier =
+    identifier-nondigit (identifier-nondigit / digit)* @1id
+</pre>
+
+<p>Using Unicode letters in place of "other implementation-defined characters",
+the remaining translated rules for identifiers are:</p>
+
+<pre class="pecan">identifier = identifier-nondigit more* @1id
 
 identifier-nondigit = nondigit / universal-character-name / other
 
@@ -168,6 +196,8 @@ other = Lu / Ll / Lt / Lm / Lo
 </pre>
 
 <h4>Universal character names</h4>
+
+<p>The rules for universal character names are easily transformed:</p>
 
 <pre class="pecan">universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
 
@@ -186,12 +216,10 @@ hex-quad =
 
 <p>Enumeration constants can't be distinguished from identifiers in the scanner,
 so they need to be removed from this rule and dealt with in the parser.
-Character constants may have a prefix before the <code>"'"</code>, and can be
-recognised in a similar way to string literals. It is convenient to deal with
-them as the first alternative to get them out of the way.  Numerical constants
-cause a problem, because both integer and floating constants can start with
-digits.  It is possible to translate directly into a Pecan grammar rule by using
-lookahead to try one alternative and then the other:</p>
+Numerical
+constants cause a problem, because both integer and floating constants can start
+with digits.  It is possible to translate directly into a Pecan grammar rule by
+using lookahead to try one alternative and then the other:</p>
 
 <pre class="c11">constant =
     character-constant / [integer-constant] / floating-constant
@@ -200,12 +228,13 @@ lookahead to try one alternative and then the other:</p>
 <p>It is tempting to try to improve on this by using a transformation approach
 to find an equivalent form where no lookahead is needed.  However, this turns
 out to be impossible. That's because, for example, <code>08</code> is
-technically two tokens because <code>8</code> is not an octal digit, whereas
-<code>08.</code> is a single floating constant.  That means, after accepting the
-<code>0</code>, lookahead is needed at least as far as the dot before knowing
-whether the token has ended.  Detection of non-octal digits in octal constants
-could be left until a later semantic pass, but perhaps a better approach is to
-find a cheap lookahead which looks for the first non-digit.</p>
+technically two tokens because <code>8</code> is not an octal digit, whereas the
+three characters <code>08.</code> form a single floating constant.  That means,
+after accepting the <code>0</code>, lookahead is needed at least as far as the
+dot before knowing whether the token has ended.  Detection of non-octal digits
+in octal constants could be left until a later semantic pass, but perhaps a
+better approach is to find a cheap lookahead which looks for the first
+non-digit.</p>
 
 <pre class="pecan">constant =
     character-constant / is-float! integer-constant / floating-constant
@@ -250,9 +279,9 @@ work.  The original rule for <code>fractional-constant</code> is:</p>
 </pre>
 
 <p>This is typical of many rules where there is a common left factor which is
-reasonably easy to transform away using routine transformations.  The first
-alternative can be expanded into two alternatives, according to whether the
-optional <code>digit-sequence</code> is absent or present:</p>
+reasonably easy to transform away using a sequence of routine transformations.
+The first alternative can be expanded into two alternatives, according to
+whether the optional <code>digit-sequence</code> is absent or present:</p>
 
 <pre class="c11">fractional-constant =
     '.' digit-sequence |
@@ -276,10 +305,19 @@ rule, and similar transformations applied to the result, to give:</p>
     digit-sequence ('.' digit-sequence?)? exponent-part? floating-suffix?
 </pre>
 
+<p>Character constants may have an encoding prefix before the <code>"'"</code>.
+To avoid a clash with identifiers, a small amount of lookahead, just two
+characters, is needed.  Pecan's string notation is sufficient for this:</p>
+
+<pre class="pecan">character-constant =
+    ("'" / "L'" / "u'" / "U'") c-char-sequence "'" @1char
+</pre>
+
+<p>The remaining rules for constants can be easily dealt with.</p>
+
 <h4>String literals</h4>
 
-<p>Leaving constants until later, string literals are described in the original
-grammar by:</p>
+<p>String literals are described in the original grammar by:</p>
 
 <pre class="c11">string-literal = encoding-prefix? '"' s-char-sequence? '"'
 
@@ -295,28 +333,16 @@ encoding-prefix = "u8" | "u" | "U" | "L"
 encoding-prefix = "u8" / "u" / "U" / "L"
 </pre>
 
-<p>The try construct <code class="pecan">[encoding-prefix '"']</code> ensures
-that a prefix such as <code>u8</code> on its own does not match.
-The characters inside a string literal are described in the original grammar
-by:</p>
+<p>The try construct <code class="pecan">[encoding-prefix '"']</code> deals with
+the overlap between prefixes and identifiers.</p>
 
-<pre class="c11">s-char-sequence =
-    s-char |
-    s-char-sequence s-char
-</pre>
-
-<p>Many of the original grammar rules use left recursion in this simple way to
-express repetition.  Such rules can usually be translated in a routine way using
-repetition operators like this:</p>
-
-<pre class="pecan">s-char-sequence = s-char+
-</pre>
+<h4>Punctuators</h4>
 
 <p>Punctuators are easier to recognize than keywords, because it doesn't matter
 what they are followed by. However, they have to be ordered so that if one is a
-prefix of another, the longer one is recognized preferentially, according to the
-greedy convention.  Perhaps the easiest way to be sure of that is to list them
-in length order.</p>
+prefix of another, the longer one is earlier and recognized preferentially,
+according to the greedy convention.  Perhaps the easiest way to be sure of that
+is to list them in order of length.</p>
 
 <pre class="pecan">punctuator =
     "%:%:" @1hshs /
@@ -328,7 +354,7 @@ in length order.</p>
     "#" @1hs
 </pre>
 
-<p>The same approach can be taken to the remaining original rules.</p>
+<p>The same approach can be taken to the remaining original lexical rules.</p>
 
 <p>Although this translation of the C11 lexical rules has involved some work, it
 has had the effect of exposing and resolving some issues.</p>
