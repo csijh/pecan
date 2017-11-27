@@ -10,76 +10,43 @@ tokens = @tokens token* Uc!
 
 // String-literals and constants and keywords must come before identifiers.
 token =
-    gap / comment / constant / string-literal /
-    keyword / identifier / punctuator
+    gap @ / comment @ / constant @1constant / string-literal @1string-literal /
+    keyword @1key / identifier @1identifier / punctuator @1key
 
-gap = (' ' / newline / tab / vtab / formfeed)+ @
+gap = (' ' / newline / tab / vtab / formfeed)+
 newline = 10
 tab = 9
 vtab = 11
 formfeed = 12
 
 comment =
-    "//" (newline! visible)* @ /
-    "/*" ("*/"! visible)* "*/" @
+    "//" (newline! visible)* /
+    "/*" ("*/"! visible)* "*/"
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc / newline
 
 // ----- A.1.2 Keywords -----
 
-// Check that keyword doesn't continue with this to form an identifier
-more = identifier-nondigit / digit
+// Check that keywords aren't followed by letters or digits
+keyword = [keyword-symbol (identifier-nondigit / digit)!]
 
-keyword =
-    ["alignof" more!] @1alignof /
-    ["auto" more!] @1auto /
-    ["break" more!] @1break /
-    ["case" more!] @1case /
-    ["char" more!] @1char /
-    ["const" more!] @1const /
-    ["continue" more!] @1continue /
-    ["default" more!] @1default /
-    ["do" more!] @1do /
-    ["double" more!] @1double /
-    ["else" more!] @1else /
-    ["enum" more!] @1enum /
-    ["extern" more!] @1extern /
-    ["float" more!] @1float /
-    ["for" more!] @1for /
-    ["goto" more!] @1goto /
-    ["if" more!] @1if /
-    ["inline" more!] @1inline /
-    ["int" more!] @1int /
-    ["long" more!] @1long /
-    ["register" more!] @1register /
-    ["restrict" more!] @1restrict /
-    ["return" more!] @1return /
-    ["short" more!] @1short /
-    ["signed" more!] @1signed /
-    ["sizeof" more!] @1sizeof /
-    ["static" more!] @1static /
-    ["struct" more!] @1struct /
-    ["switch" more!] @1switch /
-    ["typedef" more!] @1typedef /
-    ["union" more!] @1union /
-    ["unsigned" more!] @1unsigned /
-    ["void" more!] @1void /
-    ["volatile" more!] @1volatile /
-    ["while" more!] @1while /
-    ["_Alignas" more!] @1Alignas /
-    ["_Atomic" more!] @1Atomic /
-    ["_Bool" more!] @1Bool /
-    ["_Complex" more!] @1Complex /
-    ["_Generic" more!] @1Generic /
-    ["_Imaginary" more!] @1Imaginary /
-    ["_Noreturn" more!] @1Noreturn /
-    ["_Static_assert" more!] @1StaticAssert /
-    ["_Thread_local" more!] @1ThreadLocal
+keyword-symbol =
+    "alignof"     / "auto"        / "break"           / "case"          /
+    "char"        / "const"       / "continue"        / "default"       /
+    "do"          / "double"      / "else"            / "enum"          /
+    "extern"      / "float"       / "for"             / "goto"          /
+    "if"          / "inline"      / "int"             / "long"          /
+    "register"    / "restrict"    / "return"          / "short"         /
+    "signed"      / "sizeof"      / "static"          / "struct"        /
+    "switch"      / "typedef"     / "union"           / "unsigned"      /
+    "void"        / "volatile"    / "while"           / "_Alignas"      /
+    "_Atomic"     / "_Bool"       / "_Complex"        / "_Generic"      /
+    "_Imaginary"  / "_Noreturn"   / "_Static_assert"  / "_Thread_local"
 
 // ----- A.1.3 Identifiers -----
 
 // Assume keywords have already been excluded.  Include Unicode letters.
 identifier =
-    identifier-nondigit (identifier-nondigit / digit)* @1id
+    identifier-nondigit (identifier-nondigit / digit)*
 
 identifier-nondigit = nondigit / universal-character-name / other
 
@@ -106,9 +73,9 @@ constant =
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
 
 integer-constant =
-    hexadecimal-constant integer-suffix? @1hex /
-    octal-constant integer-suffix? @1octal /
-    decimal-constant integer-suffix? @1decimal
+    hexadecimal-constant integer-suffix? /
+    octal-constant integer-suffix? /
+    decimal-constant integer-suffix?
 
 decimal-constant = nonzero-digit digit*
 
@@ -136,8 +103,8 @@ long-suffix = 'lL'
 long-long-suffix = "ll" / "LL"
 
 floating-constant =
-    hexadecimal-floating-constant @1hexfloat /
-    decimal-floating-constant @1float
+    hexadecimal-floating-constant /
+    decimal-floating-constant
 
 decimal-floating-constant =
     '.' digit-sequence exponent-part? floating-suffix? /
@@ -170,7 +137,7 @@ floating-suffix = 'flFL'
 
 // A notation such as "L'" represents a two-character lookahead.
 character-constant =
-    ("'" / "L'" / "u'" / "U'") c-char-sequence "'" @1char
+    ("'" / "L'" / "u'" / "U'") c-char-sequence "'"
 
 c-char-sequence = c-char+
 
@@ -191,8 +158,8 @@ hex-escape-sequence = "\x" hexadecimal-digit+
 // ----- A.1.6 String literals -----
 
 string-literal =
-    '"' s-char-sequence? '"' @1string /
-    [encoding-prefix '"'] s-char-sequence? '"' @1string
+    '"' s-char-sequence? '"' /
+    [encoding-prefix '"'] s-char-sequence? '"'
 
 encoding-prefix = "u8" / "u" / "U" / "L"
 
@@ -203,60 +170,15 @@ s-char = ('"' / '\' / newline)! visible / escape-sequence
 // ----- A.1.7 Punctuators -----
 
 punctuator =
-    "%:%:" @1hshs /
-    "<<=" @1ltlteq /
-    ">>=" @1gtgteq /
-    "..." @1dtdtdt /
-    "->" @1migt /
-    "++" @1plpl /
-    "--" @1mimi /
-    "<<" @1ltlt /
-    ">>" @1gtgt /
-    "<=" @1lteq /
-    ">=" @1gteq /
-    "==" @1eqeq /
-    "!=" @1emeq /
-    "&&" @1amam /
-    "||" @1vbvb /
-    "*=" @1steq /
-    "/=" @1oveq /
-    "%=" @1pceq /
-    "+=" @1steq /
-    "-=" @1mieq /
-    "&=" @1ameq /
-    "^=" @1hteq /
-    "|=" @1vbeq /
-    "##" @1hshs /
-    "<:" @1os /
-    ":>" @1cs /
-    "<%" @1oc /
-    "%>" @1cc /
-    "%:" @1hs /
-    "[" @1os /
-    "]" @1cs /
-    "(" @1or /
-    ")" @1cr /
-    "{" @1oc /
-    "}" @1cc /
-    "." @1dt /
-    "&" @1am /
-    "*" @1st /
-    "+" @1pl /
-    "-" @1mi /
-    "~" @1ti /
-    "!" @1em /
-    "/" @1ov /
-    "%" @1pc /
-    "<" @1lt /
-    ">" @1gt /
-    "^" @1ht /
-    "|" @1vb /
-    "?" @1qm /
-    ":" @1cn /
-    ";" @1sc /
-    "=" @1eq /
-    "," @1co /
-    "#" @1hs
+    "%:%:" / "<<=" / ">>=" / "..." /
+    "->" / "++" / "--" / "<<" / ">>" / "<=" / ">=" / "==" /
+    "!=" / "&&" / "||" / "*=" / "/=" / "%=" / "+=" / "-=" /
+    "&=" / "^=" / "|=" / "##" / "<:" / ":>" / "<%" / "%>" /
+    "%:" /
+    "[" / "]" / "(" / ")" / "{" / "}" / "." / "&" /
+    "*" / "+" / "-" / "~" / "!" / "/" / "%" / "<" /
+    ">" / "^" / "|" / "?" / ":" / ";" / "=" / "," /
+    "#"
 
 // Testing
 ==========
@@ -264,94 +186,94 @@ x // comment
 y
 ----------
 tokens
-id x
-id y
+identifier x
+identifier y
 ==========
 x /*
 comment
 */ y
 ----------
 tokens
-id x
-id y
+identifier x
+identifier y
 ==========
 // String literals: note escaped backslashes in input and expected output
 "abc" L"abc" "\\"" "abc\\"xyz"
 ----------
 tokens
-string "abc"
-string L"abc"
-string "\\""
-string "abc\\"xyz"
+string-literal "abc"
+string-literal L"abc"
+string-literal "\\""
+string-literal "abc\\"xyz"
 ==========
 // Keywords and identifiers
 int x intx
 ----------
 tokens
-int int
-id x
-id intx
+key int
+identifier x
+identifier intx
 ==========
 // Punctuators
 [](){}+ ++ +++ < << <<< %:%:
 ----------
 tokens
-os [
-cs ]
-or (
-cr )
-oc {
-cc }
-pl +
-plpl ++
-plpl ++
-pl +
-lt <
-ltlt <<
-ltlt <<
-lt <
-hshs %:%:
+key [
+key ]
+key (
+key )
+key {
+key }
+key +
+key ++
+key ++
+key +
+key <
+key <<
+key <<
+key <
+key %:%:
 ==========
 // Character constants
 'a' L'a' '\\''
 ----------
 tokens
-char 'a'
-char L'a'
-char '\\''
+constant 'a'
+constant L'a'
+constant '\\''
 ==========
 // Integer constants
 0 4 42 42u 42U 42l 42LL
 0123 0128 0x12abCD
 ----------
 tokens
-octal 0
-decimal 4
-decimal 42
-decimal 42u
-decimal 42U
-decimal 42l
-decimal 42LL
-octal 0123
-octal 012
-decimal 8
-hex 0x12abCD
+constant 0
+constant 4
+constant 42
+constant 42u
+constant 42U
+constant 42l
+constant 42LL
+constant 0123
+constant 012
+constant 8
+constant 0x12abCD
 ==========
 // Floating constants
 0.0 0. .0 1e10 1E10 1.23e10 1e-10 e10
 0x0.0p10 0x0.p10 0x.0p10 0x1p10 0x1P10
 ----------
 tokens
-float 0.0
-float 0.
-float .0
-float 1e10
-float 1E10
-float 1.23e10
-float 1e-10
-id e10
-hexfloat 0x0.0p10
-hexfloat 0x0.p10
-hexfloat 0x.0p10
-hexfloat 0x1p10
-hexfloat 0x1P10
+constant 0.0
+constant 0.
+constant .0
+constant 1e10
+constant 1E10
+constant 1.23e10
+constant 1e-10
+identifier e10
+constant 0x0.0p10
+constant 0x0.p10
+constant 0x.0p10
+constant 0x1p10
+constant 0x1P10

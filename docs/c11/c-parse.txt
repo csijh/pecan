@@ -2,8 +2,7 @@
 // The rules are presented in the order given in appendix A of the standard.
 // with the starting point set to the translation unit rule.
 
-// start = translation-unit
-start = assignment-expression @0program
+start = translation-unit @translation-unit
 
 // It is assumed that keywords and punctuators are passed with types which match
 // their names, and that the remaining tokens are passed with these types.
@@ -11,9 +10,10 @@ start = assignment-expression @0program
 identifier = `identifier`
 constant = `constant`
 string-literal = `string-literal`
-type-name = `type-name`
+typedef-name = `typedef-name`
+enumeration-constant = `identifier`
 
-//  ----- A.2.1 Expressions -----
+// ----- A.2.1 Expressions -----
 
 primary-expression =
     identifier /
@@ -109,10 +109,210 @@ expression =
 constant-expression =
     conditional-expression
 
-initializer-list = `il`
-type-specifier = `ts`
-type-qualifier = `tq`
+// ----- A.2.2 Declarations -----
+
+declaration =
+    static_assert-declaration /
+    declaration-specifiers init-declarator-list? `;`
+
+declaration-specifiers = declaration-specifier+
+
+declaration-specifier =
+    storage-class-specifier /
+    type-specifier /
+    type-qualifier /
+    function-specifier /
+    alignment-specifier
+
+init-declarator-list = init-declarator (`,` init-declarator)*
+init-declarator = declarator (`=` initializer)?
+
+storage-class-specifier =
+    `typedef` / `extern` / `static` /
+    `_Thread_local` / `auto` / `register`
+
+type-specifier =
+    `void` / `char` / `short` / `int` / `long` / `float` / `double` /
+    `signed` / `unsigned` / `_Bool` / `_Complex` /
+    atomic-type-specifier /
+    struct-or-union-specifier / enum-specifier / typedef-name
+
+atomic-type-specifier =
+    `_Atomic` `(` type-name `)`
+
+type-qualifier = `const` / `restrict` / `volatile` / `_Atomic`
+
+function-specifier = `inline` / `_Noreturn`
+
+alignment-specifier =
+    `_Alignas` `(` (type-name / constant-expression) `)`
+
+struct-or-union-specifier = struct-or-union (
+    identifier (`{` struct-declaration-list `}`)? /
+    `{` struct-declaration-list `}`
+)
+
+struct-or-union = `struct` / `union`
+
+struct-declaration-list = struct-declaration+
+
+struct-declaration =
+    static_assert-declaration /
+    specifier-qualifier-list struct-declarator-list? `;`
+
+specifier-qualifier-list = (type-specifier / type-qualifier)+
+
+struct-declarator-list = struct-declarator (`,` struct-declarator)*
+
+struct-declarator =
+    declarator (`:` constant-expression)? /
+    `:` constant-expression
+
+enum-specifier = `enum` (
+    identifier (`{` enumerator-list `,`? `}`)? /
+    `{` enumerator-list `,`? `}`
+)
+
+enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
+
+enumerator = enumeration-constant (`=` constant-expression)?
+
+declarator = pointer? direct-declarator
+
+direct-declarator =
+    (identifier / `(` declarator `)`) dd-bracket*
+
+dd-bracket =
+    `(` dd-parameters? `)` / `[` dd-array-size? `]`
+
+dd-parameters =
+    identifier& identifier-list / parameter-type-list
+
+dd-array-size =
+    `*` /
+    `static` type-qualifier-list? assignment-expression /
+    type-qualifier-list dd-simple-array-size? /
+    assignment-expression
+
+dd-simple-array-size =
+    `*` /
+    `static` assignment-expression /
+    assignment-expression
+
+pointer = (`*` type-qualifier-list?)+
+
+type-qualifier-list = type-qualifier+
+
+parameter-type-list = parameter-list (`,` `...`)?
+
+parameter-list = parameter-declaration ((`,` `...`)! `,` parameter-declaration)*
+
+parameter-declaration = declaration-specifiers (
+    has-identifier& declarator /
+    abstract-declarator?
+)
+
+has-identifier =
+    (`*` / type-qualifier / `(`)* `identifier`
+
+identifier-list = identifier (`,` identifier)*
+
+type-name = specifier-qualifier-list abstract-declarator?
+
+abstract-declarator =
+    pointer direct-abstract-declarator? /
+    direct-abstract-declarator
+
+direct-abstract-declarator =
+    `(` abstract-declarator `)` dad-bracket* / dad-bracket+
+
+dad-bracket =
+    `(` parameter-type-list? `)` / `[` dad-array-size? `]`
+
+dad-array-size =
+    `*` /
+    `static` type-qualifier-list? assignment-expression /
+    type-qualifier-list dad-simple-array-size? /
+    assignment-expression
+
+dad-simple-array-size =
+    assignment-expression / `static` assignment-expression
+
+initializer =
+    assignment-expression /
+    `{` initializer-list `,`? `}`
+
+initializer-list =
+    designation? initializer (`,` designation? initializer)*
+
+designation =
+    designator-list `=`
+
+designator-list =
+    designator +
+
+designator =
+    `[` constant-expression `]` /
+    `.` identifier
+
+static_assert-declaration =
+    `_Static_assert` `(` constant-expression `,` string-literal `)` `;`
+
+// ----- A.2.3 Statements -----
+
+statement =
+    labeled-statement /
+    compound-statement /
+    expression-statement /
+    selection-statement /
+    iteration-statement /
+    jump-statement
+
+labeled-statement =
+    [identifier `:`] statement /
+    `case` constant-expression `:` statement /
+    `default` `:` statement
+
+compound-statement = `{` block-item* `}`
+
+block-item = declaration / statement
+
+expression-statement = expression? `;`
+
+// Note: the dangling else problem doesn't arise with the / operator
+selection-statement =
+    `if` `(` expression `)` statement (`else` statement)? /
+    `switch` `(` expression `)` statement
+
+iteration-statement =
+    `while` `(` expression `)` statement /
+    `do` statement `while` `(` expression `)` `;` /
+    `for` `(` for-start expression? `;` expression? `)` statement
+
+for-start = declaration / expression? `;`
+
+jump-statement =
+    `goto` identifier `;` /
+    `continue` `;` /
+    `break` `;` /
+    `return` expression? `;`
+
+// ----- A.2.4 External definitions -----
+
+translation-unit = external-declaration+ ``
+
+// Combine declarations and function definitions to avoid lookahead
+external-declaration = declaration-specifiers (
+    `;` /
+    declarator (
+        (`=` initializer)? (`,` init-declarator)* `;` /
+        declaration-list? compound-statement
+    )
+)
+
+declaration-list = declaration+
+
 ==========
-identifier
+int identifier;
 ----------
-program
+translation-unit

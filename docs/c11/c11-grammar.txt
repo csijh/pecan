@@ -1,7 +1,7 @@
-// This is the C11 lexical grammar from appendix A.1 of the standard, ignoring
-// all preparation and preprocessor issues, and translated into Pecan syntax,
-// except for explicit CFG | choice operators. This is a starting point for
-// transformation into a recursive descent Pecan grammar, replacing the |
+// This is the C11 grammar from appendix sections A.1 and A.2 of the standard,
+// ignoring all preparation and preprocessor issues, and translated into Pecan
+// syntax, except for explicit CFG | choice operators. This is a starting point
+// for transformation into a recursive descent Pecan grammar, replacing the |
 // operator by the PEG choice operator /.
 
 // A.1.1 Lexical elements
