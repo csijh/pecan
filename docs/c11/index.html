@@ -359,6 +359,261 @@ is to list them in order of length.</p>
 <p>Although this translation of the C11 lexical rules has involved some work, it
 has had the effect of exposing and resolving some issues.</p>
 
+<h2>The Parser</h2>
+
+<p>The parser is defined separately, with tokens from the scanner as its input.
+The rules are presented in the order given in appendix A of the standard.
+However, the first rule in Pecan must be the top rule of the grammar, so an
+extra rule is added to achieve this:</p>
+
+<pre class="pecan">start = translation-unit
+</pre>
+
+<p>It is assumed that tokens which have fixed names, that is keywords and
+punctuators, are given token types that match their names.  For example, the
+keyword <code>int</code> is passed as a token with type <code>`int`</code>, and
+the operator <code>++</code> is passed as a token with type <code>`++`</code>.
+This helps with readability, and with comparisons with the original rules.</p>
+
+<p>For tokens which do not have fixed names, it is assumed that tokens are
+passed with types such as <code>`identifier`</code> which match rule names in
+the scanner.  It also assumed, as discussed earlier, that the external linked
+with the parser tracks <code>typedef</code>s and reclassifies identifiers as
+type names where appropriate.  To achieve a close match with the original rules,
+synonyms are defined for these cases:</p>
+
+<pre class="pecan">identifier = `identifier`
+constant = `constant`
+string-literal = `string-literal`
+type-name = `type-name`
+</pre>
+
+<p>This establishes the communication between the scanner and the parser.</p>
+
+<h4>Expressions</h4>
+
+<p>Precedence and associativity are dealt with in the original grammar by
+defining hierarchically layered rules for expressions.  The transformation into
+Pecan follows the same style, and is reasonably straightforward.</p>
+
+<p>The resulting parser is not efficient, because of the number of calls
+involved in the hierarchy.  It can be made acceptably efficient by transforming
+the recursive descent style into recursive ascent, but it seems better to do
+that separately as a later exercise.</p>
+
+<p>The original rule for primary expressions is:</p>
+
+<pre class="c11">primary-expression =
+    identifier |
+    constant |
+    string-literal |
+    `(` expression `)` |
+    generic-selection
+</pre>
+
+<p>There are no translation problems, since each alternative starts with a
+different type of token:</p>
+
+<pre class="pecan">primary-expression =
+    identifier /
+    constant /
+    string-literal /
+    `(` expression `)` /
+    generic-selection
+</pre>
+
+<p>Generic selections are new in C11, but also cause no translation
+problems:</p>
+
+<pre class="pecan">generic-selection =
+    `_Generic` `(` assignment-expression `,` generic-assoc-list `)`
+
+generic-assoc-list = generic-association+
+
+generic-association =
+    type-name `:` assignment-expression /
+    `default` `:` assignment-expression
+</pre>
+
+<p>The original rule for postfix expressions is:</p>
+
+<pre class="c11">postfix-expression =
+    primary-expression |
+    postfix-expression `[` expression `]` |
+    postfix-expression `(` argument-expression-list? `)` |
+    postfix-expression `.` identifier |
+    postfix-expression `->` identifier |
+    postfix-expression `++` |
+    postfix-expression `--` |
+    `(` type-name `)` `{` initializer-list `}` |
+    `(` type-name `)` `{` initializer-list `,` `}`
+</pre>
+
+<p>There is a problem here because the first alternative can be a bracketed
+expression which begins with <code>`(`</code>, and the last two alternatives
+also begin with <code>`(`</code>. An expression and a type name begin with
+different tokens but, when bracketed, they require a two-token lookahead to
+distinguish them.</p>
+
+<p>In addition, the last two alternatives, which describe compound literals,
+will cause an overlap later in the grammar with cast expressions, which also
+begin with a bracketed type name.</p>
+
+<p>Rather than stray too far from the structure of the original rules, a
+lookahead rule is used to check for the open curly bracket:</p>
+
+<pre class="pecan">is-compound-literal = `(`type-name `)` `{`
+</pre>
+
+<p>This may be regarded as a bit inefficient, but it is in the context of a top
+down hierarchy of rules which is already inefficient.  So, it is best to defer a
+good solution to this problem until later, when a transformation to a recursive
+ascent style is investigated.</p>
+
+<p>Now the left recursion can be removed from the postfix expression rule, the
+last two alternatives can be merged and put at the beginning, and an extra rule
+can be added for clarity to define the items that can come after a primary
+expression.  The result is:</p>
+
+<pre class="pecan">postfix-expression =
+    is-compound-literal&amp; `(` type-name `)` `{` initializer-list `,`? `}` /
+    primary-expression pe-suffix*
+
+pe-suffix =
+    `[` expression `]` /
+    `(` argument-expression-list? `)` /
+    `.` identifier /
+    `->` identifier /
+    `++` /
+    `--`
+</pre>
+
+<p>The rule for an initializer list will later need to be defined to exclude the
+optional final comma shown here.</p>
+
+<p>The next layer up in the expression hierarchy is unary expressions, with
+original rule:</p>
+
+<pre class="c11">unary-expression  =
+    postfix-expression |
+    `++` unary-expression |
+    `--` unary-expression |
+    unary-operator cast-expression |
+    `sizeof` unary-expression |
+    `sizeof` `(` type-name `)` |
+    `alignof` `(` type-name `)`
+</pre>
+
+<p>This is easily transformed, combining the two overlapping alternatives, to
+give:</p>
+
+<pre class="pecan">unary-expression  =
+    postfix-expression /
+    `++` unary-expression /
+    `--` unary-expression /
+    unary-operator cast-expression /
+    `sizeof` (unary-expression / `(` type-name `)`) /
+    `alignof` `(` type-name `)`
+</pre>
+
+<p>The next layer up is cast expressions, with original rule:</p>
+
+<pre class="c11">cast-expression =
+    unary-expression |
+    "(" type-name ")" cast-expression
+</pre>
+
+<p>Again there is a problem with brackets, and again the route taken is to use
+the lookahead rule defined earlier, in order to stay close to the structure of
+the original rule:</p>
+
+<pre class="pecan">cast-expression =
+    (is-compound-literal! `(` type-name `)`)* unary-expression
+</pre>
+
+<p>The next level up in the hierarchy of expression is multiplicative
+expressions, defined by the original rule:</p>
+
+<pre class="c11">multiplicative-expression =
+    cast-expression |
+    multiplicative-expression "*" cast-expression |
+    multiplicative-expression "/" cast-expression |
+    multiplicative-expression "%" cast-expression
+</pre>
+
+<p>This can be transformed in a straightforward way to:</p>
+
+<pre class="pecan">multiplicative-expression =
+    cast-expression ((`*` / `/` / `%`) cast-expression)*
+</pre>
+
+<p>The same approach can be taken to additive expressions, shift expressions,
+relational expressions, equality expressions, AND expressions, exclusive OR
+expressions, inclusive OR expressions, logical AND expressions, and logical OR
+expressions.  These all define the precedences of infix operators in the same
+way.</p>
+
+<p>The original rule for conditional expressions is:</p>
+
+<pre class="c11">conditional-expression =
+    logical-OR-expression |
+    logical-OR-expression "?" expression ":" conditional-expression
+</pre>
+
+<p>This defines the ternary operator, but it easy to handle by combining the
+prefixes and making the suffix optional:</p>
+
+<pre class="pecan">conditional-expression =
+    logical-OR-expression (`?` expression `:` conditional-expression)?
+</pre>
+
+<p>The original rule for assignment expressions is:</p>
+
+<pre class="c11">assignment-expression =
+    conditional-expression |
+    unary-expression assignment-operator assignment-expression
+</pre>
+
+<p>This uses right recursion rather than left recursion, to capture the right
+associativity of the assignment operators.  So the recursion can stay as it is.
+However, there is a problematic overlap between the two alternatives.  Rather
+than try to do anything efficient, the alternatives are swapped and lookahead is
+used to recognise the assignment operator before accepting the new first
+alternative:</p>
+
+<pre class="pecan">assignment-expression =
+    [unary-expression assignment-operator] assignment-expression /
+    conditional-expression
+</pre>
+
+<p>At the top of the expression hierarchy is the expression rule:</p>
+
+<pre class="c11">expression =
+    assignment-expression |
+    expression "," assignment-expression
+</pre>
+
+<p>This poses no problems, beyond the usual removal of left recursion:</p>
+
+<pre class="pecan">expression =
+    assignment-expression (`,` assignment-expression)*
+</pre>
+
+<p>The expression section of the C11 grammar has one more rule in it.  It is
+just a synonym which makes some of the later rules more readable.  There is no
+harm in including it in the Pecan translation:</p>
+
+<pre class="pecan">constant-expression =
+    conditional-expression
+</pre>
+
+<p>Thre rules (for initializer lists, type specifiers and type qualifiers) are
+used in the expression rules, but are not defined until later.</p>
+
+<hr/>
+<p><b>Development incomplete</b></p>
+<hr/>
+
 <h2>Parser: external definitions</h2>
 
 <p>The remainder of the C11 grammar covering the parser rules will be tackled in
@@ -802,136 +1057,6 @@ for-start = declaration / expression? `;`
     `return` expression? `;`
 </pre>
 
-<h2>Parser: expressions</h2>
-
-<hr/>
-<p><b>Development incomplete</b></p>
-<hr/>
-
-<p>The original rule for primary expressions is:</p>
-
-<pre class="c11">primary-expression =
-    identifier |
-    constant |
-    string-literal |
-    `(` expression `)` |
-    generic-selection
-</pre>
-
-<p>The first three are tokens produced by the scanner, so simple rules for them
-can be added to indicate that they are token types.  Otherwise, there are no
-translation problems:</p>
-
-<pre class="pecan">primary-expression =
-    identifier /
-    constant /
-    string-literal /
-    `(` expression `)` /
-    generic-selection
-
-identifier = `identifier`
-constant = `constant`
-string-literal = `string-literal`
-</pre>
-
-<p>Generic selections are new in C11, but cause no translation problems:</p>
-
-<pre class="pecan">generic-selection =
-    `_Generic` `(` assignment-expression `,` generic-assoc-list `)`
-
-generic-assoc-list = generic-association+
-
-generic-association =
-    type-name `:` assignment-expression /
-    `default` `:` assignment-expression
-</pre>
-
-<p>Precedence and associativity are dealt with in the original grammar by
-defining hierarchically layered rules for expressions.  The transformation into
-Pecan is reasonably straightforward.  The resulting parser is not efficient,
-because of the number of calls involved in the hierarchy.  The parser can be
-made acceptably efficient by transforming the recursive descent style into
-recursive ascent, but it seems better to do that separately as a later exercise.
-For now, the translated rules will be kept reasonably close to the original
-ones.  The original rule for postfix expressions is:</p>
-
-<pre class="c11">postfix-expression =
-    primary-expression |
-    postfix-expression `[` expression `]` |
-    postfix-expression `(` argument-expression-list? `)` |
-    postfix-expression `.` identifier |
-    postfix-expression `->` identifier |
-    postfix-expression `++` |
-    postfix-expression `--` |
-    `(` type-name `)` `{` initializer-list `}` |
-    `(` type-name `)` `{` initializer-list `,` `}`
-
-argument-expression-list =
-    assignment-expression |
-    argument-expression-list `,` assignment-expression
-</pre>
-
-<p>There is a problem here because the first alternative can be a bracketed
-expression which begins <code>`(`</code>, and the last two alternatives also
-begin with <code>`(`</code>. An expression and a type name begin with different
-tokens but, when bracketed, they require a two-token lookahead to distinguish
-them.  The approach taken here is to replace <code>`(` type-name `)`</code> with
-<code>cast</code>, define a rule for <code>cast</code> which includes a suitable
-lookahead, and make sure that the cast alternative comes before the one
-involving a bracketed expression. The cast rule is:</p>
-
-<pre>cast =
-    (`(` (type-specifier / type-qualifier) )&amp; `(` type-name `)`
-</pre>
-
-<p>The postfix expression rule can now be transformed by removing the left
-recursion, putting the last two alternatives first and combining them, adding a
-rule for the alternatives that can follow a primary expression, and noting that
-the initializer list rule must be defined so that it doesn't accept a final
-comma, the translated rules become:</p>
-
-<pre class="pecan">postfix-expression =
-    cast `{` initializer-list `,`? `}` /
-    primary-expression pe-suffix*
-
-pe-suffix =
-    `[` expression `]` /
-    `(` argument-expression-list? `)` /
-    `.` identifier /
-    `->` identifier /
-    `++` /
-    `--`
-
-argument-expression-list =
-    assignment-expression (`,` assignment-expression)*
-</pre>
-
-<p>The next layer up in the hierarchy is unary expressions:</p>
-
-<pre class="c11">unary-expression  =
-    postfix-expression |
-    `++` unary-expression |
-    `--` unary-expression |
-    unary-operator cast-expression |
-    `sizeof` unary-expression |
-    `sizeof` `(` type-name `)` |
-    `alignof` `(` type-name `)`
-
-unary-operator:
-    `&amp;` | `*` | `+` | `-` | `~` | `!`
-</pre>
-
-<pre class="pecan">unary-expression  =
-    postfix-expression /
-    `++` unary-expression /
-    `--` unary-expression /
-    unary-operator cast-expression /
-    `sizeof` (unary-expression / `(` type-name `)`) /
-    `alignof` `(` type-name `)`
-
-unary-operator:
-    `&amp;` | `*` | `+` | `-` | `~` | `!`
-</pre>
 
 </body>
 </html>
