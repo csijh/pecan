@@ -1,0 +1,118 @@
+// A parser for C11, assuming the source has been pre-processed and scanned.
+// The rules are presented in the order given in appendix A of the standard.
+// with the starting point set to the translation unit rule.
+
+// start = translation-unit
+start = assignment-expression @0program
+
+// It is assumed that keywords and punctuators are passed with types which match
+// their names, and that the remaining tokens are passed with these types.
+
+identifier = `identifier`
+constant = `constant`
+string-literal = `string-literal`
+type-name = `type-name`
+
+//  ----- A.2.1 Expressions -----
+
+primary-expression =
+    identifier /
+    constant /
+    string-literal /
+    `(` expression `)` /
+    generic-selection
+
+generic-selection =
+    `_Generic` `(` assignment-expression `,` generic-assoc-list `)`
+
+generic-assoc-list = generic-association+
+
+generic-association =
+    type-name `:` assignment-expression /
+    `default` `:` assignment-expression
+
+// Look ahead to the open curly bracket of a compound literal.
+is-compound-literal = `(`type-name `)` `{`
+
+postfix-expression =
+    is-compound-literal& `(` type-name `)` `{` initializer-list `,`? `}` /
+    primary-expression pe-suffix*
+
+pe-suffix =
+    `[` expression `]` /
+    `(` argument-expression-list? `)` /
+    `.` identifier /
+    `->` identifier /
+    `++` /
+    `--`
+
+argument-expression-list =
+    assignment-expression (`,` assignment-expression)*
+
+unary-expression  =
+    postfix-expression /
+    `++` unary-expression /
+    `--` unary-expression /
+    unary-operator cast-expression /
+    `sizeof` (unary-expression / `(` type-name `)`) /
+    `alignof` `(` type-name `)`
+
+unary-operator =
+    `&` / `*` / `+` / `-` / `~` / `!`
+
+cast-expression =
+    (is-compound-literal! `(` type-name `)`)* unary-expression
+
+multiplicative-expression =
+    cast-expression ((`*` / `/` / `%`) cast-expression)*
+
+additive-expression =
+    multiplicative-expression ((`+` / `-`) multiplicative-expression)*
+
+shift-expression =
+    additive-expression ((`<<` / `>>`) additive-expression)*
+
+relational-expression =
+    shift-expression ((`<` / `>` / `<=` / `>=`) shift-expression)*
+
+equality-expression =
+    relational-expression ((`==` / `!=`) relational-expression)*
+
+AND-expression =
+    equality-expression (`&` equality-expression)*
+
+exclusive-OR-expression =
+    AND-expression (`^` AND-expression)*
+
+inclusive-OR-expression =
+    exclusive-OR-expression (`|` exclusive-OR-expression)*
+
+logical-AND-expression =
+    inclusive-OR-expression (`&&` inclusive-OR-expression)*
+
+logical-OR-expression =
+    logical-AND-expression (`||` logical-AND-expression)*
+
+conditional-expression =
+    logical-OR-expression (`?` expression `:` conditional-expression)?
+
+assignment-expression =
+    [unary-expression assignment-operator] assignment-expression /
+    conditional-expression
+
+assignment-operator =
+    `=` / `*=` / `/=` / `%=` / `+=` / `-=` / `<<=` / `>>=` / `&=` / `^=` / `|=`
+
+expression =
+    assignment-expression (`,` assignment-expression)*
+
+constant-expression =
+    conditional-expression
+
+initializer-list = `il`
+type-specifier = `ts`
+type-qualifier = `tq`
+==========
+identifier
+----------
+program
