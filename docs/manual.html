@@ -1375,11 +1375,13 @@ The theory might include equations such as:</p>
 
 <pre>(x y) z == x (y z)
 (x / y) / z == x / (y / z)
-x y / x z == x (y / z)
 x+ == x x*
-x ! y ! z == x y ! z
-x y ! z / x u ! v == x ! (y ! z / u ! v)
-x / y == y / x (under suitable disjointness conditions)
+x* = (x+)?
+[[x] y] z == [x y] z
+[x y] z / [x u] v == [x] ([y] z / [u] v)
+(x / y) z = x z / y z
+x y / x z == x (y / z)  <em>under suitable conditions</em>
+x / y == y / x          <em>under suitable conditions</em>
 </pre>
 
 <p>This theory has yet to be established, but it is envisaged that it would

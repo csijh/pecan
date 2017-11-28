@@ -5,7 +5,7 @@ package pecan;
 import java.util.*;
 import java.text.*;
 import static pecan.Op.*;
-import static pecan.Node.Flag.*;
+import static pecan.Info.Flag.*;
 
 /* This class contains two interpreters.  One works directly on the tree
 nodes, and can be used for step-by-step visualisation.  The other is a

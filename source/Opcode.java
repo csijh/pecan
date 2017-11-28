@@ -48,4 +48,7 @@ public enum Opcode {
     $REPEAT1, // x?     ->  REPEAT1 ONCE (x)
     $DO3,     // x+     ->  DO3 THEN REPEAT1 MANY (x)
     $LOOK1,   // [x]    ->  LOOK1 TRY (x)
+    $GO;      // Used in generator, maybe obsolete.
+
+    public static void main(String[] args) { }
 }

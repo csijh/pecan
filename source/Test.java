@@ -42,6 +42,9 @@ public class Test {
     private int lineNo;
     private String input, output;
 
+    // No testing.
+    public static void main(String[] args) { }
+
     String input() { return input; }
     String output() { return output; }
 

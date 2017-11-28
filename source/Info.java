@@ -56,4 +56,6 @@ class Info {
     // Get/set PC = address in bytecode.
     int PC() { return PC; }
     void PC(int i) { PC = i; }
+
+    public static void main(String[] args) { }
 }

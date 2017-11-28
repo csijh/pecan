@@ -25,4 +25,6 @@ public enum Op {
     DROP,    // Drop unused matched characters, @
     TAG,     // Match a type of token.
     ACT;     // Carry out an action, e.g. @2add
+
+    public static void main(String[] args) { }
 }
