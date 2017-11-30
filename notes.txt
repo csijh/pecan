@@ -1,18 +1,14 @@
-x y / x z == x (y / z)
+x y / x z ==? x (y / z)
 
 What if x succeeds and y soft-fails?
 
-'a' 'b' / 'a' 'c'   ==   'a' ('b' / 'c')
+'a' 'b' / 'a' 'c'   ==?   'a' ('b' / 'c')
 input ac
 
-expression = term exp2
-exp2 = ("+" @ term @2add / "-" @ term @2subtract)*
-term = factor term2
-term2 = ("*" @ factor @2multiply / "/" @ factor @2divide)*
-factor = atom factor2
-factor2 = ("^" @ factor @2power)?
-atom = number / "(" @ expression ")" @
-number = ("0".."9")+ @number
+----------
 
-exp = (number / "(" @ expression ")" @) factor2 term2 exp2
-exp = number factor2 term2 exp2 / "(" @ expression ")" @  factor2 term2 exp2
+Let's try again to use || for OR and && for AND.
+A parser function p succeeds, or fails (consuming input), or mismatches.
+A parse function must return 'true' if it fails so that p || q works.
+But it must return 'false' if it fails so that p && q works.
+So, we need some kind of exception mechanism.
