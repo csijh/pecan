@@ -1,3 +1,17 @@
+Improvements to syntax:
+
+With tokens, %x or `x` not immediately followed by action is implicitly %x @
+
+Replace:   @list (x @2add)* @1end
+by:        { (x ^)* } @list
+
+The {} brackets are to be followed immediately by a variable-arg action
+The expression inside is stack-checked because of ^, but can generate
+    any number of items.
+Implemented by pushing a NULL on the stack at '{' and doing nothing at ^ and
+    searching for the NULL at '}'
+
+----------
 x y / x z ==? x (y / z)
 
 What if x succeeds and y soft-fails?
@@ -6,7 +20,6 @@ What if x succeeds and y soft-fails?
 input ac
 
 ----------
-
 Let's try again to use || for OR and && for AND.
 A parser function p succeeds, or fails (consuming input), or mismatches.
 A parse function must return 'true' if it fails so that p || q works.
