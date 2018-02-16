@@ -37,11 +37,14 @@ programmer-defined operators) is to parse expressions without regard to
 precedence and associativity, then post-process the resulting parse tree
 later.</p>
 
-<p>Another technique, which is known but not very well known, is to use a normal
-recursive descent parser, but to re-work the rules in a bottom-up fashion.  This
-is related to <a
+<p>Another technique, which deserves to be much better known and understood, is
+to use a normal recursive descent parser, but to re-work the rules in a
+bottom-up fashion.  This is related to <a
 href="https://en.wikipedia.org/wiki/Recursive_ascent_parser">recursive
-ascent</a> parsing from which the name of this tutorial has been borrowed.  The
+ascent</a> parsing from which the name of this tutorial has been borrowed, and
+<a href="https://dl.acm.org/citation.cfm?id=512931">top-down operator
+precedence</a> parsing (by Pratt, also described by <a
+href="http://crockford.com/javascript/tdop/tdop.html">Crockford</a>).  The
 technique will be illustrated by transforming the expression grammar above.</p>
 
 <p>The first step is to split each of the <code>expression</code>,
@@ -109,9 +112,9 @@ atom = `number` @atom / `(` expression `)`
 
 <p>Now each of the rules begins more-or-less immediately with the recognition of
 its first token.  There are further opportunities, such as tail call
-optimisation, in translating this grammar into actual code. The result may or
-may not be as good as the best bottom-up parser generators, but the bulk of the
-problem has been eliminated.</p>
+optimization, in translating this grammar into actual code. The result may or
+may not be as good as the best bottom-up parser generators or custom algorithms,
+but the bulk of the problem has been eliminated.</p>
 
 </body>
 </html>
