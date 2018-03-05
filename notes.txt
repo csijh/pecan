@@ -1,15 +1,23 @@
 Improvements to syntax:
 
 With tokens, %x or `x` not immediately followed by action is implicitly %x @
+(actually works already, but needs stressing).
 
-Replace:   @list (x @2add)* @1end
-by:        { (x ^)* } @list
+If a grammar contains %id, then you can use "x" instead of `x` (in fact maybe it
+is a good idea to get rid of ``)
 
-The {} brackets are to be followed immediately by a variable-arg action
+Replace:   @startlist (x @2add)* @1endlist
+by:        { (x ^)* } @*list
+
+The {} brackets are to be followed immediately by a variable-arg action @*...
+    (and an @*... must immediately follow a {...})
 The expression inside is stack-checked because of ^, but can generate
     any number of items.
-Implemented by pushing a NULL on the stack at '{' and doing nothing at ^ and
-    searching for the NULL at '}'
+Implemented by pushing a marker on the stack at '{' and doing nothing at ^ and
+    using the marker at '}'
+
+Normally, @action cannot be at the beginning of a choice, but an exception can
+be made for {. The implementation is:
 
 ----------
 x y / x z ==? x (y / z)
