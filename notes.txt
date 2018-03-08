@@ -32,4 +32,4 @@ Let's try again to use || for OR and && for AND.
 A parser function p succeeds, or fails (consuming input), or mismatches.
 A parse function must return 'true' if it fails so that p || q works.
 But it must return 'false' if it fails so that p && q works.
-So, we need some kind of exception mechanism.
+So, we need some kind of exception mechanism for lookahead.
