@@ -1,0 +1,48 @@
+Input is a pointer.  To utf8 char, or to token. Ops are:
+    look(p)     // get unicode value or tag number.  Tag == 0 for end sentinel.
+    q = next(p) // move forward.
+    backtrack(p)
+    provider can change token tags as a side effect
+
+In the parser, build is done symbolically for lookahead, so calls happen once.
+
+How map symbols to function calls?  Approach A:
+    maybe @3fun -> fun(x,y,z)
+    maybe @*fun -> fun(x, ...) varargs
+    but then what about "+"?
+    maybe "+" = %plus in grammar
+Alternative approach B:
+    @3fun -> build3(fun, x, y, z)
+    @*fun -> build(fun, 3, [x,y,z])
+    auto "+" -> PL
+If choose A, it is not very generic, and wasteful if converted to B.
+If choose B, it is more generic.  Switch needed to convert to A, but that
+    switch is needed somewhere.
+    (still need to map symbols to integers, maybe defined in header?)
+
+Distinguish between 'leaf' (takes range of characters or previous token) and
+varargs call with 0 children (takes empty range) ?
+
+Notation { ... ^ ... } @*fun for varargs
+
+Do something special about start and end of construct for range marking.
+Could use notation:
+    { begin ... *arg ... end } @3construct
+    means remember positions, call 'adjust(begin end)'
+
+Note { at start of left hand alternative needs special treatment.
+Could { ... } @*fun also be needed for range adjustment?
+Could notation be used instead of @ for discarding?
+
+Have another think about frame sizes - are they worth it?  Maybe inlined
+functions with fast routes are enough.
+
+Improvement in parse args
+=========================
+
+First arg code pointer. Don't need pc, always 0, but can point into code.
+Don't start with STOP. Have it at end or somewhere.
+Don't need act - have a header include (or signatures).
+Don't need cs (just let other module do it).
+That leaves:
+    parse(byte *code, item *in, state *out);
