@@ -43,7 +43,7 @@ indicated in the grammar. */
 
 // The type of the function which carries out actions; out is the stack, start
 // and end mark the input items matched since the last action or discard.
-typedef void actor(int act, void *out, int start, int end);
+void act(int action, void *out, int start, int end);
 
 enum opcode {
     STOP, RULE, GO, EITHER, OR, BOTH, AND, REPEAT, ONCE, MANY, LOOK, TRY, HAS,
@@ -57,29 +57,29 @@ char *names[] = {
 };
 
 // Macros for readability: use with extreme caution.
-//#define PUSH(x) calls[callTop++] = x
+#define PUSH(x) calls[callTop++] = x
 #define POP() (calls[--callTop])
 #define CALL(x) PUSH(pc); pc = x
 #define RETURN() pc = calls[--callTop]
 
-static inline void PUSH(x) { calls[callTop++] = x; }
+//static inline void PUSH(int x) { calls[callTop++] = x; }
+//static inline int POP() { return calls[--callTop]; }
+//static inline void CALL(int x) { PUSH(pc); pc = x; }
+//static inline void RETURN() { pc = calls[--callTop]; }
 
 // Carry out parsing:
-// code:   the bytecode generated from a grammar by Pecan;
-// pc:     the offset in the bytecode of the rule to use (normally 0);
+// code:   the bytecode generated from a grammar by Pecan (or a rule within it)
 // input:  the UTF-8 text or token tag array (with 0xFF sentinel);
-// act:    the action handler;
 // out:    an object to be passed to the output handler;
-// cs:     the context sensitive flag.
-report *parse(byte *code, int pc, char *input, actor *act, void *out, bool cs) {
+report *parse(byte *code, char *input, void *out) {
     // Create a local call stack and stack of failure markers.
-    int callSize = 1024, callTop = 0, failSize = 32, failTop = 0;
+    int pc = 0, callSize = 1024, callTop = 0, failSize = 32, failTop = 0;
     unsigned short *calls = malloc(callSize * sizeof(unsigned short));
     report *error = malloc(sizeof(report) + failSize * sizeof(int));
     int *fails = error->expecting;
     // Old and current positions in input, high water mark, success flag.
     int in = 0, start = 0, mark = 0, ok = true;
-    // Temporary vaiables for use within cases.
+    // Temporary variables for use within cases.
     int arg, saveIn, length, ch;
     // Push a sentinel return address, pointing to a STOP opcode.  Execute.
     assert(code[0] == STOP);
@@ -311,7 +311,7 @@ report *parse(byte *code, int pc, char *input, actor *act, void *out, bool cs) {
 
     // %t or `t`    match a token tag
     case TAG:
-        if (cs) act(-1, out, in, in);
+//        if (cs) act(-1, out, in, in);
         arg = code[pc++];
         ok = (input[in] == arg);
         if (ok) in++;

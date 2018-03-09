@@ -46,7 +46,7 @@ void act(int act, void *out, int start, int end) {
 // in structure defined in parse.h.
 
 int main() {
-    report *fail = parse(t5, 0, "2+40", act, NULL, false);
+    report *fail = parse(t5, "2+40", NULL);
     if (fail == NULL) printf("ok\n");
     else printf("fail %d %d\n", fail->position, fail->expects);
 }

@@ -6,17 +6,11 @@ Input is a pointer.  To utf8 char, or to token. Ops are:
 
 In the parser, build is done symbolically for lookahead, so calls happen once.
 
-How map symbols to function calls?  Approach A:
-    maybe @3fun -> fun(x,y,z)
-    maybe @*fun -> fun(x, ...) varargs
-    but then what about "+"?
-    maybe "+" = %plus in grammar
-Alternative approach B:
-    @3fun -> build3(fun, x, y, z)
-    @*fun -> build(fun, 3, [x,y,z])
-    auto "+" -> PL
-If choose A, it is not very generic, and wasteful if converted to B.
-If choose B, it is more generic.  Switch needed to convert to A, but that
+Approach is to translate:
+    @3fun -> act3(fun, x, y, z)
+    @*fun -> act(fun, 3, [x,y,z])
+    auto "+" -> PL (or define in grammar somehow)
+Moderately generic. Switch needed to convert to fun(x,y,z), but that
     switch is needed somewhere.
     (still need to map symbols to integers, maybe defined in header?)
 
@@ -28,7 +22,7 @@ Notation { ... ^ ... } @*fun for varargs
 Do something special about start and end of construct for range marking.
 Could use notation:
     { begin ... *arg ... end } @3construct
-    means remember positions, call 'adjust(begin end)'
+    means remember positions, call 'range(begin end)' if not default.
 
 Note { at start of left hand alternative needs special treatment.
 Could { ... } @*fun also be needed for range adjustment?
@@ -40,7 +34,6 @@ functions with fast routes are enough.
 Improvement in parse args
 =========================
 
-First arg code pointer. Don't need pc, always 0, but can point into code.
 Don't start with STOP. Have it at end or somewhere.
 Don't need act - have a header include (or signatures).
 Don't need cs (just let other module do it).
