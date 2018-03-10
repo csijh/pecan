@@ -56,6 +56,9 @@ char *names[] = {
     "MARK", "REPORT", "DROP", "ACT"
 };
 
+// state structure:
+// pc, calls [size,top], fails [size,top], backtracks [size,top]
+
 // Macros for readability: use with extreme caution.
 #define PUSH(x) calls[callTop++] = x
 #define POP() (calls[--callTop])
