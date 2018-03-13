@@ -37,39 +37,94 @@ char *names[] = {
 struct state {
     char *code; int pc;
     ushort calls[1024]; int top;
+    input *points[1024]; int point;
     int fails[1024], failTop;
     int marks[1024], markTop, markSize;
 };
 typedef struct state state;
 
-// Push a return address onto the call stack.
-static inline void PUSH(state *s, int x) { s->calls[s->top++] = x; }
-
-// Pop a return address from the call stack.
-static inline int POP(state *s) { return s->calls[--s->top]; }
-
-// Call a given rule.
-static inline void CALL(state *s, int x) { PUSH(s, s->pc); s->pc = x; }
+// Call a given rule, pushing the return address on the call stack.
+static inline void CALL(state *s, int x) { s->calls[s->top++] = x; s->pc = x; }
 
 // Return from a call.
-static inline void RETURN(state *s) { s->pc = POP(s); }
+static inline void RETURN(state *s) { s->pc = s->calls[--s->top]; }
+
+// Push the current input position on the backtracking stack.
+static inline void PUSH(state *s) { s->points[s->point++] = s->in; }
+
+// Pop an input position.
+static inline int POP(state *s) { return s->points[--s->point]; }
 
 // Read a 2-byte operand.
 static inline int ARG2(state *s) {
-    return (s->code[s->pc]<<8) + s->code[s->pc+1];
+    return (s->code[s->pc++]<<8) + s->code[s->pc++];
 }
 
 static inline void doStop(state *s) {
 
 }
 
-// x / y    EITHER &x OR &y    save in, call x, return to OR
+// x / y    EITHER &x OR &y    save input position, call x, return to OR
 static inline void doEither(state *s) {
     int arg = ARG2(s);
-    s->pc += 2;
-    PUSH(s->in);
+    PUSH(s);
     CALL(s, arg);
 }
+
+// x / y    check progress, return x or continue with y
+static inline void doOr(state *s) {
+    int saveIn = POP(s);
+    if (s->ok || s->in > saveIn) RETURN(s);
+}
+
+// x y    BOTH &x AND y      call x, returning to AND
+static inline void doBoth(state *s) {
+    arg = ARG2(s);
+    CALL(arg);
+}
+
+// x y    if x succeeded, continue with y
+static inline void doAnd(state *s) {
+    if (! ok) RETURN(s);
+}
+
+// x? or x*    REPEAT ONCE/MANY x    call x, return to ONCE or MANY
+static inline void doRepeat(state *s) {
+    PUSH(s);
+    CALL(s, s->pc + 1);
+}
+
+// x?    check success or soft failure of x
+static inline void doOnce(state *s) {
+    input *saveIn = POP(s);
+    if (! s->ok && s->in == saveIn) s->ok = true;
+    RETURN(s);
+}
+
+// x*    check success of x, and do a repeat
+static inline void doMany(state *s) {
+    input *saveIn = POP();
+    if (ok) {
+        pc = pc - 1;
+        PUSH(s);
+        CALL(s, s->pc + 1);
+    }
+    else {
+        if (s->in == saveIn) s->ok = true;
+        RETURN(s);
+    }
+}
+
+// [x] or x& or x!    LOOK TRY/HAS/NOT x    prepare to lookahead
+// Save the input position, save the high water mark, set it high to
+// avoid error reporting during lookahead, and call x.
+static inline void doLook(state *s) {
+    PUSH(s);
+    PUSH(s->mark); // another stack
+    mark = INT_MAX;
+    CALL(pc + 1);
+}
+
 
 // Carry out parsing:
 // code:   the bytecode generated from a grammar by Pecan (or a rule within it)

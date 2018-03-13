@@ -1,4 +1,5 @@
-Improvements to syntax:
+Improvements to syntax
+----------------------
 
 With tokens, %x or `x` not immediately followed by action is implicitly %x @
 (actually works already, but needs stressing).
@@ -17,7 +18,18 @@ Implemented by pushing a marker on the stack at '{' and doing nothing at ^ and
     using the marker at '}'
 
 Normally, @action cannot be at the beginning of a choice, but an exception can
-be made for {. The implementation is:
+be made for {. The implementation is like:
+
+   @a x   ==   (@a s)& x
+
+where x starts with s, i.e. an implicit lookahead until x is committed.
+
+Improvements to bytecode interpreter
+------------------------------------
+Don't bother with frame. Implement hard failure as exception, so return is just
+true/false. Pre-compute failure sets. Add switch. Allow grammars without
+actions to be interpreted, using implicit variable arguments.  Check for
+tail-call optimizations.
 
 ----------
 x y / x z ==? x (y / z)

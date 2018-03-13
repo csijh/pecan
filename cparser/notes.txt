@@ -7,7 +7,7 @@ Input is a pointer.  To utf8 char, or to token. Ops are:
 In the parser, build is done symbolically for lookahead, so calls happen once.
 
 Approach is to translate:
-    @3fun -> act3(fun, x, y, z)
+    @3fun -> act3(fun, x, y, z)   (OR act(fun, 3, [x,y,z]))
     @*fun -> act(fun, 3, [x,y,z])
     auto "+" -> PL (or define in grammar somehow)
 Moderately generic. Switch needed to convert to fun(x,y,z), but that
