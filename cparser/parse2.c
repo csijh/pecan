@@ -50,15 +50,16 @@ static inline void CALL(state *s, int x) { s->calls[s->top++] = x; s->pc = x; }
 static inline void RETURN(state *s) { s->pc = s->calls[--s->top]; }
 
 // Push the current input position on the backtracking stack.
-static inline void PUSH(state *s) { s->points[s->point++] = s->in; }
+static inline void PUSH(state *s, input *in) { s->points[s->point++] = in; }
 
 // Pop an input position.
 static inline int POP(state *s) { return s->points[--s->point]; }
 
+// Read a 1-byte operand.
+static inline int ARG1(state *s) { return s->code[s->pc++]; }
+
 // Read a 2-byte operand.
-static inline int ARG2(state *s) {
-    return (s->code[s->pc++]<<8) + s->code[s->pc++];
-}
+static inline int ARG2(state *s) { return (ARG1(s)<<8) + ARG1(s); }
 
 static inline void doStop(state *s) {
 
@@ -66,21 +67,19 @@ static inline void doStop(state *s) {
 
 // x / y    EITHER &x OR &y    save input position, call x, return to OR
 static inline void doEither(state *s) {
-    int arg = ARG2(s);
-    PUSH(s);
-    CALL(s, arg);
+    PUSH(s, s->in);
+    CALL(s, ARG2(s));
 }
 
 // x / y    check progress, return x or continue with y
 static inline void doOr(state *s) {
-    int saveIn = POP(s);
-    if (s->ok || s->in > saveIn) RETURN(s);
+    POP(s);
+    if (s->ok) RETURN(s);
 }
 
 // x y    BOTH &x AND y      call x, returning to AND
 static inline void doBoth(state *s) {
-    arg = ARG2(s);
-    CALL(arg);
+    CALL(ARG2(s));
 }
 
 // x y    if x succeeded, continue with y
@@ -90,27 +89,27 @@ static inline void doAnd(state *s) {
 
 // x? or x*    REPEAT ONCE/MANY x    call x, return to ONCE or MANY
 static inline void doRepeat(state *s) {
-    PUSH(s);
+    PUSH(s, s->in);
     CALL(s, s->pc + 1);
 }
 
 // x?    check success or soft failure of x
 static inline void doOnce(state *s) {
-    input *saveIn = POP(s);
-    if (! s->ok && s->in == saveIn) s->ok = true;
+    POP(s);
+    s->ok = true;
     RETURN(s);
 }
 
-// x*    check success of x, and do a repeat
+// x*    ... MANY x     check success of x, and do a repeat
 static inline void doMany(state *s) {
-    input *saveIn = POP();
+    POP(s);
     if (ok) {
         pc = pc - 1;
-        PUSH(s);
+        PUSH(s, s->in);
         CALL(s, s->pc + 1);
     }
     else {
-        if (s->in == saveIn) s->ok = true;
+        s->ok = true;
         RETURN(s);
     }
 }
@@ -119,10 +118,29 @@ static inline void doMany(state *s) {
 // Save the input position, save the high water mark, set it high to
 // avoid error reporting during lookahead, and call x.
 static inline void doLook(state *s) {
-    PUSH(s);
-    PUSH(s->mark); // another stack
+    PUSH(s, s->in);
+    PUSH(s->mark); // hwm stack
+    PUSH(s->top); // backtrack stack
     mark = INT_MAX;
     CALL(pc + 1);
+}
+
+// 'abc'    match against next character in input
+// Only ascii characters supported.
+static inline void doSet(state *s) {
+    int length = ARG1(s);
+    ok = false;
+    for (int i=0; i<length; i++) {
+        if (input[in] == code[pc+i]) { ok = true; break; }
+    }
+    if (ok) {
+        in += 1;
+        RETURN(s);
+    }
+    else {
+        if (mark < in) mark = in;
+        BACKTRACK(s);
+    }
 }
 
 

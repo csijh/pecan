@@ -9,7 +9,7 @@ typedef unsigned char byte;
 
 // The type of the function which carries out actions; out is the stack, start
 // and end mark the input items matched since the last action or discard.
-//typedef void actor(int act, void *out, int start, int end);
+// typedef void actor(int act, void *out, int start, int end);
 
 // Structure used to report an error.
 struct report {

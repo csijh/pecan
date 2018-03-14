@@ -1,15 +1,30 @@
 #include "parse.h"
 #include <stdio.h>
 
-//enum opcode {
-//    STOP, RULE, GO, EITHER, OR, BOTH, AND, REPEAT, ONCE, MANY, LOOK, TRY, HAS,
-//    NOT, STRING, SET, RANGE, CAT, TAG, MARK, REPORT, DROP, ACT
-//};
+enum opcode {
+    STOP, RULE, GO, EITHER, OR, BOTH, AND, REPEAT, ONCE, MANY, LOOK, TRY, HAS,
+    NOT, STRING, SET, RANGE, CAT, TAG, MARK, REPORT, DROP, ACT
+};
 
 // 0:STOP, 1:RULE 1, 4:BOTH, 0, TRY, AND,
-// Tutorial step 1;  inputs: "2"
+// Tutorial step 1;    // digit = "0".."9" @number     // inputs: "2"
 unsigned char t1[] = {
     0, 1, 0, 1, 5, 0, 11, 6, 22, 0, 0, 16, 1, 48, 1, 57
+};
+
+unsigned char t1b[] = {
+    [0] = STOP,
+    [1] = RULE, 0, 1,
+    [4] = BOTH, 0, 11,
+    [7] = AND, ACT, 0, 0,             // AND0
+    [11] = RANGE, 1, 48, 1, 57
+};
+
+unsigned char t1b[] = {
+    [0] = BOTH, 0, 7,                 // relative
+    [3] = AND, ACT, 0, 0,             // AND0
+    [7] = RANGE, 1, 48, 1, 57
+    [12] = STOP
 };
 
 // Tutorial step 2: "2" "42"

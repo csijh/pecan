@@ -18,6 +18,7 @@ Distinguish between 'leaf' (takes range of characters or previous token) and
 varargs call with 0 children (takes empty range) ?
 
 Notation { ... ^ ... } @*fun for varargs
+OR       @[ ... ^ ... @]fun
 
 Do something special about start and end of construct for range marking.
 Could use notation:
@@ -34,8 +35,8 @@ functions with fast routes are enough.
 Improvement in parse args
 =========================
 
-Don't start with STOP. Have it at end or somewhere.
+Don't start with STOP. Have it at end.
 Don't need act - have a header include (or signatures).
 Don't need cs (just let other module do it).
 That leaves:
-    parse(byte *code, item *in, state *out);
+    parse(byte *code, input *in, output *out);
