@@ -21,7 +21,7 @@ unsigned char t1b[] = {
 };
 
 unsigned char t1b[] = {
-    [0] = BOTH, 0, 7,                 // relative
+    [0] = BOTH, 0, 7,                 // relative?
     [3] = AND, ACT, 0, 0,             // AND0
     [7] = RANGE, 1, 48, 1, 57
     [12] = STOP
