@@ -10,15 +10,22 @@ enum opcode {
 
 // digit = @< "0".."9" @>number
 op code1[] = {
-    [0] = BOTH, 4-2, AND, 5-4,
+    [0] = BOTH, 4, AND, 5,
     [4] = BEGIN,
-    [5] = BOTH, 9-7, AND, 12-9,
+    [5] = BOTH, 9, AND, 12,
     [9] = RANGE, '0', '9',
     [12] = ACTn, 0,
     [14] = STOP
 };
 input *in1 = "2";
 input *in1b = "x";
+
+// x = @[1 y ... / @[2 z ...
+// y = @[3 w ...
+// Must get rid of @[1 before second alternative.
+// DO @[ UNDO y --- call y returning through undo
+// UNDO if !ok pop
+// match: do whole stack of actions
 
 // Stacks
 // ======
@@ -52,7 +59,7 @@ static inline void CALL(state *s, int x) { s->calls[s->call++] = x; s->pc = x; }
 static inline void RETURN(state *s) { s->pc = s->calls[--s->call]; }
 static inline void PUSH(state *s, input *in) { s->points[s->point++] = in; }
 static inline input *POP(state *s) { return s->points[--s->point]; }
-static inline int ARG(state *s) { int x = s->code[s->pc++]; return s->pc + x; }
+static inline int ARG(state *s) { return s->code[s->pc++]; }
 
 // x y    BOTH &x AND &y      call x, returning to AND
 static inline void doBoth(state *s) {
