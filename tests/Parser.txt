@@ -41,7 +41,7 @@ RULE x
 RULE y
   ID y
 ==========
-// Mac \r line endings
+// Old Mac \r line endings
 x=x\13\
 y=y\13\
 ----------
@@ -68,9 +68,9 @@ RULE x
   ID x
 ==========
 // Trailing spaces
-x = x
-
-y = y
+x = x    \10
+         \10
+y = y    \10
 ----------
 RULE x
   ID x
@@ -214,7 +214,7 @@ x = %x
 RULE x
   TAG %x
 ==========
-// Bad handler
+// Bad marker
 x = 'x' #3
 ----------
 Error on line 2: expecting letter
@@ -271,7 +271,7 @@ RULE exp
       ID exp
     ID end
 ==========
-// The +, *, ? postfix operators
+// The + * ? postfix operators
 exp = exp* exp+ exp? end
 ----------
 RULE exp
@@ -352,7 +352,7 @@ RULE assignment
     STRING "="
     ID right
 ==========
-// Error on second line
+// Error on line 3
 x = y /
 z / /
 ----------
@@ -711,14 +711,14 @@ RULE x
 ==========
 // Comments before and after continuation lines
 x =
- // comment not allowed
+ // comment
  y /
- // comment not allowed
+ // comment
  z
 x
- // Comment not allowed
+ // Comment
 = y
- // Comment not allowed
+ // Comment
 / z
 ----------
 RULE x
@@ -731,14 +731,15 @@ RULE x
     ID z
 ==========
 // String with supplementary unicode character 195101/2fa1d (last letter)
+// Represent in the UTF-16 source as two chars, upper/lower surrogates. 
 range = "\55422\56861" / '\55422\56861'
 ----------
 RULE range
-  OR "\55422\56861" / '\55422\56861'
-    STRING "\55422\56861"
-    SET '\55422\56861'
+  OR "\195101" / '\195101'
+    STRING "\195101"
+    SET '\195101'
 ==========
-// Line from Parser.txt
+// Angle brackets no longer accepted
 set = "'" (<"'"> visible)* ("'" @SET / #BADSET) skip1
 ----------
 Error on line 2: expecting expression

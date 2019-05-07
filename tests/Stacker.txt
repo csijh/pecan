@@ -1,3 +1,4 @@
+// Numbers reported are NET effect on output stack and LOW water mark.
 // Simple case of one output item
 x = @ID @
 ----------

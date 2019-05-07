@@ -1,25 +1,25 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 annotations. Free and open source. See licence.txt.
 
 package pecan;
 import java.util.*;
-import static pecan.Op.*;
 
-/* An Info object represents information which is gathered about an expression
-and stored in its node during the various passes. */
+/* An Info object represents annotation information which is gathered about an
+expression and stored in its node during the various passes.
+
+The annotation information consists of various flags, counts, bitsets, and a
+temporary note which is used to produce custom test output per pass. */
 
 class Info {
-    // Flags, counts, bitsets, and a temporary note which is used to produce
-    // custom test output per pass.
-
     private int value;
     private int flags;
     private int NET, LOW, PC;
     private BitSet FIRST, START, FOLLOW;
     private String note;
 
-    // Flag constants.
+    // Flag constants. For the meanings of the flags, see the Binder and
+    // Analyser classes.
     public static enum Flag {
-        IC, IT, SN, FN, SP, FP, WF, AA, AB, BP;
+        TextInput, TokenInput, SN, FN, SP, FP, WF, AA, AB, BP;
         int bit() { return 1 << ordinal(); }
     }
 

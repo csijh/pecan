@@ -1,20 +1,16 @@
-.PHONY: \
-	default unicode Category Op Info Node Test Parser Binder Checker \
-	Stacker Analyser Opcode Generator Interpreter pecan jar
-default: pecan
+# Pecan classes, in dependency order.
+Category = pecan/Category.java
+Op = pecan/Op.java
+Info = pecan/Info.java
+Node = pecan/Node.java $(Info) $(Op)
+Test = pecan/Test.java
+Parser = pecan/Parser.java $(Test) $(Node)
+Binder = pecan/Binder.java $(Parser) $(Category)
+Checker = pecan/Checker.java $(Binder)
+Stacker = pecan/Stacker.java $(Checker)
+Analyser = pecan/Analyser.java $(Stacker)
+#Opcode Generator Interpreter:
 
-unicode:
-	cp source/UnicodeData.txt pecan
-
-Category Op Info Node Test Parser Binder Checker Stacker Analyser Opcode \
-Generator Interpreter:
-	javac -sourcepath source -d . source/$@.java
-	java -cp . pecan.$@
-
-# Generator currently not working
-# Simplifier left out for now
-
-pecan:
-	javac source/Pecan.java -d .
-jar:
-	jar cfe pecan.jar pecan.Pecan pecan source tests
+%: pecan/%.java
+	javac $($@)
+	java pecan.$@

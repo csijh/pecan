@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 analyzer. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -8,85 +8,64 @@ import java.io.*;
 import static pecan.Op.*;
 import static pecan.Info.Flag.*;
 
-/* Work out the FIRST, START and FOLLOW set for every node.  This is very much
-like traditional FIRST/FOLLOW analysis, except that FIRST is divided into two
-disjoint sets, FIRST and START:
--
--   FIRST =  input items which a parsing expression can start with, where
--            parsing always makes progress (SP or FP), so the item is consumed
--   START =  input items which a parsing expression can start with (SP or FP),
--            but where there may also be no progress (SN or FN), so that the
--            item may be matched by a subsequent alternative
--   FOLLOW = items which can follow an expression (inherited downwards,
--            rather than synthesised upwards)
--
+/* Work out the FIRST, START and FOLLOW set for every node. This is very much
+like traditional FIRST/FOLLOW analysis for CFG grammars, except that FIRST is
+divided into two disjoint sets, FIRST and START:
+
+   FIRST =  input items which a parsing expression can start with, where
+            parsing always makes progress (SP or FP), so the item is consumed
+   START =  input items which a parsing expression can start with (SP or FP),
+            but where there may also be no progress (SN or FN), so that the
+            item may be matched by a subsequent alternative
+   FOLLOW = items which can follow an expression
+
 For example ('a' 'b') has 'a' in its FIRST set, whereas ['a' 'b'] has 'a' in its
 START set.
 
-For character input, the ascii characters are treated as 128 separate items.  In
+For character input, the ascii characters are treated as 128 separate items. In
 addition, there are a further 30 items representing the characters beyond ascii
 from each disjoint Unicode category (excluding Uc). Explicit individual
 characters beyond ascii are regarded as belonging to one of these 30 sets, but
-are treated as START items.
+the set is treated as a START item because it might not match.
 
+The calculations use the SN,SP,FN,FP flags (succeed/fail without/with progress)
+from the checker pass. The calculations are roughly these, with FIRST/START
+synthesized upwards in the tree, and FOLLOW inherited downwards in the tree:
 
-Need two sets of starters (a) can start with s and commits (b) can start with s
-but doesn't necessarily commit (so a later alternative could be offered s). Also
-need follow.  FIRST, START, FOLLOW.  FIRST and START are disjoint.  FOLLOW is
-calculated down the tree
+  e = x / y:
+    FIRST(e) += FIRST(x) + FIRST(y)
+    START(e) += (START(x) - FIRST(y)) + (START(y) - FIRST(x))
+    FOLLOW(x) += FOLLOW(e), FOLLOW(y) += FOLLOW(e)
 
-Generate: a = x y z
-bool a() { return x() && y() && z(); }
+  e = x y:
+    if SN(x) then same as x / y else
+    FIRST(e) += FIRST(x), START(e) += START(x),
+    FOLLOW(y) += FOLLOW(e)
+    if (SN(y)) FOLLOW(x) += FOLLOW(e)
 
-a = x / y / z
-bool a() { switch() {  x()  y()  z(); } }
+  e = "":
+    FIRST(e) += {}, START(e) += {}, (FOLLOW(e) from above)
 
-a = [x] y / z
-bool a() { if (try(x)) y(); else z(); }
+  e = "a"
+    if ascii then FIRST(e) += {'a'} else START(e) += category,
+    (FOLLOW(e) from above)
 
-LN Can involve a lookahead before progressing.  Doesn't differentiate starters.
-Need two sets of starters (a) can start with s and commits (b) can start with s
-but doesn't necessarily commit (so a later alternative could be offered s). Also
-need follow.  FIRST, START, FOLLOW.  FIRST and START are disjoint.  FOLLOW is
-calculated down the tree
+  e = x* = x+ / ""
+    FIRST(e) += FIRST(x), START(e) += START(x), FOLLOW(x) += FOLLOW(e)
 
-x / y:
-  FIRST += xFIRST + yFIRST
-  START += (xSTART - yFIRST) + (ySTART - xFIRST)
-  xFOLLOW += FOLLOW, yFOLLOW += FOLLOW
-x y:
-  if xSN then same as x / y else
-  FIRST += xFIRST, START += xSTART,
-  yFOLLOW += FOLLOW
-  if (y.SN) xFOLLOW += FOLLOW
-"":
-  FIRST += {}, START += {}, (FOLLOW from above)
-"a"
-  FIRST += {'a'}, ...
-x*: = x+ / ""
-  FIRST += xFIRST, START += xSTART, xFOLLOW += FOLLOW
-ID:
-  FIRST += xFIRST, START += xSTART, xFOLLOW += FOLLOW
-[x]:
-  FIRST += {}, START += XFIRST + xSTART, xFOLLOW += FOLLOW
-x&:
-  xFOLLOW += ?
-x!:
-%TAG:
-  FIRST += {TAG}, START += {}, ...
+  e = id
+    FIRST(e) += FIRST(id), START(e) += START(id), FOLLOW(id) += FOLLOW(e)
 
-Soft fail = return false.
-Hard fail = exception jump to innermost containing lookahead.
-WHY DOES CURRENT INTERPRETER WORK?
-Because it makes progress checks at various points, to return stepwise to
-the exception point.
-IF we say the x inside a lookahead [x] x& x! mustn't act without progressing,
-then progress is input consumption only.
+  e = [x]
+    FIRST += {}, START(x) += FIRST(x) + START(x), FOLLOW(x) += FOLLOW(e)
 
-What if hard fail = success = ok, and only soft fail = false = return.  This
-is enough to stop y in x / y.  But what about x y?
+  e = x&   or   e = x!
+    START(e) += FIRST(x), (FOLLOW(e) from above)
+
+  e = %TAG
+    FIRST(e) += {TAG}, START += {}, (FOLLOW(e) from above)
+
 */
-
 
 class Analyser implements Test.Callable {
     private String source;
@@ -104,7 +83,7 @@ class Analyser implements Test.Callable {
         source = text;
         Stacker stacker = new Stacker();
         Node root = stacker.run(source);
-        if (root.has(IC)) bits = 128 + 31;
+        if (root.has(TextInput)) bits = 128 + 31;
         else bits = maxTagIndex(root) + 1;
         changed = true;
         while (changed) { changed = false; findSets(root); }
@@ -237,17 +216,6 @@ class Analyser implements Test.Callable {
         }
     }
 
-/*
-    // Add the bits not in b to n, and check changed.
-    void addNot(BitSet n, BitSet b) {
-        for (int i=0; i<bits; i++) {
-            if (! b.get(i)) {
-                changed = true;
-                b.set(i);
-            }
-        }
-    }
-*/
     // Add the bits in a but not b to n, and check changed.
     void addSub(BitSet n, BitSet a, BitSet b) {
         int len = a.length();
@@ -261,13 +229,12 @@ class Analyser implements Test.Callable {
 
     // Show a bitset, just for testing.
     String show(Node n, BitSet b) {
-        if (n.has(IT)) return b.toString();
+        if (n.has(TokenInput)) return b.toString();
         boolean invert = b.cardinality() > bits / 2;
-        String s = "";// = "'";
+        String s = "";
         for (int i=0; i<128; i++) {
             if (invert ? ! b.get(i) : b.get(i)) s += (char) i;
         }
-        //s += "'";
         if (invert) s += "!";
         return s;
     }

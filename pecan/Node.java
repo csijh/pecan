@@ -1,16 +1,17 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 nodes. Free and open source. See licence.txt.
 
 package pecan;
 import java.util.*;
 import static pecan.Op.*;
 
-/* A Node represents any parsing expression, together with information which is
-gathered about it during the various passes. */
+/* A Node represents any parsing expression, together with annotation
+information which is gathered about it during the various passes.
+
+The node class extends the info class and has an op, a text range in the source,
+and up to two child nodes. If the left node is null, the right node represents a
+cross-reference link instead of a child node. */
 
 class Node extends Info {
-    // A node has an op, a text range in the source, up to two child nodes, a
-    // cross-reference node, and gathered info.
-
     private Op op;
     private String source;
     private int start, end;
@@ -27,7 +28,7 @@ class Node extends Info {
     // Construct a node with no subnodes.
     Node(Op o, String s, int b, int e) { this(o, null, null, s, b, e); }
 
-    // Copy a node with given children.  Leave out info except value.
+    // Copy a node with given children. Leave out info except value.
     Node copy(Node x, Node y) {
         Node n = new Node(op, x, y, source, start, end);
         n.value(value());
@@ -43,8 +44,7 @@ class Node extends Info {
     void start(int s) { start = s; }
     void end(int e) { end = e; }
 
-    // Get/set the children and the cross-reference link. The reference is
-    // stored in the right child of a node with no left child.
+    // Get/set the children and the cross-reference link.
     Node left() { return left; }
     Node right() { return left == null ? null : right; }
     Node ref() { return left != null ? null : right; }
@@ -61,7 +61,7 @@ class Node extends Info {
         right = r;
     }
 
-    // Return a node tree as multi-line text.  Then clear the notes, ready
+    // Return a node tree as multi-line text. Then clear the notes, ready
     // for the next pass.
     public String toString() {
         String s = toString("") + "\n";
@@ -76,9 +76,9 @@ class Node extends Info {
         if (left != null && right != null) right.clear();
     }
 
-    // Return a node tree as text, with the given indent for each line.  Avoid
-    // following cross references.  Include the range of text covered by the
-    // node, and any note attached by one of the passes.  Indent a chain of RULE
+    // Return a node tree as text, with the given indent for each line. Avoid
+    // following cross references. Include the range of text covered by the
+    // node, and any note attached by one of the passes. Indent a chain of RULE
     // nodes, or subnodes of a chain of AND or OR nodes, by the same amount.
     private String toString(String indent) {
         String s = indent + op + " ";

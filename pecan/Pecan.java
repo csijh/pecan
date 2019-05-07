@@ -68,7 +68,7 @@ class Pecan {
     }
 */
 /*
-    // Do integration testing.  The tests come from the Tests.txt file, as with
+    // Do integration testing. The tests come from the Tests.txt file, as with
     // unit testing, but files are created and run in the TestFiles directory.
 
     private void itest(String[] args) throws IOException {

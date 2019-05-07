@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 checker. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -6,11 +6,11 @@ import java.text.*;
 import static pecan.Op.*;
 import static pecan.Info.Flag.*;
 
-/* Check that a grammar is valid.  Report any non-terminating left recursion as
-an error, using an adaptation of the well-formed algorithm from the PEG paper
-http://pdos.csail.mit.edu/papers/parsing:popl04.pdf.  The difference is that
-the single flag "can fail" is replaced by two flags "can fail with progress"
-and "can fail without progress".   Nodes are annotated with the flags:
+/* Check that a grammar is valid. Report any non-terminating left recursion as
+an error, using an adaptation of the well-formedness algorithm from the PEG
+paper http://pdos.csail.mit.edu/papers/parsing:popl04.pdf. The single flag "can
+fail" is replaced by two flags "can fail with progress" and "can fail without
+progress". Nodes are annotated with the flags:
 
   SN   =   can succeed with no progress
   SP   =   can succeed with progress
@@ -18,17 +18,7 @@ and "can fail without progress".   Nodes are annotated with the flags:
   FP   =   can fail with progress
   WF   =   well-formed
 
-There are further checks on choices and repetitions. If the left hand
-alternative of a choice, or similar, fails without progressing, then it musn't
-have done any actions (including discards). And a left hand alternative must be
-able to fail with no progress, or the right hand alternative would be
-inacessible. Two further flag annotations are used:
-
-  AA   =   includes at least one action, or discard
-  AB   =   can act, or discard, before consuming any input
-
-All these are calculated by iterating to a fixed point.  Validity WF(x) is
-calculated by:
+Validity WF(x) is calculated by iterating to a fixed point, using:
 
   WF(x y) = WF(x) & (SN(x) => WF(y))
   WF(x/y) = WF(x) & WF(y)
@@ -37,7 +27,20 @@ calculated by:
   WF(x+) = WF(xx*) = WF(x) & ~SN(x)
   WF(x!) = WF(x)
 
-*/
+A minor change from version 4 is that if a left hand alternative can't fail with
+no progress, so that the right hand alternative is inacessible, it is no longer
+reported as an error (so that transformations remain valid).
+
+A major change from version 4 is that actions are now allowed at the start of
+the left hand item in a choice, as in (@a x / y). This is for uniformity and
+consistency, especially where transformations are concerned. To obtain the
+effect of undoing the action if the left choice mismatches, actions are delayed
+until progress is made in the input. There are two further flag annotations:
+
+  AA   =   involves at least one action (or discard)
+  AB   =   can act (or discard) before consuming any input
+
+These are used, or can potentially be used in the future, for optimisations. */
 
 class Checker implements Test.Callable {
     private String source;
@@ -200,8 +203,7 @@ class Checker implements Test.Callable {
         if (! node.has(WF)) err(node, "potential infinite loop");
     }
 
-    // Calculate AA and AB and report errors.  Check that left hand alternatives
-    // and similar can fail without progressing and without actions.
+    // Calculate AA and AB. No longer report errors.
     private void acting(Node node) throws ParseException {
         boolean xAA = false, yAA = false, nAA = false, oAA = node.has(AA);
         boolean xAB = false, yAB = false, nAB = false, oAB = node.has(AB);
@@ -237,14 +239,14 @@ class Checker implements Test.Callable {
             break;
         case OR:
             nAA = xAA || yAA;
-            if (xAB) err(x, "alternative can act without progressing");
+//          if (xAB) err(x, "alternative can act without progressing");
             nAB = yAB;
-            if (! x.has(FN)) err(y, "unreachable alternative");
+//          if (! x.has(FN)) err(y, "unreachable alternative");
             break;
         case OPT: case MANY: case SOME:
             nAA = xAA;
-            if (xAB) err(x, "component can act without progressing");
-            if (! x.has(FN)) err(node, "unreachable repetition");
+//          if (xAB) err(x, "component can act without progressing");
+//          if (! x.has(FN)) err(node, "unreachable repetition");
             break;
         default:
             throw new Error("Type " + node.op() + " not implemented");

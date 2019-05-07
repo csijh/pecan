@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 testing. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -10,22 +10,22 @@ import java.nio.file.*;
 import java.nio.charset.*;
 import java.util.*;
 
-/* Run text-based unit tests.  Supports both internal tests of the pecan
-classes, and external tests of user grammars.  The tests for a pecan class X are
-in the file tests/X.txt.  The classes implement the Testable interface, so that
+/* Run text-based unit tests. Supports both internal tests of the pecan
+classes, and external tests of user grammars. The tests for a pecan class X are
+in the file tests/X.txt. The classes implement the Testable interface, so that
 unit testing of a class can be done even when other classes are currently
-broken.  ParseExceptions are used to signal failures during any pass.
+broken. ParseExceptions are used to signal failures during any pass.
 
-Each test is separated from the next by a line of equal signs.  A test consists
-of the sample input, then a line of minus signs, then the expected output.  Line
+Each test is separated from the next by a line of equal signs. A test consists
+of the sample input, then a line of minus signs, then the expected output. Line
 endings are converted to \n.
 
 To allow the sample input or expected output to contain control characters or
 unicode characters as plain text, \nnn represents a character by its decimal
 code, or by its hex code if the code starts with zero, \\ represents a single
-backslash, and a \ followed by any other character removes the character.  In
+backslash, and a \ followed by any other character removes the character. In
 particular, \ followed by a space can be used as a separator, and \ followed by
-a newline can be used to cancel the newline.  For example, given that 960 is
+a newline can be used to cancel the newline. For example, given that 960 is
 the decimal code for the character pi, then:
 
    \960x      is pi followed by x
@@ -42,14 +42,15 @@ public class Test {
     private int lineNo;
     private String input, output;
 
-    // No testing.
+    // No testing of the test class.
     public static void main(String[] args) { }
 
     String input() { return input; }
     String output() { return output; }
 
     // Called from the main method of a class for unit testing, passing the
-    // command line arguments, and a sample object of that class.
+    // command line arguments, and a sample object of that class. If there is a
+    // command line argument, it is assumed to be the line number of a test.
     static void run(String[] args, Callable object) {
         int line = 0;
         if (args != null && args.length > 0) line = Integer.parseInt(args[0]);
@@ -83,7 +84,8 @@ public class Test {
             System.out.print(message);
             System.exit(1);
         }
-        System.out.println(name + " class OK");
+        System.out.println(
+            name + " class OK, " + tests.size() + " tests passed.");
     }
 
     // Extract tests from a given file.
@@ -154,7 +156,12 @@ public class Test {
             }
             int base = hex ? 16 : 10;
             int n = Integer.parseInt(text.substring(i, end), base);
-            out += (char) n;
+            if (Character.charCount(n) == 1) {
+                out += (char) n;
+            }
+            else {
+                out += new String(Character.toChars(n));
+            }
             i = end - 1;
         }
         return out;
@@ -172,6 +179,12 @@ public class Test {
         String out = "";
         for (int i=0; i<text.length(); i++) {
             char ch = text.charAt(i);
+            if (Character.isHighSurrogate(ch)) {
+                int uc = text.codePointAt(i);
+                out += "\\" + uc;
+                i++;
+                continue;
+            }
             if (ch == '\\') { out += "\\\\"; continue; }
             if (ch >= ' ' && ch <= '~') { out += ch; continue; }
             if (ch == '\n') { out += ch; continue; }
@@ -241,7 +254,7 @@ public class Test {
         return new String(text);
     }
 
-    // Split the text at marker lines into an array of tests.  Each test has
+    // Split the text at marker lines into an array of tests. Each test has
     // four strings: class name, note, input, output.
     private static String[][] split(String text, boolean user) {
         String[] parts = text.split("==========\n");

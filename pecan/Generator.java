@@ -113,8 +113,8 @@ class Generator implements Test.Callable {
         }
     }
 
-    // Find the address of a node.  If it is an identifier, the address of
-    // the rule it refers to can be used.  Set the BP (bypassed) flag.
+    // Find the address of a node. If it is an identifier, the address of the
+    // rule it refers to can be used. Set the BP (bypassed) flag.
     int address(Node node) {
         if (node.op() == ID) { node.PC(node.ref().PC()); node.set(BP); }
         return node.PC();

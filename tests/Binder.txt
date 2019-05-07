@@ -46,15 +46,12 @@ Error on line 3: number too big
 n = 0110000
     ^^^^^^^
 ==========
-// Unicode supplementary characters (beyond 16 bits)
-//numbers = "\1114109" / '\1114109'
-//----------
-//RULE numbers
-//  OR "\1114109" / '\1114109'
-//    STRING "\1114109" 1114109
-//    SET '\1114109' 1114109
+// Unicode supplementary characters (beyond 16 bits), 195101 = last letter.
+char = "\195101"
 x = "x"
 ----------
+RULE char
+  STRING "\195101" 195101
 RULE x
   STRING "x" 120
 ==========

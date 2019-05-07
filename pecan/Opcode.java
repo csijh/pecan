@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 opcodes. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -14,21 +14,20 @@ x >c y         if next char > c, do x, else y
  */
 
 public enum Opcode {
-    // First, opcodes which have a two-byte arg
     $RULE,    // x = y  ->  RULE framesize (followed by code for y)
     $EITHER,  // x / y  ->  EITHER &x OR &y
+    $EITHERI, // x / y  ->  EITHERI OR &y (x)
     $OR,
     $BOTH,    // x y    ->  BOTH &x AND &y
     $AND,
     $REPEAT,  // x?     ->  REPEAT &x ONCE
     $MANY,    // x*     ->  REPEAT &x MANY
     $DO,      // x+     ->  DO &x THEN REPEAT &x MANY
-    $LOOK,    // [x]    ->  LOOK &x TRY
+    $LOOK,    // [x]    ->  LOOK &x TRY,  LOOK &x HAS,  LOOK &x NOT
     $ACT,     // @a     ->  ACT a
     $MARK,    // #e     ->  MARK e
-    // Next, opcodes with no arg or a one-byte arg or a string arg
     $START,   // Entry point
-    $STOP,
+    $STOP,    // Exit point
     $ONCE,
     $THEN,
     $TRY,
@@ -38,16 +37,15 @@ public enum Opcode {
     $SET,     // 'ab'   ->  SET 2 'a' 'b' (ASCII only)
     $RANGE,   // a..b   ->  RANGE m a n b (UTF-8)
     $CAT,     // Nd     ->  CAT Nd
+    $SWITCH,  // x / y  ->  SWITCH &x &y ch (UTF-8 bytes)
     $TAG,     // %t     ->  TAG t
     $DROP,    // @      ->  DROP
-    // Next, opcodes when the code for x or y immediately follows
-    $EITHER3, // x / y  ->  EITHER3 OR &y (x)
-    $OR0,     // x / y  ->  EITHER &x OR0 (y)
-    $BOTH3,   // x y    ->  BOTH3 AND &y (x)
-    $AND0,    // x y    ->  BOTH &x AND0 (y)
-    $REPEAT1, // x?     ->  REPEAT1 ONCE (x)
-    $DO3,     // x+     ->  DO3 THEN REPEAT1 MANY (x)
-    $LOOK1,   // [x]    ->  LOOK1 TRY (x)
+    $ORI,     // x / y  ->  EITHER &x OR0 (y)
+    $BOTHI,   // x y    ->  BOTH3 AND &y (x)
+    $ANDI,    // x y    ->  BOTH &x AND0 (y)
+    $REPEATI, // x?     ->  REPEAT1 ONCE (x)
+    $DOI,     // x+     ->  DO3 THEN REPEAT1 MANY (x)
+    $LOOKI,   // [x]    ->  LOOK1 TRY (x)
     $GO;      // Used in generator, maybe obsolete.
 
     public static void main(String[] args) { }

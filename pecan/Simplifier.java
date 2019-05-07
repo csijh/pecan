@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 simplifier. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -32,8 +32,8 @@ class Simplifier implements Test.Callable {
         return root;
     }
 
-    // Replace x+ by x x*.  Make one copy of x an ID cross reference, so that
-    // it remains a tree.  Also, clear notes.
+    // Replace x+ by x x*. Make one copy of x an ID cross reference, so that
+    // it remains a tree. Also, clear notes.
     private void expandSome(Node node) {
         if (node.left() != null) expandSome(node.left());
         if (node.right() != null) expandSome(node.right());

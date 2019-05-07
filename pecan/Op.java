@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 operators. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -22,8 +22,8 @@ public enum Op {
     SET,     // Choice of characters, '...'
     RANGE,   // Character range, x..y
     CAT,     // Unicode category, e.g. Lu
-    DROP,    // Drop unused matched characters, @
     TAG,     // Match a type of token.
+    DROP,    // Drop unused matched characters, @
     ACT;     // Carry out an action, e.g. @2add
 
     public static void main(String[] args) { }

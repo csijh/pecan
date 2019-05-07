@@ -7,14 +7,14 @@ import java.text.*;
 import static pecan.Op.*;
 import static pecan.Info.Flag.*;
 
-/* This class contains two interpreters.  One works directly on the tree
-nodes, and can be used for step-by-step visualisation.  The other is a
+/* This class contains two interpreters. One works directly on the tree
+nodes, and can be used for step-by-step visualisation. The other is a
 bytecode interpreter, so that the details of code generation can be included
 in the unit testing.
 
 The test input may be text, or tag names with possible white space in between.
 The output describes the external calls that would be made, with one line of
-text per call. The output should be the same for both interpreters.  */
+text per call. The output should be the same for both interpreters. */
 
 public class Interpreter implements Test.Callable {
     private String grammar;
@@ -34,7 +34,7 @@ public class Interpreter implements Test.Callable {
     static int no = 0;
 
     // Each test consists of a grammar followed by a line of ten tildes followed
-    // by some source text.  If the grammar is missing, the grammar from
+    // by some source text. If the grammar is missing, the grammar from
     // the previous test is used.
     public String test(String s) throws ParseException {
         String[] parts = s.split("~~~~~~~~~~\n");

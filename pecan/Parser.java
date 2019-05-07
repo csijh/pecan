@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 parser. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -308,7 +308,7 @@ class Parser implements Test.Callable {
         }
     }
 
-    // A gap follows a token which can end a rule.  It looks ahead for a
+    // A gap follows a token which can end a rule. It looks ahead for a
     // possible continuation to see if the next newline should be skipped.
     // gap = space* comment? continuation @
     private void gap() throws ParseException {
@@ -508,14 +508,14 @@ class Parser implements Test.Callable {
         output[out++] = r;
     }
 
-    // There is a subtle difficulty with bracketed subexpressions "(x)".
-    // To have one node with text "(x)" poses a problem when "x" is an id,
-    // because then the node's text is not the name of the id.
-    // To have one node with text "x" spoils the text range convention, e.g.
-    // "(x)y" could end up with text "x)y"
-    // So, two nodes are created, one for "(x)" and one for "x", and the outer
-    // "(x)" node is discarded after parsing is over.
-    // To avoid having an extra temporary Op constant which would pollute later
+    // There is a subtle difficulty with bracketed subexpressions "(x)". To have
+    // one node with text "(x)" would pose a problem when "x" is an id, because
+    // then the node's text is not the name of the id. To have one node with
+    // text "x" would spoil the text range convention, e.g. expression "(x)y"
+    // would end up with text "x)y" So, two nodes are created, one for "(x)" and
+    // one for "x". The outer "(x)" node ensures that ancestor nodes have the
+    // right ramge. Then the outer node is discarded after parsing is over. To
+    // avoid having an extra temporary Op constant which would pollute later
     // passes, a temporary "(x)" node has a null Op.
 
     // Convert "(" x ")" into "(x)", with child x.

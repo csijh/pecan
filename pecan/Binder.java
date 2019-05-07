@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 binder. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -13,7 +13,7 @@ import static java.lang.Character.*;
 Create cross-references from ids to their definitions.
 Recognise unicode category names.
 Check for missing or duplicate definitions.
-For queries/markers/actions, set the value to a unique sequence number.
+For tags/markers/actions, set the value to a unique sequence number.
 Check consistency of action arities, and add a node for the name and arity.
 Check that a set consists of distinct ASCII characters.
 For matchers which represent single characters, set the value to the code.
@@ -26,7 +26,7 @@ class Binder implements Test.Callable {
     private String source;
     private Set<String> cats;
     private Map<String,Node> rules;
-    private Map<String,Integer> queries, markers, actions;
+    private Map<String,Integer> tags, markers, actions;
 
     public static void main(String[] args) {
         Binder program = new Binder();
@@ -44,12 +44,12 @@ class Binder implements Test.Callable {
         return bind(root);
     }
 
-    // Bind a grammar.  Gather the names, then allocate, then scan the nodes.
+    // Bind a grammar. Gather the names, then allocate, then scan the nodes.
     Node bind(Node root) throws ParseException {
         cats = new HashSet<String>();
         for (Category cat : Category.values()) cats.add(cat.toString());
         rules = new LinkedHashMap<String,Node>();
-        queries = new LinkedHashMap<String,Integer>();
+        tags = new LinkedHashMap<String,Integer>();
         markers = new TreeMap<String,Integer>();
         actions = new LinkedHashMap<String,Integer>();
         gather(root);
@@ -59,7 +59,7 @@ class Binder implements Test.Callable {
         return root;
     }
 
-    // Gather all rule, query, marker and action names, top down.
+    // Gather all rule, tag, marker and action names, top down.
     // Check rule names for unicode ids or duplicates.
     // For rules, set the value to the sequence number.
     // Convert ids which are category names into category nodes.
@@ -80,8 +80,8 @@ class Binder implements Test.Callable {
             break;
         case TAG:
             name = node.text().substring(1);
-            defined = queries.get(name) != null;
-            if (! defined) queries.put(name, 0);
+            defined = tags.get(name) != null;
+            if (! defined) tags.put(name, 0);
             break;
         case ID:
             name = node.text();
@@ -116,11 +116,11 @@ class Binder implements Test.Callable {
         if (node.left() != null && node.right() != null) gather(node.right());
     }
 
-    // Allocate sequence numbers to queries, markers and actions.
+    // Allocate sequence numbers to tags, markers and actions.
     // Sort actions by arity first.
     private void allocate() {
         int seq = 0;
-        for (String name : queries.keySet()) queries.put(name, seq++);
+        for (String name : tags.keySet()) tags.put(name, seq++);
         seq = 0;
         for (String name : markers.keySet()) markers.put(name, seq++);
         seq = 0;
@@ -137,7 +137,7 @@ class Binder implements Test.Callable {
     }
 
     // Traverse the tree, bottom up, and check each node.
-    // For queries, markers and actions, set value to sequence number.
+    // For tags, markers and actions, set value to sequence number.
     private void scan(Node node) throws ParseException {
         if (node.left() != null) scan(node.left());
         if (node.right() != null) scan(node.right());
@@ -157,38 +157,46 @@ class Binder implements Test.Callable {
         }
     }
 
-    // Calculate the IC (input is characters) and IT (input is tokens) flags.
+    // Calculate the TextInput and TokenInput flags.
     void classify(Node node)  throws ParseException {
-        boolean xIC = false, yIC = false, xIT = false, yIT = false;
+        boolean xTxt = false, yTxt = false, xTok = false, yTok = false;
         Node x = node.left(), y = node.right();
-        if (x != null) { classify(x); xIC = x.has(IC); xIT = x.has(IT); }
-        if (y != null) { classify(y); yIC = y.has(IC); yIT = y.has(IT); }
-        if (xIC || yIC) node.set(IC);
-        if (xIT || yIT) node.set(IT);
+        if (x != null) {
+            classify(x);
+            xTxt = x.has(TextInput);
+            xTok = x.has(TokenInput);
+        }
+        if (y != null) {
+            classify(y);
+            yTxt = y.has(TextInput);
+            yTok = y.has(TokenInput);
+        }
+        if (xTxt || yTxt) node.set(TextInput);
+        if (xTok || yTok) node.set(TokenInput);
         switch (node.op()) {
         case ID:
-            if (node.ref().has(IC)) node.set(IC);
-            if (node.ref().has(IT)) node.set(IT);
+            if (node.ref().has(TextInput)) node.set(TextInput);
+            if (node.ref().has(TokenInput)) node.set(TokenInput);
             break;
         case TAG:
-            node.set(IT);
+            node.set(TokenInput);
             break;
         case CHAR: case RANGE: case CAT:
-            node.set(IC);
+            node.set(TextInput);
             break;
         case STRING:
-            if (! node.text().equals("\"\"")) node.set(IC);
+            if (! node.text().equals("\"\"")) node.set(TextInput);
             break;
         case SET:
-            if (! node.text().equals("''")) node.set(IC);
+            if (! node.text().equals("''")) node.set(TextInput);
             break;
         default: break;
         }
-        if (node.has(IC) && node.has(IT)) {
+        if (node.has(TextInput) && node.has(TokenInput)) {
             err(node, "there is both text and token input");
         }
         if (node.op() == RULE && node.value() == 0) {
-            if (! node.has(IT)) node.set(IC);
+            if (! node.has(TokenInput)) node.set(TextInput);
         }
     }
 
@@ -264,9 +272,9 @@ class Binder implements Test.Callable {
         node.note("" + node.value());
     }
 
-    // Bind a query.
+    // Bind a tag.
     private void bindTag(Node node) throws ParseException {
-        node.value(queries.get(node.text().substring(1)));
+        node.value(tags.get(node.text().substring(1)));
         node.note("" + node.value());
     }
 

@@ -1,34 +1,35 @@
-// Empty
+// Flags shown are SN,SP,FN,FP: can succeed/fail without/with progressing.
+// Empty string: succeeds without progressing
 x = ""
 ----------
 RULE x 1000
   STRING "" 1000
 ==========
-// Nonempty
+// Empty set: fails without progressing
 x = ''
 ----------
 RULE x 0010
   SET '' 0010
 ==========
-// Number
+// Numerical character: succeeds and progresses or fails without progressing
 x = 42
 ----------
 RULE x 0110
   CHAR 42 0110
 ==========
-// String
+// String: SP or FN
 x = "a"
 ----------
 RULE x 0110
   STRING "a" 0110
 ==========
-// Set
+// Set: SP or FN
 x = 'a'
 ----------
 RULE x 0110
   SET 'a' 0110
 ==========
-// Empty and empty
+// Empty string then empty string: SN
 x = "" ""
 ----------
 RULE x 1000
@@ -36,7 +37,7 @@ RULE x 1000
     STRING "" 1000
     STRING "" 1000
 ==========
-// Normal rule
+// Normal rule without recursion
 x = 'a'
 ----------
 RULE x 0110
@@ -58,7 +59,7 @@ Error on line 2: potential infinite loop
 x = y "abc"
     ^
 ==========
-// Mutual recursion masked by optional
+// Mutual recursion masked by optional expression
 x = "a" ? y
 y = "A" ? x "ABC"
 ----------
@@ -66,7 +67,7 @@ Error on line 2: potential infinite loop
 x = "a" ? y
           ^
 ==========
-// Mutual recursion masked by remote optional
+// Mutual recursion masked by remote optional expression
 x = a y
 z = "123"
 y = "A" ? x "ABC"
@@ -78,34 +79,49 @@ Error on line 2: potential infinite loop
 x = a y
       ^
 ==========
-// Was a check for error: query while backtracking
-// Now a check for error: text and tokens
+// Text input and token input
 x = [%a] 'b'
 ----------
-Error on line 3: there is both text and token input
+Error on line 2: there is both text and token input
 x = [%a] 'b'
     ^^^^^^^^
 ==========
-// Was a check for error: query while looking ahead
-x = (%a)& 'b'
+// Try: SP or FN or FP
+x = [%a] %b
 ----------
-Error on line 2: there is both text and token input
-x = (%a)& 'b'
-    ^^^^^^^^^
+RULE x 0111
+  AND [%a] %b 0111
+    TRY [%a] 0110
+      TAG %a 0110
+    TAG %b 0110
 ==========
-// Was a check for error: query while looking ahead
-x = (%a)! 'b'
+// Positive lookahead: SP or FN
+x = (%a)& %b
 ----------
-Error on line 2: there is both text and token input
-x = (%a)! 'b'
-    ^^^^^^^^^
+RULE x 0110
+  AND (%a)& %b 0110
+    HAS (%a)& 1010
+      TAG %a 0110
+    TAG %b 0110
 ==========
-// Action on left of choice
+// Negative lookahead: SP or FN
+x = (%a)! %b
+----------
+RULE x 0110
+  AND (%a)! %b 0110
+    NOT (%a)! 1010
+      TAG %a 0110
+    TAG %b 0110
+==========
+// Action on left of choice (legal in Pecan 5)
 x = @a 'a' / 'b'
 ----------
-Error on line 2: alternative can act without progressing
-x = @a 'a' / 'b'
-    ^^^^^^
+RULE x 0110
+  OR @a 'a' / 'b' 0110
+    AND @a 'a' 0110
+      ACT @a 1000
+      SET 'a' 0110
+    SET 'b' 0110
 ==========
 // Expressions
 exp = term ('+' term @2add / '-' term @2sub)* 'eof'
