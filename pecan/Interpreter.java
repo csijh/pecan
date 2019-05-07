@@ -1,4 +1,4 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 interpreter. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -21,14 +21,14 @@ public class Interpreter implements Test.Callable {
     private boolean textInput, ok, marked;
     private String input;
     private Node root;
-    private int start, in, mark;
+    private int start, in, mark, lookahead;
     private BitSet failures;
     private String[] markers;
     private StringBuffer output;
 
     public static void main(String[] args) throws ParseException {
         Interpreter program = new Interpreter();
-        Generator.main(null);
+//        Generator.main(null);
         Test.run(args, program);
     }
     static int no = 0;
@@ -51,12 +51,13 @@ public class Interpreter implements Test.Callable {
     void prepare(String grammar, String text) throws ParseException {
         Stacker stacker = new Stacker();
         root = stacker.run(grammar);
-        textInput = root.has(IC);
+        textInput = root.has(TextInput);
         input = text;
         ok = true;
         start = 0;
         in = 0;
         mark = 0;
+        lookahead = 0;
         marked = false;
         markers = new String[markerSize(root)];
         gatherMarkers(root);
@@ -86,6 +87,7 @@ public class Interpreter implements Test.Callable {
     void parse(Node node) {
         int saveIn, saveMark, length;
         String text;
+        System.out.println(node.op());
         switch(node.op()) {
         case RULE:
             parse(node.left());
@@ -117,21 +119,39 @@ public class Interpreter implements Test.Callable {
             }
             if (in == saveIn) ok = true;
             break;
-        case TRY:
+        case SOME:
             saveIn = in;
             parse(node.left());
-            if (! ok) in = saveIn;
+            if (!ok) { if (in == saveIn) ok = true; return; }
+            saveIn = in;
+            while (ok) {
+                saveIn = in;
+                parse(node.left());
+            }
+            if (in == saveIn) ok = true;
+            break;
+        case TRY:
+            saveIn = in;
+            lookahead++;
+            parse(node.left());
+            lookahead--;
+            in = saveIn;
+            if (ok) parse(node.left());
             break;
         case HAS:
             saveIn = in;
+            lookahead++;
             parse(node.left());
+            lookahead--;
             in = saveIn;
             break;
         case NOT:
             saveMark = mark;
             mark = Integer.MAX_VALUE;
             saveIn = in;
+            lookahead++;
             parse(node.left());
+            lookahead--;
             in = saveIn;
             ok = !ok;
             mark = saveMark;
@@ -237,6 +257,7 @@ public class Interpreter implements Test.Callable {
             break;
         case ACT:
             ok = true;
+            if (lookahead > 0) break;
             int arity = node.ref().value();
             output.append(node.ref().text());
             if (textInput && in > start) {

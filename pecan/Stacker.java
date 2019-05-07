@@ -53,6 +53,7 @@ class Stacker implements Test.Callable {
         clear(root);
         changed = true;
         while (changed) { changed = false; net(root); }
+        System.out.println("tree " + root);
         checkNet(root);
         checkRoot(root);
         changed = true;
@@ -108,8 +109,10 @@ class Stacker implements Test.Callable {
         Node x = node.left(), y = node.right();
         if (x != null) { checkNet(x); xNet = x.NET(); }
         if (y != null) { checkNet(y); yNet = y.NET(); }
-        if (node.NET() == UNKNOWN)
+        if (node.NET() == UNKNOWN) {
+            System.out.println("checkNet " + node.op());
             err(node, "unable to calculate number of output items produced");
+        }
         switch(node.op()) {
         case OR:
             if (xNet != UNKNOWN && yNet != UNKNOWN && xNet != yNet) {

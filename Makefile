@@ -9,6 +9,7 @@ Binder = pecan/Binder.java $(Parser) $(Category)
 Checker = pecan/Checker.java $(Binder)
 Stacker = pecan/Stacker.java $(Checker)
 Analyser = pecan/Analyser.java $(Stacker)
+Interpreter = pecan/Interpreter.java $(Stacker)
 #Opcode Generator Interpreter:
 
 %: pecan/%.java

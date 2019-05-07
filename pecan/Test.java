@@ -84,7 +84,8 @@ public class Test {
             System.out.print(message);
             System.exit(1);
         }
-        System.out.println(
+        if (line > 0) System.out.println("Test on line " + line + " passed.");
+        else System.out.println(
             name + " class OK, " + tests.size() + " tests passed.");
     }
 
