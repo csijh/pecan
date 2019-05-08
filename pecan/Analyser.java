@@ -106,9 +106,9 @@ class Analyser implements Test.Callable {
         if (y != null) findSets(y);
         int ch;
         switch (node.op()) {
-        case DROP: case ACT:
+        case DROP: case ACT: case MARK:
             break;
-        case RULE: case MARK:
+        case RULE:
             add(node.FIRST(), x.FIRST());
             add(node.START(), x.START());
             add(x.FOLLOW(), node.FOLLOW());

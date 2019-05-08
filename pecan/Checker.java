@@ -90,7 +90,7 @@ class Checker implements Test.Callable {
             nFN = node.ref().has(FN);
             nFP = node.ref().has(FP);
             break;
-        case DROP: case ACT:
+        case DROP: case ACT: case MARK:
             nSN = true;
             break;
         case TAG: case CHAR: case RANGE: case CAT:
@@ -108,7 +108,7 @@ class Checker implements Test.Callable {
             if (! node.text().equals("''")) nSP = true;
             nFN = true;
             break;
-        case RULE: case MARK:
+        case RULE:
             nSN = xSN;
             nSP = xSP;
             nFN = xFN;
@@ -211,11 +211,11 @@ class Checker implements Test.Callable {
         if (x != null) { acting(x); xAA = x.has(AA); xAB = x.has(AB); }
         if (y != null) { acting(y); yAA = y.has(AA); yAB = y.has(AB); }
         switch (node.op()) {
+            // HAS and NOT have actions switched off, so don't have AA or AB.
         case CHAR: case RANGE: case CAT: case STRING: case SET: case TAG:
-        // HAS and NOT have actions switched off, so don't have AA or AB.
-        case HAS: case NOT:
+        case MARK: case HAS: case NOT:
             break;
-        // If [x] succeeds, x is executed a second time with actions.
+        // If [x] succeeds, x is executed a second time with actions on.
         case TRY:
             nAA = xAA;
             nAB = xAB;
@@ -224,7 +224,7 @@ class Checker implements Test.Callable {
             nAA = true;
             nAB = true;
             break;
-        case RULE: case MARK:
+        case RULE:
             nAA = xAA;
             nAB = xAB;
             break;
@@ -239,6 +239,10 @@ class Checker implements Test.Callable {
             break;
         case OR:
             nAA = xAA || yAA;
+// x acts and fails w/o progrssing, then y doesn't progress
+//            nAB ||= xAB && xFN && (ySN || yFN);
+// x fails w/o progrssing, then y acts without progressing.
+//            nAB ||= xFN && yAB;
 //          if (xAB) err(x, "alternative can act without progressing");
             nAB = yAB;
 //          if (! x.has(FN)) err(y, "unreachable alternative");

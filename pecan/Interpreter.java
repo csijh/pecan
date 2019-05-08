@@ -7,14 +7,26 @@ import java.text.*;
 import static pecan.Op.*;
 import static pecan.Info.Flag.*;
 
-/* This class contains two interpreters. One works directly on the tree
-nodes, and can be used for step-by-step visualisation. The other is a
-bytecode interpreter, so that the details of code generation can be included
-in the unit testing.
+/* This interpreter works directly from the tree nodes, and can be used for
+testing, and for tracing. It also effectively defines the operational semantics
+of the grammar language.
 
 The test input may be text, or tag names with possible white space in between.
 The output describes the external calls that would be made, with one line of
-text per call. The output should be the same for both interpreters. */
+text per call.
+
+TODO: trace option:
+    I3 print input with | position when it progresses
+    G3 print the text of a node (on one line) when parsing it
+    O3 print the output when generated
+    with x y z or x / y / z, go straight to x
+
+TODO: work out which actions need to be delayed, or max no.
+    contained in an FN node where, the action can be before any progress
+    x y:    x IS @   or   x is a closer node   or   xSN and y is a closer node
+    x / y:  x is closer   or   y is closer
+
+*/
 
 public class Interpreter implements Test.Callable {
     private String grammar;
@@ -24,11 +36,11 @@ public class Interpreter implements Test.Callable {
     private int start, in, mark, lookahead;
     private BitSet failures;
     private String[] markers;
+    private List<Node> delay;
     private StringBuffer output;
 
     public static void main(String[] args) throws ParseException {
         Interpreter program = new Interpreter();
-//        Generator.main(null);
         Test.run(args, program);
     }
     static int no = 0;
@@ -61,13 +73,15 @@ public class Interpreter implements Test.Callable {
         marked = false;
         markers = new String[markerSize(root)];
         gatherMarkers(root);
-        output = new StringBuffer();
         failures = new BitSet();
+        delay = new ArrayList<>();
+        output = new StringBuffer();
     }
 
     // Run the parser
     String run() throws ParseException {
         parse(root.left());
+        takeActions();
         if (! ok) {
             output.setLength(0);
             String s;
@@ -87,7 +101,7 @@ public class Interpreter implements Test.Callable {
     void parse(Node node) {
         int saveIn, saveMark, length;
         String text;
-        System.out.println(node.op());
+        System.out.println(node.trace());
         switch(node.op()) {
         case RULE:
             parse(node.left());
@@ -122,7 +136,7 @@ public class Interpreter implements Test.Callable {
         case SOME:
             saveIn = in;
             parse(node.left());
-            if (!ok) { if (in == saveIn) ok = true; return; }
+            if (!ok) return;
             saveIn = in;
             while (ok) {
                 saveIn = in;
@@ -163,8 +177,10 @@ public class Interpreter implements Test.Callable {
                 int ch = input.codePointAt(in);
                 ok = (ch == node.value());
                 if (ok) {
+                    takeActions();
                     int n = Character.charCount(ch);
                     in += n;
+                    traceInput();
                 }
             }
             break;
@@ -176,7 +192,7 @@ public class Interpreter implements Test.Callable {
             else for (int i=0; i<length; i++) {
                 if (input.charAt(in+i) != text.charAt(i)) { ok = false; break; }
             }
-            if (ok) in += length;
+            if (ok) { takeActions(); in += length; traceInput(); }
             if (! ok && mark < in) mark = in;
             break;
         case SET:
@@ -186,12 +202,14 @@ public class Interpreter implements Test.Callable {
             if (in >= input.length()) { }
             else for (int i=0; i<length; i++) {
                 if (input.charAt(in) != text.charAt(i)) continue;
+                takeActions();
                 if (Character.isHighSurrogate(text.charAt(i))) {
                     i++;
                     if (input.charAt(in+1) != text.charAt(i)) continue;
                     in++;
                 }
                 in++;
+                traceInput();
                 ok = true;
             }
             if (! ok && mark < in) mark = in;
@@ -204,8 +222,10 @@ public class Interpreter implements Test.Callable {
                 int ch = input.codePointAt(in);
                 ok = (ch >= low) && (ch <= high);
                 if (ok) {
+                    takeActions();
                     int n = Character.charCount(ch);
                     in += n;
+                    traceInput();
                 }
             }
             if (! ok && mark < in) mark = in;
@@ -218,8 +238,10 @@ public class Interpreter implements Test.Callable {
                 int bit = 1 << Character.getType(ch);
                 ok = ((cats & bit) != 0);
                 if (ok) {
+                    takeActions();
                     int n = Character.charCount(ch);
                     in += n;
+                    traceInput();
                 }
             }
             if (! ok && mark < in) mark = in;
@@ -239,25 +261,22 @@ public class Interpreter implements Test.Callable {
             if (! ok && mark < in) mark = in;
             break;
         case MARK:
-            if (in > mark) { mark = in; marked = false; failures.clear(); }
-            if (in == mark && ! marked) {
-                marked = true;
-                parse(node.left());
-                marked = false;
-                if (! ok) {
-                    mark = in;
-                    failures.set(node.value());
-                }
-            }
-            else parse(node.left());
+            if (in > mark) { mark = in; failures.clear(); }
+            if (in == mark) failures.set(node.value());
+            ok = true;
             break;
         case DROP:
             ok = true;
+            delay.add(node);
+            /*
             start = in;
+            */
             break;
         case ACT:
             ok = true;
             if (lookahead > 0) break;
+            delay.add(node);
+            /*
             int arity = node.ref().value();
             output.append(node.ref().text());
             if (textInput && in > start) {
@@ -265,10 +284,39 @@ public class Interpreter implements Test.Callable {
             }
             output.append("\n");
             start = in;
+            */
             break;
         default:
             throw new Error("Not implemented " + node.op());
         }
+    }
+
+    // Print out the input position. TODO: multiline.
+    private void traceInput() {
+        System.out.print(input.substring(0, in));
+        System.out.print("|");
+        System.out.println(input.substring(in));
+    }
+
+    // Carry out any delayed actions.
+    private void takeActions() {
+        for (Node node : delay) {
+            System.out.println("O: " + node.text());
+            takeAction(node);
+        }
+        delay.clear();
+    }
+
+    // Carry out an action.
+    private void takeAction(Node node) {
+        if (node.op() == DROP) { start = in; return; }
+        if (node.op() != ACT) throw new Error("Expecting ACT");
+        output.append(node.ref().text());
+        if (textInput && in > start) {
+            output.append(" " + input.substring(start,in));
+        }
+        output.append("\n");
+        start = in;
     }
 
     // Measure the number of markers.

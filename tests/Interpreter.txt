@@ -206,8 +206,8 @@ subtract
 ==========
 // Tutorial step 10 with some error reporting added
 sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
-number = ("0".."9" #digit)+ @number
-end = 13? 10 #newline @
+number = (#digit "0".."9")+ @number
+end = #newline 13? 10 @
 ~~~~~~~~~~
 2
 ----------
@@ -258,10 +258,10 @@ subtract
 // Tutorial step 10 with full error reporting added
 sum = number (plus number @2add / minus number @2subtract)* end
 number = digit+ @number
-plus = "+" #operator @
-minus = "-" #operator @
-digit = "0".."9" #digit
-end = 13? 10 #newline @
+plus = #operator "+" @
+minus = #operator "-" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 ~~~~~~~~~~
 2
 ----------
@@ -363,12 +363,12 @@ add
 sum = term (plus term @2add / minus term @2subtract)* end
 term = number (times number @2multiply / over number @2divide)*
 number = digit+ @number
-plus = "+" #operator @
-minus = "-" #operator @
-times = "*" #operator @
-over = "/" #operator @
-digit = "0".."9" #digit
-end = 13? 10 #newline @
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 ~~~~~~~~~~
 2
 ----------
@@ -488,14 +488,14 @@ sum = term (plus term @2add / minus term @2subtract)* end
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open sum close
 number = digit+ @number
-plus = "+" #operator @
-minus = "-" #operator @
-times = "*" #operator @
-over = "/" #operator @
-open = "(" #bracket @
-close = ")" #bracket @
-digit = "0".."9" #digit
-end = 13? 10 #newline @
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+open = #bracket "(" @
+close = #bracket ")" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 ~~~~~~~~~~
 2
 ----------
@@ -625,14 +625,14 @@ expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
 number = digit+ @number
-plus = "+" #operator @
-minus = "-" #operator @
-times = "*" #operator @
-over = "/" #operator @
-open = "(" #bracket @
-close = ")" #bracket @
-digit = "0".."9" #digit
-end = 13? 10 #newline @
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+open = #bracket "(" @
+close = #bracket ")" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 ~~~~~~~~~~
 2
 ----------
@@ -698,15 +698,15 @@ expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
 number = digit+ @number gap
-plus = "+" #operator gap
-minus = "-" #operator gap
-times = "*" #operator gap
-over = "/" #operator gap
-open = "(" #bracket gap
-close = ")" #bracket gap
-digit = "0".."9" #digit
-gap = (" " #space)* @
-end = 13? 10 #newline @
+plus = #operator "+" gap
+minus = #operator "-" gap
+times = #operator "*" gap
+over = #operator "/" gap
+open = #bracket "(" gap
+close = #bracket ")" gap
+digit = #digit "0".."9"
+gap = (#space " ")* @
+end = #newline 13? 10 @
 ~~~~~~~~~~
 2
 ----------
@@ -816,8 +816,8 @@ lt <
 ==========
 // Error marker not reached
 tokens = @tokens (token @2add)+ end
-token = "x" @x / "y" @y / "z" #err @z
-end = 13? 10 #newline @
+token = "x" @x / "y" @y / #err "z" @z
+end = #newline 13? 10 @
 ~~~~~~~~~~
 xyx
 ----------
@@ -831,8 +831,8 @@ add
 ==========
 // Error marker reached, but no error
 tokens = @tokens (token @2add)+ end
-token = "x" @x / "y" @y / "z" #err @z
-end = 13? 10 #newline @
+token = "x" @x / "y" @y / #err "z" @z
+end = #newline 13? 10 @
 ~~~~~~~~~~
 z
 ----------
@@ -842,8 +842,8 @@ add
 ==========
 // Error marker reached, and reported
 tokens = @tokens (token @2add)+ end
-token = "x" @x / "y" @y / "z" #err @z
-end = 13? 10 #newline @
+token = "x" @x / "y" @y / #err "z" @z
+end = #newline 13? 10 @
 ~~~~~~~~~~
 
 ----------
@@ -904,7 +904,7 @@ number 2
 add
 ==========
 x = 'x' end @x
-end = Uc! #end
+end = #end Uc!
 ~~~~~~~~~~
 x
 ----------

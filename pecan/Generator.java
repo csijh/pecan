@@ -104,9 +104,7 @@ class Generator implements Test.Callable {
             return 2 + frame(node.left());
         case NOT: case TRY: case HAS:
             return 3 + frame(node.left());
-        case MARK:
-            return 1 + frame(node.left());
-        case TAG: case ACT:
+        case TAG: case ACT: case MARK:
         case STRING: case SET: case CHAR: case RANGE: case CAT: case DROP:
             return 0;
         default: throw new Error("Type " + node.op() + " unimplemented");

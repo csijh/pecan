@@ -106,6 +106,26 @@ class Node extends Info {
         return s;
     }
 
+    // Print the source text of a node on one line, e.g. when tracing.
+    String trace() {
+        int firstLine = row(source, start);
+        int lastLine = row(source, end);
+        if (lastLine == firstLine) {
+            return "G" + firstLine + ": " + source.substring(start, end);
+        }
+        String s = "G" + firstLine + "-" + lastLine + ": ";
+        int pos = start + 10;
+        int newline = source.indexOf('\n', start);
+        if (newline >= 0 && newline < pos) pos = newline;
+        s += source.substring(start, pos);
+        s += "...";
+        pos = end - 10;
+        newline = source.indexOf('\n', pos);
+        if (newline >= 0 && newline < end) pos = newline + 1;
+        s += source.substring(pos, end);
+        return s;
+    }
+
     // Create an error message based on a source.
     static String err(String source, int start, int end, String error) {
         int firstLineNumber = row(source, start);
