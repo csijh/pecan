@@ -38,6 +38,7 @@ public class Interpreter implements Test.Callable {
     private String[] markers;
     private List<Node> delay;
     private StringBuffer output;
+    private boolean tracing = true;
 
     public static void main(String[] args) throws ParseException {
         Interpreter program = new Interpreter();
@@ -46,8 +47,9 @@ public class Interpreter implements Test.Callable {
     static int no = 0;
 
     // Each test consists of a grammar followed by a line of ten tildes followed
-    // by some source text. If the grammar is missing, the grammar from
-    // the previous test is used.
+    // by some source text. If the grammar is missing, the grammar from the
+    // previous test is used. (If a single test is specified, a copy of the
+    // grammar may be need to be added to it in the test file.)
     public String test(String s) throws ParseException {
         String[] parts = s.split("~~~~~~~~~~\n");
         String input;
@@ -59,7 +61,7 @@ public class Interpreter implements Test.Callable {
         return out;
     }
 
-    // Get the interpreters ready to run, with the given grammar and text.
+    // Get the interpreter ready to run, with the given grammar and text.
     void prepare(String grammar, String text) throws ParseException {
         Stacker stacker = new Stacker();
         root = stacker.run(grammar);
@@ -101,7 +103,7 @@ public class Interpreter implements Test.Callable {
     void parse(Node node) {
         int saveIn, saveMark, length;
         String text;
-        System.out.println(node.trace());
+        if (tracing) System.out.println(node.trace());
         switch(node.op()) {
         case RULE:
             parse(node.left());
