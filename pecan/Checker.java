@@ -4,7 +4,7 @@ package pecan;
 
 import java.text.*;
 import static pecan.Op.*;
-import static pecan.Info.Flag.*;
+import static pecan.Node.Flag.*;
 
 /* Check that a grammar is valid. Report any non-terminating left recursion as
 an error, using an adaptation of the well-formedness algorithm from the PEG
@@ -42,16 +42,22 @@ until progress is made in the input. There are two further flag annotations:
 
 These are used, or can potentially be used in the future, for optimisations. */
 
-class Checker implements Test.Callable {
+class Checker implements Testable {
     private String source;
     private boolean changed;
 
     public static void main(String[] args) {
-        Binder.main(null);
-        Test.run(args, new Checker());
+        int line = 0;
+        if (args.length > 0) line = Integer.parseInt(args[0]);
+        int n = Test.run("tests/Checker.txt", new Checker(), line);
+        if (n == 0) System.out.println("No test on line " + line);
+        else if (line > 0) System.out.println("Pass test on line " + line);
+        else System.out.println("Checker class OK, " + n + " tests passed.");
     }
 
-    public String test(String s) throws ParseException { return "" + run(s); }
+    public String test(String g, String s) throws ParseException {
+        return "" + run(g);
+    }
 
     // Run the checker on the given source text.
     Node run(String text) throws ParseException {

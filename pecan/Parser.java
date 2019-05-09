@@ -9,14 +9,23 @@ import static java.lang.Character.*;
 
 /* Parse a Pecan source text, producing a tree. */
 
-class Parser implements Test.Callable {
+class Parser implements Testable {
     private String source;
     private Node[] output;
     private int start, in, out;
 
-    public static void main(String[] args) { Test.run(args, new Parser()); }
+    public static void main(String[] args) {
+        int line = 0;
+        if (args.length > 0) line = Integer.parseInt(args[0]);
+        int n = Test.run("tests/Parser.txt", new Parser(), line);
+        if (n == 0) System.out.println("No test on line " + line);
+        else if (line > 0) System.out.println("Pass test on line " + line);
+        else System.out.println("Parser class OK, " + n + " tests passed.");
+    }
 
-    public String test(String s) throws ParseException { return "" + run(s); }
+    public String test(String g, String s) throws ParseException {
+        return "" + run(g);
+    }
 
     // Parse the grammar, returning a node (or error report).
     Node run(String s) throws ParseException {

@@ -11,7 +11,54 @@ The node class extends the info class and has an op, a text range in the source,
 and up to two child nodes. If the left node is null, the right node represents a
 cross-reference link instead of a child node. */
 
-class Node extends Info {
+class Node {
+
+    public static void main(String[] args) { }
+
+// ---------- The annotation fields and methods -------------------------------
+
+    private int value;
+    private int flags;
+    private int NET, LOW, PC;
+    private BitSet FIRST = new BitSet();
+    private BitSet START = new BitSet();
+    private BitSet FOLLOW = new BitSet();
+    private String note = "";
+
+    // Flag constants. See the relevant analysis classes.
+    public static enum Flag {
+        TextInput, TokenInput, SN, FN, SP, FP, WF, AA, AB, BP;
+        int bit() { return 1 << ordinal(); }
+    }
+
+    // Get/set the value.
+    int value() { return value; }
+    void value(int v) { value = v; }
+
+    // Get, set or unset a flag.
+    boolean has(Flag f) { return (flags & f.bit()) != 0; }
+    void set(Flag f) { flags |= f.bit(); }
+    void unset(Flag f) { flags &= ~f.bit(); }
+
+    // Get/set counts and get bitsets.
+    int NET() { return NET; }
+    int LOW() { return LOW; }
+    void NET(int n) { NET = n; }
+    void LOW(int l) { LOW = l; }
+    BitSet FIRST() { return FIRST; }
+    BitSet START() { return START; }
+    BitSet FOLLOW() { return FOLLOW; }
+
+    // Get/set the note.
+    String note() { return note; }
+    void note(String n) { note = n; }
+
+    // Get/set PC = address in bytecode.
+    int PC() { return PC; }
+    void PC(int i) { PC = i; }
+
+// ---------- The structral fields and methods --------------------------------
+
     private Op op;
     private String source;
     private int start, end;
@@ -111,9 +158,9 @@ class Node extends Info {
         int firstLine = row(source, start);
         int lastLine = row(source, end);
         if (lastLine == firstLine) {
-            return "G" + firstLine + ": " + source.substring(start, end);
+            return "P" + firstLine + ": " + source.substring(start, end);
         }
-        String s = "G" + firstLine + "-" + lastLine + ": ";
+        String s = "P" + firstLine + "-" + lastLine + ": ";
         int pos = start + 10;
         int newline = source.indexOf('\n', start);
         if (newline >= 0 && newline < pos) pos = newline;

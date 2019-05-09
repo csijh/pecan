@@ -1,43 +1,43 @@
 // Tutorial step 1
 digit = "0".."9" @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 // Tutorial step 2
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 // Tutorial step 3 (3rd test fails: parses only 1st number)
 sum = number / number "+" number @2add
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 ==========
 // Tutorial step 4 (1st test fails: expecting plus or digit)
 sum = number "+" number @2add / number
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 Error on line 1:
 2
  ^
@@ -45,20 +45,20 @@ Error on line 1:
 // Tutorial step 5 (3rd test doesn't discard "+")
 sum = [number "+"] number @2add / number
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 sum = [number "+"] number @2add / number
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2+40
 ----------
+2+40
+..........
 number 2
 number +40
 add
@@ -66,17 +66,17 @@ add
 // Tutorial step 6 (3rd test doesn't discard "+")
 sum = number ("+" number @2add)?
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number +40
 add
@@ -84,17 +84,17 @@ add
 // Tutorial step 7 (add the skip)
 sum = number ("+" @ number @2add)?
 number = ("0".."9")+ @number
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
@@ -103,23 +103,23 @@ add
 sum = number ("+" @ number @2add)? end
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1:
 2+40$
     ^
@@ -128,29 +128,29 @@ Error on line 1:
 sum = number ("+" @ number @2add)* end
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1:
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -163,29 +163,29 @@ add
 sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1:
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -195,7 +195,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -208,35 +208,35 @@ subtract
 sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
 number = (#digit "0".."9")+ @number
 end = #newline 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1: expecting digit, newline
 2+40$
     ^
 ==========
 2+
-----------
+..........
 Error on line 1: expecting digit
 2+
   ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -246,7 +246,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -262,29 +262,29 @@ plus = #operator "+" @
 minus = #operator "-" @
 digit = #digit "0".."9"
 end = #newline 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1: expecting digit, newline, operator
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -294,7 +294,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -308,29 +308,29 @@ sum = term ("+" @ term @2add / "-" @ term @2subtract)* end
 term = number ("*" @ number @2multiply / "/" @ number @2divide)*
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1:
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -340,7 +340,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -350,7 +350,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -369,29 +369,29 @@ times = #operator "*" @
 over = #operator "/" @
 digit = #digit "0".."9"
 end = #newline 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1: expecting digit, newline, operator
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -401,7 +401,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -411,7 +411,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -426,29 +426,29 @@ term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
 atom = number / "(" @ sum ")" @
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1:
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -458,7 +458,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -468,7 +468,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -478,7 +478,7 @@ divide
 add
 ==========
 2*(20+1)
-----------
+..........
 Error on line 1:
 2*(20+1)
        ^
@@ -496,29 +496,29 @@ open = #bracket "(" @
 close = #bracket ")" @
 digit = #digit "0".."9"
 end = #newline 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1: expecting digit, newline, operator
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -528,7 +528,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -538,7 +538,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -548,7 +548,7 @@ divide
 add
 ==========
 2*(20+1)
-----------
+..........
 Error on line 1: expecting digit, newline, operator
 2*(20+1)
        ^
@@ -560,29 +560,29 @@ term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
 atom = number / "(" @ expression ")" @
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1:
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -592,7 +592,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -602,7 +602,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -612,7 +612,7 @@ divide
 add
 ==========
 2*(20+1)
-----------
+..........
 number 2
 number 20
 number 1
@@ -633,29 +633,29 @@ open = #bracket "(" @
 close = #bracket ")" @
 digit = #digit "0".."9"
 end = #newline 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1: expecting digit, newline, operator
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -665,7 +665,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -675,7 +675,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -685,7 +685,7 @@ divide
 add
 ==========
 2*(20+1)
-----------
+..........
 number 2
 number 20
 number 1
@@ -707,29 +707,29 @@ close = #bracket ")" gap
 digit = #digit "0".."9"
 gap = (#space " ")* @
 end = #newline 13? 10 @
-~~~~~~~~~~
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40$
-----------
+..........
 Error on line 1: expecting digit, newline, operator, space
 2+40$
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -739,7 +739,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -749,7 +749,7 @@ number 3
 subtract
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -759,7 +759,7 @@ divide
 add
 ==========
 2*(20+1)
-----------
+..........
 number 2
 number 20
 number 1
@@ -767,7 +767,7 @@ add
 multiply
 ==========
  2 * ( 20 + 1 )
-----------
+..........
 number 2
 number 20
 number 1
@@ -776,51 +776,51 @@ multiply
 ==========
 // Bad grammar
 rule
-~~~~~~~~~~
-2
 ----------
+2
+..........
 Error on line 2: expecting =
 rule
     ^
 ==========
 // Try succeeds
 dots = ['.' '.'] @dots / '.' '3' @num
-~~~~~~~~~~
-..
 ----------
+..
+..........
 dots ..
 ==========
 // Try fails
 dots = ['.' '.'] @dots / '.' '3' @num
-~~~~~~~~~~
-.3
 ----------
+.3
+..........
 num .3
 ==========
 // String has a built-in try
 op = "<=" @le / "<" @lt
-~~~~~~~~~~
-x
 ----------
+x
+..........
 Error on line 1:
 x
 ^
 ==========
 <=
-----------
+..........
 le <=
 ==========
 <
-----------
+..........
 lt <
 ==========
 // Error marker not reached
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
-~~~~~~~~~~
-xyx
 ----------
+xyx
+..........
 tokens
 x x
 add
@@ -833,9 +833,9 @@ add
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
-~~~~~~~~~~
-z
 ----------
+z
+..........
 tokens
 z z
 add
@@ -844,22 +844,22 @@ add
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
-~~~~~~~~~~
-
 ----------
+
+..........
 Error on line 1: expecting err
 
 ^
 ==========
 // Category succeeds or fails
 token = Ll @letter
-~~~~~~~~~~
-x
 ----------
+x
+..........
 letter x
 ==========
 X
-----------
+..........
 Error on line 1:
 X
 ^
@@ -867,9 +867,9 @@ X
 // Scanner
 tokens = @tokens token+
 token = Ll @1lower / Lu @1upper
-~~~~~~~~~~
-xYz
 ----------
+xYz
+..........
 tokens
 lower x
 upper Y
@@ -877,15 +877,15 @@ lower z
 ==========
 // Token parser using queries
 sum = %num @num (%plus @ %num @num @2add)*
-~~~~~~~~~~
-id
 ----------
+id
+..........
 Error on line 1:
 id
 ^
 ==========
 num plus num
-----------
+..........
 num
 num
 add
@@ -896,22 +896,34 @@ term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
 atom = number / "(" @ sum ")" @
 number = ("0".."9")+ @number
 end = 13? 10 @
-~~~~~~~~~~
-2+2
 ----------
+2+2
+..........
 number 2
 number 2
 add
 ==========
 x = 'x' end @x
 end = #end Uc!
-~~~~~~~~~~
-x
 ----------
+x
+..........
 Error on line 1: expecting end
 x
  ^
 ==========
 x\
-----------
+..........
 x x
+==========
+// Check that an action at the start of a left hand alternative is delayed so
+// that it happens only if the alternative is chosen.
+test = @left "0" / @right "1"
+----------
+0
+..........
+left
+==========
+1
+..........
+right

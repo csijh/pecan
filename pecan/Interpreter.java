@@ -5,7 +5,7 @@ package pecan;
 import java.util.*;
 import java.text.*;
 import static pecan.Op.*;
-import static pecan.Info.Flag.*;
+import static pecan.Node.Flag.*;
 
 /* This interpreter works directly from the tree nodes, and can be used for
 testing, and for tracing. It also effectively defines the operational semantics
@@ -28,33 +28,33 @@ TODO: work out which actions need to be delayed, or max no.
 
 */
 
-public class Interpreter implements Test.Callable {
+public class Interpreter implements Testable {
+    private boolean tracing = false;
     private String grammar;
     private boolean textInput, ok, marked;
     private String input;
     private Node root;
-    private int start, in, mark, lookahead;
+    private int start, in, out, mark, lookahead;
     private BitSet failures;
     private String[] markers;
-    private List<Node> delay;
+    private Node[] delay;
     private StringBuffer output;
-    private boolean tracing = true;
 
     public static void main(String[] args) throws ParseException {
+        int line = 0;
         Interpreter program = new Interpreter();
-        Test.run(args, program);
+        if (args != null) for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-trace")) program.tracing = true;
+            else line = Integer.parseInt(args[i]);
+        }
+        int n = Test.run("tests/Interpreter.txt", program, line);
+        if (n == 0) System.out.println("No test on line " + line);
+        else if (line > 0) System.out.println("Pass test on line " + line);
+        else System.out.println("Interpreter class OK, "+ n +" tests passed.");
     }
     static int no = 0;
 
-    // Each test consists of a grammar followed by a line of ten tildes followed
-    // by some source text. If the grammar is missing, the grammar from the
-    // previous test is used. (If a single test is specified, a copy of the
-    // grammar may be need to be added to it in the test file.)
-    public String test(String s) throws ParseException {
-        String[] parts = s.split("~~~~~~~~~~\n");
-        String input;
-        if (parts.length == 1) input = parts[0];
-        else { grammar = parts[0]; input = parts[1]; }
+    public String test(String grammar, String input) throws ParseException {
         prepare(grammar, input);
         no++;
         String out = run();
@@ -70,18 +70,20 @@ public class Interpreter implements Test.Callable {
         ok = true;
         start = 0;
         in = 0;
+        out = 0;
         mark = 0;
         lookahead = 0;
         marked = false;
         markers = new String[markerSize(root)];
         gatherMarkers(root);
         failures = new BitSet();
-        delay = new ArrayList<>();
+        delay = new Node[100];
         output = new StringBuffer();
     }
 
     // Run the parser
     String run() throws ParseException {
+        if (tracing) traceInput();
         parse(root.left());
         takeActions();
         if (! ok) {
@@ -101,7 +103,7 @@ public class Interpreter implements Test.Callable {
 
     // Parse according to the given node.
     void parse(Node node) {
-        int saveIn, saveMark, length;
+        int saveIn, saveOut, saveMark, length;
         String text;
         if (tracing) System.out.println(node.trace());
         switch(node.op()) {
@@ -113,8 +115,10 @@ public class Interpreter implements Test.Callable {
             break;
         case OR:
             saveIn = in;
+            saveOut = out;
             parse(node.left());
             if (ok || in > saveIn) return;
+            out = saveOut;
             parse(node.right());
             break;
         case AND:
@@ -182,7 +186,7 @@ public class Interpreter implements Test.Callable {
                     takeActions();
                     int n = Character.charCount(ch);
                     in += n;
-                    traceInput();
+                    if (tracing) traceInput();
                 }
             }
             break;
@@ -194,7 +198,7 @@ public class Interpreter implements Test.Callable {
             else for (int i=0; i<length; i++) {
                 if (input.charAt(in+i) != text.charAt(i)) { ok = false; break; }
             }
-            if (ok) { takeActions(); in += length; traceInput(); }
+            if (ok) { takeActions(); in += length; if (tracing) traceInput(); }
             if (! ok && mark < in) mark = in;
             break;
         case SET:
@@ -211,7 +215,7 @@ public class Interpreter implements Test.Callable {
                     in++;
                 }
                 in++;
-                traceInput();
+                if (tracing) traceInput();
                 ok = true;
             }
             if (! ok && mark < in) mark = in;
@@ -227,7 +231,7 @@ public class Interpreter implements Test.Callable {
                     takeActions();
                     int n = Character.charCount(ch);
                     in += n;
-                    traceInput();
+                    if (tracing) traceInput();
                 }
             }
             if (! ok && mark < in) mark = in;
@@ -243,7 +247,7 @@ public class Interpreter implements Test.Callable {
                     takeActions();
                     int n = Character.charCount(ch);
                     in += n;
-                    traceInput();
+                    if (tracing) traceInput();
                 }
             }
             if (! ok && mark < in) mark = in;
@@ -259,6 +263,7 @@ public class Interpreter implements Test.Callable {
                 in += query.length();
                 while (in < input.length() &&
                     (input.charAt(in) == ' ' || input.charAt(in) == '\n')) in++;
+                if (tracing) traceInput();
             }
             if (! ok && mark < in) mark = in;
             break;
@@ -269,24 +274,12 @@ public class Interpreter implements Test.Callable {
             break;
         case DROP:
             ok = true;
-            delay.add(node);
-            /*
-            start = in;
-            */
+            delay[out++] = node;
             break;
         case ACT:
             ok = true;
             if (lookahead > 0) break;
-            delay.add(node);
-            /*
-            int arity = node.ref().value();
-            output.append(node.ref().text());
-            if (textInput && in > start) {
-                output.append(" " + input.substring(start,in));
-            }
-            output.append("\n");
-            start = in;
-            */
+            delay[out++] = node;
             break;
         default:
             throw new Error("Not implemented " + node.op());
@@ -295,18 +288,33 @@ public class Interpreter implements Test.Callable {
 
     // Print out the input position. TODO: multiline.
     private void traceInput() {
-        System.out.print(input.substring(0, in));
+        int line = 1, start = 0, stop = input.length();
+        for (int i = 0; i < in; i++) {
+            if (input.charAt(i) != '\n') continue;
+            line++;
+            start = i + 1;
+        }
+        for (int i = in; i < input.length(); i++) {
+            if (input.charAt(i) != '\n') continue;
+            stop = i;
+            break;
+        }
+        System.out.print("I" + line + ": ");
+        System.out.print(input.substring(start, in));
         System.out.print("|");
-        System.out.println(input.substring(in));
+        System.out.println(input.substring(in, stop));
     }
 
     // Carry out any delayed actions.
     private void takeActions() {
-        for (Node node : delay) {
-            System.out.println("O: " + node.text());
+        for (int i = 0; i < out; i++) {
+            Node node = delay[i];
+            String s = node.text();
+            if (! s.equals("@")) s = s.substring(1);
+            if (tracing) System.out.println("O: " + s);
             takeAction(node);
         }
-        delay.clear();
+        out = 0;
     }
 
     // Carry out an action.

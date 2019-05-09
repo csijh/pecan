@@ -10,23 +10,32 @@ import java.nio.file.*;
 import java.nio.charset.*;
 import java.util.*;
 
-/* Run text-based unit tests. Supports both internal tests of the pecan
-classes, and external tests of user grammars. The tests for a pecan class X are
-in the file tests/X.txt. The classes implement the Testable interface, so that
-unit testing of a class can be done even when other classes are currently
-broken. ParseExceptions are used to signal failures during any pass.
+/* Run a collection of tests. This supports both internal unit tests for pecan
+classes, and external tests for user grammars. To run tests, the static method
+Test.run is called with a representative object of one of the pecan classes and
+the name of a file of tests. The object implements the Testable interface, so
+that this Test class has no dependencies on the other pecan classes, and
+therefore unit testing of a class can be done even when other classes are
+broken. The Testable interface describes a single test method. For each test,
+the test method is called on the object, and its output is compared with the
+expected output. ParseExceptions are used to signal failures during testing.
 
-Each test is separated from the next by a line of equal signs. A test consists
-of the sample input, then a line of minus signs, then the expected output. Line
-endings are converted to \n.
+In a file of tests, each test has up to three sections: a grammar, a sample
+input string, and an expected output string. Tests are separated from each other
+by a line of three or more equal signs. A grammar is separated from the rest of
+a test by a line of minus signs. An input string is separated from an output
+string by a line of dots. If the grammar section is omitted, the test uses the
+same grammar as the previous test. If the input string is omitted, e.g. for some
+of the early pecan passes, it is assumed to be the empty string. Line endings in
+a test file are converted to \n when it is read in.
 
-To allow the sample input or expected output to contain control characters or
-unicode characters as plain text, \nnn represents a character by its decimal
-code, or by its hex code if the code starts with zero, \\ represents a single
-backslash, and a \ followed by any other character removes the character. In
-particular, \ followed by a space can be used as a separator, and \ followed by
-a newline can be used to cancel the newline. For example, given that 960 is
-the decimal code for the character pi, then:
+To allow the grammar or sample input or expected output to contain control
+characters or unicode characters as plain text, \nnn represents a character by
+its decimal code, or by its hex code if the code starts with zero, \\ represents
+a single backslash, and a \ followed by any other character removes the
+character. In particular, \ followed by a space can be used as a separator, and
+\ followed by a newline can be used to cancel the newline. For example, given
+that 960 is the decimal code for the character pi, then:
 
    \960x      is pi followed by x
    \960\ 5    is pi followed by the digit 5
@@ -35,12 +44,9 @@ the decimal code for the character pi, then:
 */
 
 public class Test {
-    // Run a test on an object, with input and output expressed as strings.
-    static interface Callable { String test(String in) throws ParseException; }
-
     private String fileName;
     private int lineNo;
-    private String input, output;
+    private String grammar, input, output;
 
     // No testing of the test class.
     public static void main(String[] args) { }
@@ -48,26 +54,15 @@ public class Test {
     String input() { return input; }
     String output() { return output; }
 
-    // Called from the main method of a class for unit testing, passing the
-    // command line arguments, and a sample object of that class. If there is a
-    // command line argument, it is assumed to be the line number of a test.
-    static void run(String[] args, Callable object) {
-        int line = 0;
-        if (args != null && args.length > 0) line = Integer.parseInt(args[0]);
-        try { tests(object, line); }
-        catch (Exception e) { throw new Error(e); }
-    }
-
-    // Run the tests for a class. If line > 0, just run the test on that line.
-    private static void tests(Callable object, int line) throws Exception {
-        String name = object.getClass().getName();
-        name = name.substring(name.lastIndexOf('.') + 1);
-        List<Test> tests = extract("tests", name+".txt");
-        for (int i=0; i<tests.size(); i++) {
-            Test test = tests.get(i);
+    // Run tests from a given file on a given object. If line > 0, run just the
+    // one test that starts on that line. Return the number of tests passed.
+    static int run(String file, Testable object, int line) {
+        List<Test> tests = extract(file);
+        int passed = 0;
+        for (Test test : tests) {
             if (line > 0 && test.lineNo != line) continue;
             String out;
-            try { out = object.test(test.input); }
+            try { out = object.test(test.grammar, test.input); }
             catch (ParseException e) {
                 out = e.getMessage();
                 if (out == null) out = "" + e;
@@ -80,21 +75,22 @@ public class Test {
                 }
             }
             String message = test.check(out);
-            if (message == null) continue;
-            System.out.print(message);
+            if (message == null) { passed++; continue; }
+            System.err.print(message);
             System.exit(1);
         }
-        if (line > 0) System.out.println("Test on line " + line + " passed.");
-        else System.out.println(
-            name + " class OK, " + tests.size() + " tests passed.");
+        return passed;
     }
 
     // Extract tests from a given file.
-    static List<Test> extract(String dir, String fileName) {
-        Path path = Paths.get(dir, fileName);
-        List<String> lines;
+    static List<Test> extract(String fileName) {
+        Path path = Paths.get(fileName);
+        List<String> lines = null;
         try { lines = Files.readAllLines(path, StandardCharsets.UTF_8); }
-        catch (Exception e) { throw new Error(e); }
+        catch (Exception e) {
+            System.err.println("Error: can't read " + fileName);
+            System.exit(1);
+        }
         return readTests(fileName, lines);
     }
 
@@ -102,10 +98,14 @@ public class Test {
     private static List<Test> readTests(String file, List<String> lines) {
         List<Test> tests = new ArrayList<Test>();
         int start = 0;
+        String grammar = null;
         for (int i=0; i<=lines.size(); i++) {
             if (i < lines.size() && ! all(lines.get(i), '=')) continue;
             Test t = readTest(lines, start, i);
+            if (t.grammar == null) t.grammar = grammar;
+            else grammar = t.grammar;
             t.fileName = file;
+            t.grammar = unescape(t.grammar);
             t.input = unescape(t.input);
             tests.add(t);
             start = i + 1;
@@ -124,19 +124,21 @@ public class Test {
 
     // Create a test object from a range of lines.
     private static Test readTest(List<String> lines, int start, int end) {
-        int mid = -1;
+        int endg = -1, endi = -1;
         for (int i=start; i<end; i++) {
-            if (! all(lines.get(i), '-')) continue;
-            mid = i;
-            break;
+            if (all(lines.get(i), '-')) endg = i;
+            if (all(lines.get(i), '.')) endi = i;
         }
-        if (mid < 0) mid = end;
         Test test = new Test();
         test.lineNo = start + 1;
+        test.grammar = endg < 0 ? null : "";
         test.input = "";
-        for (int i=start; i<mid; i++) test.input += lines.get(i) + "\n";
         test.output = "";
-        for (int i=mid+1; i<end; i++) test.output += lines.get(i) + "\n";
+        if (endg < 0) endg = start - 1;
+        if (endi < 0) endi = endg;
+        for (int i=start; i<endg; i++) test.grammar += lines.get(i) + "\n";
+        for (int i=endg+1; i<endi; i++) test.input += lines.get(i) + "\n";
+        for (int i=endi+1; i<end; i++) test.output += lines.get(i) + "\n";
         return test;
     }
 
@@ -196,90 +198,6 @@ public class Test {
         }
         return out;
     }
-/*
-    // Utility function: Read the contents of a UTF-8 file as a string.
-    static String read(File file) {
-        try {
-            byte[] bytes = Files.readAllBytes(file.toPath());
-            return new String(bytes, "UTF-8");
-        }
-        catch (Exception err) { throw new Error(err); }
-    }
-
-    // Utility function: Read the contents of a UTF-8 url resource as a string.
-    static String read(URL url) {
-        try {
-            Path path = Paths.get(url.toURI());
-            byte[] bytes = Files.readAllBytes(path);
-            return new String(bytes, "UTF-8");
-        }
-        catch (Exception err) { throw new Error(err); }
-    }
-
-    // Utility function: Read the contents of a UTF-8 file as lines.
-    static List<String> readLines(File file) {
-        try {
-            return Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-        }
-        catch (Exception err) { throw new Error(err); }
-    }
-
-    // Utility function: Read the contents of a UTF-8 url resource as lines.
-    static List<String> readLines(URL url) {
-        try {
-            Path path = Paths.get(url.toURI());
-            return Files.readAllLines(path, StandardCharsets.UTF_8);
-        }
-        catch (Exception err) { throw new Error(err); }
-    }
-
-    // Read UTF-8 file from a stream.
-    static String read(InputStream stream) {
-        System.setProperty("file.encoding", "UTF-8");
-        byte[] buffer = new byte[1];
-        int len = 0;
-        while(true) try {
-            int n = stream.read(buffer, len, buffer.length - len);
-            if (n < 0) { stream.close(); break; }
-            len += n;
-            if (len == buffer.length) {
-                buffer = Arrays.copyOf(buffer, 2*buffer.length);
-            }
-        }
-        catch (Exception err) { throw new Error(err); }
-        ByteBuffer byteBuffer = ByteBuffer.wrap(buffer, 0, len);
-        Charset utf8 = Charset.forName("UTF-8");
-        CharBuffer charBuffer = utf8.decode(byteBuffer);
-        char[] text = new char[charBuffer.length()];
-        charBuffer.get(text);
-        return new String(text);
-    }
-
-    // Split the text at marker lines into an array of tests. Each test has
-    // four strings: class name, note, input, output.
-    private static String[][] split(String text, boolean user) {
-        String[] parts = text.split("==========\n");
-        String[][] tests = new String[parts.length][4];
-        for (int i=0; i<parts.length; i++) {
-            String part = parts[i];
-            String[] sections = part.split("----------\n", 2);
-            tests[i][3] = (sections.length == 1) ? "" : sections[1];
-            if (user) {
-                tests[i][2] = sections[0];
-                tests[i][1] = "";
-                tests[i][0] = "";
-            }
-            else {
-                sections = sections[0].split("\n", 2);
-                tests[i][2] = sections[1];
-                sections = sections[0].split(" ", 2);
-                tests[i][1] = sections[1];
-                tests[i][0] = sections[0];
-            }
-        }
-        return tests;
-    }
-*/
 
     // Check the given actual output against the expected output. Return an
     // error message, or null for success.

@@ -34,17 +34,23 @@ stack before compensating by putting items back on. To deal with this, an
 arbitrary limit of -100 is put on LOW values, beyond which it is assumed that
 there is an infinite loop at work. */
 
-class Stacker implements Test.Callable {
+class Stacker implements Testable {
     private String source;
     private static final int UNKNOWN = Short.MIN_VALUE;
     private boolean changed;
 
     public static void main(String[] args) {
-        Checker.main(null);
-        Test.run(args, new Stacker());
+        int line = 0;
+        if (args.length > 0) line = Integer.parseInt(args[0]);
+        int n = Test.run("tests/Stacker.txt", new Stacker(), line);
+        if (n == 0) System.out.println("No test on line " + line);
+        else if (line > 0) System.out.println("Pass test on line " + line);
+        else System.out.println("Stacker class OK, " + n + " tests passed.");
     }
 
-    public String test(String s) throws ParseException { return "" + run(s); }
+    public String test(String g, String s) throws ParseException {
+        return "" + run(g);
+    }
 
     Node run(String text) throws ParseException {
         source = text;

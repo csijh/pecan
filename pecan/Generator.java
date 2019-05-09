@@ -18,6 +18,13 @@ Holds the code, plus:
 // TODO verbose interpreter
 // TODO markers: is there a lift optimisation?
 // TODO markers don't count as progress
+
+
+TODO: two versions of each opcode, immediate and remote
+EITHER &OR <x> OR...
+EITHERr &x OR...
+This design allows each opcode to be either, independently. Use remote when
+x is an identifier, to avoid a GO opcode.
 */
 
 class Generator implements Test.Callable {

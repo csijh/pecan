@@ -6,7 +6,7 @@ import java.io.*;
 import java.text.*;
 import java.util.*;
 import static pecan.Op.*;
-import static pecan.Info.Flag.*;
+import static pecan.Node.Flag.*;
 import static java.lang.Character.*;
 
 /* Carry out binding:
@@ -22,19 +22,24 @@ Check that both ends of a range are single characters.
 Check that a range is non-empty.
 Check whether the grammar has text or tokens as input. */
 
-class Binder implements Test.Callable {
+class Binder implements Testable {
     private String source;
     private Set<String> cats;
     private Map<String,Node> rules;
     private Map<String,Integer> tags, markers, actions;
 
     public static void main(String[] args) {
-        Binder program = new Binder();
-        Parser.main(null);
-        Test.run(args, program);
+        int line = 0;
+        if (args.length > 0) line = Integer.parseInt(args[0]);
+        int n = Test.run("tests/Binder.txt", new Binder(), line);
+        if (n == 0) System.out.println("No test on line " + line);
+        else if (line > 0) System.out.println("Pass test on line " + line);
+        else System.out.println("Binder class OK, " + n + " tests passed.");
     }
 
-    public String test(String s) throws ParseException { return "" + run(s); }
+    public String test(String g, String s) throws ParseException {
+        return "" + run(g);
+    }
 
     // Run the passes up to the binder on the given source text.
     Node run(String s) throws ParseException {
