@@ -11,14 +11,14 @@ import java.nio.charset.*;
 import java.util.*;
 
 /* Run a collection of tests. This supports both internal unit tests for pecan
-classes, and external tests for user grammars. To run tests, the static method
-Test.run is called with a representative object of one of the pecan classes and
-the name of a file of tests. The object implements the Testable interface, so
-that this Test class has no dependencies on the other pecan classes, and
-therefore unit testing of a class can be done even when other classes are
-broken. The Testable interface describes a single test method. For each test,
-the test method is called on the object, and its output is compared with the
-expected output. ParseExceptions are used to signal failures during testing.
+classes, and external user tests. To run tests, one version of the static method
+Test.run is called. A representative object of one of the pecan classes is
+passed as an argument. The object implements the Testable interface, so that
+this Test class has no dependencies on the other pecan classes, and therefore
+unit testing of a class can be done even when other classes are broken. The
+Testable interface describes a single test method. For each test, the test
+method is called on the object, and its output is compared with the expected
+output. ParseExceptions are used to signal failures during tests.
 
 In a file of tests, each test has up to three sections: a grammar, a sample
 input string, and an expected output string. Tests are separated from each other
@@ -26,16 +26,16 @@ by a line of three or more equal signs. A grammar is separated from the rest of
 a test by a line of minus signs. An input string is separated from an output
 string by a line of dots. If the grammar section is omitted, the test uses the
 same grammar as the previous test. If the input string is omitted, e.g. for some
-of the early pecan passes, it is assumed to be the empty string. Line endings in
-a test file are converted to \n when it is read in.
+of the early pecan passes, it is assumed to be the empty string.
 
-To allow the grammar or sample input or expected output to contain control
-characters or unicode characters as plain text, \nnn represents a character by
-its decimal code, or by its hex code if the code starts with zero, \\ represents
-a single backslash, and a \ followed by any other character removes the
-character. In particular, \ followed by a space can be used as a separator, and
-\ followed by a newline can be used to cancel the newline. For example, given
-that 960 is the decimal code for the character pi, then:
+Line endings in a test file are converted to \n when it is read in. To allow the
+test file to contain control characters or unicode characters as plain text,
+\nnn represents a character by its decimal code, or by its hex code if the code
+starts with zero, \\ represents a single backslash, and a \ followed by any
+other character removes the character. In particular, \ followed by a space can
+be used as a separator, and \ followed by a newline can be used to cancel the
+newline. For example, given that 960 is the decimal code for the character pi,
+then:
 
    \960x      is pi followed by x
    \960\ 5    is pi followed by the digit 5
@@ -54,9 +54,33 @@ public class Test {
     String input() { return input; }
     String output() { return output; }
 
+    // Run a collection of unit tests on the class which the object belongs to.
+    static void run(Testable object) { run(object, 0); }
+
+    // Run a single unit test, starting on a given line number.
+    static void run(Testable object, int line) {
+        String name = object.getClass().getSimpleName();
+        String file = "tests/" + name + ".txt";
+        int n = runTests(file, object, line);
+        if (n == 0) System.out.println("No test on line "+ line +".");
+        else if (line > 0) System.out.println("Pass test on line "+ line +".");
+        else System.out.println(name +" class OK, pass "+ n +" tests.");
+    }
+
+    // Run user tests from the given file.
+    static void run(String file, Testable object) { run(file, object, 0); }
+
+    // Run one user test from a file.
+    static void run(String file, Testable object, int line) {
+        int n = runTests(file, object, line);
+        if (n == 0) System.out.println("No test on line " + line);
+        else if (n == 1) System.out.println("Pass 1 test.");
+        else System.out.println("Pass " + n + " tests.");
+    }
+
     // Run tests from a given file on a given object. If line > 0, run just the
     // one test that starts on that line. Return the number of tests passed.
-    static int run(String file, Testable object, int line) {
+    private static int runTests(String file, Testable object, int line) {
         List<Test> tests = extract(file);
         int passed = 0;
         for (Test test : tests) {

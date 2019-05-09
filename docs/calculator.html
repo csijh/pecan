@@ -11,8 +11,15 @@
 
 <h1>Developing a Calculator</h1>
 
+<p>Suppose we want to implement a calculator where the user can type in a sum
+such as <kbd>6+3*(10+2)</kbd> and get the answer <samp>42</samp>. A calculator
+like this consists mostly of a parser for arithmetic expressions. Although it
+would be easy to write by hand, it illustrates how to use Pecan to develop a
+parser in a step-by-step, test-driven fashion.</p>
+
+<!--
 <p>It is possible to write a parser by hand, using the recursive descent
-technique for example, but it can be very fiddly.  Using a generator such as
+technique for example, but it can be very fiddly. Using a generator such as
 Pecan has several potential advantages:</p>
 
 <ul>
@@ -27,60 +34,70 @@ Pecan has several potential advantages:</p>
 
 </ul>
 
-<p>Pecan provides a language for writing parsers.  While having a lot in common
+<p>Pecan provides a language for writing parsers. While having a lot in common
 with other grammar languages, it is specifically designed to be as simple as
 possible for programmers who only rarely write parsers or are not grammar
-experts.  It can be thought of as a specialist scripting language for writing
-parsers.  A Pecan script can be run interpretively as it stands, e.g. for
+experts. It can be thought of as a specialist scripting language for writing
+parsers. A Pecan script can be run interpretively as it stands, e.g. for
 testing purposes, or it can be used to generate code for a parser in a specific
 programming language.</p>
 
 <p>Since grammars are compact, they contain a lot of compressed detail, so they
-are not necessarily easy to develop.  Pecan provides features to help with
-development, and in particular it promotes a test-driven style.  This tutorial
+are not necessarily easy to develop. Pecan provides features to help with
+development, and in particular it promotes a test-driven style. This tutorial
 illustrates the style by developing a calculator.</p>
-
-<p>Suppose we want to implement a simple calculator where the user can type in
-a sum such as <kbd>6+3*(10+2)</kbd> and get the answer <samp>42</samp>.  A
-calculator like this consists mostly of a parser for arithmetic expressions.
-Let's develop the parser in small steps.</p>
+-->
 
 <h3>Step 1</h3>
 
-<p>To make a start, create a file <code>sum.pecan</code> containing:</p>
+<p>To make a start, create a file <code>sum.txt</code> containing:</p>
 
 <pre>digit = "0".."9" @number
 </pre>
 
-<p>This specifies a parsing function called <code>digit</code> which recognises
-a single digit and then uses an action called <code>@number</code> to evaluate
-it.  A rule such as <code>"0"</code> in a definition matches a character in the
-input, in this case a single digit, and the infix <code>..</code> operator
-represents a range of characters.  An action such as <code>@number</code>
-represents an operation to be applied to the text matched so far.</p>
+<p>This can be thought of as a prototype parser. It specifies a parsing function
+called <code>digit</code> which recognises a single digit and then uses an
+action called <code>@number</code> to evaluate it. A rule such as
+<code>"0"</code> in a definition matches a string in the input, in this case a
+single digit, and the infix <code>..</code> operator represents a range of
+characters. An action such as <code>@number</code> represents an operation to be
+applied to the text matched so far.</p>
 
-<p>Later, the parser we are developing will be translated into code in a
-specific language such as Java.  That parser code will call a function, which
-we will have to provide, to carry out the action <code>@number</code>.
-However, the parser can be tested interpretively as it stands, for quick
-development.  We can add a test to the end of the file <code>sum.pecan</code>,
-like this:</p>
+<p>An action such as <code>@number</code> can be thought of as representing an
+external function call in the final parser which will be written or generated
+when the prototype is complete. The function will generate an output item of
+some kind. In this case, we are thinking of it as a number, but in some other
+application such as a compiler, it could be a syntax tree.</p>
+
+<p>The prototype parser doesn't make external calls, but it can be tested
+symbolically as it stands. We can add a test to the end of the file
+<code>sum.txt</code>, like this:</p>
 
 <pre>digit = "0".."9" @number
-==========
-2
 ----------
+2
+..........
 number 2
 </pre>
 
-<p>The line of equal signs divides the rules from the test.  The test
-consists of some input and some expected output, separated by a line of minus
-signs.  The output produced represents the external calls which would be made
-by the generated code.  If we don't know exactly what output we are expecting,
-we can put in a guess and correct it later. Then we can run the test like
-this:</p>
+<p>The file now represents a single test, divided into three sections by a line
+of minus signs, and a line of dots. The first section is the parser, the second
+is the sample input, and the third is the expected output. The output produced
+represents the external calls which would be made by the final parser, in this
+case a call to a function <code>number</code> with an argument which represents
+the substring <code>"2"</code> of the input text.</p>
 
-<pre>pecan -test sum.pecan
+<p>If we don't know exactly what output we are expecting, we can put in a guess
+and correct it later. Then we can run the test like this:</p>
+
+<pre>pecan sum.txt
+Pass 1 test.
+</pre>
+
+<p>It is assumed here that <code>pecan</code> is an alias for whatever command
+has to be typed to run the pecan program, perhaps:</p>
+
+<pre>java -jar pecan.jar sum.txt
 Pass 1 test.
 </pre>
 
@@ -88,34 +105,38 @@ Pass 1 test.
 
 <h3>Step 2</h3>
 
-<p>To extend the parser to handle multi-digit numbers, edit the top line of
-<code>sum.pecan</code>:</p>
+<p>To extend the parser to handle multi-digit numbers, edit the parser at the
+top of <code>sum.txt</code> to read:</p>
 
 <pre>number = ("0".."9")+ @number
-...
 </pre>
 
 <p>The parsing function and the action function now have the same name, but
-there is no harm in that.  The postfix operator <code>+</code> means that the
-parser should try to match something one or more times.  In this case, a number
-consists of one or more digits.  To see if this works, add another test to the
-file <code>sum.pecan</code> so that it now contains:</p>
+there is no harm in that. The postfix operator <code>+</code> means that the
+parser should try to match something one or more times. In this case, a number
+consists of one or more digits. To see if this works, add another test to the
+file <code>sum.txt</code> so that it now contains:</p>
 
 <pre>number = ("0".."9")+ @number
-==========
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 </pre>
 
-<p>Tests are separated by lines consisting of equal signs.  Running the
-tests gives:</p>
+<p>Tests are separated by lines consisting of equal signs. The file now consists
+of two tests. The second test has no parser or its line of minus signs. In that
+case, Pecan uses the same parser as the previous test. Over time, the test file
+can contain various parser fragments or parser versions and their tests,
+representing the entire history of development. For the calculator, we are
+discarding previous versions of the parser, but keeping all the tests to make
+sure they still work:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 2 tests.
 </pre>
 
@@ -124,34 +145,33 @@ Pass 2 tests.
 <h3>Step 3</h3>
 
 <p>To extend the parser to handle two numbers added together such as
-<code>2+40</code>, edit the rules at the top of the
-file <code>sum.pecan</code> so that it now reads:</p>
+<code>2+40</code>, edit the parser at the top of <code>sum.txt</code> to
+read:</p>
 
 <pre>sum = number / number "+" number @2add
 number = ("0".."9")+ @number
-...
 </pre>
 
 <p>The <code>/</code> operator means "or", so the parser should recognise
 either a single number, or two numbers with a plus sign in between, in which
-case a function <code>add</code> is to be called to evaluate the sum.  The
+case a function <code>add</code> is to be called to evaluate the sum. The
 <code>2</code> in <code>@2add</code> indicates that the <code>add</code>
 function is to be applied to the two previously created output items, rather
-than to text from the input.  Add a third test to the file:</p>
+than to text from the input. Add a third test to the file:</p>
 
 <pre>sum = number / number "+" number @2add
 number = ("0".."9")+ @number
-==========
-2
 ----------
+2
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
@@ -162,8 +182,8 @@ the generated code, i.e. two calls to <code>number</code> followed by a call
 to <code>add</code>, passing the results of the previous calls as arguments.
 Running the tests gives:</p>
 
-<pre>pecan -test sum.pecan
-Fail test on line 12 of sum.pecan:
+<pre>pecan sum.txt
+Fail test on line 12 of sum.txt:
 ---------- Expected ----------
 number 2
 number 40
@@ -172,18 +192,49 @@ add
 number 2
 </pre>
 
-<p>What's gone wrong is that the parser has a choice <code>number / number "+"
-...</code>, and the first alternative has succeeded, so the second alternative
-isn't tried.  The choice operator <code>/</code> is sequential, as in PEG
-grammars, not symmetrical like the <code>|</code> operator in CFG grammars.
-Also, our parser doesn't yet specify that parsing must reach the end of the
-input, so recognising just the first number from the input gives a successful
-result.</p>
+<p>This is a good opportunity to demonstrate a couple of Pecan features:</p>
+
+<pre>pecan -trace sum.txt 12
+I1: |2+40
+P1: number / number "+" number @2add
+P1: number
+P2: number
+P2: ("0".."9")+ @number
+P2: ("0".."9")+
+P2: "0".."9"
+I1: 2|+40
+P2: "0".."9"
+P2: @number
+O: number
+Fail test on line 12 of sum.txt:
+---------- Expected ----------
+number 2
+number 40
+add
+---------- Actual ----------
+number 2
+</pre>
+
+<p>A second argument after the file name represents the line number of a single
+test in the test file. This makes sure only one test is run. The
+<code>-trace</code> option switches on trace output. Although verbose, this can
+sometimes be used to resolve difficult issues. Each line starts with
+<code>I</code> and a line number in the input to represent a change in the input
+position, <code>P</code> and a line number in the parser to represent a change
+in the current parse expression being executed, and <code>O</code> to report an
+output action. The position in the input is marked by a vertical bar.</p>
+
+<p>The trace shows that the parser has a choice <code>number / number "+"
+...</code>, and the first alternative succeeds, so the second alternative isn't
+tried. The choice operator <code>/</code> is sequential, as in PEG grammars, not
+symmetrical like the <code>|</code> operator in CFG grammars. Also, our parser
+doesn't yet specify that parsing must reach the end of the input, so recognising
+just the first number from the input gives a successful result.</p>
 
 <h3>Step 4</h3>
 
-<p>Maybe we can fix things by changing the order of choice.  Change the rules
-at the top of <kbd>sum.pecan</kbd> to:</p>
+<p>Maybe we can fix things by changing the order of choice. Change the rules
+at the top of <kbd>sum.txt</kbd> to:</p>
 
 <pre>sum = number "+" number @2add / number
 number = ("0".."9")+ @number
@@ -191,8 +242,8 @@ number = ("0".."9")+ @number
 
 <p>Now running the tests gives:</p>
 
-<pre>pecan -test sum.pecan
-Fail test on line 4 of sum.pecan:
+<pre>pecan sum.txt
+Fail test on line 1 of sum.txt:
 ---------- Expected ----------
 number 2
 ---------- Actual ----------
@@ -201,22 +252,15 @@ Error on line 1:
  ^
 </pre>
 
-<p>We have broken the first test, which used to work.  It is very common to
+<p>We have broken the first test, which used to work. It is very common to
 break old tests, which is why we are keeping them all and re-running them on
 every development step.</p>
 
 <p>The reason the first test now fails is that the parser has made a start on
 the first alternative <code>number "+" number @2add</code>, and the initial
-part, <code>number</code>, has succeeded.  The parser is now committed to this
-first alternative, which then fails because there is no plus sign.  By default,
+part, <code>number</code>, has succeeded. The parser is now committed to this
+first alternative, which then fails because there is no plus sign. By default,
 a parser is committed to an alternative as soon as any progress is made.</p>
-
-<!--
-<p>When parsing fails at a particular point in the input, by default, all the
-possibilities which would have allowed parsing to continue at that point are
-listed.  In this case, a further digit could also have been accepted, so that
-is reported as well as the missing plus sign.</p>
--->
 
 <h3>Step 5</h3>
 
@@ -228,10 +272,10 @@ number = ("0".."9")+ @number
 </pre>
 
 <p>The square brackets indicate that the parser should commit to the first
-alternative after the plus sign is found.  If there is no plus sign, the
+alternative after the plus sign is found. If there is no plus sign, the
 parser should backtrack to the beginning and try the second alternative.</p>
 
-<p>However, this may involve re-parsing the first number.  To keep parsers
+<p>However, this may involve re-parsing the first number. To keep parsers
 efficient, it is best to use backtracking very sparingly, so let's try
 something else.</p>
 
@@ -246,9 +290,9 @@ number = ("0".."9")+ @number
 
 <p>The postfix operator <code>?</code> means that something is
 optional, so <code>x?</code> represents a choice between <code>x</code> or
-nothing.  Running our tests now gives:</p>
+nothing. Running our tests now gives:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 The test on line 12 fails:
 ---------- Expected ----------
 number 2
@@ -260,9 +304,9 @@ number +40
 add
 </pre>
 
-<p>Well, at least the first test is working again.  The final test is nearly
-working, except for the plus sign on the front of the number 40.  That's
-because every character in the input must be handled by some action.  An action
+<p>Well, at least the first test is working again. The final test is nearly
+working, except for the plus sign on the front of the number 40. That's
+because every character in the input must be handled by some action. An action
 such as <code>number</code> is passed all the characters matched since the
 previous action.</p>
 
@@ -276,9 +320,9 @@ number = ("0".."9")+ @number
 </pre>
 
 <p>An <code>@</code> sign on its own is an action which discards all characters
-matched since the previous action.  Does this finally sort out our tests?</p>
+matched since the previous action. Does this finally sort out our tests?</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 3 tests.
 </pre>
 
@@ -294,37 +338,42 @@ number = ("0".."9")+ @number
 end = 13? 10 @
 </pre>
 
-<p>A number such as <code>13</code> is the decimal code for a character, in
-this case the carriage return control character <code>CR</code> also known as
-<code>\r</code> or <code>CTRL/M</code> or <code>0D</code>, and <code>10</code>
-stands for the line feed control character <code>LF</code> also known
-as <code>\n</code> or <code>CTRL/J</code> or <code>0A</code>.
-The <code>end</code> definition covers the two most common line ending
-conventions, and matches the end of the input line in our tests.
-The <code>@</code> action discards the end-of-line characters after matching
-them.  Another test can be added to our file to make sure that the parser
-reports an error if the end of the input isn't reached.</p>
+<p>A number such as <code>13</code> is the decimal code for a character, in this
+case the carriage return control character <code>CR</code> also known as
+<code>\r</code> or <code>CTRL+M</code> or <code>0D</code> (hexadecimal), and
+<code>10</code> stands for the line feed control character <code>LF</code> also
+known as <code>\n</code> or <code>CTRL+J</code> or <code>0A</code>
+(hexadecimal).</p>
+
+<p>Pecan normalizes the line endings of the test file when it is read in, so
+they are all <code>10</code>, but the <code>end</code> definition covers the two
+most common line ending conventions, which would make the final parser work on
+most common platforms.</p>
+
+<p>The <code>@</code> action discards the end-of-line character or characters
+after matching them. Another test can be added to our file to make sure that the
+parser reports an error if the end of the input isn't reached.</p>
 
 <pre>...
 ==========
-2+40$
-----------
+2+40%
+..........
 Error on line 1:
-2+40$
+2+40%
     ^
 </pre>
 
 <p>The test says that the parser should produce an error with a specific
-message.  If it does, the test succeeds:</p>
+message. If it does, the test succeeds:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 4 tests.
 </pre>
 
 <p>The error message in the last test isn't very good, because it doesn't
-provide a reason for the failure.  That's because we haven't specified any
-error reporting details. For our simple calculator, it is enough to point to
-the place where the failure occurs.</p>
+provide a reason for the failure. That's because we haven't specified any error
+reporting details yet. For now, it is enough to point to the place where the
+failure occurs.</p>
 
 <h3>Step 9</h3>
 
@@ -337,13 +386,13 @@ end = 13? 10 @
 
 <p>All we've done is to replace the <code>?</code> operator by the
 <code>*</code> operator, which says that something is to be repeated any number
-of times.  Unlike the <code>+</code> operator, it specifies zero or more times,
-rather than one or more times.  We can add a test:</p>
+of times. Unlike the <code>+</code> operator, it specifies zero or more times,
+rather than one or more times. We can add a test:</p>
 
 <pre>...
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -355,7 +404,7 @@ add
 
 <p>Running the tests produces:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 5 tests.
 </pre>
 
@@ -370,14 +419,14 @@ number = ("0".."9")+ @number
 end = 13? 10 @
 </pre>
 
-<p>A number can be followed by any number of clauses.  Each clause is either a
-plus sign or a minus sign followed by another number.  Add an extra test for
+<p>A number can be followed by any number of clauses. Each clause is either a
+plus sign or a minus sign followed by another number. Add an extra test for
 subtraction:</p>
 
 <pre>...
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -389,7 +438,7 @@ subtract
 
 <p>Run the tests:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 6 tests.
 </pre>
 
@@ -407,13 +456,13 @@ end = 13? 10 @
 
 <p>Using the two separate rules <code>sum</code> and <code>term</code> means
 that we have specified that multiplication and division take precedence over
-addition and subtraction.  We need to add at least one more test to make sure
+addition and subtraction. We need to add at least one more test to make sure
 this is working:</p>
 
 <pre>...
 ==========
 5*8+12/6
-----------
+..........
 number 5
 number 8
 multiply
@@ -425,7 +474,7 @@ add
 
 <p>Running the tests gives:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 7 tests.
 </pre>
 
@@ -448,7 +497,7 @@ end = 13? 10 @
 <pre>...
 ==========
 2*(20+1)
-----------
+..........
 number 2
 number 20
 number 1
@@ -458,8 +507,8 @@ multiply
 
 <p>Running the tests gives:</p>
 
-<pre>pecan -test sum.pecan
-Fail test on line 64 of sum.pecan:
+<pre>pecan sum.txt
+Fail test on line 57 of sum.txt:
 ---------- Expected ----------
 number 2
 number 20
@@ -467,15 +516,15 @@ number 1
 add
 multiply
 ---------- Actual ----------
-Error on line 1: expecting digit, newline, operator
+Error on line 1:
 2*(20+1)
        ^
 </pre>
 
-<p>The new test for brackets fails.  That is because we are using
+<p>The new test for brackets fails. That is because we are using
 the <code>sum</code> rule both for the expression as a whole, where we expect
 the end of the input to follow, and for the inner subexpression, where we
-expect a closing bracket to follow.  We need to separate out these two
+expect a closing bracket to follow. We need to separate out these two
 cases.</p>
 
 <h3>Step 13</h3>
@@ -493,12 +542,12 @@ end = 13? 10 @
 
 <p>Let's run the tests one more time:</p>
 
-<pre>pecan -test sum.pecan
+<pre>pecan sum.txt
 Pass 8 tests.
 </pre>
 
 <p>There are various details, perticularly allowing spaces and adding error
-reporting details, which we haven't covered.  However, let's say that the
+reporting details, which we haven't covered. However, let's say that the
 parser for our calculator is complete.</p>
 
 <h3>Step 14</h3>
@@ -517,7 +566,7 @@ program, in a file <kbd>Calculator.java</kbd>, say:</p>
     int multiply(int m, int n) { return m*n; }
     int divide(int m, int n) { return m/n; }
     boolean err(int row, int col, String line, String[] ss) { return false; }
-    // Begin generated parser: &lt;pecan grammar='calc.pecan' type='int'&gt;
+    // Begin generated parser: &lt;pecan grammar='calc.txt' type='int'&gt;
     // End parser &lt;/pecan&gt;
 }
 </pre>
@@ -528,22 +577,22 @@ The <code>run</code> method adds a newline to the end of the text to match the
 convention we have ued in the grammar, calls the <code>parse</code> method, and
 prints the result. The <code>number</code>, <code>add</code>,
 <code>subtract</code>, <code>multiply</code> and <code>divide</code> methods
-are provided to be called from the parser.  The <code>number</code> function
+are provided to be called from the parser. The <code>number</code> function
 uses the <code>text</code>, <code>start</code> and <code>end</code> variables
 provided by the parser code.</p>
 
 <p>This program includes the action functions and error function which will be
-called by the parser.  It also calls
+called by the parser. It also calls
 functions <code>parse</code>, <code>text</code> and <code>error</code> which
 will be provided by the generated parser code.</p>
 
 <p>The two comment lines near the end indicate where the generated code is to
-be inserted.  The first contains a tag <code>&lt;pecan...&gt;</code> in the XML
+be inserted. The first contains a tag <code>&lt;pecan...&gt;</code> in the XML
 style, and the second contains the <code>&lt;/pecan&gt;</code> end tag.
 The <code>grammar</code> parameter gives the path of the file containing the
 grammar to generate code from. The path is relative to the location of the
-source file.  The <code>type</code> parameter gives the type of the items which
-the action functions expect.  The next step is:</p>
+source file. The <code>type</code> parameter gives the type of the items which
+the action functions expect. The next step is:</p>
 
 <pre>pecan -java Calculator.java
 </pre>

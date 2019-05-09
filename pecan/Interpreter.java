@@ -40,25 +40,25 @@ public class Interpreter implements Testable {
     private Node[] delay;
     private StringBuffer output;
 
-    public static void main(String[] args) throws ParseException {
+    public static void main(String[] args) {
         int line = 0;
         Interpreter program = new Interpreter();
         if (args != null) for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-trace")) program.tracing = true;
             else line = Integer.parseInt(args[i]);
         }
-        int n = Test.run("tests/Interpreter.txt", program, line);
-        if (n == 0) System.out.println("No test on line " + line);
-        else if (line > 0) System.out.println("Pass test on line " + line);
-        else System.out.println("Interpreter class OK, "+ n +" tests passed.");
+        if (args.length == 0) Stacker.main(args);
+        Test.run(program, line);
     }
-    static int no = 0;
 
     public String test(String grammar, String input) throws ParseException {
         prepare(grammar, input);
-        no++;
-        String out = run();
-        return out;
+        return run();
+    }
+
+    // Set the tracing flag.
+    void trace(boolean b) {
+        tracing = b;
     }
 
     // Get the interpreter ready to run, with the given grammar and text.

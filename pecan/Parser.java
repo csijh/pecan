@@ -15,12 +15,8 @@ class Parser implements Testable {
     private int start, in, out;
 
     public static void main(String[] args) {
-        int line = 0;
-        if (args.length > 0) line = Integer.parseInt(args[0]);
-        int n = Test.run("tests/Parser.txt", new Parser(), line);
-        if (n == 0) System.out.println("No test on line " + line);
-        else if (line > 0) System.out.println("Pass test on line " + line);
-        else System.out.println("Parser class OK, " + n + " tests passed.");
+        if (args.length == 0) Test.run(new Parser());
+        else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
     public String test(String g, String s) throws ParseException {

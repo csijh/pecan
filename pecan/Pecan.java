@@ -3,45 +3,51 @@
 package pecan;
 
 import java.util.*;
+import java.text.*;
 import java.io.*;
 import java.nio.file.*;
 import java.nio.charset.*;
 
-/* Read in a grammar and use it to run tests:
+/* Read in a file of tests and run them:
 
-    java -jar pecan.jar grammar[.pecan] [tests]
+    java -jar pecan.jar [-trace] [line] testfile
 
-If no extension is given for the grammar file, it is assumed to have the .pecan
-extension. If no file of tests is given, it is assumed to have the same name,
-with the .tests extension. */
+*/
 
-class Pecan {
-    public static void main(String[] args) throws Exception {
-        Pecan program = new Pecan();
-        if (args.length == 0 || args.length > 2) usage();
-        String grammar = args[0];
-        if (grammar.indexOf('.') < 0) grammar += ".pecan";
-        String tests;
-        if (args.length == 2) tests = args[1];
-        else tests = grammar.substring(0, grammar.lastIndexOf('.')) + ".tests";
-        try { program.run(grammar, tests); }
-        catch (Exception e) {
-            System.err.println("Error: " + e);
-            usage();
+class Pecan implements Testable {
+    public static void main(String[] args) {
+        int line = 0;
+        String filename = null;
+        Interpreter interpreter = new Interpreter();
+        if (args != null) for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-trace")) interpreter.trace(true);
+            else if (Character.isDigit(args[i].charAt(0))) {
+                line = Integer.parseInt(args[i]);
+            }
+            else if (filename == null) filename = args[i];
+            else usage();
         }
+        if (filename == null) usage();
+        Test.run(filename, interpreter, line);
     }
 
     // Give a usage message and stop.
     private static void usage() {
         System.err.println(
             "Usage:\n" +
-            "    pecan grammarFile[.pecan] [testsFile]\n" +
+            "    pecan [-trace] [line] testsfile\n" +
             "Or:\n" +
-            "    java -jar pecan.jar grammarFile[.pecan] [testsFile]\n" +
-            "The default tests file is grammarFile.tests");
+            "    java -jar pecan.jar [-trace] [line] testsfile\n");
         System.exit(1);
     }
 
+    // Run a test passed from the Test class.
+    public String test(String grammar, String input) throws ParseException {
+        Interpreter interpreter = new Interpreter();
+        return interpreter.test(grammar, input);
+    }
+
+/*
     // Run tests from the command line file through the interpreter.
     void run(String grammarFile, String testsFile) throws IOException {
         int passed = 0;
@@ -54,7 +60,7 @@ class Pecan {
             interpreter.prepare(grammar, test.input);
 
         }
-        /*
+
         for (Test t : tests) {
             message = t.run(interp);
             if (message != null) break;
@@ -63,9 +69,9 @@ class Pecan {
         if (message != null) System.err.print(message);
         else if (passed == 1) System.out.println("Pass 1 test.");
         else System.out.println("Pass " + passed + " tests.");
-        */
-    }
 
+    }
+*/
     // Generate code
 /*
     private void gen(String list, String grammar) {

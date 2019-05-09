@@ -47,12 +47,9 @@ class Checker implements Testable {
     private boolean changed;
 
     public static void main(String[] args) {
-        int line = 0;
-        if (args.length > 0) line = Integer.parseInt(args[0]);
-        int n = Test.run("tests/Checker.txt", new Checker(), line);
-        if (n == 0) System.out.println("No test on line " + line);
-        else if (line > 0) System.out.println("Pass test on line " + line);
-        else System.out.println("Checker class OK, " + n + " tests passed.");
+        if (args.length == 0) Binder.main(args);
+        if (args.length == 0) Test.run(new Checker());
+        else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
     public String test(String g, String s) throws ParseException {
