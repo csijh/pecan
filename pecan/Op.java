@@ -3,10 +3,10 @@
 package pecan;
 
 /* Op constants represent parsing expression operators, and are used to classify
-nodes. */
+nodes. Later ops are used to generate bytecode. */
 
 public enum Op {
-    RULE,    // Definition, name = rhs
+    RULE,    // Definition, name = rhs, text is name, child is rhs
     ID,      // Identifier, with cross-reference to its definition
     OR,      // Choice, x / y, right associative
     AND,     // Sequence, x y, right associative
@@ -24,7 +24,15 @@ public enum Op {
     CAT,     // Unicode category, e.g. Lu
     TAG,     // Match a type of token.
     DROP,    // Drop unused matched characters, @
-    ACT;     // Carry out an action, e.g. @2add
+    ACT,     // Carry out an action, e.g. @2add
+
+// Extras for generating bytecode:
+    EITHER,  // x / y            EITHER &OR <x> OR <y>
+    BOTH,    // x y              BOTH &AND <x> AND <y>
+    MAYBE,   // x? or x*         MAYBE <x> OPT/MANY
+    THEN,    // x+               SOME &x THEN MAYBE <x> MANY
+    LOOK,    // [x] or x& or x!  LOOK &TRY <x> TRY/HAS/NOT
+    LE;      // 0.."m"           LE "m"
 
     public static void main(String[] args) { }
 }

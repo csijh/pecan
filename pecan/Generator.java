@@ -1,23 +1,75 @@
-// Part of Pecan 4. Open source - see licence.txt.
+// Pecan 5 bytecode generator. Free and open source. See licence.txt.
 
 package pecan;
 
 import java.util.*;
 import java.text.*;
 import static pecan.Op.*;
-import static pecan.Opcode.*;
-import static pecan.Info.Flag.*;
+import static pecan.Node.Flag.*;
 
-/* Converts tree into bytecode.
+/* Converts grammar into bytecode. The translation is:
+
+    source    node        bytecode
+    ------------------------------
+    id = x    RULE x      RULE <x>                    (entry point)
+    x         ID          ID &rhs                     (two byte offset)
+    x / y     OR x y      EITHER &OR <x> OR <y>       (one unsigned byte offset)
+    x y       AND x y     BOTH &AND <x> AND <y>
+    x?        OPT x       MAYBE &OPT <x> OPT
+    x*        MANY x      MAYBE &MANY <x> MANY
+    x+        SOME x      DO &x THEN MAYBE <x> MANY
+    [x]       TRY x       LOOK &TRY <x> TRY
+    x&        HAS x       LOOK &HAS <x> HAS
+    x!        NOT x       LOOK &NOT <x> NOT
+    @a        ACT a       ACT n                       (one unsigned byte index)
+    @         DROP        DROP
+    #e        MARK e      MARK n
+    10        CHAR 10     CHAR 10                     (ascii)
+    128       CHAR 128    STRING n "utf-8"
+    "a"       STRING "a"  STRING n "bytes"
+    'a'       CHAR 'a'    CHAR 'a'                    (ascii)
+    "pi"      CHAR 'pi'   STRING n "pi"
+    'ab'      SET 'ab'    SET n "ab"
+    "a".."z"  RANGE...    RANGE n "a" LE n "z"
+    0.."m"    RANGE...    LE n "m"
+    Nd        CAT Nd      CAT Nd
+    %id       TAG id      TAG n
+    `+`       TAG +       TAG n
+                          STOP
+
+
 Holds the code, plus:
   the opcodes (may not want to include twice) ?
 -  the actions for output
 -  the entry points for the rules (and/or rule names) (one output item)?
 -  the marker names (or entry points for them)
-// TODO backquote tags
-// TODO verbose interpreter
 // TODO markers: is there a lift optimisation?
 
+TODO: Standard versions:
+
+STRING n "utf-8 bytes" (256 limit!)
+SET n "ascii bytes"
+GE "utf-8 char"     (split range)
+LE "utf-8 char"
+CAT c (one byte)
+EITHER &OR BOTH &AND LE m AND <a/.../m> OR <n/.../z>    (switch)
+TAG t
+START
+STOP
+
+// 10       ->  CHAR 10
+// 128      ->  STRING n "utf-8 bytes"
+// "a"      ->  CHAR 'a'
+// 'a'      ->  CHAR 'a'
+// "pi"     ->  STRING n "utf-8 bytes"
+// 'ab'     ->  SET n "bytes"
+// "a".."z" ->  RANGE &AND "a" AND LE "z"
+LE,      // 0.."m"   ->  LE "m"
+// Nd       ->  CAT Nd
+// %id      ->  TAG n
+// `+`      ->  TAG n
+// @        ->  DROP
+// @a       ->  ACT n
 
 TODO: switch optimization from
 x = a / b / ... / z
@@ -33,20 +85,22 @@ This design allows each opcode to be either, independently. Use remote when
 x is an identifier, to avoid a GO opcode.
 */
 
-class Generator implements Test.Callable {
+class Generator implements Testable {
     private byte[] code;
     private StringBuilder output, comment;
     private String[] rules, tags, actions, markers;
     private int[] arities;
     private int pc, linePc;
 
-    public static void main(String[] args) throws ParseException {
-        Generator program = new Generator();
-        Stacker.main(null);
-        Test.run(args, program);
+    public static void main(String[] args) {
+        if (args.length == 0) Checker.main(args);
+        if (args.length == 0) Test.run(new Generator());
+        else Test.run(new Generator(), Integer.parseInt(args[0]));
     }
 
-    public String test(String s) throws ParseException { return run(s); }
+    public String test(String g, String s) throws ParseException {
+        return run(g);
+    }
 
     // Convert the grammar into bytecode
     String run(String grammar) throws ParseException {
@@ -90,6 +144,7 @@ class Generator implements Test.Callable {
         if (node.right() != null) strings(node.right());
         switch (node.op()) {
         case RULE: rules[node.value()] = node.text(); break;
+        // TODO: `tag`
         case TAG: tags[node.value()] = node.text().substring(1); break;
         case MARK: markers[node.value()] = node.text().substring(1); break;
         case ACT:

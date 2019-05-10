@@ -1,3 +1,4 @@
+// Tutorial step 15 (fix end of input)
 sum = expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*

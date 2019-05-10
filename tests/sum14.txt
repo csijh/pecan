@@ -1,3 +1,4 @@
+// Tutorial step 14 (brackets; end of input makes last test fail)
 sum = term (plus term @2add / minus term @2subtract)* end
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open sum close
@@ -69,8 +70,6 @@ add
 ==========
 2*(20+1)
 ..........
-number 2
-number 20
-number 1
-add
-multiply
+Error on line 1: expecting digit, newline, operator
+2*(20+1)
+       ^

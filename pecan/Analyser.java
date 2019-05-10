@@ -189,11 +189,12 @@ class Analyser implements Test.Callable {
             add(x.FOLLOW(), node.FOLLOW());
             break;
         default:
-            throw new Error("Type " + node.op() + " not implemented");
+            throw new Error("Node type "+ node.op() +" not implemented");
         }
-        node.note(" " + show(node, node.FIRST()) + ":" +
-                  show(node, node.START()) + ":" +
-                  show(node, node.FOLLOW())
+        node.note(" " +
+            show(node, node.FIRST()) + ":" +
+            show(node, node.START()) + ":" +
+            show(node, node.FOLLOW())
         );
     }
 

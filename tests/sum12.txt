@@ -1,3 +1,4 @@
+// Tutorial step 12 (full error reporting)
 sum = number (plus number @2add / minus number @2subtract)* end
 number = digit+ @number
 plus = #operator "+" @
