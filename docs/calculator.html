@@ -198,7 +198,6 @@ number 2
 I1: |2+40
 P1: number / number "+" number @2add
 P1: number
-P2: number
 P2: ("0".."9")+ @number
 P2: ("0".."9")+
 P2: "0".."9"
@@ -215,14 +214,16 @@ add
 number 2
 </pre>
 
-<p>A second argument after the file name represents the line number of a single
-test in the test file. This makes sure only one test is run. The
-<code>-trace</code> option switches on trace output. Although verbose, this can
-sometimes be used to resolve difficult issues. Each line starts with
-<code>I</code> and a line number in the input to represent a change in the input
-position, <code>P</code> and a line number in the parser to represent a change
-in the current parse expression being executed, and <code>O</code> to report an
-output action. The position in the input is marked by a vertical bar.</p>
+<p>A second argument to the <code>pecan</code> program after the file name
+represents the line number of a single test in the test file. This makes sure
+only one test is run. The <code>-trace</code> option switches on trace output.
+Although verbose, this can sometimes be used to resolve difficult issues. Each
+line in the trace starts with <code>I</code>, <code>P</code> or <code>O</code>.
+A line starting with <code>I</code> reports a change in the input position,
+giving an input line number and marking the position in that line with a
+vertical bar. A line starting with <code>P</code> reports a change in the
+current parse expression being executed, displaying a parser line number and the
+expression. A line starting with <code>O</code> reports an output action.</p>
 
 <p>The trace shows that the parser has a choice <code>number / number "+"
 ...</code>, and the first alternative succeeds, so the second alternative isn't
@@ -252,8 +253,8 @@ Error on line 1:
  ^
 </pre>
 
-<p>We have broken the first test, which used to work. It is very common to
-break old tests, which is why we are keeping them all and re-running them on
+<p>We have broken the first test, which used to work. It is very common to break
+old tests, which is why we are keeping all the tests and re-running them in
 every development step.</p>
 
 <p>The reason the first test now fails is that the parser has made a start on
@@ -446,12 +447,146 @@ Pass 6 tests.
 
 <h3>Step 11</h3>
 
+<p>At this point, let's do something about the uninformative error messages.
+Here is the one in our current test file:</p>
+
+<pre>2+40%
+..........
+Error on line 1:
+2+40%
+    ^
+</pre>
+
+<p>This accurately reports the position in the input at which parsing failed,
+but doesn't give any clue about why. The conventional approach is to list the
+things which would allow further parsing. If the list were generated
+automatically by Pecan, it might read:</p>
+
+<pre>2+40%
+..........
+Error on line 1: expecting '0','1','2','3','4','5','6','7','8','9','+','-',13,10
+2+40%
+    ^
+</pre>
+
+<p>Messages like this are too long and detailed to be very useful. We need to
+form a summary. To do that, we can add error handlers to the parser:</p>
+
+<pre>sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
+number = (#digit "0".."9")+ @number
+end = #newline 13? 10 @
+</pre>
+
+<p>If we run the Pecan program on our test file, we get this:</p>
+
+<pre>java pecan.Run tests/sum11.txt
+Fail test on line 19 of tests/sum11.txt:
+---------- Expected ----------
+Error on line 1:
+2+40%
+    ^
+---------- Actual ----------
+Error on line 1: expecting digit, newline
+2+40%
+    ^
+</pre>
+
+<p>When an error handler such as <code>#digit</code> is encountered, it is
+attached as a marker to the current position in the input. If progress is made
+beyond that position, the marker is removed. If parsing fails, the markers
+associated with the current input position are reported. In the example here,
+the <code>#digit</code> handler summarises the set of digits which are expected,
+and the handler <code>#newline</code> summarises the line endings.</p>
+
+<p>If the error message is changed in the test file to match what is actually
+reported, the tests all pass. A further test can be added to cover the case
+where there is no number after an operator:</p>
+
+<pre>...
+==========
+2+
+..........
+Error on line 1: expecting digit
+2+
+  ^
+</pre>
+
+<p>Running the tests gives:</p>
+
+<pre>pecan sum.txt
+Pass 7 tests.
+</pre>
+
+<p>This is good, but we need a more uniform approach to error handling to make
+sure it is accurate.</p>
+
+<h3>Step 12</h3>
+
+<p>The operators <code>+</code> and <code>-</code> are not being reported
+because there is no handler for them. Although it is often reasonable to leave
+out relatively unimportant items from the 'expected' list, the operators ought
+to be reported in our case. For uniformity, let's make sure that whenever a
+character is matched in the input, there is a marker associated with it. We can
+rewrite the parser as:</p>
+
+<pre>sum = number (plus number @2add / minus number @2subtract)* end
+number = digit+ @number
+plus = #operator "+" @
+minus = #operator "-" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
+</pre>
+
+<p>Each expression where a character is recognised has been pulled out into its
+own definition, with an error handler included. This is a rather minor example
+of the transformation approach to parser development. We started with a
+parser:</p>
+
+<pre>sum = ... "+" @ ...
+</pre>
+
+<p>Then we transformed it by pulling a subexpression out into its own
+rule before developing further:</p>
+
+<pre>sum = ... plus ...
+plus = "+" @
+</pre>
+
+<p>There are many transformations like this which can be performed on a Pecan
+parser which are guaranteed not to change its meaning. For any input, the output
+actions performed or the error report produced are not changed.</p>
+
+<p>Running the tests produces:</p>
+
+<pre>Fail test on line 22 of tests/sum12.txt:
+---------- Expected ----------
+Error on line 1: expecting digit, newline
+2+40%
+    ^
+---------- Actual ----------
+Error on line 1: expecting digit, newline, operator
+2+40%
+    ^
+</pre>
+
+<p>This shows that operators are now being reported. If we upgrade the error
+message in the test file, the tests pass. The error handler
+<code>#operator</code> is encountered twice while parsing, once for each
+operator, but is only reported once.</p>
+
+<h3>Step 13</h3>
+
 <p>It is time to add the other two operators:</p>
 
-<pre>sum = term ("+" @ term @2add / "-" @ term @2subtract)* end
-term = number ("*" @ number @2multiply / "/" @ number @2divide)*
-number = ("0".."9")+ @number
-end = 13? 10 @
+<pre>sum = term (plus term @2add / minus term @2subtract)* end
+term = number (times number @2multiply / over number @2divide)*
+number = digit+ @number
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 </pre>
 
 <p>Using the two separate rules <code>sum</code> and <code>term</code> means
@@ -475,24 +610,45 @@ add
 <p>Running the tests gives:</p>
 
 <pre>pecan sum.txt
-Pass 7 tests.
+Pass 8 tests.
 </pre>
 
 <p>Now all the operators are in place, it is time to tackle brackets.</p>
 
-<h3>Step 12</h3>
+<h3>Step 14</h3>
 
 <p>Let's add a rule <code>atom</code> to mean either a number or a bracketed
 subexpression:</p>
 
-<pre>sum = term ("+" @ term @2add / "-" @ term @2subtract)* end
-term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
-atom = number / "(" @ sum ")" @
-number = ("0".."9")+ @number
-end = 13? 10 @
+<pre>sum = term (plus term @2add / minus term @2subtract)* end
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open sum close
+number = digit+ @number
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+open = #bracket "(" @
+close = #bracket ")" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 </pre>
 
-<p>We can also add a simple test for brackets:</p>
+<p>Running the existing tests shows up a slight problem:</p>
+
+<pre>Fail test on line 54 of tests/sum14.txt:
+---------- Expected ----------
+Error on line 1: expecting digit
+2+
+  ^
+---------- Actual ----------
+Error on line 1: expecting bracket, digit
+2+
+  ^
+</pre>
+
+<p>The error message in that test needs to be upgraded in the test file. Now we
+can add a simple test for brackets:</p>
 
 <pre>...
 ==========
@@ -508,7 +664,7 @@ multiply
 <p>Running the tests gives:</p>
 
 <pre>pecan sum.txt
-Fail test on line 57 of sum.txt:
+Fail test on line 70 of tests/sum14.txt:
 ---------- Expected ----------
 number 2
 number 20
@@ -516,7 +672,7 @@ number 1
 add
 multiply
 ---------- Actual ----------
-Error on line 1:
+Error on line 1: expecting digit, newline, operator
 2*(20+1)
        ^
 </pre>
@@ -527,30 +683,113 @@ the end of the input to follow, and for the inner subexpression, where we
 expect a closing bracket to follow. We need to separate out these two
 cases.</p>
 
-<h3>Step 13</h3>
+<h3>Step 15</h3>
 
 <p>All we need to do is to add an extra rule <code>expression</code> which is
 the same as <code>sum</code>, but without the end of input test:</p>
 
 <pre>sum = expression end
-expression = term ("+" @ term @2add / "-" @ term @2subtract)*
-term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
-atom = number / "(" @ expression ")" @
-number = ("0".."9")+ @number
-end = 13? 10 @
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+open = #bracket "(" @
+close = #bracket ")" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
 </pre>
 
-<p>Let's run the tests one more time:</p>
+<p>Let's run the tests again:</p>
 
 <pre>pecan sum.txt
-Pass 8 tests.
+Pass 9 tests.
 </pre>
 
-<p>There are various details, perticularly allowing spaces and adding error
-reporting details, which we haven't covered. However, let's say that the
-parser for our calculator is complete.</p>
+<p>Let's do one more development step, to illustrate allowing spaces.</p>
 
-<h3>Step 14</h3>
+<h3>Step 16</h3>
+
+<p>Handling spaces is a little bit difficult, because we are scanning and
+parsing in one go, rather than writing a separate scanner and parser. To avoid
+complicating the parser any more than necessary, the best approach is to skip
+spaces at the start and after recognising each token:</p>
+
+<pre>sum = gap expression end
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number gap
+plus = #operator "+" gap
+minus = #operator "-" gap
+times = #operator "*" gap
+over = #operator "/" gap
+open = #bracket "(" gap
+close = #bracket ")" gap
+digit = #digit "0".."9"
+gap = (#space " ")* @
+end = #newline 13? 10 @
+</pre>
+
+<p>A test can be added:</p>
+
+<pre>...
+==========
+ 2 * ( 20 + 1 )
+..........
+number 2
+number 20
+number 1
+add
+multiply
+</pre>
+
+<p>Running the tests gives:</p>
+
+<pre>Fail test on line 30 of tests/sum16.txt:
+---------- Expected ----------
+Error on line 1: expecting digit, newline, operator
+2+40%
+    ^
+---------- Actual ----------
+Error on line 1: expecting digit, newline, operator, space
+2+40%
+    ^
+</pre>
+
+<p>Rather than change the error messages to add space as an extra expected item,
+let's decide that error messages will look cleaner if spaces are not reported,
+since they are allowed almost anywhere. So, we will change the grammar to:</p>
+
+<pre>sum = gap expression end
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number gap
+plus = #operator "+" gap
+minus = #operator "-" gap
+times = #operator "*" gap
+over = #operator "/" gap
+open = #bracket "(" gap
+close = #bracket ")" gap
+digit = #digit "0".."9"
+gap = (" ")* @
+end = #newline 13? 10 @
+</pre>
+
+<p>Let's run the tests just one more time:</p>
+
+<pre>pecan sum.txt
+Pass 10 tests.
+</pre>
+
+<p>Although there are many more features that could be added, let's stop and say
+we have successfully developed a numerical expression parser.</p>
+
+<h3>Step ?</h3>
 
 <p><b><i>Not currently working</i></b></p>
 

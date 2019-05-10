@@ -1,0 +1,76 @@
+sum = term (plus term @2add / minus term @2subtract)* end
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open sum close
+number = digit+ @number
+plus = #operator "+" @
+minus = #operator "-" @
+times = #operator "*" @
+over = #operator "/" @
+open = #bracket "(" @
+close = #bracket ")" @
+digit = #digit "0".."9"
+end = #newline 13? 10 @
+----------
+2
+..........
+number 2
+==========
+42
+..........
+number 42
+==========
+2+40
+..........
+number 2
+number 40
+add
+==========
+2+40%
+..........
+Error on line 1: expecting digit, newline, operator
+2+40%
+    ^
+==========
+2+10+12+18
+..........
+number 2
+number 10
+add
+number 12
+add
+number 18
+add
+==========
+2-10+53-3
+..........
+number 2
+number 10
+subtract
+number 53
+add
+number 3
+subtract
+==========
+2+
+..........
+Error on line 1: expecting bracket, digit
+2+
+  ^
+==========
+5*8+12/6
+..........
+number 5
+number 8
+multiply
+number 12
+number 6
+divide
+add
+==========
+2*(20+1)
+..........
+number 2
+number 20
+number 1
+add
+multiply

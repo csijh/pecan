@@ -15,7 +15,7 @@ divided into two disjoint sets, FIRST and START:
    FIRST =  input items which a parsing expression can start with, where
             parsing always makes progress (SP or FP), so the item is consumed
    START =  input items which a parsing expression can start with (SP or FP),
-            but where there may also be no progress (SN or FN), so that the
+            but where there may also be no progress (FN), so that the
             item may be matched by a subsequent alternative
    FOLLOW = items which can follow an expression
 

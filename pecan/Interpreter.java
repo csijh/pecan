@@ -15,13 +15,12 @@ The test input may be text, or tag names with possible white space in between.
 The output describes the external calls that would be made, with one line of
 text per call.
 
-TODO: trace option:
-    I3 print input with | position when it progresses
-    G3 print the text of a node (on one line) when parsing it
-    O3 print the output when generated
-    with x y z or x / y / z, go straight to x
+TODO: work out which actions need to be delayed (or max no).
+Look for x / y or x? or x* or x+ where x has a problem action.
+A problem action is x y where x has a problem action or
+x y where x is an action (or SN and action) and y is FN
 
-TODO: work out which actions need to be delayed, or max no.
+
     contained in an FN node where, the action can be before any progress
     x y:    x IS @   or   x is a closer node   or   xSN and y is a closer node
     x / y:  x is closer   or   y is closer
@@ -29,9 +28,9 @@ TODO: work out which actions need to be delayed, or max no.
 */
 
 public class Interpreter implements Testable {
-    private boolean tracing = false;
+    private boolean tracing = false, skipTrace = false;
     private String grammar;
-    private boolean textInput, ok, marked;
+    private boolean textInput, ok;
     private String input;
     private Node root;
     private int start, in, out, mark, lookahead;
@@ -73,7 +72,6 @@ public class Interpreter implements Testable {
         out = 0;
         mark = 0;
         lookahead = 0;
-        marked = false;
         markers = new String[markerSize(root)];
         gatherMarkers(root);
         failures = new BitSet();
@@ -85,6 +83,7 @@ public class Interpreter implements Testable {
     String run() throws ParseException {
         if (tracing) traceInput();
         parse(root.left());
+        if (in > mark) failures.clear();
         takeActions();
         if (! ok) {
             output.setLength(0);
@@ -96,7 +95,7 @@ public class Interpreter implements Testable {
                 if (! s.equals("expecting ")) s += ", ";
                 s += markers[i];
             }
-            output.append(Node.err(input, mark, mark, s));
+            output.append(Node.err(input, in, in, s));
         }
         return output.toString();
     }
@@ -105,12 +104,14 @@ public class Interpreter implements Testable {
     void parse(Node node) {
         int saveIn, saveOut, saveMark, length;
         String text;
-        if (tracing) System.out.println(node.trace());
+        if (tracing && ! skipTrace) System.out.println(node.trace());
+        skipTrace = false;
         switch(node.op()) {
         case RULE:
             parse(node.left());
             break;
         case ID:
+            skipTrace = true;
             parse(node.ref());
             break;
         case OR:
@@ -198,8 +199,11 @@ public class Interpreter implements Testable {
             else for (int i=0; i<length; i++) {
                 if (input.charAt(in+i) != text.charAt(i)) { ok = false; break; }
             }
-            if (ok) { takeActions(); in += length; if (tracing) traceInput(); }
-            if (! ok && mark < in) mark = in;
+            if (ok) {
+                takeActions();
+                in += length;
+                if (tracing) traceInput();
+            }
             break;
         case SET:
             length = node.text().length() - 2;
@@ -218,7 +222,6 @@ public class Interpreter implements Testable {
                 if (tracing) traceInput();
                 ok = true;
             }
-            if (! ok && mark < in) mark = in;
             break;
         case RANGE:
             int low = node.left().value();
@@ -234,7 +237,6 @@ public class Interpreter implements Testable {
                     if (tracing) traceInput();
                 }
             }
-            if (! ok && mark < in) mark = in;
             break;
         case CAT:
             ok = false;
@@ -250,7 +252,6 @@ public class Interpreter implements Testable {
                     if (tracing) traceInput();
                 }
             }
-            if (! ok && mark < in) mark = in;
             break;
         case TAG:
             String query;
@@ -265,12 +266,12 @@ public class Interpreter implements Testable {
                     (input.charAt(in) == ' ' || input.charAt(in) == '\n')) in++;
                 if (tracing) traceInput();
             }
-            if (! ok && mark < in) mark = in;
             break;
         case MARK:
-            if (in > mark) { mark = in; failures.clear(); }
-            if (in == mark) failures.set(node.value());
             ok = true;
+            if (lookahead > 0) break;
+            if (mark != in) { mark = in; failures.clear(); }
+            failures.set(node.value());
             break;
         case DROP:
             ok = true;
@@ -286,7 +287,7 @@ public class Interpreter implements Testable {
         }
     }
 
-    // Print out the input position. TODO: multiline.
+    // Print out the input position.
     private void traceInput() {
         int line = 1, start = 0, stop = input.length();
         for (int i = 0; i < in; i++) {

@@ -1,0 +1,15 @@
+// Tutorial step 3 (3rd test parses only the 1st number)
+sum = number / number "+" number @2add
+number = ("0".."9")+ @number
+----------
+2
+..........
+number 2
+==========
+42
+..........
+number 42
+==========
+2+40
+..........
+number 2

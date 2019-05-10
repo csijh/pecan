@@ -26,7 +26,9 @@ by a line of three or more equal signs. A grammar is separated from the rest of
 a test by a line of minus signs. An input string is separated from an output
 string by a line of dots. If the grammar section is omitted, the test uses the
 same grammar as the previous test. If the input string is omitted, e.g. for some
-of the early pecan passes, it is assumed to be the empty string.
+of the early pecan passes, it is assumed to be the empty string. If a test has
+only one section, that is a single line containing the filename of an extra test
+file.
 
 Line endings in a test file are converted to \n when it is read in. To allow the
 test file to contain control characters or unicode characters as plain text,
@@ -46,7 +48,7 @@ then:
 public class Test {
     private String fileName;
     private int lineNo;
-    private String grammar, input, output;
+    private String subfile, grammar, input, output;
 
     // No testing of the test class.
     public static void main(String[] args) { }
@@ -54,28 +56,35 @@ public class Test {
     String input() { return input; }
     String output() { return output; }
 
-    // Run a collection of unit tests on the class which the object belongs to.
+    // Run unit tests on the class which the object belongs to.
     static void run(Testable object) { run(object, 0); }
 
     // Run a single unit test, starting on a given line number.
     static void run(Testable object, int line) {
         String name = object.getClass().getSimpleName();
-        String file = "tests/" + name + ".txt";
-        int n = runTests(file, object, line);
-        if (n == 0) System.out.println("No test on line "+ line +".");
-        else if (line > 0) System.out.println("Pass test on line "+ line +".");
-        else System.out.println(name +" class OK, pass "+ n +" tests.");
+        run("tests/"+ name +".txt", object, line, false);
     }
 
-    // Run user tests from the given file.
-    static void run(String file, Testable object) { run(file, object, 0); }
+    // Run user or unit tests from the given file.
+    static void run(String file, Testable object, boolean user) {
+        run(file, object, 0, user);
+    }
 
-    // Run one user test from a file.
-    static void run(String file, Testable object, int line) {
+    // Run test or tests for user or unit from a file.
+    static void run(String file, Testable object, int line, boolean user) {
         int n = runTests(file, object, line);
-        if (n == 0) System.out.println("No test on line " + line);
-        else if (n == 1) System.out.println("Pass 1 test.");
-        else System.out.println("Pass " + n + " tests.");
+        if (n == 0) {
+            System.out.println("No test on line "+ line +".");
+            return;
+        }
+        if (user) {
+            if (n == 1) System.out.println("Pass 1 test.");
+            else System.out.println("Pass "+ n +" tests.");
+            return;
+        }
+        String name = object.getClass().getSimpleName();
+        if (line > 0) System.out.println("Pass test on line "+ line +".");
+        System.out.println(name +" class OK, pass "+ n +" tests.");
     }
 
     // Run tests from a given file on a given object. If line > 0, run just the
@@ -85,6 +94,13 @@ public class Test {
         int passed = 0;
         for (Test test : tests) {
             if (line > 0 && test.lineNo != line) continue;
+            if (test.subfile != null) {
+                File f = new File(file);
+                f = new File(f.getParentFile(), test.subfile);
+                String subfile = f.getPath();
+                passed += runTests(subfile, object, line);
+                continue;
+            }
             String out;
             try { out = object.test(test.grammar, test.input); }
             catch (ParseException e) {
@@ -126,11 +142,13 @@ public class Test {
         for (int i=0; i<=lines.size(); i++) {
             if (i < lines.size() && ! all(lines.get(i), '=')) continue;
             Test t = readTest(lines, start, i);
-            if (t.grammar == null) t.grammar = grammar;
-            else grammar = t.grammar;
+            if (t.subfile == null) {
+                if (t.grammar == null) t.grammar = grammar;
+                else grammar = t.grammar;
+                t.grammar = unescape(t.grammar);
+                t.input = unescape(t.input);
+            }
             t.fileName = file;
-            t.grammar = unescape(t.grammar);
-            t.input = unescape(t.input);
             tests.add(t);
             start = i + 1;
         }
@@ -158,6 +176,15 @@ public class Test {
         test.grammar = endg < 0 ? null : "";
         test.input = "";
         test.output = "";
+        if (endg < 0 && endi < 0) {
+            if (end - start != 1) {
+                System.err.println(
+                    "Error: test without sections on line " + start);
+                System.exit(1);
+            }
+            test.subfile = lines.get(start);
+            return test;
+        }
         if (endg < 0) endg = start - 1;
         if (endi < 0) endi = endg;
         for (int i=start; i<endg; i++) test.grammar += lines.get(i) + "\n";

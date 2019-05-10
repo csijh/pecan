@@ -17,7 +17,13 @@ Holds the code, plus:
 // TODO backquote tags
 // TODO verbose interpreter
 // TODO markers: is there a lift optimisation?
-// TODO markers don't count as progress
+
+
+TODO: switch optimization from
+x = a / b / ... / z
+first sort if allowed (and group?) then
+x = ('a' .. 'm') (a / b / ... / m) / n / ... / z
+could use a semi-range 0..'m'
 
 
 TODO: two versions of each opcode, immediate and remote

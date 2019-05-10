@@ -1,0 +1,16 @@
+sum = number ("+" number @2add)?
+number = ("0".."9")+ @number
+----------
+2
+..........
+number 2
+==========
+42
+..........
+number 42
+==========
+2+40
+..........
+number 2
+number 40
+add

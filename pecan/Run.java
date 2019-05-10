@@ -1,4 +1,4 @@
-// Pecan 5 program. Free and open source. See licence.txt.
+// Pecan 5 main program. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -14,7 +14,7 @@ import java.nio.charset.*;
 
 */
 
-class Pecan implements Testable {
+class Run implements Testable {
     public static void main(String[] args) {
         int line = 0;
         String filename = null;
@@ -97,7 +97,7 @@ class Pecan implements Testable {
         String grammar = "pecan/TestFiles/grammar.txt";
         String tests = "pecan/TestFiles/tests.txt";
         String message = null;
-        for (Test test : Test.extract("Pecan", n)) {
+        for (Test test : Test.extract("Run", n)) {
             String in = test.input();
             String[] parts = in.split("~~~~~~~~~~\n", 2);
             PrintWriter out = new PrintWriter(grammar);

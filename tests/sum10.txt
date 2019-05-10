@@ -1,0 +1,43 @@
+sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
+number = ("0".."9")+ @number
+end = 13? 10 @
+----------
+2
+..........
+number 2
+==========
+42
+..........
+number 42
+==========
+2+40
+..........
+number 2
+number 40
+add
+==========
+2+40%
+..........
+Error on line 1:
+2+40%
+    ^
+==========
+2+10+12+18
+..........
+number 2
+number 10
+add
+number 12
+add
+number 18
+add
+==========
+2-10+53-3
+..........
+number 2
+number 10
+subtract
+number 53
+add
+number 3
+subtract
