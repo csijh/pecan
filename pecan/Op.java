@@ -27,12 +27,18 @@ public enum Op {
     ACT,     // Carry out an action, e.g. @2add
 
 // Extras for generating bytecode:
-    EITHER,  // x / y            EITHER &OR <x> OR <y>
-    BOTH,    // x y              BOTH &AND <x> AND <y>
-    MAYBE,   // x? or x*         MAYBE <x> OPT/MANY
-    THEN,    // x+               SOME &x THEN MAYBE <x> MANY
-    LOOK,    // [x] or x& or x!  LOOK &TRY <x> TRY/HAS/NOT
-    LE;      // 0.."m"           LE "m"
+    EXTEND,  //                  EXTEND n1 OP n2
+    GO,      // id               GO &x
+    EITHER,  // x / y            EITHER n <x> OR <y>
+    BOTH,    // x y              BOTH n <x> AND <y>
+    MAYBE,   // x? or x*         MAYBE OPT/MANY <x>
+    DO,      // x+               DO THEN MAYBE MANY <x>
+    THEN,
+    LOOK,    // [x] or x& or x!  LOOK TRY/HAS/NOT <x>
+    GE,      // "a".."z"         GE n "a" LE n "z"
+    LE,      // 0.."m"           LE "m"
+    START,   // id = x           START STOP <x>
+    STOP;
 
     public static void main(String[] args) { }
 }

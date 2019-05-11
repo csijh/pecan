@@ -56,22 +56,21 @@ public class Test {
     String input() { return input; }
     String output() { return output; }
 
-    // Run unit tests on the class which the object belongs to.
+    // Run tests on the class which the object belongs to.
     static void run(Testable object) { run(object, 0); }
 
-    // Run a single unit test, starting on a given line number.
-    static void run(Testable object, int line) {
+    // Run a single test, starting on a given line number.
+    static void run(Testable object, int line) { run(null, object, line); }
+
+    // Run tests from the given file.
+    static void run(String file, Testable object) { run(file, object, 0); }
+
+    // Run a test or tests from a file. If the file is null, use the default
+    // test file. If the class of the object is Run, assume they are user tests.
+    static void run(String file, Testable object, int line) {
         String name = object.getClass().getSimpleName();
-        run("tests/"+ name +".txt", object, line, false);
-    }
-
-    // Run user or unit tests from the given file.
-    static void run(String file, Testable object, boolean user) {
-        run(file, object, 0, user);
-    }
-
-    // Run test or tests for user or unit from a file.
-    static void run(String file, Testable object, int line, boolean user) {
+        boolean user = name.equals("Run");
+        if (file == null) file = "tests/"+ name +".txt";
         int n = runTests(file, object, line);
         if (n == 0) {
             System.out.println("No test on line "+ line +".");
@@ -82,9 +81,8 @@ public class Test {
             else System.out.println("Pass "+ n +" tests.");
             return;
         }
-        String name = object.getClass().getSimpleName();
         if (line > 0) System.out.println("Pass test on line "+ line +".");
-        System.out.println(name +" class OK, pass "+ n +" tests.");
+        else System.out.println(name +" class OK, pass "+ n +" tests.");
     }
 
     // Run tests from a given file on a given object. If line > 0, run just the

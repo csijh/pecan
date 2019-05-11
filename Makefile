@@ -8,6 +8,7 @@ Binder = pecan/Binder.java $(Parser) $(Category)
 Checker = pecan/Checker.java $(Binder)
 Stacker = pecan/Stacker.java $(Checker)
 Interpreter = pecan/Interpreter.java $(Stacker)
+Generator = pecan/Generator.java $(Stacker)
 Run = pecan/Run.java $(Interpreter)
 # Analyser = pecan/Analyser.java $(Stacker)
 #Opcode Generator Interpreter:

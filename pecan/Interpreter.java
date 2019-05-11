@@ -129,27 +129,43 @@ public class Interpreter implements Testable {
             break;
         case OPT:
             saveIn = in;
+            saveOut = out;
             parse(node.left());
-            if (!ok && in == saveIn) ok = true;
+            if (!ok && in == saveIn) {
+                out = saveOut;
+                ok = true;
+            }
             break;
         case MANY:
             saveIn = in;
+            saveOut = out;
             while (ok) {
                 saveIn = in;
+                saveOut = out;
                 parse(node.left());
             }
-            if (in == saveIn) ok = true;
+            if (!ok && in == saveIn) {
+                out = saveOut;
+                ok = true;
+            }
             break;
         case SOME:
             saveIn = in;
+            saveOut = out;
             parse(node.left());
+            if (!ok && in == saveIn) out = saveOut;
             if (!ok) return;
             saveIn = in;
+            saveOut = out;
             while (ok) {
                 saveIn = in;
+                saveOut = out;
                 parse(node.left());
             }
-            if (in == saveIn) ok = true;
+            if (!ok && in == saveIn) {
+                out = saveOut;
+                ok = true;
+            }
             break;
         case TRY:
             saveIn = in;
@@ -167,16 +183,12 @@ public class Interpreter implements Testable {
             in = saveIn;
             break;
         case NOT:
-            saveMark = mark;
-            mark = Integer.MAX_VALUE;
             saveIn = in;
             lookahead++;
             parse(node.left());
             lookahead--;
             in = saveIn;
             ok = !ok;
-            mark = saveMark;
-            if (! ok && mark < in) mark = in;
             break;
         case CHAR:
             if (in >= input.length()) ok = false;

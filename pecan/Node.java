@@ -19,7 +19,7 @@ class Node {
 
     private int value;
     private int flags;
-    private int NET, LOW, PC;
+    private int NET, LOW, PC, LEN;
     private BitSet FIRST = new BitSet();
     private BitSet START = new BitSet();
     private BitSet FOLLOW = new BitSet();
@@ -56,6 +56,10 @@ class Node {
     // Get/set PC = address in bytecode.
     int PC() { return PC; }
     void PC(int i) { PC = i; }
+
+    // Get/set LEN = number of bytes of bytecode.
+    int LEN() { return LEN; }
+    void LEN(int n) { LEN = n; }
 
 // ---------- The structral fields and methods --------------------------------
 

@@ -10,17 +10,23 @@ import java.nio.charset.*;
 
 /* Read in a file of tests and run them:
 
-    java -jar pecan.jar [-trace] [line] testfile
+    java -jar pecan.jar [-trace] grammar tests [line]
+
+TODO:
+    pecan tests   OR   pecan grammar tests
+
 
 */
 
 class Run implements Testable {
+    private boolean tracing;
+
     public static void main(String[] args) {
         int line = 0;
         String filename = null;
-        Interpreter interpreter = new Interpreter();
+        Run program = new Run();
         if (args != null) for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-trace")) interpreter.trace(true);
+            if (args[i].equals("-trace")) program.tracing = true;
             else if (Character.isDigit(args[i].charAt(0))) {
                 line = Integer.parseInt(args[i]);
             }
@@ -28,7 +34,7 @@ class Run implements Testable {
             else usage();
         }
         if (filename == null) usage();
-        Test.run(filename, interpreter, line);
+        Test.run(filename, program, line);
     }
 
     // Give a usage message and stop.
@@ -44,6 +50,7 @@ class Run implements Testable {
     // Run a test passed from the Test class.
     public String test(String grammar, String input) throws ParseException {
         Interpreter interpreter = new Interpreter();
+        if (tracing) interpreter.trace(true);
         return interpreter.test(grammar, input);
     }
 
