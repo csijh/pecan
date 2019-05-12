@@ -15,6 +15,16 @@ The test input may be text, or tag names with possible white space in between.
 The output describes the external calls that would be made, with one line of
 text per call.
 
+Actions are normally delayed until the next time progress is made, or discarded
+if parsing fails without progressing. During lookahead, actions are delayed
+until the end of the lookahead, or discarded on failure or backtrack. Error
+markers are gathered as a bit set, with a mark variable to record the position
+in the input at which they were encountered. When a new marker is encountered,
+and the input has progressed beyond the mark position, the old markers are
+discarded and the mark updated. Old markers are also discarded when an error is
+reported if the input position has progressed beyond the mark. Markers are
+ignored during lookahead.
+
 TODO: work out which actions need to be delayed (or max no).
 Look for x / y or x? or x* or x+ where x has a problem action.
 A problem action is x y where x has a problem action or
@@ -169,24 +179,31 @@ public class Interpreter implements Testable {
             break;
         case TRY:
             saveIn = in;
+            saveOut = out;
             lookahead++;
             parse(node.left());
             lookahead--;
             in = saveIn;
+            if (ok && lookahead == 0) takeActions();
             if (ok) parse(node.left());
+            else out = saveOut;
             break;
         case HAS:
             saveIn = in;
+            saveOut = out;
             lookahead++;
             parse(node.left());
             lookahead--;
+            out = saveOut;
             in = saveIn;
             break;
         case NOT:
             saveIn = in;
+            saveOut = out;
             lookahead++;
             parse(node.left());
             lookahead--;
+            out = saveOut;
             in = saveIn;
             ok = !ok;
             break;
@@ -196,7 +213,7 @@ public class Interpreter implements Testable {
                 int ch = input.codePointAt(in);
                 ok = (ch == node.value());
                 if (ok) {
-                    takeActions();
+                    if (lookahead == 0 && out > 0) takeActions();
                     int n = Character.charCount(ch);
                     in += n;
                     if (tracing) traceInput();
@@ -212,7 +229,7 @@ public class Interpreter implements Testable {
                 if (input.charAt(in+i) != text.charAt(i)) { ok = false; break; }
             }
             if (ok) {
-                takeActions();
+                if (lookahead == 0 && out > 0) takeActions();
                 in += length;
                 if (tracing) traceInput();
             }
@@ -224,7 +241,7 @@ public class Interpreter implements Testable {
             if (in >= input.length()) { }
             else for (int i=0; i<length; i++) {
                 if (input.charAt(in) != text.charAt(i)) continue;
-                takeActions();
+                if (lookahead == 0 && out > 0) takeActions();
                 if (Character.isHighSurrogate(text.charAt(i))) {
                     i++;
                     if (input.charAt(in+1) != text.charAt(i)) continue;
@@ -243,7 +260,7 @@ public class Interpreter implements Testable {
                 int ch = input.codePointAt(in);
                 ok = (ch >= low) && (ch <= high);
                 if (ok) {
-                    takeActions();
+                    if (lookahead == 0 && out > 0) takeActions();
                     int n = Character.charCount(ch);
                     in += n;
                     if (tracing) traceInput();
@@ -258,7 +275,7 @@ public class Interpreter implements Testable {
                 int bit = 1 << Character.getType(ch);
                 ok = ((cats & bit) != 0);
                 if (ok) {
-                    takeActions();
+                    if (lookahead == 0 && out > 0) takeActions();
                     int n = Character.charCount(ch);
                     in += n;
                     if (tracing) traceInput();
@@ -273,6 +290,7 @@ public class Interpreter implements Testable {
             else ok = input.startsWith(query, in);
             if (ok) {
                 start = in;
+                if (lookahead == 0 && out > 0) takeActions();
                 in += query.length();
                 while (in < input.length() &&
                     (input.charAt(in) == ' ' || input.charAt(in) == '\n')) in++;

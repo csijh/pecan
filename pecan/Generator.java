@@ -50,6 +50,18 @@ If a length of <x> is greater than 255, the translation is
     EITHER n <x> OR <y>
     EXTEND n1 EITHER n2 <x> OR <y>
 
+TODO: template-based generation, printf-like:
+<"%d", opcodes>     decimal text
+<"%s, ", opcode>    with ", " separator
+<"%b", opcodes>     binary, one byte
+<"%.2b", opcodes>   binary, two bytes, endianness?
+<"%lb%b\0", opcode>  byte length, utf-8 bytes, null byte terminator
+actions
+entries
+errors
+tags
+bytecodes
+
 Holds the code, plus:
   the opcodes (may not want to include twice) ?
 -  the actions for output

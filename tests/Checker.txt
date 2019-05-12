@@ -123,6 +123,13 @@ RULE x 0110
       SET 'a' 0110
     SET 'b' 0110
 ==========
+// Expression which succeeds without progressing, repeated in an infinite loop
+x = (@a @2b)*
+----------
+Error on line 2: potential infinite loop
+x = (@a @2b)*
+    ^^^^^^^^^
+==========
 // Expressions
 exp = term ('+' term @2add / '-' term @2sub)* 'eof'
 term = factor ('*' factor @2mul / '/' factor @2div)*

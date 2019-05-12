@@ -28,7 +28,7 @@ Validity WF(x) is calculated by iterating to a fixed point, using:
   WF(x!) = WF(x)
 
 A minor change from version 4 is that if a left hand alternative can't fail with
-no progress, so that the right hand alternative is inacessible, it is no longer
+no progress, so that the right hand alternative is inaccessible, it is no longer
 reported as an error (so that transformations remain valid).
 
 A major change from version 4 is that actions are now allowed at the start of
