@@ -27,7 +27,7 @@ public enum Op {
     ACT,     // Carry out an action, e.g. @2add
 
 // Extras for generating bytecode:
-    EXTEND,  //                  EXTEND n1 OP n2
+    EXTEND,  //                  EXTEND n1 OP n2 for two-byte args
     GO,      // id               GO &x
     EITHER,  // x / y            EITHER n <x> OR <y>
     BOTH,    // x y              BOTH n <x> AND <y>
