@@ -10,8 +10,7 @@
 <hr/>
 
 <!--
-// Advantage of interpreter, improves language independence (only have to
-//   rewrite interpreter, not generator).
+TODO: specifying an entry point, allowing any fixed number of outputs. 
 // Advantage of explicit call stack instead of actual calls:
 //   leaves open techniques such as examining the stack on failure
 //   to help with error reporting, and leaving the parse state intact to be
@@ -21,7 +20,7 @@
 //   tail calls are easier, and memory compactness is important.
 -->
 
-<h1>Pecan 4 Reference Manual</h1>
+<h1>Pecan Reference Manual</h1>
 
 <ul>
 <li><a href="#intro">Introduction</a></li>
@@ -68,8 +67,8 @@ and parsers.  It is aimed at programming languages, <a
 href="https://en.wikipedia.org/wiki/Domain-specific_language">domain specific
 languages</a>, and other unambiguous languages.  It provides a precise grammar
 notation, which is independent of implementation language, based on recursive
-descent with lookahead. This manual describes Pecan version 4, 2017. Pecan has
-these features:</p>
+descent with lookahead. This manual describes Pecan version 1.0 which has these
+features:</p>
 
 <ul>
 
@@ -85,6 +84,8 @@ these features:</p>
 
 <li>scanner and parser generation is via a bytecode</li>
 
+<li>an interpreter for the bytecode can be written in any language</li>
+
 </ul>
 
 <p>Other grammar languages are usually based on
@@ -95,11 +96,22 @@ expression grammar</a> (PEG) notation, or
 the <a href="https://en.wikipedia.org/wiki/Recursive_descent_parser">recursive
 descent</a> (RD) approach.</p>
 
+<p>The previous version of Pecan was 0.4. Changes are:</p>
+
+<ul>
+<li>actions are now allowed at the start of a left hand choice</li>
+<li>actions are delayed in case they need to be discarded</li>
+<li>error markers are no longer postfix</li>
+<li>string tags use double quotes instead of backquotes</li>
+<li>string tags have definitions to give them names</li>
+<li>parser generation is via bytecode</li>
+</ul>
+
 <h3>CFG grammars</h3>
 
 <p>The CFG notation (in the form of BNF and many variations) has been the main
 formalism for grammars for a long time, and it has been well studied.  However,
-It can be, and has been, argued quite strongly that it is not an ideal formalism
+it can be, and has been, argued quite strongly that it is not an ideal formalism
 to use for unambiguous languages.  According to <a
 href="http://dl.acm.org/citation.cfm?id=964001.964011">Bryan Ford</a>:</p>
 
@@ -187,11 +199,12 @@ grammars or languages are supported by any given recursive descent system.</p>
 <p>Embedding a parsing system into a language, e.g. in the form of combinators,
 can be very convenient, especially for small domain specific languages where the
 grammar is known in advance.  A system like that has a natural feel for
-programmers, often with good control over backtracking.  However, if the grammar
-needs to be developed from scratch, or translated from a different formalism
-(which is common because of the prevalence of CFG grammars), or checked for
-consistency, or optimized to produce a fast parser, then there is a case for a
-separate formalism such as Pecan.</p>
+programmers, often with good control over backtracking.  However, a combinator
+library is typically limited to one programming language. If the grammar needs
+to be developed from scratch, or translated from a different formalism (which is
+common because of the prevalence of CFG grammars), or checked for consistency,
+or optimized to produce a fast parser, then there is a case for a separate
+formalism such as Pecan.</p>
 
 <h3>Pecan grammars</h3>
 
@@ -220,8 +233,8 @@ for test-driven grammar development is an important feature of Pecan.</p>
 
 <p>Pecan is a tool for developing grammars and generating parsers in a variety
 of programming languages.  The Pecan system is written in Java, so the first
-step is to make sure an up to date version of Java is properly installed.  This
-can be tested by typing:</p>
+step is to make sure a reasonably up-to-date version of Java is properly
+installed.  This can be tested by typing:</p>
 
 <pre>javac -version
 java -version
@@ -234,9 +247,8 @@ this jar file is downloaded, it can be run with:</p>
 <pre>java -jar pecan.jar ...
 </pre>
 
-<p>However, it is more convenient to put the jar file somewhere safe and create
-a batch file or shell script somewhere on the command path, or use an alias or
-equivalent, so that it can be run just by typing:</p>
+<p>However, it is more convenient to create a batch file or shell script, or use
+an alias or equivalent, so that it can be run just by typing:</p>
 
 <pre>pecan ...
 </pre>
@@ -245,23 +257,21 @@ equivalent, so that it can be run just by typing:</p>
 
 <h2 id="notation">Notation</h2>
 
-<p>The Pecan language is a language for writing parsers, closely based on the <a
-href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">PEG</a> notation.
-Pecan uses the sequential choice operator <code>x/y</code> but, unlike the PEG
-notation, the operator does not automatically involve backtracking.  There are
-separate lookahead operators, for the controlled use of backtracking. This
-provides greater control over the progress of parsing.  It is much easier to
-generate accurate error messages, and parsers can be kept reasonably efficient
-by the programmer, without the space overhead of such techniques as the PEG
-packrat algorithm.</p>
+<p>The Pecan language is a gramamr language for writing parsers, closely based
+on the <a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">PEG</a>
+notation. Pecan uses the sequential choice operator <code>x/y</code> but, unlike
+the PEG notation, the operator does not automatically involve backtracking.
+There are separate lookahead operators, for the controlled use of backtracking,
+which provide greater control over the progress of parsing.  It is much easier
+to generate accurate error messages, and parsers can be kept reasonably
+efficient by the programmer, without the space overhead of such techniques as
+the PEG packrat algorithm.</p>
 
 <p>As with PEG grammars, any parsing expression within a grammar represents a
 matching operation which succeeds or fails when applied at a particular position
 in the input, and which may cause progress, i.e. may cause the current position
 to move forwards in the input, according to how much of it is matched.  Unlike
-PEG grammars, there is only a single possible outcome for this operation, and a
-distinction is made between whether the operation resulted in any progress or
-not.</p>
+PEG grammars, there is only a single possible outcome for this operation.</p>
 
 <h3 id="rules">Rules</h3>
 
@@ -270,7 +280,9 @@ parsing expression.  The first rule specifies the output of the whole parsing
 process.  For example, a parser might start with:</p>
 
 <pre>module = function+ end
+
 function = id arguments body
+
 end = Uc!
 ...
 </pre>
@@ -313,13 +325,13 @@ opposed to:</p>
 <pre>x / y z
 </pre>
 
-<p>which means either parse <code>x</code> or parse <code>y</code> followed by
+<p>which means either parse <code>x</code>, or parse <code>y</code> and
 <code>z</code>.</p>
 
 <h3 id="continuations">Continuations</h3>
 
-<p>No explicit symbol is used to terminate a rule. One line of a rule is
-continued on the next if the last token on the line is an infix symbol or open
+<p>No explicit symbol is used to terminate a rule. A rule is continued on the
+next line if the last token on the current line is an infix symbol or open
 bracket, i.e. one of <code>=/([</code>.  Here is an example rule where each line
 except the last ends with <code>=</code> or the <code>/</code> operator:</p>
 
@@ -329,9 +341,9 @@ except the last ends with <code>=</code> or the <code>/</code> operator:</p>
   bracket
 </pre>
 
-<p>Also, one line is continued on the next if the first token on the next line
-is an infix symbol or close bracket, i.e. one of <code>=/)]</code>. This allows
-an alternative style for multi-line rules:</p>
+<p>Also, a rule is continued on the next line if the first token of the next
+line is an infix symbol or close bracket, i.e. one of <code>=/)]</code>. This
+allows an alternative style for a multi-line rule:</p>
 
 <pre>atom
 = id
@@ -357,7 +369,7 @@ tried.</p>
 <p>The choice operator does not directly involve backtracking.  If any progress
 is made while trying an alternative, then the parser is committed to that
 alternative, and further alternatives are not tried.  Progress is made on an
-alternative if input characters or tokens are matched.</p>
+alternative if at least one input character or token is matched.</p>
 
 <p>There are separate lookahead operators which allow speculative parsing of an
 alternative.</p>
@@ -431,9 +443,9 @@ identifier has been matched but there is no equal sign, backtracking is done by
 resetting the parser to the point before the identifier, and the next
 alternative is tried.</p>
 
-<p>The has <code>&amp;</code> and not <code>!</code> postfix operators represent
+<p>The has <code>&amp;</code> and not <code>!</code> operators represent
 positive and negative lookahead. In the PEG notation, <code>&amp;</code> and
-<code>!</code> are prefix operators.  In Pecan, they are postfix, to make the
+<code>!</code> are prefix operators, but in Pecan, they are postfix, to make the
 syntax of rules simpler and more uniform and, in particular, to avoid precedence
 issues which would arise if there were both prefix and postfix operators.</p>
 
@@ -464,13 +476,11 @@ tightly than sequencing.</p>
 
 <p>Within has and not operations <code>x&amp;</code> or <code>x!</code>, actions
 are switched off during the processing of <code>x</code>.  Within a try
-operation <code>[x]</code>, if <code>x</code> contains actions, then
-<code>x</code> is parsed twice, once with actions switched off, and again with
-actions switched on.  In other words, <code>[x]</code> is equivalent to
-<code>x&amp; x</code>, but is more efficient if <code>x</code> contains no
-actions.</p>
+operation <code>[x]</code>, actions are delayed by storing them symbolically. If
+<code>x</code> succeeds, the delayed actions are performed. If <code>x</code>
+fails, the delayed actions are discarded.</p>
 
-<p>The fact that actions are switched off during speculative parsing restricts
+<p>The fact that actions are not performed during speculative parsing restricts
 the possible context sensitive aspects of a language, which can only depend on
 actions outside of lookahead constructs.</p>
 
@@ -508,11 +518,15 @@ number = '0123456789'+
 operator characters, and is equivalent to <code>'+' / '-' / '*' / '/'</code>.
 The expression <code>'0123456789'</code> matches any digit.</p>
 
-<p>The single quote set notation is restricted to ASCII characters.  For other
-unicode characters, where grapheme clusters might cause ambiguity, it is clearer
-to use the string notation, e.g. <code>"é" / "è"</code>.</p>
+<p>Although the single quote set notation may contain Unicode characters, each
+code point is treated as a separate character. In any situation where graphemes
+(multiple code points combined to produce a single visible character) might
+cause ambiguity, the string notation should be used, e.g.</p>
 
-<p>Single ASCII characters can be represented using either single or double
+<pre>x = "é" / "è"
+</pre>
+
+<p>Single characters can be represented using either single or double
 quotes. For example:</p>
 
 <pre>assign = id '=' exp
@@ -547,8 +561,8 @@ visible = ' '..'~'
 ascii = 0..127
 </pre>
 
-<p>Each argument to the range operator <code>..</code> must be a character,
-represented using single quotes or double quotes or an integer.</p>
+<p>Each argument to the range operator <code>..</code> must be a single
+character, represented using single quotes or double quotes or an integer.</p>
 
 <p>When representing individual characters using numbers or ranges,
 <dfn>character</dfn> means Unicode code point.  No account is taken of whether
@@ -588,9 +602,9 @@ fail = ''
 
 <h3 id="tags">Tags</h3>
 
-<p>Tags support parsers where there is a separate scanner. The input is thought
-of as an array of tokens instead of an array of characters. Each tag represents
-a specific kind of token.</p>
+<p>Tags support token parsers, where there is a separate scanner. The input is
+thought of as an array of tokens instead of an array of characters. Each tag
+represents a specific kind of token.</p>
 
 <p>A tag is represented as a symbol consisting of the <code>%</code> character
 followed by a name.  For example, a token-based parser for a simple calculator
@@ -606,26 +620,29 @@ number = %number @number
 input is an array of tokens with tags <code>%number</code>, <code>%plus</code>,
 <code>%minus</code>, <code>%times</code>, <code>%over</code>.</p>
 
-<p>Alternatively, for greater readability, tags can be represented as strings
-surrounded by backquotes.  The backquote notation allows tag names to contain
-arbitrary ASCII characters. The simple calculator could be rewritten as:</p>
+<p>The tag <code>%</code> with no name is matched only at the end of the input.
+This is equivalent to using <code>Uc!</code> in a scanner.</p>
 
-<pre>sum = term (`+` term @2add / `-` term @2subtract)* end
-term = number (`*` number @2multiply / `/` number @2divide)*
-number = `number` @number
+<p>For greater readability, some tags can be represented as strings.
+The simple calculator could be rewritten as:</p>
+
+<pre>sum = term ("+" term @2add / "-" term @2subtract)* end
+term = number ("*" number @2multiply / "/" number @2divide)*
+number = %number @number
 ...
 </pre>
 
-<p>The tag <code>%</code> or <code>``</code> with no name is matched only at the
-end of the input.  This is equivalent to using <code>Uc!</code> in a
-scanner.</p>
+<p>Any string used must be given a definitions which relates it to a named
+tag:</p>
 
-<p>For the purposes of parser generation, tags using the backquote notation are
-regarded as equivalent to tags using the <code>%</code> notation.  For example,
-<code>`int`</code> is equivalent to <code>%int</code>.  Characters which are not
-letters or digits are converted into pairs of upper case letters, e.g.
-<code>`+`</code> is equivalent to <code>%PL</code>, and <code>`&lt;=`</code>
-is equivalent to <code>%LTEQ</code>.</p>
+<pre>"+" = %plus
+"-" = %minus
+"*" = %times
+"/" = %over
+</pre>
+
+<p>This allows string tags to be associated with an enumerated type in external
+code when a parser is generated.</p>
 
 <!--
 Instead of the generated code being given an array of tokens, calls are made to
@@ -657,14 +674,14 @@ new item, and the new item should be pushed onto the stack.  A parser as a whole
 ends with a single item on the stack, which is the output from the parsing
 process.</p>
 
-<p>The parser deals with the stack without knowing what type of items are being
-manipulated or how.  An action symbol such as <code>@2add</code> is translated
-into a call to some external code.  The parser could be part of a calculator,
-in which case the <code>add</code> action might add two numbers.
-Alternatively, the parser might become part of a compiler, in which case
-the <code>add</code> action might combine two expression trees into a larger
-tree.  While testing, an action simply causes text to be printed without
-calling external code.</p>
+<p>The stack is provided and manipulated by external code when a full parser is
+generated. An action symbol such as <code>@2add</code> is translated into the
+execution of a fragment of external code.  The parser could be part of a
+calculator, in which case the <code>add</code> action might add two numbers.
+Alternatively, the parser might become part of a compiler, in which case the
+<code>add</code> action might combine two expression trees into a larger tree.
+When executing a grammar symbolically for testing, an action simply causes the
+text of the action to be printed.</p>
 
 <p>An action has access to the characters or tokens from the input which have
 been matched since the previous action.  For example:</p>
@@ -680,34 +697,31 @@ convention which allows matched characters to be discarded.  For example:</p>
 </pre>
 
 <p>An <code>@</code> sign on its own causes any recently matched characters to
-be discarded by the parser, without any external code being called.</p>
+be discarded by the parser, without any external code being executed.</p>
+
+<p>A left hand alternative can begin with an action, for example:</p>
+
+<pre>@a x / y
+</pre>
+
+<p>The action <code>@a</code> is only performed if <code>x</code> succeeds, or
+if it progresses before failing. If <code>x</code> fails without progressing in
+the input, the action <code>@a</code> is not performed, and the next choice
+<code>y</code> is tried. To avoid the need to undo actions, the action
+<code>@a</code> is delayed. It is performed when <code>x</code> progresses, or
+discarded if <code>x</code> fails without progressing.</p>
 
 <p>There are severe consistency restrictions on actions.  For example, each
 alternative in a choice must create or consume the same number of output items.
 Within a repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>,
 the inner expression <code>x</code> must have no net effect on the number of
-output items.  The top level rule must yield a single output item.  A left hand
-alternative must not begin with an action, e.g. this is illegal:</p>
-
-<pre>@a x / y
-</pre>
-
-<p>There are three meanings for this expression which could be considered if it
-weren't illegal.  One is that executing the action <code>@a</code> counts as
-progress.  But in that case, parsing is bound to commit to the first
-alternative, and the second alternative <code>y</code> is unreachable.  The
-second is that the action <code>@a</code> does not count as progress, but is not
-undone if <code>x</code> fails to match and <code>y</code> is tried.  But in
-that case, the expression would be better written as <code>@a (x / y)</code>.
-The final possibility would involve undoing actions in order to backtrack past
-them, which is a complication with potential inefficiency which is not in the
-spirit of simple recursive descent parsing.</p>
+output items.  The top level rule must yield a single output item.</p>
 
 <p>The compensation for these severe restrictions is that Pecan can carry out
 strong consistency checks on grammars, ensuring that every expression has the
 right effect on the output stack, that the stack never underflows, and that a
 single output item is produced overall. There is also the advantage that actions
-are an integral part of the grammar, and can be preserved during
+are an integral part of the grammar, and are preserved during
 transformations.</p>
 
 <p>Scanners are normally thought of as producing a sequence of tokens.  But in
@@ -736,9 +750,9 @@ children.  This provides a fairly generic way to deal with discarding of output
 nodes, and also allows all the relevant nodes to be available when the new node
 is created, e.g. to work out the range of source text covered.</p>
 
-<p>Finally, an argument may be a backquote tag such as <code>`+`</code> which
+<p>Finally, an argument may be a backquote tag such as <code>"+"</code> which
 will automatically be converted into a suitable tag name.  For example,
-<code>@1token.`+`</code> is equivalent to <code>@1token.PL</code>. This is
+<code>@1token."+"</code> is equivalent to <code>@1token.PL</code>. This is
 useful in a scanner, where the corresponding parser uses backquote tags for
 maximum readability.</p>
 -->
@@ -760,11 +774,10 @@ details.  For example, suppose this rule is being parsed:</p>
 
 <p>Markers can be added to parser rules, to describe the items which would have
 allowed parsing to continue.  A marker is a symbol consisting of
-the <code>#</code> character followed by a name, and it acts as a postfix
-operator.  If its argument expression fails, then the marker is reported.  For
+the <code>#</code> character followed by a name. For
 example, suppose the rule above is changed to:</p>
 
-<pre>sum = number ("+" #plus number / "-" #minus number)
+<pre>sum = number (#plus "+" number / #minus "-" number)
 </pre>
 
 <p>Then, for an incorrect operator, the expressions <code>"+"</code>
@@ -775,8 +788,11 @@ and <code>"-"</code> both fail, so the error message produced becomes:</p>
   ^
 </pre>
 
-<p>The position at which a marker is reported is the start of the expression it
-is attached to.  The reported markers have duplicates removed.  Suppose the rule
+<p>When a marker is encountered, it is associated with the current position in
+the input. It records something that the parser is expecting at that point. If
+progress is made past that input position, the markers are cleared. When the
+parser encounters an error, the set of things that the parser was expecting at
+that point can be reported. Duplicates are removed, for example suppose the rule
 is changed to:</p>
 
 <pre>sum = number ("+" #operator number / "-" #operator number)
@@ -792,62 +808,52 @@ is changed to:</p>
 <p>One way to ensure that all the items which could possibly allow parsing to
 continue are reported is to write separate rules to describe low level features
 of a grammar involving primitive character matchers, i.e. strings, sets,
-character codes, or Unicode identifiers.  It is often convenient to write such
-separate rules anyway, to deal with the discarding of matched characters or
-following spaces, or the creation of tokens.  For example, a parser for a
-programming language might contain rules such as:</p>
+character codes, or Unicode identifiers, and begin each with a marker.  For
+example, a parser for a programming language might contain rules such as:</p>
 
-<pre>plus = "+" #operator " "* @
-letter = (Lu / Ll / Lt / Lm / Lo) #letter
-number = ('0'..'9')+ #number @number " "* @
-end = 13? 10 #newline @
+<pre>plus = #operator "+" " "* @
+letter = #letter (Lu / Ll / Lt / Lm / Lo)
+number = #number ('0'..'9')+ @number " "* @
+newline = #newline 13? 10 @
+end = #end Uc!
 </pre>
 
 <p>The <code>plus</code> rule specifies that the plus sign is to be described as
 an operator in error messages, that it may be followed by optional spaces, and
 that the plus sign and spaces are discarded.  The <code>letter</code> rule
 applies an error marker to a choice of Unicode categories, to avoid having to
-attach a marker to each one individually.  The <code>number</code> rule ensures
-that if a number is expected, it is reported.  With these rules, an error
-message like this might be generated:</p>
+attach a marker to each one individually.</p>
 
-<pre>Error on line 1: expecting operator
-42~5
-  ^
-</pre>
-
-<p>The fact that an extra digit on the preceding number, or a space, could also
-have allowed parsing to continue is ignored.  That is because individual digits
-and spaces were not marked in the rules.</p>
-
-<p>If a lookahead construct such as <code>x!</code> fails, it does not produce a
-meaningful error message, so it is normal to attach a marker to it. For example,
-to test that the end of the input text has been reached, this rule can be
-used:</p>
-
-<pre>end = Uc! #end
-</pre>
-
-<p>The overall algorithm is that the parser keeps track of a high water mark,
-i.e. the furthest point reached in the input, and the set of markers which have
-been detected at that point as a result of marked expressions which have failed.
-This excludes progress made, or failures which have occurred, during lookahead
-constructs or in subexpressions of marked expressions.  If parsing as a whole
-fails, then the high water mark and its set of detected markers is reported.</p>
+<p>With these rules, an error message like the one above might be generated,
+saying that an operator is expected. The fact that an extra digit on the
+preceding number, or a space, could also have allowed parsing to continue is not
+reported. That is because individual digits and spaces are not marked in the
+rules.</p>
 
 <h2 id="testing">Testing</h2>
 
-<p>When developing scanners and parsers, a grammar can be tested without
-having to generate code.  Testing is carried out using a command of the
-form:</p>
+<p>During developing of a grammar, it can be tested by symbolic execution
+without having to generate a parser. Testing is carried out by typing a command
+of the form:</p>
 
-<pre>pecan -test file.pecan
+<pre>pecan [-trace] [grammarfile] testfile [line]
 </pre>
 
-<p>The file contains the grammar and any number of tests.  Each test is
+<p>The test file contains any number of tests. It may contain the grammar, or
+fragments of the grammar, or variations on the grammar, making it
+self-contained. Alternatively, the grammar can be given in its own file, to form
+a basis for the tests in the test file. The <code>-trace</code> option switches
+on tracing, so that the individual steps taken are displayed.
+
+
+ When a test fails, its line number is
+reported in the error message. That line number can then be used to re-run
+testing, but with only that
+
+    file contains the grammar and any number of tests.  Each test is
 preceded by a line containing just equal signs, and consists of input text,
 then a line containing just minus signs, then the expected output.  The
-expected output has one line for each external function call the generated code
+expected output has one line for each external action the generated code
 would make, e.g.:</p>
 
 <pre>sum = number / number "+" number @2add
@@ -868,8 +874,8 @@ number "40"
 add
 </pre>
 
-<p>For each call, the name of the function is given, followed by the matched
-but unused input characters when the call is made, if any.</p>
+<p>For each action, its name is given, followed by the matched but unused input
+characters when the action is performed, if any.</p>
 
 <p>There is an escape convention which can be used in both the input and
 expected output portions of tests.  This allows the input or output to contain
@@ -1050,193 +1056,6 @@ which always correctly produce one output item in practice, but which don't
 pass the checks.</p>
 
 <h2 id="java">Generating Code</h2>
-
-<p><b><i>The rest of this manual has not been updated from Pecan version 3.  In
-particular, generation of code is not currently available.</i></b></p>
-
-<p>Currently, Java is the only available language in which to generate
-code. A parser in Java is generated by:</p>
-
-<pre>pecan -java "Parser,Output,Builder" file.pecan
-</pre>
-
-<p>The argument to the <code>-java</code> option should have three names in it,
-separated by commas.  These specify the name of the class to be generated, the
-type of the output items, and the class of a builder object on which external
-calls will be made.  The builder object typically builds a parse tree or
-evaluates numbers.  The Java file is generated in the same directory as the
-grammar file.</p>
-
-<p>The full classname of the generated class should be specified, if a package
-statement needs to be generated at the top.  For example:</p>
-
-<pre>pecan -java "project.Parser,Output,Builder" file.pecan
-</pre>
-
-<p>The output type can be a class or a primitive type.  For example, if a
-calculator is being generated, the output type might
-be <code>double</code>:</p>
-
-<pre>pecan -java "Parser,double,Builder" file.pecan
-</pre>
-
-<p>The output type can be an array.  In that case, the usual restriction that
-only a single output item should be generated is lifted.  This is useful for a
-standalone scanner generating an array of tokens:</p>
-
-<pre>pecan -java "Scanner,Token[],Builder" file.pecan
-</pre>
-
-<p>The methods called on the builder object can be static, if desired.  The
-builder class can be the same as the output type, in which case the methods to
-be called are presumably static.  A sample object of the output type will need
-to be passed to the parser.  For example:</p>
-
-<pre>pecan -java "Parser,Tree,Tree" file.pecan
-pecan -java "Scanner,Token[],Token" file.pecan
-</pre>
-
-<p>The API of the generated Java class is:</p>
-
-<ul>
-<li><code>Parser(String s)</code>: constructor</li>
-<li><code>Parser(File f)</code>: constructor</li>
-<li><code>Output run(Builder b)</code>: execute the parser</li>
-<li><code>Output[] run(Builder b)</code>: if an output array is specified</li>
-<li><code>String text(int i, int j)</code>: get a fragment of text</li>
-<li><code>String line(int p)</code>:
-get the line containing a given point</li>
-<li><code>int row(int p)</code>:
-find the line number at a given point</li>
-<li><code>int column(int p)</code>:
-find the column number at a given point</li>
-</ul>
-
-<p>An <code>Actor</code> object is passed to <code>run</code>, and method calls
-are made on it to construct output items, or combine output items, or handle
-errors.  The methods expected, which could be static if desired, are:</p>
-
-<ul>
-<li><code>Output <i>a</i>(int i, int j)</code>:
-for each accept action <i>a</i></li>
-<li><code>Output <i>c</i>(Output x, ...)</code>:
-for each combine action <i>c</i></li>
-<li><code>void <i>h</i>(String set, int i, int j)</code>:
-for each error handler <i>h</i></li>
-<li><code>void error(String set, int i, int j)</code>:
-for unhandled errors</li>
-<li><code>void undo(int n)</code>:
-for backtracking</li>
-</ul>
-
-<p>The <code>accept</code> method is passed two integers <code>i</code> and
-<code>j</code>, representing the start and end positions of the token in the
-input character array.  Positions are passed rather than a string, in case the
-programmer wants to keep track of positions within the source, or to avoid the
-overhead of creating a string object for every token.  However, if a string is
-desired, the <code>text(i,j)</code> method can be called on the scanner
-object.</p>
-
-<p>An error method, whether a handler or the default <code>error</code> method,
-is called with <code>i</code> and <code>j</code> representing an incomplete
-token.  The <code>set</code> argument is the set of characters which would have
-allowed the token to be continued.  The default <code>error</code> method can
-cause the program to exit, or throw a <code>ParseException</code>.  If the
-method returns, the scanner or parser itself throws a
-<code>ParseException</code> - there is no error recovery in this case.  An
-explicit error handler can cause the program to exit, or throw a
-<code>ParseException</code>, or it can return.  If it returns, it is treated as
-succeeding, so that error recovery can be attempted.  If enough explicit error
-handlers are provided, the default <code>error</code> method need never be
-called.</p>
-
-<p>The <code>undo</code> method asks the actor object to undo any side effects
-caused by the most recent <code>n</code> actions.  In the simple case where the
-actions are pure functions, without side effects, the method need not contain
-any code.  Also, if the grammar contains no backtracking or lookahead, the
-method will never be called.  Otherwise, for example if the actor object
-constructs a symbol table during parsing, the <code>undo</code> method should
-remove the most recent entries.</p>
-
-<p>Examples of using pecan to generate scanners and scanner-parsers are:</p>
-
-<pre>pecan -java "Scanner,Token,Token" file.pecan
-pecan -java "Scanner,long,Tokens" file.pecan
-pecan -java "Parser,double,Calculator" file.pecan
-pecan -java "pkg.Parser,double,Calculator" src/file.pecan
-</pre>
-
-<p>In the first example, actions are handled by static methods of the
-<code>Token</code> class, accessed via a sample <code>Token</code> object
-passed to the scanner.  In the second example, an object of a utility
-<code>Tokens</code> class is passed to the scanner, which constructs compact
-tokens of type <code>long</code>. The third example is typical of a calculator
-or evaluator, where the output items are values and action methods perform
-computations.  In the final example, the file generated is
-<code>src/Parser.java</code>, and a package statement <code>package pkg;</code>
-is included at the top.</p>
-
-<h3 id="parsers">Parsers</h3>
-
-<p>A parser, which processes tokens, is generated by:</p>
-
-<pre>pecan -java "Parser,Token,Tag,Output,Actor" file.pecan
-</pre>
-
-<p>The argument to the <code>-java</code> option should have five names in it,
-separated by commas.  These specify the name of the parser class to be
-generated, the type of the input tokens, the type of the tag constants which
-classify tokens, the type of the output items, and the type of the object on
-which external calls are made.  The input and output types can be classes or
-primitive types.  The type of token tags can be an enumerated type, or a
-primitive type which allows case switching.  The parser class can be specified
-with a full pathname to generate a package statement at the top, and the file
-<code>Parser.java</code> itself will be generated in the same directory as the
-grammar file.</p>
-
-<p>The API of the generated <code>Parser</code> class is:</p>
-
-<ul>
-<li><code>Parser(Input[] ts)</code>: constructor</li>
-<li><code>Output[] run(Actor a)</code>: scan or parse the text</li>
-</ul>
-
-<p>The methods expected in the <code>Actor</code> class, which can be static,
-are:</p>
-
-<ul>
-<li><code>Tag tag(Token t)</code>:
-find tag of token <i>t</i></li>
-<li><code>Output accept(Tag k, Token t)</code>:
-to convert a matched token <i>t</i></li>
-<li><code>Output <i>c</i>(Output x, ...)</code>:
-for each combine action <i>c</i></li>
-<li><code>void <i>h</i>(Set&lt;Tag&gt; set, Token t)</code>:
-for each error handler <i>h</i></li>
-<li><code>void error(Set&lt;Tag&gt; set, Token t)</code>:
-for unhandled errors</li>
-<li><code>void undo(int n)</code>:
-for backtracking</li>
-</ul>
-
-<p>The generated code uses calls to the <code>tag</code> method to find the
-tag of each token.  For an accept action <code>@ID</code>, if the tag of the
-input token matches, then a call is made to the <code>accept</code> method to
-convert the token into an output item.  The conventions for output and error
-handling are the same as for text input.</p>
-
-<p>Examples of generating parsers are:</p>
-
-<pre>pecan -java "Parser,Token,Tag,double,Evaluator" file.pecan
-pecan -java "Parser,Token,Tag,Node,Builder" file.pecan
-</pre>
-
-<p>In the first example, the actions generate values and carry out calculations
-on them to produce a final result value.  In the second example, tokens are
-accepted as, or converted into, leaf nodes and the combine actions build a
-complete parse tree.</p>
-
-<h3 id="code">Bytecode</h3>
 
 <p>Code is generated as a bytecode with an interpreter.  This is somewhat
 similar to the table-driven techniques used in some other parser
