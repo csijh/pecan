@@ -9,6 +9,52 @@
 <img src="pecan.png" width="300" height="65" />
 <hr/>
 
+<!--
+TODO: testing
+
+Testable has two calls: set up grammar, run test. Then can
+validate grammar before doing tests with it. Want defaults.
+
+A 'test' in one piece is a grammar. Then an import of a grammar file just sets
+up a grammar for the remaining tests.
+
+Separator lines start with === or - - - and can have comments.
+
+Early classes: grammar is input, no outer grammar. Because we don't want
+separate checking of the grammar.
+
+One line 'grammar' is file import (/) OR pick rule (=).
+/filename   (OR contains dot)
+=rulename   (OR doesn't contain dot)
+
+===          grammar.txt
+atom         - - -
+===          in
+input        ...
+...          out
+output       ===
+===
+
+TODO: generate
+
+Have opcodes, actions, errors, tags, rules, bytes.
+Want to connect parser to grammar via enumerations.
+Template in any language contains e.g.
+<opcodes %s=%d, >
+In the printf-like string, %s is name, %d is number, other text is verbatim.
+Verbatim text after last % is separator text, not printed after last entry.
+
+TODO: interpreter
+
+Rename the Interpreter class.
+What about @i causing two switches?
+OR have @0, @1, @2, ... opcodes.
+How link up scanner enumeration of actions with parser enumeration of tags?
+(Pecan chooses numbers for scanner actions, and for parser tags!)
+(Same set, same spellings, sorted maybe? @ and % first # for end?)
+
+-->
+
 <h1>Pecan Reference Manual</h1>
 
 <ul>
