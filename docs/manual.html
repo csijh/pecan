@@ -18,22 +18,20 @@ validate grammar before doing tests with it. Want defaults.
 A 'test' in one piece is a grammar. Then an import of a grammar file just sets
 up a grammar for the remaining tests.
 
-Separator lines start with === or - - - and can have comments.
+A 'test' with one line has a number of forms:
+
+atom = id / number
+=====
+atom
+=====
+// Comment about the tests below.
+=====
+tests.txt
+=====
+grammar.txt
 
 Early classes: grammar is input, no outer grammar. Because we don't want
 separate checking of the grammar.
-
-One line 'grammar' is file import (/) OR pick rule (=).
-/filename   (OR contains dot)
-=rulename   (OR doesn't contain dot)
-
-===          grammar.txt
-atom         - - -
-===          in
-input        ...
-...          out
-output       ===
-===
 
 TODO: generate
 
@@ -880,61 +878,98 @@ rules.</p>
 
 <h2 id="testing">Testing</h2>
 
-<p>During development of a grammar, it can be tested by symbolic execution
-without having to generate a parser. Testing is carried out by typing a command
+<p>During development of a grammar, testing can be carried out by symbolic
+execution without having to generate a parser. This is done by typing a command
 of the form:</p>
 
-<pre>pecan [-trace] [grammarfile] testfile [line]
+<pre>pecan [-trace] [line] testfile
 </pre>
 
-<p>The test file contains any number of tests. It may contain the grammar, or
-fragments of the grammar, or variations on the grammar, making it
-self-contained. Alternatively, the grammar can be given in its own file, to form
-a basis for the tests in the test file. The <code>-trace</code> option switches
-on tracing, so that the individual steps taken are displayed.
+<p>The test file contains the tests to be carried out. The <code>-trace</code>
+option switches on tracing, so that the individual steps taken during parsing
+are displayed. If a line number is given, only the single test that starts on
+that line of the test file is executed.</p>
 
+<p>A test file contains a number of sections separated by lines consisting of at
+least three equal signs. If a section contains a line of minus signs, then it is
+a test with sample input and expected output. If a section has no divider, it is
+a grammar which is used for subsequent tests, until another grammar is given.
+For example:</p>
 
- When a test fails, its line number is
-reported in the error message. That line number can then be used to re-run
-testing, but with only that
-
-    file contains the grammar and any number of tests. Each test is
-preceded by a line containing just equal signs, and consists of input text,
-then a line containing just minus signs, then the expected output. The
-expected output has one line for each external action the generated code
-would make, e.g.:</p>
-
-<pre>sum = number / number "+" number @2add
-number = ("0".."9")+ @number
+<pre>// Recognise one digit
+number = ("0".."9") @number
 ==========
 2
 ----------
-number "2"
+number 2
 ==========
 42
 ----------
-number "42"
+number 4
 ==========
-2+40
+// Recognise any number of digits
+number = ("0".."9") @number
+==========
+42
 ----------
-number "2"
-number "40"
-add
+number 42
 </pre>
 
-<p>For each action, its name is given, followed by the matched but unused input
-characters when the action is performed, if any.</p>
+<p>The first section of this file sets up a grammar, then there are two tests
+using that grammar, then a new grammar is given, then there is a final test
+using the second grammar.</p>
 
-<p>There is an escape convention which can be used in both the input and
-expected output portions of tests. This allows the input or output to contain
-control characters or unicode characters as plain text. A backslash followed
-by digits represents a character by its decimal code, or by its hex code if the
-code starts with zero. Two backslashes are used to represent a single
-backslash, and a backslash followed by any other character removes that
-character. In particular, a backslash followed by a space can be used as a
-separator, and a backslash followed by a newline can be used to cancel the
-newline. For example, given that <code>960</code> is the decimal code for the
-character &#960;, then:</p>
+<p>The output from running a test using a given grammar and sample input is a
+list of the actions that would be performed by a parser generated from the
+grammar. If the input is text rather than tokens, the characters matched since
+the previous action or discard are displayed.</p>
+
+<p>When a test fails, its line number is reported in the error message. That
+line number can then be used to re-run the testing, but picking out only that
+one test to be performed, perhaps with tracing:</p>
+
+<pre>pecan tests.txt
+Fail test on line 24 of tests.txt:
+---------- Expected ----------
+...
+---------- Actual ----------
+...
+
+pecan -trace 24 tests.txt
+</pre>
+
+<p>A section of the test file may consist of a single line with a special
+meaning. Examples of each possibility are:</p>
+
+<pre>grammar.pecan
+==========
+tests.txt
+==========
+number
+</pre>
+
+<p>Each of these cases can be distinguished from a one-line grammar, because the
+line does not contain an equal sign. The first example is the name of a file
+containing a grammar to be used for subsequent tests. This supports the common
+case where the grammar is in one file and its tests are in another. The second
+example is the name of a secondary test file to execute, allowing a suite of
+tests to be split across several files. There is no conflict between the first
+two examples, because a grammar file is equivalent to a test file which sets up
+a grammar but contains no tests. The third example is the name of a rule in the
+current grammar, to be used as an entry point for subsequent tests. It can be
+recognized by the lack of a dot character. This allows a grammar to be developed
+rule by rule, with old tests on particular rules being kept as regression
+tests.</p>
+
+<p>Test files are expected to use the UTF-8 encoding, but there is an escape
+convention which allows control characters or Unicode characters to be included
+as plain text. A backslash followed by digits represents a character by its
+decimal code, or by its hex code if the code starts with zero. Two backslashes
+are used to represent a single backslash, and a backslash followed by any other
+character removes that character. In particular, a backslash followed by a space
+can be used as a separator, and a backslash followed by a newline can be used to
+cancel the newline. For example, given that <code>960</code> is the decimal code
+for the character &#960;, then:</p>
 
 <ul style="list-style-type:none;">
 <li><code style="display:inline-block;width:5em;">\960x</code>
@@ -950,21 +985,20 @@ is a line ending in CR instead of LF</li>
 <h2 id="checks">Consistency Checks</h2>
 
 <p>A number of checks are performed on a grammar which help to ensure
-correctness, or at least consistency. As well as obvious checks, such as syntax
-checking of the grammar, and checking that each rule name is defined exactly
-once, the following further checks are done:</p>
+consistency. As well as obvious checks, such as syntax checking of the grammar,
+and checking that each rule name is defined exactly once, the following further
+checks are done:</p>
 
 <h3 id="type">Type Checking</h3>
 
-<p>A grammar is checked to see if it contains character notations, or tags, but
-not both. If it contains character notations (<code>"..."</code> or
-<code>'...'</code> or numbers or ranges) then the input to be parsed by the
-grammar is text. If the grammar contains tags, then the input to be parsed
-consists of tokens.</p>
+<p>A grammar is checked to see if it represents a text parser or a token parser.
+A text parser must contain no tags. A token parser must not contain numerical
+character codes or character sets or character ranges. If contains a string,
+there must be a definition of that string as a synonym for a tag.</p>
 
 <p>If the range operator is used, there is a check that each operand is a
-character, i.e. a one-character string or one-character set, or a name which
-refers to one of those:</p>
+character, i.e. a numerical character code or a one-character string or
+one-character set, or a name which refers to one of those:</p>
 
 <pre>digit = "0" .. "9"
 letter = 'a' .. 'z' / 'A' .. 'Z'
@@ -996,7 +1030,7 @@ mention each other at the beginning:</p>
 expression2 = expression1 ...
 </pre>
 
-<p>Some less obvious cases of left recursion are also detected, e.g.</p>
+<p>Less obvious cases of left recursion are also detected, e.g.</p>
 
 <pre>statement = label* statement
 </pre>
@@ -1044,7 +1078,7 @@ would ever be created in practice.</p>
 end of the input. For example, suppose there is a scanner rule like
 this:</p>
 
-<pre>tokens = token+ '' @end
+<pre>tokens = token+ UC! @end
 token =  space / identifier / keyword / operator / punctuation
 </pre>
 
@@ -1062,16 +1096,51 @@ scanner could continue to look for more tokens.</p>
 
 <h3 id="output">Output Checking</h3>
 
-<p>Actions are assumed to treat output items in a stack-like manner. Checks are
-made to guarantee consistent handling of output items. One check is that, at
-the end of processing, there is exactly one output item. For example:</p>
+<p>Actions are assumed to treat output items in a stack-like manner. Restrictive
+checks are made to guarantee consistent handling of output items. The arity of
+each action has to be specified, and has to be consistent each time the action
+appears. For example if a grammar contains both <code>@1add</code> and
+<code>@2add</code>, that is reported as an error. The arities are used to check
+that each expression in the grammar produces a fixed, known number of output
+items.</p>
 
-<pre>example = "1" @n "2" @n "3" @n @2add
+<p>Both alternatives in a choice expression must have the same net effect on the
+size of the stack. For example, this rule causes an error:</p>
+
+<pre>token = ('0'..'9')+ @token / ' '+
 </pre>
 
-<p>In this case, three items are pushed onto the stack, and two of them are
-combined into one by the <code>add</code> action, but that leaves two items on
-the stack at the end of processing, so an error is reported.</p>
+<p>The first alternative adds one item to the stack, but the second adds
+nothing. On the other hand, this rule is legal:</p>
+
+<pre>token =  ('0'..'9')+ @1token / ' '+
+</pre>
+
+<p>The <code>@1token</code> action pops an item from the stack, presumably a
+list of tokens, and pushes one item back on the stack, presumably the updated
+list. It thus has zero net effect on the stack. Since both alternatives now have
+a net zero effect, the <code>token</code> rule itself can be deduced as having a
+net zero effect.</p>
+
+<p>A repeated expression must have zero net effect on the stack. For example,
+suppose the grammar contains:</p>
+
+<pre>tokens = (('0'..'9')+ @token)*
+</pre>
+
+<p>The inner expression causes one output item to be pushed on the stack. This
+is reported as an error, because <code>tokens</code> as a whole pushes an
+unknown number of items onto the stack. On the other hand, this definition is
+allowed:</p>
+
+<pre>tokens = @list (('0'..'9')+ @1token)*
+</pre>
+
+<p>The <code>@list</code> action pushes one item, an empty list, onto the stack.
+The inner expression pops the list, adds a token to it, and pushes the updated
+list onto the stack. As a result, it has a zero net effect on the stack. It can
+be repeated any number of times, still with a zero net effect, and so the
+<code>tokens</code> rule can be deduced to push one item onto the stack.</p>
 
 <p>A second check is that the stack never underflows. For example:</p>
 
