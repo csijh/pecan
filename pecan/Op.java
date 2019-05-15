@@ -35,10 +35,12 @@ public enum Op {
     DO,      // x+               DO THEN MAYBE MANY <x>
     THEN,
     LOOK,    // [x] or x& or x!  LOOK TRY/HAS/NOT <x>
-    GE,      // "a".."z"         GE n "a" LE n "z"
-    LE,      // 0.."m"           LE "m"
+    RANGE,   // "a".."z"         RANGE "a" "z" (UTF-8)
+    LT,      // <"xyz"           LT "xyz"
     START,   // id = x           START STOP <x>
-    STOP;
+    STOP,
+    ACTN,    // @any             action with sequence number as argument
+    ACT0;    // @any             action with sequence number added to bytecode
 
     public static void main(String[] args) { }
 }
