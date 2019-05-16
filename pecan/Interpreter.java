@@ -112,7 +112,7 @@ public class Interpreter implements Testable {
 
     // Parse according to the given node.
     void parse(Node node) {
-        int saveIn, saveOut, saveMark, length;
+        int saveIn, saveOut, length;
         String text;
         if (tracing && ! skipTrace) System.out.println(node.trace());
         skipTrace = false;

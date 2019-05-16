@@ -12,6 +12,13 @@
 <!--
 TODO: generate
 
+Have only one entry point. (Don't generate rules?)
+Insist on all names distinct. (Or what? Prefix?)
+Insist on first character or tag to make parser choose rule.
+Option to add action to ACT opcode?
+Generate: OP, ACT, add, MARK, id, TAG, id, CHAR, int
+
+
 Have opcodes, actions, errors, tags, rules, bytes.
 Want to connect parser to grammar via enumerations.
 Template in any language contains e.g.
@@ -25,6 +32,7 @@ Rename the Interpreter class.
 What about @i causing two switches?
 OR have @0, @1, @2, ... opcodes.
 How link up scanner enumeration of actions with parser enumeration of tags?
+Can we specify external enumerations? (@a = 3  OR  %id = 2)
 (Pecan chooses numbers for scanner actions, and for parser tags!)
 (Same set, same spellings, sorted maybe? @ and % first # for end?)
 
