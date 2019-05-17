@@ -137,7 +137,7 @@ public class Interpreter implements Testable {
             if (!ok) return;
             parse(node.right());
             break;
-        case OPT:
+        case Opt:
             saveIn = in;
             saveOut = out;
             parse(node.left());
@@ -146,7 +146,7 @@ public class Interpreter implements Testable {
                 ok = true;
             }
             break;
-        case MANY:
+        case Many:
             saveIn = in;
             saveOut = out;
             while (ok) {
@@ -159,7 +159,7 @@ public class Interpreter implements Testable {
                 ok = true;
             }
             break;
-        case SOME:
+        case Some:
             saveIn = in;
             saveOut = out;
             parse(node.left());
@@ -177,7 +177,7 @@ public class Interpreter implements Testable {
                 ok = true;
             }
             break;
-        case TRY:
+        case Try:
             saveIn = in;
             saveOut = out;
             lookahead++;
@@ -188,7 +188,7 @@ public class Interpreter implements Testable {
             if (ok) parse(node.left());
             else out = saveOut;
             break;
-        case HAS:
+        case Has:
             saveIn = in;
             saveOut = out;
             lookahead++;
@@ -197,7 +197,7 @@ public class Interpreter implements Testable {
             out = saveOut;
             in = saveIn;
             break;
-        case NOT:
+        case Not:
             saveIn = in;
             saveOut = out;
             lookahead++;
@@ -207,7 +207,7 @@ public class Interpreter implements Testable {
             in = saveIn;
             ok = !ok;
             break;
-        case CHAR:
+        case Char:
             if (in >= input.length()) ok = false;
             else {
                 int ch = input.codePointAt(in);
@@ -220,7 +220,7 @@ public class Interpreter implements Testable {
                 }
             }
             break;
-        case STRING:
+        case String:
             length = node.text().length() - 2;
             text = node.text().substring(1, length+1);
             ok = true;
@@ -234,7 +234,7 @@ public class Interpreter implements Testable {
                 if (tracing) traceInput();
             }
             break;
-        case SET:
+        case Set:
             length = node.text().length() - 2;
             text = node.text().substring(1, length+1);
             ok = false;
@@ -252,7 +252,7 @@ public class Interpreter implements Testable {
                 ok = true;
             }
             break;
-        case RANGE:
+        case Range:
             int low = node.left().value();
             int high = node.right().value();
             ok = false;
@@ -267,7 +267,7 @@ public class Interpreter implements Testable {
                 }
             }
             break;
-        case CAT:
+        case Cat:
             ok = false;
             int cats = node.value();
             if (in < input.length()) {
@@ -282,7 +282,7 @@ public class Interpreter implements Testable {
                 }
             }
             break;
-        case TAG:
+        case Tag:
             String query;
             if (node.text().charAt(0) == '%') query = node.text().substring(1);
             else query = node.text().substring(1, node.text().length()-1);
@@ -297,17 +297,17 @@ public class Interpreter implements Testable {
                 if (tracing) traceInput();
             }
             break;
-        case MARK:
+        case Mark:
             ok = true;
             if (lookahead > 0) break;
             if (mark != in) { mark = in; failures.clear(); }
             failures.set(node.value());
             break;
-        case DROP:
+        case Drop:
             ok = true;
             delay[out++] = node;
             break;
-        case ACT:
+        case Act:
             ok = true;
             if (lookahead > 0) break;
             delay[out++] = node;
@@ -350,8 +350,8 @@ public class Interpreter implements Testable {
 
     // Carry out an action.
     private void takeAction(Node node) {
-        if (node.op() == DROP) { start = in; return; }
-        if (node.op() != ACT) throw new Error("Expecting ACT");
+        if (node.op() == Drop) { start = in; return; }
+        if (node.op() != Act) throw new Error("Expecting Act");
         output.append(node.ref().text());
         if (textInput && in > start) {
             output.append(" " + input.substring(start,in));
@@ -366,7 +366,7 @@ public class Interpreter implements Testable {
         if (node.left() != null) m = markerSize(node.left());
         if (node.left() != null && node.right() != null) n = markerSize(node.right());
         m = Math.max(m, n);
-        if (node.op() == MARK) m = Math.max(m, node.value() + 1);
+        if (node.op() == Mark) m = Math.max(m, node.value() + 1);
         return m;
     }
 
@@ -374,7 +374,7 @@ public class Interpreter implements Testable {
     private void gatherMarkers(Node node) {
         if (node.left() != null) gatherMarkers(node.left());
         if (node.left() != null && node.right() != null) gatherMarkers(node.right());
-        if (node.op() == MARK) {
+        if (node.op() == Mark) {
             markers[node.value()] = node.text().substring(1);
         }
     }

@@ -2,15 +2,15 @@
 x = "a"
 ----------
 Rule x
-  STRING "a" 97
+  String "a" 97
 ==========
 // One call action
 x = "x" @1act
 ----------
 Rule x
   And "x" @1act
-    STRING "x" 120
-    ACT @1act 0
+    String "x" 120
+    Act @1act 0
 ==========
 // Brackets
 exp = (exp) END
@@ -21,7 +21,7 @@ Rule exp
     Id exp
     Id END
 Rule END
-  CHAR 10 10
+  Char 10 10
 ==========
 // Set with duplicate character
 s = 'abcdefcghi'
@@ -51,9 +51,9 @@ char = "\195101"
 x = "x"
 ----------
 Rule char
-  STRING "\195101" 195101
+  String "\195101" 195101
 Rule x
-  STRING "x" 120
+  String "x" 120
 ==========
 // Bad range
 s = 'ab'..'c'
@@ -101,9 +101,9 @@ s = 33..32
 s = 33..33
 ----------
 Rule s
-  RANGE 33..33
-    CHAR 33 33
-    CHAR 33 33
+  Range 33..33
+    Char 33 33
+    Char 33 33
 ==========
 // Name clash
 x = @2add @3add
@@ -123,52 +123,52 @@ digit = '0123456789'
 Rule exp
   And term ("+" term @2add / "-" term @2sub)* ''
     Id term
-    MANY ("+" term @2add / "-" term @2sub)*
+    Many ("+" term @2add / "-" term @2sub)*
       Or "+" term @2add / "-" term @2sub
         And "+" term @2add
-          STRING "+" 43
+          String "+" 43
           Id term
-          ACT @2add 1
+          Act @2add 1
         And "-" term @2sub
-          STRING "-" 45
+          String "-" 45
           Id term
-          ACT @2sub 2
-    SET ''
+          Act @2sub 2
+    Set ''
 Rule term
   And factor ("*" factor @2mul / "/" factor @2div)*
     Id factor
-    MANY ("*" factor @2mul / "/" factor @2div)*
+    Many ("*" factor @2mul / "/" factor @2div)*
       Or "*" factor @2mul / "/" factor @2div
         And "*" factor @2mul
-          STRING "*" 42
+          String "*" 42
           Id factor
-          ACT @2mul 3
+          Act @2mul 3
         And "/" factor @2div
-          STRING "/" 47
+          String "/" 47
           Id factor
-          ACT @2div 4
+          Act @2div 4
 Rule factor
   And primary ("^" factor @2pow)?
     Id primary
-    OPT ("^" factor @2pow)?
+    Opt ("^" factor @2pow)?
       And "^" factor @2pow
-        STRING "^" 94
+        String "^" 94
         Id factor
-        ACT @2pow 5
+        Act @2pow 5
 Rule primary
   Or number / "(" exp ")"
     Id number
     And "(" exp ")"
-      STRING "(" 40
+      String "(" 40
       Id exp
-      STRING ")" 41
+      String ")" 41
 Rule number
   And digit+ @number
-    SOME digit+
+    Some digit+
       Id digit
-    ACT @number 0
+    Act @number 0
 Rule digit
-  SET '0123456789'
+  Set '0123456789'
 ==========
 // Unknown rule name
 x = z
@@ -196,14 +196,14 @@ Rule sum
     Id number
     And number "+" number @2add
       Id number
-      STRING "+" 43
+      String "+" 43
       Id number
-      ACT @2add 1
+      Act @2add 1
 Rule number
   And ('0123456789')+ @read
-    SOME ('0123456789')+
-      SET '0123456789'
-    ACT @read 0
+    Some ('0123456789')+
+      Set '0123456789'
+    Act @read 0
 ==========
 // Error handling
 string = '"' visible* #badstring '"'
@@ -211,19 +211,19 @@ visible = "x"
 ----------
 Rule string
   And '"' visible* #badstring '"'
-    SET '"' 34
-    MANY visible*
+    Set '"' 34
+    Many visible*
       Id visible
-    MARK #badstring 0
-    SET '"' 34
+    Mark #badstring 0
+    Set '"' 34
 Rule visible
-  STRING "x" 120
+  String "x" 120
 ==========
 // Unicode category
 upper = Lu
 ----------
 Rule upper
-  CAT Lu 2
+  Cat Lu 2
 ==========
 // Attempt to redefine category
 Lu = 'x'
@@ -243,17 +243,17 @@ big = 1114112
 tokens = skip token*
 token = id / number / set / string / matcher / action / handler / key / bad
 id = name @Id skip1
-number = ('0' hex* / digit+) @CHAR skip1
-set = "'" ("'"! visible)* #BADSET "'" @SET skip1
-string = '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
+number = ('0' hex* / digit+) @Char skip1
+set = "'" ("'"! visible)* #BADSet "'" @Set skip1
+string = '"' ('"'! visible)* #BADString '"' @String skip1
 matcher = "%" name @MATCH skip1
-action = "@" (digit+ name @ACT / name @READ / @DROP) skip1
+action = "@" (digit+ name @Act / name @READ / @Drop) skip1
 handler = "#" name @HAndLE skip1
 key = prefix skip2 / infix skip2 / postfix skip1
 prefix = "(" @RB / "[" @SB / "<" @AB
 infix = "=" @Id / "/" @SL / ".." @DD
 postfix = "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
-bad =  #BADSET Uc skip1
+bad =  #BADSet Uc skip1
 skip = (space / comment / newline)* @
 skip1 = space @ (newline ([space (letter / newline)] @NL)? skip)?
 skip2 = space (newline space)? @
@@ -270,7 +270,7 @@ space = " "*
 Rule tokens
   And skip token*
     Id skip
-    MANY token*
+    Many token*
       Id token
 Rule token
   Or id / number / set / string / matcher / action / handler / key / bad
@@ -286,68 +286,68 @@ Rule token
 Rule id
   And name @Id skip1
     Id name
-    ACT @Id 0
+    Act @Id 0
     Id skip1
 Rule number
-  And ('0' hex* / digit+) @CHAR skip1
+  And ('0' hex* / digit+) @Char skip1
     Or '0' hex* / digit+
       And '0' hex*
-        SET '0' 48
-        MANY hex*
+        Set '0' 48
+        Many hex*
           Id hex
-      SOME digit+
+      Some digit+
         Id digit
-    ACT @CHAR 1
+    Act @Char 1
     Id skip1
 Rule set
-  And "'" ("'"! visible)* #BADSET "'" @SET skip1
-    STRING "'" 39
-    MANY ("'"! visible)*
+  And "'" ("'"! visible)* #BADSet "'" @Set skip1
+    String "'" 39
+    Many ("'"! visible)*
       And "'"! visible
-        NOT "'"!
-          STRING "'" 39
+        Not "'"!
+          String "'" 39
         Id visible
-    MARK #BADSET 0
-    STRING "'" 39
-    ACT @SET 2
+    Mark #BADSet 0
+    String "'" 39
+    Act @Set 2
     Id skip1
 Rule string
-  And '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
-    SET '"' 34
-    MANY ('"'! visible)*
+  And '"' ('"'! visible)* #BADString '"' @String skip1
+    Set '"' 34
+    Many ('"'! visible)*
       And '"'! visible
-        NOT '"'!
-          SET '"' 34
+        Not '"'!
+          Set '"' 34
         Id visible
-    MARK #BADSTRING 1
-    SET '"' 34
-    ACT @STRING 3
+    Mark #BADString 1
+    Set '"' 34
+    Act @String 3
     Id skip1
 Rule matcher
   And "%" name @MATCH skip1
-    STRING "%" 37
+    String "%" 37
     Id name
-    ACT @MATCH 4
+    Act @MATCH 4
     Id skip1
 Rule action
-  And "@" (digit+ name @ACT / name @READ / @DROP) skip1
-    STRING "@" 64
-    Or digit+ name @ACT / name @READ / @DROP
-      And digit+ name @ACT
-        SOME digit+
+  And "@" (digit+ name @Act / name @READ / @Drop) skip1
+    String "@" 64
+    Or digit+ name @Act / name @READ / @Drop
+      And digit+ name @Act
+        Some digit+
           Id digit
         Id name
-        ACT @ACT 5
+        Act @Act 5
       And name @READ
         Id name
-        ACT @READ 6
-      ACT @DROP 7
+        Act @READ 6
+      Act @Drop 7
     Id skip1
 Rule handler
   And "#" name @HAndLE skip1
-    STRING "#" 35
+    String "#" 35
     Id name
-    ACT @HAndLE 8
+    Act @HAndLE 8
     Id skip1
 Rule key
   Or prefix skip2 / infix skip2 / postfix skip1
@@ -363,138 +363,138 @@ Rule key
 Rule prefix
   Or "(" @RB / "[" @SB / "<" @AB
     And "(" @RB
-      STRING "(" 40
-      ACT @RB 9
+      String "(" 40
+      Act @RB 9
     And "[" @SB
-      STRING "[" 91
-      ACT @SB 10
+      String "[" 91
+      Act @SB 10
     And "<" @AB
-      STRING "<" 60
-      ACT @AB 11
+      String "<" 60
+      Act @AB 11
 Rule infix
   Or "=" @Id / "/" @SL / ".." @DD
     And "=" @Id
-      STRING "=" 61
-      ACT @Id 0
+      String "=" 61
+      Act @Id 0
     And "/" @SL
-      STRING "/" 47
-      ACT @SL 12
+      String "/" 47
+      Act @SL 12
     And ".." @DD
-      STRING ".."
-      ACT @DD 13
+      String ".."
+      Act @DD 13
 Rule postfix
   Or "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
     And "!" @EM
-      STRING "!" 33
-      ACT @EM 14
+      String "!" 33
+      Act @EM 14
     And "?" @QM
-      STRING "?" 63
-      ACT @QM 15
+      String "?" 63
+      Act @QM 15
     And "+" @PL
-      STRING "+" 43
-      ACT @PL 16
+      String "+" 43
+      Act @PL 16
     And "*" @ST
-      STRING "*" 42
-      ACT @ST 17
+      String "*" 42
+      Act @ST 17
     And ")" @RE
-      STRING ")" 41
-      ACT @RE 18
+      String ")" 41
+      Act @RE 18
     And "]" @SE
-      STRING "]" 93
-      ACT @SE 19
+      String "]" 93
+      Act @SE 19
     And ">" @AE
-      STRING ">" 62
-      ACT @AE 20
+      String ">" 62
+      Act @AE 20
 Rule bad
-  And #BADSET Uc skip1
-    MARK #BADSET 0
-    CAT Uc -268435457
+  And #BADSet Uc skip1
+    Mark #BADSet 0
+    Cat Uc -268435457
     Id skip1
 Rule skip
   And (space / comment / newline)* @
-    MANY (space / comment / newline)*
+    Many (space / comment / newline)*
       Or space / comment / newline
         Id space
         Id comment
         Id newline
-    DROP @
+    Drop @
 Rule skip1
   And space @ (newline ([space (letter / newline)] @NL)? skip)?
     Id space
-    DROP @
-    OPT (newline ([space (letter / newline)] @NL)? skip)?
+    Drop @
+    Opt (newline ([space (letter / newline)] @NL)? skip)?
       And newline ([space (letter / newline)] @NL)? skip
         Id newline
-        OPT ([space (letter / newline)] @NL)?
+        Opt ([space (letter / newline)] @NL)?
           And [space (letter / newline)] @NL
-            TRY [space (letter / newline)]
+            Try [space (letter / newline)]
               And space (letter / newline)
                 Id space
                 Or letter / newline
                   Id letter
                   Id newline
-            ACT @NL 21
+            Act @NL 21
         Id skip
 Rule skip2
   And space (newline space)? @
     Id space
-    OPT (newline space)?
+    Opt (newline space)?
       And newline space
         Id newline
         Id space
-    DROP @
+    Drop @
 Rule name
   And letter alpha*
     Id letter
-    MANY alpha*
+    Many alpha*
       Id alpha
 Rule hex
   Or digit / 'A'..'F' / 'a'..'f'
     Id digit
-    RANGE 'A'..'F'
-      SET 'A' 65
-      SET 'F' 70
-    RANGE 'a'..'f'
-      SET 'a' 97
-      SET 'f' 102
+    Range 'A'..'F'
+      Set 'A' 65
+      Set 'F' 70
+    Range 'a'..'f'
+      Set 'a' 97
+      Set 'f' 102
 Rule digit
-  RANGE '0'..'9'
-    SET '0' 48
-    SET '9' 57
+  Range '0'..'9'
+    Set '0' 48
+    Set '9' 57
 Rule letter
   Or 'A'..'Z' / 'a'..'z'
-    RANGE 'A'..'Z'
-      SET 'A' 65
-      SET 'Z' 90
-    RANGE 'a'..'z'
-      SET 'a' 97
-      SET 'z' 122
+    Range 'A'..'Z'
+      Set 'A' 65
+      Set 'Z' 90
+    Range 'a'..'z'
+      Set 'a' 97
+      Set 'z' 122
 Rule alpha
   Or letter / digit / '_-'
     Id letter
     Id digit
-    SET '_-'
+    Set '_-'
 Rule newline
   Or 10 / 133 / 8232 / 13 10 / 13 133 / 13
-    CHAR 10 10
-    CHAR 133 133
-    CHAR 8232 8232
+    Char 10 10
+    Char 133 133
+    Char 8232 8232
     And 13 10
-      CHAR 13 13
-      CHAR 10 10
+      Char 13 13
+      Char 10 10
     And 13 133
-      CHAR 13 13
-      CHAR 133 133
-    CHAR 13 13
+      Char 13 13
+      Char 133 133
+    Char 13 13
 Rule visible
-  RANGE ' '..'~'
-    SET ' ' 32
-    SET '~' 126
+  Range ' '..'~'
+    Set ' ' 32
+    Set '~' 126
 Rule comment
   And "//" visible*
-    STRING "//"
-    MANY visible*
+    String "//"
+    Many visible*
       Id visible
 Rule space
-  MANY " "*
-    STRING " " 32
+  Many " "*
+    String " " 32

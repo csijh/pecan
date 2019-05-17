@@ -4,8 +4,8 @@ x = @start 'a'
 ----------
 RULE x  a::
   AND @start 'a'  a::
-    ACT @start  ::a
-    SET 'a'  a::
+    Act @start  ::a
+    Set 'a'  a::
 ==========
 // Across rules
 x = @start y
@@ -14,12 +14,12 @@ z = 'a'
 ----------
 RULE x  a::
   AND @start y  a::
-    ACT @start  ::a
+    Act @start  ::a
     ID y  a::
 RULE y  a::
   ID z  a::
 RULE z  a::
-  SET 'a'  a::
+  Set 'a'  a::
 ==========
 //
 x = @start u? v w
@@ -29,17 +29,17 @@ w = 'w'
 ----------
 RULE x  uv::
   AND @start u? v w  uv::
-    ACT @start  ::uv
-    OPT u?  u::v
+    Act @start  ::uv
+    Opt u?  u::v
       ID u  u::v
     ID v  v::w
     ID w  w::
 RULE u  u::v
-  SET 'u'  u::v
+  Set 'u'  u::v
 RULE v  v::w
-  SET 'v'  v::w
+  Set 'v'  v::w
 RULE w  w::
-  SET 'w'  w::
+  Set 'w'  w::
 ==========
 a = @start "x" "y"
 b = ["x"] "y"
@@ -48,21 +48,21 @@ d = "x"! "y"
 ----------
 RULE a  x::
   AND @start "x" "y"  x::
-    ACT @start  ::x
-    STRING "x"  x::y
-    STRING "y"  y::
+    Act @start  ::x
+    String "x"  x::y
+    String "y"  y::
 RULE b  :x:
   AND ["x"] "y"  :x:
-    TRY ["x"]  :x:y
-      STRING "x"  x::y
-    STRING "y"  y::
+    Try ["x"]  :x:y
+      String "x"  x::y
+    String "y"  y::
 RULE c  y:x:
   AND "x"& "y"  y:x:
-    HAS "x"&  :x:y
-      STRING "x"  x::
-    STRING "y"  y::
+    Has "x"&  :x:y
+      String "x"  x::
+    String "y"  y::
 RULE d  y:x:
   AND "x"! "y"  y:x:
-    NOT "x"!  :x:y
-      STRING "x"  x::
-    STRING "y"  y::
+    Not "x"!  :x:y
+      String "x"  x::
+    String "y"  y::

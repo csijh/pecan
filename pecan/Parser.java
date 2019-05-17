@@ -86,11 +86,11 @@ class Parser implements Testable {
 
     // postop = opt / any / some / has / not
     private boolean postop() throws ParseException {
-        if (postfix('?', OPT)) return true;
-        if (postfix('*', MANY)) return true;
-        if (postfix('+', SOME)) return true;
-        if (postfix('&', HAS)) return true;
-        if (postfix('!', NOT)) return true;
+        if (postfix('?', Opt)) return true;
+        if (postfix('*', Many)) return true;
+        if (postfix('+', Some)) return true;
+        if (postfix('&', Has)) return true;
+        if (postfix('!', Not)) return true;
         return false;
     }
 
@@ -122,13 +122,13 @@ class Parser implements Testable {
             while (digit()) { }
             if (! letter()) err(in, in, "expecting letter");
             while (alpha()) { }
-            doName(ACT);
+            doName(Act);
         }
         else if (letter()) {
             while (alpha()) { }
-            doName(ACT);
+            doName(Act);
         }
-        else doName(DROP);
+        else doName(Drop);
         gap();
         return true;
     }
@@ -140,7 +140,7 @@ class Parser implements Testable {
         while (true) {
             if (! alpha()) break;
         }
-        doName(MARK);
+        doName(Mark);
         gap();
         return true;
     }
@@ -153,7 +153,7 @@ class Parser implements Testable {
                     if (! alpha()) break;
                 }
             }
-            doName(TAG);
+            doName(Tag);
             gap();
             return true;
         }
@@ -163,7 +163,7 @@ class Parser implements Testable {
                 if (visible()) continue;
                 err(in, in, "expecting visible character or `");
             }
-            doName(TAG);
+            doName(Tag);
             gap();
             return true;
         }
@@ -175,7 +175,7 @@ class Parser implements Testable {
         if (! text()) return false;
         if (! dots()) return true;
         if (! text()) err(in, in, "expecting character");
-        doInfix(RANGE);
+        doInfix(Range);
         return true;
     }
 
@@ -211,7 +211,7 @@ class Parser implements Testable {
         boolean isHex = source.charAt(in-1) == '0';
         if (isHex) while (hex()) { }
         else while (digit()) { }
-        doName(CHAR);
+        doName(Char);
         gap();
         return true;
     }
@@ -224,7 +224,7 @@ class Parser implements Testable {
             if (visible()) continue;
             err(in, in, "expecting visible character or \"");
         }
-        doName(STRING);
+        doName(String);
         gap();
         return true;
     }
@@ -237,7 +237,7 @@ class Parser implements Testable {
             if (visible()) continue;
             err(in, in, "expecting visible character or '");
         }
-        doName(SET);
+        doName(Set);
         gap();
         return true;
     }
@@ -504,12 +504,12 @@ class Parser implements Testable {
         output[out++] = y;
     }
 
-    // Convert "[" x "]" into TRY x
+    // Convert "[" x "]" into Try x
     private void doBack() {
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];
-        Node r = new Node(TRY, x, source, open.start(), close.end());
+        Node r = new Node(Try, x, source, open.start(), close.end());
         output[out++] = r;
     }
 

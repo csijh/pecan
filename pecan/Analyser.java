@@ -62,8 +62,8 @@ synthesized upwards in the tree, and FOLLOW inherited downwards in the tree:
   e = x&   or   e = x!
     START(e) += FIRST(x), (FOLLOW(e) from above)
 
-  e = %TAG
-    FIRST(e) += {TAG}, START += {}, (FOLLOW(e) from above)
+  e = %Tag
+    FIRST(e) += {Tag}, START += {}, (FOLLOW(e) from above)
 
 */
 
@@ -93,7 +93,7 @@ class Analyser implements Test.Callable {
     // Find the maximum tag index.
     int maxTagIndex(Node node) {
         int x = 0, y = 0;
-        if (node.op() == TAG) x = node.value();
+        if (node.op() == Tag) x = node.value();
         if (node.left() != null) x = maxTagIndex(node.left());
         if (node.right() != null) y = maxTagIndex(node.right());
         return Math.max(x, y);
@@ -106,7 +106,7 @@ class Analyser implements Test.Callable {
         if (y != null) findSets(y);
         int ch;
         switch (node.op()) {
-        case DROP: case ACT: case MARK:
+        case Drop: case Act: case Mark:
             break;
         case Rule:
             add(node.FIRST(), x.FIRST());
@@ -118,15 +118,15 @@ class Analyser implements Test.Callable {
             add(node.START(), node.ref().START());
             add(node.ref().FOLLOW(), node.FOLLOW());
             break;
-        case TAG:
+        case Tag:
             add(node.FIRST(), node.value());
             break;
-        case CHAR:
+        case Char:
             ch = node.value();
             if (ch < 128) add(node.FIRST(), ch);
             else add(node.START(), 128 + Character.getType(ch));
             break;
-        case CAT:
+        case Cat:
             Category cat = Category.values()[node.value()];
             if (cat == Category.Uc) {
                 for (int i=0; i<bits; i++) add(node.FIRST(), i);
@@ -135,32 +135,32 @@ class Analyser implements Test.Callable {
                 add(node.FIRST(), 128 + node.value());
             }
             break;
-        case RANGE:
+        case Range:
             int from = x.value(), to = y.value();
             for (ch = from; ch <= to; ch++) {
                 if (ch < 128) add(node.FIRST(), ch);
                 else add(node.START(), 128 + Character.getType(ch));
             }
             break;
-        case STRING: case SET:
+        case String: case Set:
             String text = node.text();
             if (text.length() == 2) break;
             ch = text.codePointAt(1);
             if (ch < 128) add(node.FIRST(), ch);
             else add(node.START(), 128 + Character.getType(ch));
             break;
-        case SOME: case MANY: case OPT:
+        case Some: case Many: case Opt:
             add(node.FIRST(), x.FIRST());
             add(node.START(), x.START());
             add(x.FOLLOW(), node.FOLLOW());
             break;
-        case TRY:
+        case Try:
             add(node.START(), x.FIRST());
             add(node.START(), x.START());
             add(x.FOLLOW(), node.FOLLOW());
             break;
         // Note x! swaps S and F, but not P and N, so is the same as x&
-        case HAS: case NOT:
+        case Has: case Not:
             add(node.START(), x.FIRST());
             add(node.START(), x.START());
             break;

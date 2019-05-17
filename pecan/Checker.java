@@ -93,21 +93,21 @@ class Checker implements Testable {
             nFN = node.ref().has(FN);
             nFP = node.ref().has(FP);
             break;
-        case DROP: case ACT: case MARK:
+        case Drop: case Act: case Mark:
             nSN = true;
             break;
-        case TAG: case CHAR: case RANGE: case CAT:
+        case Tag: case Char: case Range: case Cat:
             nSP = true;
             nFN = true;
             break;
         // A string has implicit backtracking, e.g. "xy" == ['x' 'y']
-        case STRING:
+        case String:
             boolean empty = node.text().equals("\"\"");
             if (empty) { nSN = true; break; }
             nSP = true;
             nFN = true;
             break;
-        case SET:
+        case Set:
             if (! node.text().equals("''")) nSP = true;
             nFN = true;
             break;
@@ -129,31 +129,31 @@ class Checker implements Testable {
             nFN = xFN && yFN;
             nFP = xFP || xFN && yFP;
             break;
-        case OPT:
+        case Opt:
             nSN = xFN || xSN;
             nSP = xSP;
             nFP = xFP;
             break;
-        case MANY:
+        case Many:
             nSN = xFN;
             nSP = xSP && xFN;
             nFP = xFP;
             break;
-        case SOME:
+        case Some:
             nSP = xSP && xFN;
             nFN = xFN;
             nFP = xFP;
             break;
-        case TRY:
+        case Try:
             nSN = xSN;
             nSP = xSP;
             nFN = xFN || xFP;
             break;
-        case HAS:
+        case Has:
             nSN = xSN || xSP;
             nFN = xFN || xFP;
             break;
-        case NOT:
+        case Not:
             nSN = xFN || xFP;
             nFN = xSN || xSP;
             break;
@@ -183,15 +183,15 @@ class Checker implements Testable {
         if (y != null) { valid(y); yWF = y.has(WF); }
         switch (node.op()) {
         case Id:    nWF = node.ref().has(WF);           break;
-        case Rule: case OPT: case TRY: case HAS:
-        case NOT:   nWF = xWF;                          break;
-        case MARK: case CHAR: case RANGE: case CAT:
-        case STRING: case SET: case DROP: case ACT:
-        case TAG:   nWF = true;                         break;
+        case Rule: case Opt: case Try: case Has:
+        case Not:   nWF = xWF;                          break;
+        case Mark: case Char: case Range: case Cat:
+        case String: case Set: case Drop: case Act:
+        case Tag:   nWF = true;                         break;
         case And:   nWF = xWF && (yWF || ! x.has(SN));  break;
         case Or:    nWF = xWF && yWF;                   break;
-        case MANY:
-        case SOME:  nWF = xWF && ! x.has(SN);           break;
+        case Many:
+        case Some:  nWF = xWF && ! x.has(SN);           break;
         default:
             throw new Error("Type " + node.op() + " not implemented");
         }
@@ -214,16 +214,16 @@ class Checker implements Testable {
         if (x != null) { acting(x); xAA = x.has(AA); xAB = x.has(AB); }
         if (y != null) { acting(y); yAA = y.has(AA); yAB = y.has(AB); }
         switch (node.op()) {
-            // HAS and NOT have actions switched off, so don't have AA or AB.
-        case CHAR: case RANGE: case CAT: case STRING: case SET: case TAG:
-        case MARK: case HAS: case NOT:
+            // Has and Not have actions switched off, so don't have AA or AB.
+        case Char: case Range: case Cat: case String: case Set: case Tag:
+        case Mark: case Has: case Not:
             break;
         // If [x] succeeds, x is executed a second time with actions on.
-        case TRY:
+        case Try:
             nAA = xAA;
             nAB = xAB;
             break;
-        case ACT: case DROP:
+        case Act: case Drop:
             nAA = true;
             nAB = true;
             break;
@@ -250,7 +250,7 @@ class Checker implements Testable {
             nAB = yAB;
 //          if (! x.has(FN)) err(y, "unreachable alternative");
             break;
-        case OPT: case MANY: case SOME:
+        case Opt: case Many: case Some:
             nAA = xAA;
 //          if (xAB) err(x, "component can act without progressing");
 //          if (! x.has(FN)) err(node, "unreachable repetition");

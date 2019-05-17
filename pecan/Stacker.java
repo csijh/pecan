@@ -79,18 +79,18 @@ class Stacker implements Testable {
         if (x != null) { net(x); xNet = x.NET(); }
         if (y != null) { net(y); yNet = y.NET(); }
         switch(node.op()) {
-        case DROP: case STRING: case SET:  case RANGE: case CAT: case TAG:
-        case SOME: case MANY: case OPT: case HAS: case NOT: case CHAR:
-        case MARK:
+        case Drop: case String: case Set:  case Range: case Cat: case Tag:
+        case Some: case Many: case Opt: case Has: case Not: case Char:
+        case Mark:
             nNet = 0;   break;
-        case ACT:
+        case Act:
             int arity = node.ref().value();
             nNet = 1-arity;
             break;
         case Id:
             nNet = node.ref().NET();
             break;
-        case Rule: case TRY:
+        case Rule: case Try:
             nNet = xNet;
             break;
         case And:
@@ -121,7 +121,7 @@ class Stacker implements Testable {
                 err(node, "choices produce unequal numbers of outputs");
             }
             break;
-        case SOME: case MANY: case OPT:
+        case Some: case Many: case Opt:
             if (xNet != UNKNOWN && xNet != 0) {
                 err(node, "subrule produces or consumes output items");
             }
@@ -144,10 +144,10 @@ class Stacker implements Testable {
         if (x != null) { low(x); xLow = x.LOW(); }
         if (y != null) { low(y); yLow = y.LOW(); }
         switch(node.op()) {
-        case DROP: case STRING: case SET: case CHAR: case RANGE:
-        case CAT: case TAG: case MARK:
+        case Drop: case String: case Set: case Char: case Range:
+        case Cat: case Tag: case Mark:
             break;
-        case ACT:
+        case Act:
             int arity = node.ref().value();
             nLow = -arity;
             break;
@@ -163,8 +163,8 @@ class Stacker implements Testable {
         case Or:
             nLow = Math.min(xLow, yLow);
             break;
-        case SOME: case MANY: case OPT:
-        case TRY: case HAS: case NOT:
+        case Some: case Many: case Opt:
+        case Try: case Has: case Not:
             nLow = xLow;
             break;
         default: throw new Error("Type " + node.op() + " unimplemented");

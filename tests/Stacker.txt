@@ -4,8 +4,8 @@ x = @Id @
 ----------
 Rule x 1,0
   And @Id @ 1,0
-    ACT @Id 1,0
-    DROP @ 0,0
+    Act @Id 1,0
+    Drop @ 0,0
 ==========
 // Two items
 x = @Id @Id @1add
@@ -34,15 +34,15 @@ exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP
 Rule exp 1,0
   Or 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP 1,0
     And 'a' @NUM 1,0
-      SET 'a' 0,0
-      ACT @NUM 1,0
+      Set 'a' 0,0
+      Act @NUM 1,0
     And "(" @OPEN exp ")" @CLOSE @3EXP 1,0
-      STRING "(" 0,0
-      ACT @OPEN 1,0
+      String "(" 0,0
+      Act @OPEN 1,0
       Id exp 1,0
-      STRING ")" 0,0
-      ACT @CLOSE 1,0
-      ACT @3EXP -2,-3
+      String ")" 0,0
+      Act @CLOSE 1,0
+      Act @3EXP -2,-3
 ==========
 // Expressions
 sum = exp
@@ -58,50 +58,50 @@ Rule sum 1,0
 Rule exp 1,0
   And term ("+" term @2add / "-" term @2sub)* 1,0
     Id term 1,0
-    MANY ("+" term @2add / "-" term @2sub)* 0,-1
+    Many ("+" term @2add / "-" term @2sub)* 0,-1
       Or "+" term @2add / "-" term @2sub 0,-1
         And "+" term @2add 0,-1
-          STRING "+" 0,0
+          String "+" 0,0
           Id term 1,0
-          ACT @2add -1,-2
+          Act @2add -1,-2
         And "-" term @2sub 0,-1
-          STRING "-" 0,0
+          String "-" 0,0
           Id term 1,0
-          ACT @2sub -1,-2
+          Act @2sub -1,-2
 Rule term 1,0
   And factor ("*" factor @2mul / "/" factor @2div)* 1,0
     Id factor 1,0
-    MANY ("*" factor @2mul / "/" factor @2div)* 0,-1
+    Many ("*" factor @2mul / "/" factor @2div)* 0,-1
       Or "*" factor @2mul / "/" factor @2div 0,-1
         And "*" factor @2mul 0,-1
-          STRING "*" 0,0
+          String "*" 0,0
           Id factor 1,0
-          ACT @2mul -1,-2
+          Act @2mul -1,-2
         And "/" factor @2div 0,-1
-          STRING "/" 0,0
+          String "/" 0,0
           Id factor 1,0
-          ACT @2div -1,-2
+          Act @2div -1,-2
 Rule factor 1,0
   And primary ("^" factor @2pow)? 1,0
     Id primary 1,0
-    OPT ("^" factor @2pow)? 0,-1
+    Opt ("^" factor @2pow)? 0,-1
       And "^" factor @2pow 0,-1
-        STRING "^" 0,0
+        String "^" 0,0
         Id factor 1,0
-        ACT @2pow -1,-2
+        Act @2pow -1,-2
 Rule primary 1,0
   Or number / "(" exp ")" 1,0
     Id number 1,0
     And "(" exp ")" 1,0
-      STRING "(" 0,0
+      String "(" 0,0
       Id exp 1,0
-      STRING ")" 0,0
+      String ")" 0,0
 Rule number 1,0
   And digit+ @number 1,0
-    SOME digit+ 0,0
+    Some digit+ 0,0
       Id digit 0,0
-    ACT @number 1,0
+    Act @number 1,0
 Rule digit 0,0
-  RANGE "0" .. "9" 0,0
-    STRING "0" 0,0
-    STRING "9" 0,0
+  Range "0" .. "9" 0,0
+    String "0" 0,0
+    String "9" 0,0

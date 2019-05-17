@@ -4,53 +4,43 @@ package pecan;
 
 /* Opcode constants represent bytecode ops.
 
-TODO:
-x <c y         if next char < c, do x, else y
-x >c y         if next char > c, do x, else y
-[<c] x / y     alternative, expresses binary search in grammar
-[>c] x / y
-[>=a] <=b      equivalent of range
-               (similar to a sparse switch statement in many compilers)
- */
+<id = x>    RULE id START nx <x> STOP
+<id>        GO n     or     BACK n
+[ */
 
 public enum Code {
-    CHAR,    // Single unicode character as a number, e.g. 13 or 0D
-    ACT;
+    EXTEND, // EXTEND n1 OP n2   where OP needs two-byte unsigned arg
+    RULE,   // Entry point, argument is rule name
+    START,  // Initilize, push address of STOP, jump to <x>
+    STOP,   // End parsing
+    GO,     // skip forwards
+    BACK,   // skip backwards, negates its unsigned arg
 
-    RULE,    // x = y  ->  RULE framesize (followed by code for y)
-    ID;      // Used in generator, maybe obsolete.
+    EITHER, // x / y            EITHER n <x> OR <y>
     OR,
-    $AND,
-    $OPT,
-    $MANY,    // x*     ->  MAYBE &x MANY
-    $SOME,    // x+     ->  SOME &x THEN MAYBE &x MANY
-    $TRY,
-    $HAS,     // x&     ->  LOOK &x HAS
-    $NOT,     // x!     ->  LOOK &x NOT
-    $MARK,    // #e     ->  MARK e
-    $STRING,  // "ab"   ->  STRING 2 'a' 'b' (UTF-8 bytes)
-    $SET,     // 'ab'   ->  SET 2 'a' 'b' (ASCII only)
-    $RANGE,   // a..b   ->  RANGE m a n b (UTF-8)
-    $CAT,     // Nd     ->  CAT Nd
-    $TAG,     // %t     ->  TAG t
-    $DROP,    // @      ->  DROP
-    $ACT,     // @a     ->  ACT a
+    BOTH,   // x y              BOTH n <x> AND <y>
+    AND,
+    MAYBE,  // x? or x*         MAYBE OPT/MANY <x>
+    OPT,
+    MANY,
+    DO,     // x+               DO THEN MAYBE MANY <x>
+    THEN,
+    LOOK,   // [x] or x& or x!  LOOK TRY/HAS/NOT <x>
+    TRY,
+    HAS,
+    NOT,
 
-    $EITHER,  // x / y  ->  EITHER &x OR &y
-    $EITHERI, // x / y  ->  EITHERI OR &y (x)
-    $BOTH,    // x y    ->  BOTH &x AND &y
-    $REPEAT,  // x?     ->  MAYBE &x OPT
-    $LOOK,    // [x]    ->  LOOK &x TRY,  LOOK &x HAS,  LOOK &x NOT
-    $START,   // Entry point
-    $STOP,    // Exit point
-    $THEN,
-    $SWITCH,  // x / y  ->  SWITCH &x &y ch (UTF-8 bytes)
-    $ORI,     // x / y  ->  EITHER &x OR0 (y)
-    $BOTHI,   // x y    ->  BOTH3 AND &y (x)
-    $ANDI,    // x y    ->  BOTH &x AND0 (y)
-    $REPEATI, // x?     ->  REPEAT1 ONCE (x)
-    $DOI,     // x+     ->  DO3 THEN REPEAT1 MANY (x)
-    $LOOKI,   // [x]    ->  LOOK1 TRY (x)
+    CHAR,    // One-byte character
+    SET,     // 'ab'   ->  SET 2 'a' 'b' (UTF-8)
+    STRING,  // "ab"   ->  STRING 2 'a' 'b' (UTF-8 byte sequence)
+    GE,      // "a".."z" -> GE m ... LE n ...
+    LE,      // on its own if left arg is ""
+    CAT,     // Nd     ->  CAT Nd
+    TAG,     // %t     ->  TAG t
+
+    MARK,    // #e     ->  MARK e
+    DROP,    // @      ->  DROP
+    ACT;     // @a     ->  ACT a
 
     public static void main(String[] args) { }
 }

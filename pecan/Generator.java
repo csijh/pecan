@@ -15,26 +15,26 @@ import static pecan.Node.Flag.*;
     id        Id          GO n    or    GOBACK n
     x / y     Or x y      EITHER n <x> OR <y>         (one byte length)
     x y       AND x y     BOTH n <x> AND <y>
-    x?        OPT x       MAYBE OPT <x>
+    x?        Opt x       MAYBE OPT <x>
     x*        MANY x      MAYBE MANY <x>
-    x+        SOME x      DO THEN MAYBE MANY <x>
+    x+        Some x      DO THEN MAYBE MANY <x>
     [x]       TRY x       LOOK TRY <x>
-    x&        HAS x       LOOK HAS <x>
-    x!        NOT x       LOOK NOT <x>
-    @a        ACT a       ACT n                       (one byte index)
-    @         DROP        DROP
-    #e        MARK e      MARK n
-    10        CHAR 10     CHAR 10                     (ascii)
-    128       CHAR 128    STRING n "utf-8"
-    "a"       STRING "a"  STRING n "bytes"
-    'a'       CHAR 'a'    CHAR 'a'                    (ascii)
-    "pi"      CHAR 'pi'   STRING n "pi"
-    'ab'      SET 'ab'    SET n "ab"
-    "a".."z"  RANGE...    GE n "a" LE n "z"
-    0.."m"    RANGE...    LE n "m"
-    Nd        CAT Nd      CAT Nd
-    %id       TAG id      TAG n
-    `+`       TAG +       TAG n
+    x&        Has x       LOOK HAS <x>
+    x!        Not x       LOOK NOT <x>
+    @a        Act a       ACT n                       (one byte index)
+    @         Drop        DROP
+    #e        Mark e      MARK n
+    10        Char 10     CHAR 10                     (ascii)
+    128       Char 128    STRING n "utf-8"
+    "a"       String "a"  STRING n "bytes"
+    'a'       Char 'a'    CHAR 'a'                    (ascii)
+    "pi"      Char 'pi'   STRING n "pi"
+    'ab'      Set 'ab'    SET n "ab"
+    "a".."z"  Range...    GE n "a" LE n "z"
+    0.."m"    Range...    LE n "m"
+    Nd        Cat Nd      CAT Nd
+    %id       Tag id      TAG n
+    `+`       Tag +       TAG n
 
 By default, only first rule is defined as an entry point (in which case RULE id
 is left out). There is an option to ask for more entry points. The bytecode can
@@ -118,9 +118,9 @@ class Generator implements Testable {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
         rules = new String[size(root, Rule)];
-        tags = new String[size(root, TAG)];
-        markers = new String[size(root, MARK)];
-        actions = new String[size(root, ACT)];
+        tags = new String[size(root, Tag)];
+        markers = new String[size(root, Mark)];
+        actions = new String[size(root, Act)];
         arities = new int[actions.length];
         output = new StringBuilder();
         comment = new StringBuilder();
@@ -155,13 +155,13 @@ class Generator implements Testable {
         switch (node.op()) {
         case Rule: rules[node.value()] = node.text(); break;
         // TODO: `tag`
-        case TAG: tags[node.value()] = node.text().substring(1); break;
-        case MARK: markers[node.value()] = node.text().substring(1); break;
-        case ACT:
+        case Tag: tags[node.value()] = node.text().substring(1); break;
+        case Mark: markers[node.value()] = node.text().substring(1); break;
+        case Act:
             actions[node.value()] = node.ref().text();
             arities[node.value()] = node.ref().value();
             break;
-        case STRING: case SET: case CHAR: case RANGE: case CAT: case NOT:
+        case String: case Set: case Char: case Range: case Cat: case Not:
             break;
         }
     }
@@ -179,12 +179,12 @@ class Generator implements Testable {
             return Math.max(2 + frame(node.left()), frame(node.right()));
         case And:
             return Math.max(1 + frame(node.left()), frame(node.right()));
-        case OPT: case MANY: case SOME:
+        case Opt: case Many: case Some:
             return 2 + frame(node.left());
-        case NOT: case TRY: case HAS:
+        case Not: case Try: case Has:
             return 3 + frame(node.left());
-        case TAG: case ACT: case MARK:
-        case STRING: case SET: case CHAR: case RANGE: case CAT: case DROP:
+        case Tag: case Act: case Mark:
+        case String: case Set: case Char: case Range: case Cat: case Drop:
             return 0;
         default: throw new Error("Type " + node.op() + " unimplemented");
         }
@@ -230,17 +230,17 @@ class Generator implements Testable {
             add(AND);
             encode(node.right());
             break;
-        case OPT:  // x?  ->  MAYBE OPT x
+        case Opt:  // x?  ->  MAYBE OPT x
             add(MAYBE);
             add(OPT);
             encode(node.left());
             break;
-        case MANY: // x*  ->  MAYBE MANY x
+        case Many: // x*  ->  MAYBE MANY x
             add(MAYBE);
             add(MANY);
             encode(node.left());
             break;
-        case SOME: // x+  ->  DO THEN MAYBE MANY <x>
+        case Some: // x+  ->  DO THEN MAYBE MANY <x>
             add(DO);
             add(THEN);
             add(MAYBE);
@@ -250,23 +250,23 @@ class Generator implements Testable {
         x
 
 /*
-[x]       TRY x       LOOK TRY <x>
-x&        HAS x       LOOK HAS <x>
-x!        NOT x       LOOK NOT <x>
-@a        ACT a       ACT n                       (one byte index)
-@         DROP        DROP
-#e        MARK e      MARK n
-10        CHAR 10     CHAR 10                     (ascii)
-128       CHAR 128    STRING n "utf-8"
-"a"       STRING "a"  STRING n "bytes"
-'a'       CHAR 'a'    CHAR 'a'                    (ascii)
-"pi"      CHAR 'pi'   STRING n "pi"
-'ab'      SET 'ab'    SET n "ab"
-"a".."z"  RANGE...    GE n "a" LE n "z"
-0.."m"    RANGE...    LE n "m"
-Nd        CAT Nd      CAT Nd
-%id       TAG id      TAG n
-`+`       TAG +       TAG n
+[x]       Try x       LOOK TRY <x>
+x&        Has x       LOOK HAS <x>
+x!        Not x       LOOK NOT <x>
+@a        Act a       ACT n                       (one byte index)
+@         Drop        DROP
+#e        Mark e      MARK n
+10        Char 10     CHAR 10                     (ascii)
+128       Char 128    STRING n "utf-8"
+"a"       String "a"  STRING n "bytes"
+'a'       Char 'a'    CHAR 'a'                    (ascii)
+"pi"      Char 'pi'   STRING n "pi"
+'ab'      Set 'ab'    SET n "ab"
+"a".."z"  Range...    GE n "a" LE n "z"
+0.."m"    Range...    LE n "m"
+Nd        Cat Nd      CAT Nd
+%id       Tag id      TAG n
+`+`       Tag +       TAG n
         case TRY: // [x]  ->  LOOK TRY x
             if (! node.has(AA)) {
                 add(LOOK);
@@ -279,52 +279,52 @@ Nd        CAT Nd      CAT Nd
                 add(TRY);
             }
             break;
-        case HAS: // x&  ->  LOOK HAS x
+        case Has: // x&  ->  LOOK HAS x
             add(LOOK);
             add(HAS);
             break;
-        case NOT: // x!  ->  LOOK NOT x
+        case Not: // x!  ->  LOOK NOT x
             add(LOOK);
             add(NOT);
             break;
-        case MARK:  // #e  ->  MARK #e
+        case Mark:  // #e  ->  MARK #e
             add(MARK);
             arg2(node.value());
             break;
-        case TAG:   // %a  ->  TAG a
+        case Tag:   // %a  ->  TAG a
             add(TAG);
             arg1((byte)node.value());
             break;
-        case CHAR:  // c  ->  STRING n c
+        case Char:  // c  ->  STRING n c
             text = text(node);
             add(STRING);
             string(text);
             break;
-        case STRING: // "s"  ->  STRING n s
+        case String: // "s"  ->  STRING n s
             text = text(node);
             add(STRING);
             string(text);
             break;
-        case SET:  // 's'  ->  SET n s
+        case Set:  // 's'  ->  SET n s
             text = text(node);
             add(SET);
             string(text);
             break;
-        case RANGE:  // RANGE "c1" "c2"
+        case Range:  // RANGE "c1" "c2"
             add(RANGE);
             string(text(node.left()));
             string(text(node.right()));
             // Don't generate any more code for the child nodes
             endLine();
             return;
-        case CAT:    // CAT c
+        case Cat:    // CAT c
             add(CAT); arg1((byte)node.value());
             break;
-        case DROP:  // @ -> DROP
+        case Drop:  // @ -> DROP
             add(DROP);
             break;
             */
-        case ACT:   // ACT a
+        case Act:   // ACT a
             arg = node.value();
             add(ACT, arg);
             break;
@@ -339,11 +339,11 @@ Nd        CAT Nd      CAT Nd
     // Find the character array for a char/string/set node
     char[] text(Node node) {
         switch (node.op()) {
-        case CHAR:
+        case Char:
             int base = node.text().startsWith("0") ? 16 : 10;
             int ch = Integer.parseInt(node.text(), base);
             return Character.toChars(ch);
-        case STRING: case SET:
+        case String: case Set:
             String s = node.text();
             s = s.substring(1, s.length() - 1);
             return s.toCharArray();

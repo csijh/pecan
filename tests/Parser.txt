@@ -154,16 +154,16 @@ x = 'abc
 x = "a"
 ----------
 Rule x
-  STRING "a"
+  String "a"
 ==========
 // Two rules
 x = "a"
 y = "b"
 ----------
 Rule x
-  STRING "a"
+  String "a"
 Rule y
-  STRING "b"
+  String "b"
 ==========
 // Expecting equals
 x
@@ -212,7 +212,7 @@ x = @3
 x = %x
 ----------
 Rule x
-  TAG %x
+  Tag %x
 ==========
 // Bad marker
 x = 'x' #3
@@ -244,7 +244,7 @@ Rule x
 Rule x
   And (...
     Id a
-    TRY [...
+    Try [...
       Id c
 Rule x
   Or y...
@@ -254,7 +254,7 @@ Rule x
   And y (a...
     Id y
     Id a
-    TRY [c...
+    Try [c...
       Id c
 ==========
 // Brackets
@@ -267,7 +267,7 @@ Rule exp
     Id end
 Rule exp
   And [exp] end
-    TRY [exp]
+    Try [exp]
       Id exp
     Id end
 ==========
@@ -276,11 +276,11 @@ exp = exp* exp+ exp? end
 ----------
 Rule exp
   And exp* exp+ exp? end
-    MANY exp*
+    Many exp*
       Id exp
-    SOME exp+
+    Some exp+
       Id exp
-    OPT exp?
+    Opt exp?
       Id exp
     Id end
 ==========
@@ -295,52 +295,52 @@ digit = '0123456789'
 Rule exp
   And term ("+" term @2add / "-" term @2sub)* ''
     Id term
-    MANY ("+" term @2add / "-" term @2sub)*
+    Many ("+" term @2add / "-" term @2sub)*
       Or "+" term @2add / "-" term @2sub
         And "+" term @2add
-          STRING "+"
+          String "+"
           Id term
-          ACT @2add
+          Act @2add
         And "-" term @2sub
-          STRING "-"
+          String "-"
           Id term
-          ACT @2sub
-    SET ''
+          Act @2sub
+    Set ''
 Rule term
   And factor ("*" factor @2mul / "/" factor @2div)*
     Id factor
-    MANY ("*" factor @2mul / "/" factor @2div)*
+    Many ("*" factor @2mul / "/" factor @2div)*
       Or "*" factor @2mul / "/" factor @2div
         And "*" factor @2mul
-          STRING "*"
+          String "*"
           Id factor
-          ACT @2mul
+          Act @2mul
         And "/" factor @2div
-          STRING "/"
+          String "/"
           Id factor
-          ACT @2div
+          Act @2div
 Rule factor
   And primary ("^" factor @2pow)?
     Id primary
-    OPT ("^" factor @2pow)?
+    Opt ("^" factor @2pow)?
       And "^" factor @2pow
-        STRING "^"
+        String "^"
         Id factor
-        ACT @2pow
+        Act @2pow
 Rule primary
   Or number / "(" exp ")"
     Id number
     And "(" exp ")"
-      STRING "("
+      String "("
       Id exp
-      STRING ")"
+      String ")"
 Rule number
   And digit+ @number
-    SOME digit+
+    Some digit+
       Id digit
-    ACT @number
+    Act @number
 Rule digit
-  SET '0123456789'
+  Set '0123456789'
 ==========
 // Error markers
 assignment = left #equals "=" right
@@ -348,8 +348,8 @@ assignment = left #equals "=" right
 Rule assignment
   And left #equals "=" right
     Id left
-    MARK #equals
-    STRING "="
+    Mark #equals
+    String "="
     Id right
 ==========
 // Error on line 3
@@ -366,7 +366,7 @@ tokens = skip token*
 Rule tokens
   And skip token*
     Id skip
-    MANY token*
+    Many token*
       Id token
 ==========
 // Next line of pecan scanner
@@ -390,12 +390,12 @@ Rule number
   And ('0' hex* / digit+) @NUMBER skip1
     Or '0' hex* / digit+
       And '0' hex*
-        SET '0'
-        MANY hex*
+        Set '0'
+        Many hex*
           Id hex
-      SOME digit+
+      Some digit+
         Id digit
-    ACT @NUMBER
+    Act @NUMBER
     Id skip1
 ==========
 // Next line of pecan scanner
@@ -404,57 +404,57 @@ id = name @Id skip1
 Rule id
   And name @Id skip1
     Id name
-    ACT @Id
+    Act @Id
     Id skip1
 ==========
 // Next line of pecan scanner
-string = '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
+string = '"' ('"'! visible)* #BADString '"' @String skip1
 ----------
 Rule string
-  And '"' ('"'! visible)* #BADSTRING '"' @STRING skip1
-    SET '"'
-    MANY ('"'! visible)*
+  And '"' ('"'! visible)* #BADString '"' @String skip1
+    Set '"'
+    Many ('"'! visible)*
       And '"'! visible
-        NOT '"'!
-          SET '"'
+        Not '"'!
+          Set '"'
         Id visible
-    MARK #BADSTRING
-    SET '"'
-    ACT @STRING
+    Mark #BADString
+    Set '"'
+    Act @String
     Id skip1
 ==========
 // Next line of pecan scanner
-set = "'" ("'"! visible)* #BADSET "'" @SET skip1
+set = "'" ("'"! visible)* #BADSet "'" @Set skip1
 ----------
 Rule set
-  And "'" ("'"! visible)* #BADSET "'" @SET skip1
-    STRING "'"
-    MANY ("'"! visible)*
+  And "'" ("'"! visible)* #BADSet "'" @Set skip1
+    String "'"
+    Many ("'"! visible)*
       And "'"! visible
-        NOT "'"!
-          STRING "'"
+        Not "'"!
+          String "'"
         Id visible
-    MARK #BADSET
-    STRING "'"
-    ACT @SET
+    Mark #BADSet
+    String "'"
+    Act @Set
     Id skip1
 ==========
 // Next line of pecan scanner
-action = "@" (digit+ name @ACT / name @READ / @DROP) skip1
+action = "@" (digit+ name @Act / name @READ / @Drop) skip1
 ----------
 Rule action
-  And "@" (digit+ name @ACT / name @READ / @DROP) skip1
-    STRING "@"
-    Or digit+ name @ACT / name @READ / @DROP
-      And digit+ name @ACT
-        SOME digit+
+  And "@" (digit+ name @Act / name @READ / @Drop) skip1
+    String "@"
+    Or digit+ name @Act / name @READ / @Drop
+      And digit+ name @Act
+        Some digit+
           Id digit
         Id name
-        ACT @ACT
+        Act @Act
       And name @READ
         Id name
-        ACT @READ
-      ACT @DROP
+        Act @READ
+      Act @Drop
     Id skip1
 ==========
 // Next line of pecan scanner
@@ -462,9 +462,9 @@ handler = "#" name @HAndLE skip1
 ----------
 Rule handler
   And "#" name @HAndLE skip1
-    STRING "#"
+    String "#"
     Id name
-    ACT @HAndLE
+    Act @HAndLE
     Id skip1
 ==========
 // Next line of pecan scanner
@@ -473,64 +473,64 @@ key
 / "+" @PL skip1 / "*" @ST skip1 / "(" @RB skip2 / ")" @RE skip1
 / "[" @SB skip2 / "]" @SE skip1 / "<" @AB skip2 / ">" @AE skip1
 / ".." @DD skip2
-/ #BADSET Uc skip1
+/ #BADSet Uc skip1
 ----------
 Rule key
   Or "!" @EM skip1 / "=" @Rule skip2 / "/" @SL skip2 / "?" @QM skip1...
     And "!" @EM skip1
-      STRING "!"
-      ACT @EM
+      String "!"
+      Act @EM
       Id skip1
     And "=" @Rule skip2
-      STRING "="
-      ACT @Rule
+      String "="
+      Act @Rule
       Id skip2
     And "/" @SL skip2
-      STRING "/"
-      ACT @SL
+      String "/"
+      Act @SL
       Id skip2
     And "?" @QM skip1
-      STRING "?"
-      ACT @QM
+      String "?"
+      Act @QM
       Id skip1
     And "+" @PL skip1
-      STRING "+"
-      ACT @PL
+      String "+"
+      Act @PL
       Id skip1
     And "*" @ST skip1
-      STRING "*"
-      ACT @ST
+      String "*"
+      Act @ST
       Id skip1
     And "(" @RB skip2
-      STRING "("
-      ACT @RB
+      String "("
+      Act @RB
       Id skip2
     And ")" @RE skip1
-      STRING ")"
-      ACT @RE
+      String ")"
+      Act @RE
       Id skip1
     And "[" @SB skip2
-      STRING "["
-      ACT @SB
+      String "["
+      Act @SB
       Id skip2
     And "]" @SE skip1
-      STRING "]"
-      ACT @SE
+      String "]"
+      Act @SE
       Id skip1
     And "<" @AB skip2
-      STRING "<"
-      ACT @AB
+      String "<"
+      Act @AB
       Id skip2
     And ">" @AE skip1
-      STRING ">"
-      ACT @AE
+      String ">"
+      Act @AE
       Id skip1
     And ".." @DD skip2
-      STRING ".."
-      ACT @DD
+      String ".."
+      Act @DD
       Id skip2
-    And #BADSET Uc skip1
-      MARK #BADSET
+    And #BADSet Uc skip1
+      Mark #BADSet
       Id Uc
       Id skip1
 ==========
@@ -539,12 +539,12 @@ skip = (space / comment / newline)* @
 ----------
 Rule skip
   And (space / comment / newline)* @
-    MANY (space / comment / newline)*
+    Many (space / comment / newline)*
       Or space / comment / newline
         Id space
         Id comment
         Id newline
-    DROP @
+    Drop @
 ==========
 // Next line of pecan scanner
 skip1 = space @ (newline ([space (letter / newline)]& @NL)? skip)?
@@ -552,20 +552,20 @@ skip1 = space @ (newline ([space (letter / newline)]& @NL)? skip)?
 Rule skip1
   And space @ (newline ([space (letter / newline)]& @NL)? skip)?
     Id space
-    DROP @
-    OPT (newline ([space (letter / newline)]& @NL)? skip)?
+    Drop @
+    Opt (newline ([space (letter / newline)]& @NL)? skip)?
       And newline ([space (letter / newline)]& @NL)? skip
         Id newline
-        OPT ([space (letter / newline)]& @NL)?
+        Opt ([space (letter / newline)]& @NL)?
           And [space (letter / newline)]& @NL
-            HAS [space (letter / newline)]&
-              TRY [space (letter / newline)]
+            Has [space (letter / newline)]&
+              Try [space (letter / newline)]
                 And space (letter / newline)
                   Id space
                   Or letter / newline
                     Id letter
                     Id newline
-            ACT @NL
+            Act @NL
         Id skip
 ==========
 // Next line of pecan scanner
@@ -574,11 +574,11 @@ skip2 = space (newline space)? @
 Rule skip2
   And space (newline space)? @
     Id space
-    OPT (newline space)?
+    Opt (newline space)?
       And newline space
         Id newline
         Id space
-    DROP @
+    Drop @
 ==========
 // Next line of pecan scanner
 name = letter alpha*
@@ -586,7 +586,7 @@ name = letter alpha*
 Rule name
   And letter alpha*
     Id letter
-    MANY alpha*
+    Many alpha*
       Id alpha
 ==========
 // Next line of pecan scanner
@@ -595,12 +595,12 @@ hex = digit / 'A'..'F' / 'a'..'f'
 Rule hex
   Or digit / 'A'..'F' / 'a'..'f'
     Id digit
-    RANGE 'A'..'F'
-      SET 'A'
-      SET 'F'
-    RANGE 'a'..'f'
-      SET 'a'
-      SET 'f'
+    Range 'A'..'F'
+      Set 'A'
+      Set 'F'
+    Range 'a'..'f'
+      Set 'a'
+      Set 'f'
 ==========
 // Unicode letters and digits and numbers
 x = abc\960
@@ -610,11 +610,11 @@ z = 1114111 / 0ffff
 Rule x
   Id abc\960
 Rule y
-  CHAR 123\1636
+  Char 123\1636
 Rule z
   Or 1114111 / 0ffff
-    CHAR 1114111
-    CHAR 0ffff
+    Char 1114111
+    Char 0ffff
 ==========
 // Strings, character sets, unicode
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
@@ -623,14 +623,14 @@ pi = "\960"
 ----------
 Rule x
   And "abc" " !#$%^&*()_-=+[]`{};:'@#~"
-    STRING "abc"
-    STRING " !#$%^&*()_-=+[]`{};:'@#~"
+    String "abc"
+    String " !#$%^&*()_-=+[]`{};:'@#~"
 Rule y
   And 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
-    SET 'abc'
-    SET ' !#$%^&*()_-=+[]`{};:"@#~'
+    Set 'abc'
+    Set ' !#$%^&*()_-=+[]`{};:"@#~'
 Rule pi
-  STRING "\960"
+  String "\960"
 ==========
 // Actions, tests, numbers and errors
 x = %x @0x @1x @ @x
@@ -640,29 +640,29 @@ u = #err ''
 ----------
 Rule x
   And %x @0x @1x @ @x
-    TAG %x
-    ACT @0x
-    ACT @1x
-    DROP @
-    ACT @x
+    Tag %x
+    Act @0x
+    Act @1x
+    Drop @
+    Act @x
 Rule y
   And 0 1 2 10 12 123
-    CHAR 0
-    CHAR 1
-    CHAR 2
-    CHAR 10
-    CHAR 12
-    CHAR 123
+    Char 0
+    Char 1
+    Char 2
+    Char 10
+    Char 12
+    Char 123
 Rule z
   And 0ffff 01ABCDEF23 0FG
-    CHAR 0ffff
-    CHAR 01ABCDEF23
-    CHAR 0F
+    Char 0ffff
+    Char 01ABCDEF23
+    Char 0F
     Id G
 Rule u
   And #err ''
-    MARK #err
-    SET ''
+    Mark #err
+    Set ''
 ==========
 // Brackets and operators
 x = (y / z) / y?
@@ -675,27 +675,27 @@ Rule x
     Or y / z
       Id y
       Id z
-    OPT y?
+    Opt y?
       Id y
 Rule x
   Or (y/z)+ / y*
-    SOME (y/z)+
+    Some (y/z)+
       Or y/z
         Id y
         Id z
-    MANY y*
+    Many y*
       Id y
 Rule x
   Or y z w ! / y
     And y z w !
       Id y
       Id z
-      NOT w !
+      Not w !
         Id w
     Id y
 Rule x
   Or [y z] / w
-    TRY [y z]
+    Try [y z]
       And y z
         Id y
         Id z
@@ -705,9 +705,9 @@ Rule x
 x = 'a'..'z'
 ----------
 Rule x
-  RANGE 'a'..'z'
-    SET 'a'
-    SET 'z'
+  Range 'a'..'z'
+    Set 'a'
+    Set 'z'
 ==========
 // Comments before and after continuation lines
 x =
@@ -736,14 +736,14 @@ range = "\55422\56861" / '\55422\56861'
 ----------
 Rule range
   Or "\195101" / '\195101'
-    STRING "\195101"
-    SET '\195101'
+    String "\195101"
+    Set '\195101'
 ==========
 // Angle brackets no longer accepted
-set = "'" (<"'"> visible)* ("'" @SET / #BADSET) skip1
+set = "'" (<"'"> visible)* ("'" @Set / #BADSet) skip1
 ----------
 Error on line 2: expecting expression
-set = "'" (<"'"> visible)* ("'" @SET / #BADSET) skip1
+set = "'" (<"'"> visible)* ("'" @Set / #BADSet) skip1
            ^
 ==========
 // Check NEL line endings
@@ -774,8 +774,8 @@ end = #end Uc!
 ----------
 Rule end
   And #end Uc!
-    MARK #end
-    NOT Uc!
+    Mark #end
+    Not Uc!
       Id Uc
 ==========
 // Underscore
@@ -794,19 +794,19 @@ Rule a-b
 x = `++`
 ----------
 Rule x
-  TAG `++`
+  Tag `++`
 ==========
 // End-of-file tags
 end1 = %
 end2 = ``
 ----------
 Rule end1
-  TAG %
+  Tag %
 Rule end2
-  TAG ``
+  Tag ``
 ==========
 // Backslash in quotes
 bs = '\\'
 ----------
 Rule bs
-  SET '\\'
+  Set '\\'

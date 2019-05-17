@@ -2,21 +2,29 @@
 
 typedef unsigned char byte;
 
-enum op { START, STOP, GO, EITHER, OR };
+enum op { START, STOP, GO, LE, GE, EITHER, OR, ACT };
+enum action { number };
+static byte code[] = {
+    START, 8, GE, 1, 48, LE, 1, 57, ACT, number, STOP
+};
 
-static int arg0, in, out, saveIn, saveOut, ok;
+static int in, out, saveIn, saveOut, ok;
 static byte *pc;
-static byte code[];
 
-static inline void arg() { return arg0 + *pc++; }
+static inline int arg() { return *pc++; }
+static inline int sarg() { return (signed char) *pc++; }
+static inline void arg2() { return (*pc++ << 8) + *pc++; }
+static inline void sarg2() { return (((signed char) *pc++) << 8) + *pc++; }
+
+
 static inline void ret() { ps = pop(); }
 
 static inline void start() {
     push(pc + arg());
 }
 
-static inline void go() {
-    pc = code + arg();
+static inline void go(int arg) {
+    pc = pc + arg;
 }
 
 static inline void either() {
@@ -64,6 +72,41 @@ static inline void many() {
             ok = true;
         }
         ret();
+    }
+}
+
+// If succeed, continue with le().
+static inline void ge() {
+    pc++; //assume one-byte string
+    char ch = *pc++;
+    if (input[in] >= ch) {
+        ok = true;
+        in++;
+    }
+    else {
+        ok = false;
+        ret();
+    }
+}
+
+static inline void le() {
+    pc++; //assume one-byte string
+    char ch = *pc++;
+    if (input[in] <= ch) {
+        ok = true;
+        in++;
+    }
+    else ok = false;
+    ret();
+}
+
+int parse() {
+    switch(*pc++) {
+case START: push(pc + arg()); break;
+case STOP: return output[0]; break;
+case GE: ge(); break;
+case LE: le(); break;
+case ACT: act(); break;
     }
 }
 /*

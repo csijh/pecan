@@ -80,21 +80,21 @@ class Binder implements Testable {
             node.value(rules.size());
             rules.put(name, node);
             break;
-        case TAG:
+        case Tag:
             name = node.text().substring(1);
             defined = tags.get(name) != null;
             if (! defined) tags.put(name, 0);
             break;
         case Id:
             name = node.text();
-            if (cats.contains(name)) node.op(CAT);
+            if (cats.contains(name)) node.op(Cat);
             break;
-        case MARK:
+        case Mark:
             name = node.text().substring(1);
             defined = markers.get(name) != null;
             if (! defined) markers.put(name, 0);
             break;
-        case ACT:
+        case Act:
             name = node.text();
             int p = 1;
             while (Character.isDigit(name.charAt(p))) p++;
@@ -144,17 +144,17 @@ class Binder implements Testable {
         if (node.left() != null) scan(node.left());
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
-        case Rule: case And: case Or: case OPT: case MANY:
-        case SOME: case DROP: case HAS: case NOT: case TRY: break;
+        case Rule: case And: case Or: case Opt: case Many:
+        case Some: case Drop: case Has: case Not: case Try: break;
         case Id: bindId(node); break;
-        case CHAR: bindChar(node); break;
-        case STRING: bindString(node); break;
-        case SET: bindSet(node); break;
-        case RANGE: bindRange(node); break;
-        case CAT: bindCat(node); break;
-        case MARK: bindMark(node); break;
-        case ACT: bindAct(node); break;
-        case TAG: bindTag(node); break;
+        case Char: bindChar(node); break;
+        case String: bindString(node); break;
+        case Set: bindSet(node); break;
+        case Range: bindRange(node); break;
+        case Cat: bindCat(node); break;
+        case Mark: bindMark(node); break;
+        case Act: bindAct(node); break;
+        case Tag: bindTag(node); break;
         default: throw new Error("Type " + node.op() + " not implemented");
         }
     }
@@ -180,16 +180,16 @@ class Binder implements Testable {
             if (node.ref().has(TextInput)) node.set(TextInput);
             if (node.ref().has(TokenInput)) node.set(TokenInput);
             break;
-        case TAG:
+        case Tag:
             node.set(TokenInput);
             break;
-        case CHAR: case RANGE: case CAT:
+        case Char: case Range: case Cat:
             node.set(TextInput);
             break;
-        case STRING:
+        case String:
             if (! node.text().equals("\"\"")) node.set(TextInput);
             break;
-        case SET:
+        case Set:
             if (! node.text().equals("''")) node.set(TextInput);
             break;
         default: break;
