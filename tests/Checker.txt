@@ -2,45 +2,45 @@
 // Empty string: succeeds without progressing
 x = ""
 ----------
-RULE x 1000
+Rule x 1000
   STRING "" 1000
 ==========
 // Empty set: fails without progressing
 x = ''
 ----------
-RULE x 0010
+Rule x 0010
   SET '' 0010
 ==========
 // Numerical character: succeeds and progresses or fails without progressing
 x = 42
 ----------
-RULE x 0110
+Rule x 0110
   CHAR 42 0110
 ==========
 // String: SP or FN
 x = "a"
 ----------
-RULE x 0110
+Rule x 0110
   STRING "a" 0110
 ==========
 // Set: SP or FN
 x = 'a'
 ----------
-RULE x 0110
+Rule x 0110
   SET 'a' 0110
 ==========
 // Empty string then empty string: SN
 x = "" ""
 ----------
-RULE x 1000
-  AND "" "" 1000
+Rule x 1000
+  And "" "" 1000
     STRING "" 1000
     STRING "" 1000
 ==========
 // Normal rule without recursion
 x = 'a'
 ----------
-RULE x 0110
+Rule x 0110
   SET 'a' 0110
 ==========
 // Simple left recursive rule
@@ -89,8 +89,8 @@ x = [%a] 'b'
 // Try: SP or FN or FP
 x = [%a] %b
 ----------
-RULE x 0111
-  AND [%a] %b 0111
+Rule x 0111
+  And [%a] %b 0111
     TRY [%a] 0110
       TAG %a 0110
     TAG %b 0110
@@ -98,8 +98,8 @@ RULE x 0111
 // Positive lookahead: SP or FN
 x = (%a)& %b
 ----------
-RULE x 0110
-  AND (%a)& %b 0110
+Rule x 0110
+  And (%a)& %b 0110
     HAS (%a)& 1010
       TAG %a 0110
     TAG %b 0110
@@ -107,8 +107,8 @@ RULE x 0110
 // Negative lookahead: SP or FN
 x = (%a)! %b
 ----------
-RULE x 0110
-  AND (%a)! %b 0110
+Rule x 0110
+  And (%a)! %b 0110
     NOT (%a)! 1010
       TAG %a 0110
     TAG %b 0110
@@ -116,9 +116,9 @@ RULE x 0110
 // Action on left of choice (legal in Pecan 5)
 x = @a 'a' / 'b'
 ----------
-RULE x 0110
-  OR @a 'a' / 'b' 0110
-    AND @a 'a' 0110
+Rule x 0110
+  Or @a 'a' / 'b' 0110
+    And @a 'a' 0110
       ACT @a 1000
       SET 'a' 0110
     SET 'b' 0110
@@ -136,47 +136,47 @@ term = factor ('*' factor @2mul / '/' factor @2div)*
 factor = primary ('^' factor @2pow)?
 primary = 'number' @number / '(' exp ')'
 ----------
-RULE exp 0111
-  AND term ('+' term @2add / '-' term @2sub)* 'eof' 0111
-    ID term 0111
+Rule exp 0111
+  And term ('+' term @2add / '-' term @2sub)* 'eof' 0111
+    Id term 0111
     MANY ('+' term @2add / '-' term @2sub)* 1101
-      OR '+' term @2add / '-' term @2sub 0111
-        AND '+' term @2add 0111
+      Or '+' term @2add / '-' term @2sub 0111
+        And '+' term @2add 0111
           SET '+' 0110
-          ID term 0111
+          Id term 0111
           ACT @2add 1000
-        AND '-' term @2sub 0111
+        And '-' term @2sub 0111
           SET '-' 0110
-          ID term 0111
+          Id term 0111
           ACT @2sub 1000
     SET 'eof' 0110
-RULE term 0111
-  AND factor ('*' factor @2mul / '/' factor @2div)* 0111
-    ID factor 0111
+Rule term 0111
+  And factor ('*' factor @2mul / '/' factor @2div)* 0111
+    Id factor 0111
     MANY ('*' factor @2mul / '/' factor @2div)* 1101
-      OR '*' factor @2mul / '/' factor @2div 0111
-        AND '*' factor @2mul 0111
+      Or '*' factor @2mul / '/' factor @2div 0111
+        And '*' factor @2mul 0111
           SET '*' 0110
-          ID factor 0111
+          Id factor 0111
           ACT @2mul 1000
-        AND '/' factor @2div 0111
+        And '/' factor @2div 0111
           SET '/' 0110
-          ID factor 0111
+          Id factor 0111
           ACT @2div 1000
-RULE factor 0111
-  AND primary ('^' factor @2pow)? 0111
-    ID primary 0111
+Rule factor 0111
+  And primary ('^' factor @2pow)? 0111
+    Id primary 0111
     OPT ('^' factor @2pow)? 1101
-      AND '^' factor @2pow 0111
+      And '^' factor @2pow 0111
         SET '^' 0110
-        ID factor 0111
+        Id factor 0111
         ACT @2pow 1000
-RULE primary 0111
-  OR 'number' @number / '(' exp ')' 0111
-    AND 'number' @number 0110
+Rule primary 0111
+  Or 'number' @number / '(' exp ')' 0111
+    And 'number' @number 0110
       SET 'number' 0110
       ACT @number 1000
-    AND '(' exp ')' 0111
+    And '(' exp ')' 0111
       SET '(' 0110
-      ID exp 0111
+      Id exp 0111
       SET ')' 0110

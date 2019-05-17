@@ -109,14 +109,15 @@ features:</p>
 <p>The previous version of Pecan was 0.4. Changes are:</p>
 
 <ul>
-<li>a rule may produce any fixed number of outputs</li>
 <li>actions are now allowed at the start of a left hand choice</li>
 <li>actions are delayed in case they need to be discarded</li>
 <li>error markers are no longer postfix</li>
+<li>the range notation now supports strings</li>
 <li>string tags use double quotes instead of backquotes</li>
 <li>string tags have definitions to give them names</li>
-<li>testing of rules within a grammar is supported</li>
-<li>testing of one file from within another is supported</li>
+<li>separate grammar and test files are supported</li>
+<li>individual rules within a grammar can be tested</li>
+<li>one test file can be called from within another</li>
 <li>parser generation is via bytecode</li>
 </ul>
 
@@ -523,8 +524,8 @@ pi = "&#960;"
 the input in sequence, i.e. it is equivalent to <code>["i" "n" "t"]</code>. The
 square brackets indicate that if a string matches only partially, the input
 position returns to the beginning of the string, and other alternatives can be
-tried. Any Unicode characters can be used in a string, since grammars are
-assumed to use UTF-8.</p>
+tried. Any Unicode characters can be used in a string, using the UTF-8 encoding
+in the grammar file.</p>
 
 <p>Single quotes indicate a set of alternative characters, any one of which can
 be matched. For example:</p>
@@ -575,19 +576,6 @@ code is in hexadecimal, using <code>a</code> to <code>f</code> or
 newline = 0d? 0a
 </pre>
 
-<p>A set of characters can be specified using a Unicode range. For
-example:</p>
-
-<pre>digit = '0'..'9'
-letter = 'a'..'z' / 'A'..'Z'
-visible = ' '..'~'
-ascii = 0..127
-</pre>
-
-<p>Each argument to the range operator <code>..</code> must be a single
-character (code point), represented using single quotes or double quotes or an
-integer.</p>
-
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
 No, Pc, Pd, Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided.
@@ -611,8 +599,30 @@ character. The rule for <code>visible</code> excludes character code points
 which are unassigned, private, surrogate, controls, or line or paragraph
 separators.</p>
 
-<p>The empty string <code>""</code> always succeeds, and the empty character
-set <code>''</code> always fails because it has no matchable characters:</p>
+<p>A set of characters can be specified using a range. For
+example:</p>
+
+<pre>digit = '0'..'9'
+letter = 'a'..'z' / 'A'..'Z'
+visible = ' '..'~'
+ascii = 0..127
+</pre>
+
+<p>Each argument to the range operator can be a single character specified using
+an integer or single quotes or a string. If an argument is a string, it is not
+limited to a single character.  For example:</p>
+
+<pre>keyword = ("break".."else") keyword12 / keyword34
+keyword12 = ("break".."catch") keyword1 / keyword2
+keyword34 = ("for".."static") keyword3 / keyword4
+keyword1 = "break" / "case" / "catch"
+keyword2 = "continue" / "default" / "do" / "else"
+keyword3 = "for" / "if" / "return" / "static"
+keyword4 = "switch" / "try" / "while"
+</pre>
+
+<p>The range <code>"break".."else"</code> matches if the input, regarded as a
+string, is lexicographically between the two argument strings, inclusive.</p>
 
 <pre>succeed = ""
 fail = ''

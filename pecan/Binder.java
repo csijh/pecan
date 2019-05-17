@@ -66,13 +66,13 @@ class Binder implements Testable {
     // For rules, set the value to the sequence number.
     // Convert ids which are category names into category nodes.
     // For actions, temporarily record the arity of each name.
-    // For actions, create an ID node representing the name and arity.
+    // For actions, create an Id node representing the name and arity.
     // Then for a duplicate action, check that the arity matches.
     private void gather(Node node) throws ParseException {
         String name;
         boolean defined;
         switch (node.op()) {
-        case RULE:
+        case Rule:
             name = node.text();
             if (cats.contains(name)) err(node, name + " is a unicode id");
             defined = rules.get(name) != null;
@@ -85,7 +85,7 @@ class Binder implements Testable {
             defined = tags.get(name) != null;
             if (! defined) tags.put(name, 0);
             break;
-        case ID:
+        case Id:
             name = node.text();
             if (cats.contains(name)) node.op(CAT);
             break;
@@ -102,7 +102,7 @@ class Binder implements Testable {
             if (p > 1) arity = Integer.parseInt(name.substring(1, p));
             name = name.substring(p);
             int s = node.start();
-            node.ref(new Node(ID, source, s+p, s+p + name.length()));
+            node.ref(new Node(Id, source, s+p, s+p + name.length()));
             node.ref().value(arity);
             defined = actions.get(name) != null;
             if (! defined) actions.put(name, arity);
@@ -144,9 +144,9 @@ class Binder implements Testable {
         if (node.left() != null) scan(node.left());
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
-        case RULE: case AND: case OR: case OPT: case MANY:
+        case Rule: case And: case Or: case OPT: case MANY:
         case SOME: case DROP: case HAS: case NOT: case TRY: break;
-        case ID: bindId(node); break;
+        case Id: bindId(node); break;
         case CHAR: bindChar(node); break;
         case STRING: bindString(node); break;
         case SET: bindSet(node); break;
@@ -176,7 +176,7 @@ class Binder implements Testable {
         if (xTxt || yTxt) node.set(TextInput);
         if (xTok || yTok) node.set(TokenInput);
         switch (node.op()) {
-        case ID:
+        case Id:
             if (node.ref().has(TextInput)) node.set(TextInput);
             if (node.ref().has(TokenInput)) node.set(TokenInput);
             break;
@@ -197,7 +197,7 @@ class Binder implements Testable {
         if (node.has(TextInput) && node.has(TokenInput)) {
             err(node, "there is both text and token input");
         }
-        if (node.op() == RULE && node.value() == 0) {
+        if (node.op() == Rule && node.value() == 0) {
             if (! node.has(TokenInput)) node.set(TextInput);
         }
     }

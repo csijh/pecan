@@ -13,13 +13,13 @@ x >c y         if next char > c, do x, else y
                (similar to a sparse switch statement in many compilers)
  */
 
-public enum Opcode {
+public enum Code {
     CHAR,    // Single unicode character as a number, e.g. 13 or 0D
     ACT;
 
-    $RULE,    // x = y  ->  RULE framesize (followed by code for y)
-    $ID;      // Used in generator, maybe obsolete.
-    $OR,
+    RULE,    // x = y  ->  RULE framesize (followed by code for y)
+    ID;      // Used in generator, maybe obsolete.
+    OR,
     $AND,
     $OPT,
     $MANY,    // x*     ->  MAYBE &x MANY

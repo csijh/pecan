@@ -65,7 +65,7 @@ class Parser implements Testable {
         if (! term()) return false;
         if (! infix('/')) return true;
         if (! expression()) err(in, in, "expecting expression");
-        doInfix(OR);
+        doInfix(Or);
         return true;
     }
 
@@ -73,7 +73,7 @@ class Parser implements Testable {
     private boolean term() throws ParseException {
         if (! factor()) return false;
         if (! term()) return true;
-        doInfix(AND);
+        doInfix(And);
         return true;
     }
 
@@ -110,7 +110,7 @@ class Parser implements Testable {
     private boolean id() throws ParseException {
         if (! letter()) return false;
         while (alpha()) { }
-        doName(ID);
+        doName(Id);
         gap();
         return true;
     }
@@ -477,7 +477,7 @@ class Parser implements Testable {
     private void doRule() {
         Node rhs = output[--out];
         Node lhs = output[--out];
-        Node eq = new Node(RULE, rhs, source, lhs.start(), lhs.end());
+        Node eq = new Node(Rule, rhs, source, lhs.start(), lhs.end());
         output[out++] = eq;
     }
 

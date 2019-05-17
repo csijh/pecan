@@ -108,12 +108,12 @@ class Analyser implements Test.Callable {
         switch (node.op()) {
         case DROP: case ACT: case MARK:
             break;
-        case RULE:
+        case Rule:
             add(node.FIRST(), x.FIRST());
             add(node.START(), x.START());
             add(x.FOLLOW(), node.FOLLOW());
             break;
-        case ID:
+        case Id:
             add(node.FIRST(), node.ref().FIRST());
             add(node.START(), node.ref().START());
             add(node.ref().FOLLOW(), node.FOLLOW());
@@ -164,7 +164,7 @@ class Analyser implements Test.Callable {
             add(node.START(), x.FIRST());
             add(node.START(), x.START());
             break;
-        case AND:
+        case And:
             boolean xSN = x.has(SN), ySN = y.has(SN);
             if (xSN) {
                 add(node.FIRST(), x.FIRST());
@@ -180,7 +180,7 @@ class Analyser implements Test.Callable {
             add(x.FOLLOW(), y.START());
             if (ySN) add(x.FOLLOW(), node.FOLLOW());
             break;
-        case OR:
+        case Or:
             add(node.FIRST(), x.FIRST());
             add(node.FIRST(), y.FIRST());
             addSub(node.START(), x.START(), y.FIRST());

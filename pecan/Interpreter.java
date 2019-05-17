@@ -117,14 +117,14 @@ public class Interpreter implements Testable {
         if (tracing && ! skipTrace) System.out.println(node.trace());
         skipTrace = false;
         switch(node.op()) {
-        case RULE:
+        case Rule:
             parse(node.left());
             break;
-        case ID:
+        case Id:
             skipTrace = true;
             parse(node.ref());
             break;
-        case OR:
+        case Or:
             saveIn = in;
             saveOut = out;
             parse(node.left());
@@ -132,7 +132,7 @@ public class Interpreter implements Testable {
             out = saveOut;
             parse(node.right());
             break;
-        case AND:
+        case And:
             parse(node.left());
             if (!ok) return;
             parse(node.right());
