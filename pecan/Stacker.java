@@ -87,16 +87,16 @@ class Stacker implements Testable {
             int arity = node.ref().value();
             nNet = 1-arity;
             break;
-        case ID:
+        case Id:
             nNet = node.ref().NET();
             break;
-        case RULE: case TRY:
+        case Rule: case TRY:
             nNet = xNet;
             break;
-        case AND:
+        case And:
             if (xNet != UNKNOWN && yNet != UNKNOWN) nNet = xNet + yNet;
             break;
-        case OR:
+        case Or:
             if (xNet != UNKNOWN) nNet = xNet;
             if (yNet != UNKNOWN) nNet = yNet;
             break;
@@ -116,7 +116,7 @@ class Stacker implements Testable {
             err(node, "unable to calculate number of output items produced");
         }
         switch(node.op()) {
-        case OR:
+        case Or:
             if (xNet != UNKNOWN && yNet != UNKNOWN && xNet != yNet) {
                 err(node, "choices produce unequal numbers of outputs");
             }
@@ -151,16 +151,16 @@ class Stacker implements Testable {
             int arity = node.ref().value();
             nLow = -arity;
             break;
-        case ID:
+        case Id:
             nLow = node.ref().LOW();
             break;
-        case RULE:
+        case Rule:
             nLow = xLow;
             break;
-        case AND:
+        case And:
             nLow = Math.min(xLow, x.NET() + yLow);
             break;
-        case OR:
+        case Or:
             nLow = Math.min(xLow, yLow);
             break;
         case SOME: case MANY: case OPT:

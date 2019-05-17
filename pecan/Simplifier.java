@@ -32,7 +32,7 @@ class Simplifier implements Test.Callable {
         return root;
     }
 
-    // Replace x+ by x x*. Make one copy of x an ID cross reference, so that
+    // Replace x+ by x x*. Make one copy of x an Id cross reference, so that
     // it remains a tree. Also, clear notes.
     private void expandSome(Node node) {
         if (node.left() != null) expandSome(node.left());
@@ -40,9 +40,9 @@ class Simplifier implements Test.Callable {
         /*
         if (node.op() == SOME) {
             Node x = node.left();
-            Node xid = new Node(ID, source, x.start(), x.end());
+            Node xid = new Node(Id, source, x.start(), x.end());
             xid.ref(x);
-            node.op(AND);
+            node.op(And);
             int s = node.start(), e = node.end();
             node.left(xid);
             node.right(new Node(MANY, x, source, s, e));
@@ -57,9 +57,9 @@ class Simplifier implements Test.Callable {
         if (node.right() != null) expandTry(node.right());
         if (node.op() == TRY && node.has(AA)) {
             Node x = node.left();
-            Node xid = new Node(ID, source, x.start(), x.end());
+            Node xid = new Node(Id, source, x.start(), x.end());
             xid.ref(x);
-            node.op(AND);
+            node.op(And);
             int s = node.start(), e = node.end();
             node.left(new Node(HAS, x, source, s, e));
             node.right(xid);
@@ -88,17 +88,17 @@ class Simplifier implements Test.Callable {
         }
 
         // Remove an action altogether in simple cases.
-        if (op == AND && (x.op() == ACT || x.op() == DROP)) {
+        if (op == And && (x.op() == ACT || x.op() == DROP)) {
             return inactive(y);
         }
-        if (op == AND && (y.op() == ACT || y.op() == DROP)) {
+        if (op == And && (y.op() == ACT || y.op() == DROP)) {
             return inactive(x);
         }
 
-        // For an ID, make it refer to an inactive copy of its rule.
-        if (op == ID) {
+        // For an Id, make it refer to an inactive copy of its rule.
+        if (op == Id) {
             String name = "$" + node.text();
-            Node copy = new Node(ID, name, 0, name.length());
+            Node copy = new Node(Id, name, 0, name.length());
             copy.ref(inactiveRule(node.ref()));
             return copy;
         }
@@ -122,7 +122,7 @@ class Simplifier implements Test.Callable {
         // Make a copy, insert it, and return it.
         String name = "$" + node.text();
         Node rhs = inactive(node.left());
-        Node copy = new Node(RULE, rhs, next, name, 0, name.length());
+        Node copy = new Node(Rule, rhs, next, name, 0, name.length());
         node.right(copy);
         return copy;
     }

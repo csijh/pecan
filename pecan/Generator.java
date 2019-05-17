@@ -11,9 +11,9 @@ import static pecan.Node.Flag.*;
 
     source    node        bytecode
     ------------------------------
-    id = x    RULE x      START STOP <x>              (entry point)
-    id        ID          GO n
-    x / y     OR x y      EITHER n <x> OR <y>         (one byte length)
+    id = x    Rule x      RULE id START n <x> STOP    (entry point)
+    id        Id          GO n    or    GOBACK n
+    x / y     Or x y      EITHER n <x> OR <y>         (one byte length)
     x y       AND x y     BOTH n <x> AND <y>
     x?        OPT x       MAYBE OPT <x>
     x*        MANY x      MAYBE MANY <x>
@@ -36,6 +36,10 @@ import static pecan.Node.Flag.*;
     %id       TAG id      TAG n
     `+`       TAG +       TAG n
 
+By default, only first rule is defined as an entry point (in which case RULE id
+is left out). There is an option to ask for more entry points. The bytecode can
+be scanned to find entry points.
+
     case EXTEND:
         arg = *pc++;
         break;
@@ -45,10 +49,14 @@ import static pecan.Node.Flag.*;
         ...
         if (op != EXTEND) arg = 0;
 
+No args: START STOP Or AND MAYBE OPT MAYBE MANY DO THEN LOOK TRY HAS NOT DROP
+Arg: GO, EITHER, BOTH, ACT, MARK, CHAR, STRING, SET, GE, LE, CAT, TAG
+Arg: GO2, EITHER2, BOTH2, ACT2, MARK2, STRING2, SET2, GE2, LE2, CAT2, TAG2
+
 If a length of <x> is greater than 255, the translation is
 
-    EITHER n <x> OR <y>
-    EXTEND n1 EITHER n2 <x> OR <y>
+    EITHER n <x> Or <y>
+    EXTEND n1 EITHER n2 <x> Or <y>
 
 TODO: template-based generation, printf-like:
 <"%d", opcodes>     decimal text
@@ -71,7 +79,7 @@ Holds the code, plus:
 TODO: multiple entry points
 TODO: Standard versions:
 
-EITHER &OR BOTH &AND LE m AND <a/.../m> OR <n/.../z>    (switch)
+EITHER &Or BOTH &AND LE m AND <a/.../m> OR <n/.../z>    (switch)
 
 TODO: switch optimization from
 x = a / b / ... / z
@@ -81,8 +89,8 @@ could use a semi-range 0..'m'
 
 
 TODO: two versions of each opcode, immediate and remote
-EITHER &OR <x> OR...
-EITHERr &x OR...
+EITHER &Or <x> Or...
+EITHERr &x Or...
 This design allows each opcode to be either, independently. Use remote when
 x is an identifier, to avoid a GO opcode.
 */
@@ -109,7 +117,7 @@ class Generator implements Testable {
     String run(String grammar) throws ParseException {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
-        rules = new String[size(root, RULE)];
+        rules = new String[size(root, Rule)];
         tags = new String[size(root, TAG)];
         markers = new String[size(root, MARK)];
         actions = new String[size(root, ACT)];
@@ -145,7 +153,7 @@ class Generator implements Testable {
         if (node.left() != null) strings(node.left());
         if (node.right() != null) strings(node.right());
         switch (node.op()) {
-        case RULE: rules[node.value()] = node.text(); break;
+        case Rule: rules[node.value()] = node.text(); break;
         // TODO: `tag`
         case TAG: tags[node.value()] = node.text().substring(1); break;
         case MARK: markers[node.value()] = node.text().substring(1); break;
@@ -163,13 +171,13 @@ class Generator implements Testable {
     // rules into account.
     private int frame(Node node) {
         switch (node.op()) {
-        case RULE:
+        case Rule:
             return frame(node.left());
-        case ID:
+        case Id:
             return 0;
-        case OR:
+        case Or:
             return Math.max(2 + frame(node.left()), frame(node.right()));
-        case AND:
+        case And:
             return Math.max(1 + frame(node.left()), frame(node.right()));
         case OPT: case MANY: case SOME:
             return 2 + frame(node.left());
@@ -186,7 +194,7 @@ class Generator implements Testable {
     // Find the address of a node. If it is an identifier, use the address of
     // the rule it refers to.
     int address(Node node) {
-        if (node.op() == ID) node.PC(node.ref().PC());
+        if (node.op() == Id) node.PC(node.ref().PC());
         return node.PC();
     }
 */
@@ -199,23 +207,23 @@ class Generator implements Testable {
         if (output.length() > 0) output.append("\n");
         output.append("" + pc + ":");
         switch (node.op()) {
-        case RULE: // id = x  ->  START STOP <x>
+        case Rule: // id = x  ->  START STOP <x>
             add(START);
             add(STOP);
             encode(node.left());
             break;
-        case ID:   // id = x ... id  ->  GO &x
+        case Id:   // id = x ... id  ->  GO &x
             arg = node.ref().left().PC();
             add(GO, arg);
             break;
-        case OR:  // x / y  ->  EITHER n <x> OR <y>
+        case Or:  // x / y  ->  EITHER n <x> Or <y>
             arg = node.left().LEN();
             add(EITHER, arg);
             encode(node.left());
             add(OR);
             encode(node.right());
             break;
-        case AND: // x y  ->  BOTH n <x> AND <y>
+        case And: // x y  ->  BOTH n <x> AND <y>
             arg = node.left().LEN();
             add(BOTH, arg);
             encode(node.left());

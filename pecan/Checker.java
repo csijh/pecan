@@ -87,7 +87,7 @@ class Checker implements Testable {
             ySN = y.has(SN); ySP = y.has(SP); yFN = y.has(FN); yFP = y.has(FP);
         }
         switch (node.op()) {
-        case ID:
+        case Id:
             nSN = node.ref().has(SN);
             nSP = node.ref().has(SP);
             nFN = node.ref().has(FN);
@@ -111,19 +111,19 @@ class Checker implements Testable {
             if (! node.text().equals("''")) nSP = true;
             nFN = true;
             break;
-        case RULE:
+        case Rule:
             nSN = xSN;
             nSP = xSP;
             nFN = xFN;
             nFP = xFP;
             break;
-        case AND:
+        case And:
             nSN = xSN && ySN;
             nSP = xSP && ySP || xSP && ySN || xSN && ySP;
             nFN = xFN || xSN && yFN;
             nFP = xFP || xSN && yFP || xSP && yFN || xSP && yFP;
             break;
-        case OR:
+        case Or:
             nSN = xSN || xFN && ySN;
             nSP = xSP || xFN && ySP;
             nFN = xFN && yFN;
@@ -182,14 +182,14 @@ class Checker implements Testable {
         if (x != null) { valid(x); xWF = x.has(WF); }
         if (y != null) { valid(y); yWF = y.has(WF); }
         switch (node.op()) {
-        case ID:    nWF = node.ref().has(WF);           break;
-        case RULE: case OPT: case TRY: case HAS:
+        case Id:    nWF = node.ref().has(WF);           break;
+        case Rule: case OPT: case TRY: case HAS:
         case NOT:   nWF = xWF;                          break;
         case MARK: case CHAR: case RANGE: case CAT:
         case STRING: case SET: case DROP: case ACT:
         case TAG:   nWF = true;                         break;
-        case AND:   nWF = xWF && (yWF || ! x.has(SN));  break;
-        case OR:    nWF = xWF && yWF;                   break;
+        case And:   nWF = xWF && (yWF || ! x.has(SN));  break;
+        case Or:    nWF = xWF && yWF;                   break;
         case MANY:
         case SOME:  nWF = xWF && ! x.has(SN);           break;
         default:
@@ -227,20 +227,20 @@ class Checker implements Testable {
             nAA = true;
             nAB = true;
             break;
-        case RULE:
+        case Rule:
             nAA = xAA;
             nAB = xAB;
             break;
-        case ID:
+        case Id:
             nAA = node.ref().has(AA);
             nAB = node.ref().has(AB);
             break;
-        case AND:
+        case And:
             nAA = xAA || yAA;
             boolean xSN = node.left().has(SN);
             nAB = xAB || xSN && yAB;
             break;
-        case OR:
+        case Or:
             nAA = xAA || yAA;
 // x acts and fails w/o progrssing, then y doesn't progress
 //            nAB ||= xAB && xFN && (ySN || yFN);

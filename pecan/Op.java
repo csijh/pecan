@@ -6,10 +6,10 @@ package pecan;
 nodes. Later ops are used to generate bytecode. */
 
 public enum Op {
-    RULE,    // Definition, name = rhs, text is name, child is rhs
-    ID,      // Identifier, with cross-reference to its definition
-    OR,      // Choice, x / y, right associative
-    AND,     // Sequence, x y, right associative
+    Rule,    // Definition, name = rhs, text is name, child is rhs
+    Id,      // Identifier, with cross-reference to its definition
+    Or,      // Choice, x / y, right associative
+    And,     // Sequence, x y, right associative
     OPT,     // Optional, x?
     MANY,    // Zero or more, x*
     SOME,    // One or more, x+
@@ -35,7 +35,7 @@ public enum Op {
     DO,      // x+               DO THEN MAYBE MANY <x>
     THEN,
     LOOK,    // [x] or x& or x!  LOOK TRY/HAS/NOT <x>
-    RANGE,   // "a".."z"         RANGE "a" "z" (UTF-8)
+//    RANGE,   // "a".."z"         RANGE "a" "z" (UTF-8)
     LT,      // <"xyz"           LT "xyz"
     START,   // id = x           START STOP <x>
     STOP,
