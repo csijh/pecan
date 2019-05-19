@@ -53,8 +53,8 @@ Can we specify external enumerations? (@a = 3  OR  %id = 2)
 <li><a href="#sequences">Sequences</a></li>
 <li><a href="#repetition">Repetition</a></li>
 <li><a href="#lookahead">Lookahead</a></li>
-<li><a href="#characters">Characters</a></li>
-<li><a href="#tags">Tags</a></li>
+<li><a href="#text">Text</a></li>
+<li><a href="#tokens">Tokens</a></li>
 <li><a href="#actions">Actions</a></li>
 <li><a href="#errors">Errors</a></li>
 </ul>
@@ -511,9 +511,9 @@ are always discarded.</p>
 the possible context sensitive aspects of a language, which can only depend on
 actions outside of lookahead constructs.</p>
 
-<h3 id="characters">Characters</h3>
+<h3 id="text">Text</h3>
 
-<p>Character notations are used to match input text. Double quotes indicate a
+<p>Text notations are used to match input characters. Double quotes indicate a
 string of characters, which are matched in sequence. For example:</p>
 
 <pre>keyword = "int" / "if" / "while" / ...
@@ -608,21 +608,26 @@ visible = ' '..'~'
 ascii = 0..127
 </pre>
 
-<p>Each argument to the range operator can be a single character specified using
-an integer or single quotes or a string. If an argument is a string, it is not
-limited to a single character.  For example:</p>
+<p>Each argument to the range operator must be a single character, specified
+using an integer or single quotes or a double quotes.</p>
 
-<pre>keyword = ("break".."else") keyword12 / keyword34
-keyword12 = ("break".."catch") keyword1 / keyword2
-keyword34 = ("for".."static") keyword3 / keyword4
+<p>A further notation is a string of characters in angle brackets instead of
+double quotes. An expression such as <code>&lt;abc></code> does not match any
+input characters. It is a lookahead construct which succeeds if the remaining
+input, regarded as a string, is lexicographically less than <code>"abc"</code>.
+For example:</p>
+
+<pre>keyword = &lt;f> keyword12 / keyword34
+keyword12 = &lt;co> keyword1 / keyword2
+keyword34 = &lt;sw> keyword3 / keyword4
 keyword1 = "break" / "case" / "catch"
 keyword2 = "continue" / "default" / "do" / "else"
 keyword3 = "for" / "if" / "return" / "static"
 keyword4 = "switch" / "try" / "while"
 </pre>
 
-<p>The range <code>"break".."else"</code> matches if the input, regarded as a
-string, is lexicographically between the two argument strings, inclusive.</p>
+<p>The <code>&lt;f></code> matches if the input, regarded as a
+string, is lexicographically less than <code>"f"</code>.</p>
 
 <pre>succeed = ""
 fail = ''

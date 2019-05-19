@@ -2,110 +2,186 @@
 
 typedef unsigned char byte;
 
-enum op { START, STOP, GO, LE, GE, EITHER, OR, ACT };
-enum action { number };
+// The first line of opcodes take no argument. The second block take a one-byte
+// argument, The second block have  If EXTEND is added to an opcode which takes
+// an argument, then the argument is two bytes forming a big-endian unsigned
+// integer.
+
+ The remaining
+// opcodes have
+// op & 0x10 non-zero
+enum op {
+    STOP, OR, AND, MAYBE, OPT, MANY, DO, THEN, LOOK, TRY, HAS, NOT, DROP,
+    RULE, START, GO, BACK, EITHER, BOTH, CHAR, SET, STRING, GE, LE, CAT,
+    TAG, MARK, ACT0, ACT1, ACT2, ACT3, ACTN,
+    LRULE, LSTART, LGO, LBACK, LEITHER, LBOTH, LCHAR, LSET, LSTRING,
+    LGE, LLE, LCAT, LTAG, LMARK, LACT0, LACT1, LACT2, LACT4, LACTN
+};
+
+num action { number };
 static byte code[] = {
     START, 8, GE, 1, 48, LE, 1, 57, ACT, number, STOP
 };
 
-static int in, out, saveIn, saveOut, ok;
-static byte *pc;
 
-static inline int arg() { return *pc++; }
-static inline int sarg() { return (signed char) *pc++; }
-static inline void arg2() { return (*pc++ << 8) + *pc++; }
-static inline void sarg2() { return (((signed char) *pc++) << 8) + *pc++; }
+int parse(byte *input) {
+    int output[1000], stack[1000];
+    int pc=0, op, arg, in=0, out=0, top=0, look=0, saveIn, saveOut, ok;
 
-
-static inline void ret() { ps = pop(); }
-
-static inline void start() {
-    push(pc + arg());
-}
-
-static inline void go(int arg) {
-    pc = pc + arg;
-}
-
-static inline void either() {
-    saveIn = in;
-    saveOut = out;
-    push(pc + arg());
-}
-
-static inline void or() {
-    if (ok || in > saveIn) ret();
-    else out = saveOut;
-}
-
-static inline void both() {
-    push(pc + arg());
-}
-
-static inline void and() {
-    if (! ok) ret();
-}
-
-static inline void maybe() {
-    saveIn = in;
-    saveOut = out;
-    push(pc);
-    pc++;
-}
-
-static inline void opt() {
-    if (!ok && in == saveIn) {
-        out = saveOut;
-        ok = true;
-    }
-    ret();
-}
-
-static inline void many() {
-    if (ok) {
-        saveIn = in;
-        saveOut = out;
-    }
-    else {
-        if (!ok && in == saveIn) {
-            out = saveOut;
-            ok = true;
+    while(1) {
+        op = code[pc++];
+        if (op >= RULE) arg = code[pc++];
+        if (op >= LRULE) {
+            arg = (arg << 8) | code[pc++];
+            op = op + RULE - LRULE;
         }
-        ret();
-    }
-}
+        switch(*pc++) {
 
-// If succeed, continue with le().
-static inline void ge() {
-    pc++; //assume one-byte string
-    char ch = *pc++;
-    if (input[in] >= ch) {
-        ok = true;
-        in++;
-    }
-    else {
-        ok = false;
-        ret();
-    }
-}
+            // id = x: entry point; arrange to return to STOP.
+            case START: stack[top++] = pc + arg; break;
 
-static inline void le() {
-    pc++; //assume one-byte string
-    char ch = *pc++;
-    if (input[in] <= ch) {
-        ok = true;
-        in++;
-    }
-    else ok = false;
-    ret();
-}
+            // id = x: return the result of parsing.
+            case STOP: return output[0]; break;
 
-int parse() {
-    switch(*pc++) {
-case START: push(pc + arg()); break;
-case STOP: return output[0]; break;
-case GE: ge(); break;
-case LE: le(); break;
+            // id: skip forwards in the code, to tail-call a remote rule.
+            case GO: pc = pc + arg; break;
+
+            // id: skip backwards in the code, to tail-call a remote rule.
+            case BACK: pc = pc - arg; break;
+
+            // x / y: Save current state, call x, returning to OR.
+            case EITHER:
+                saveIn = in;
+                saveOut = out;
+                stack[top++] = pc + arg;
+                break;
+
+            // x / y: Return or continue with y.
+            case OR:
+                if (ok || in > saveIn) pc = stack[--top];
+                else out = saveOut;
+                break;
+
+            // x y: Arrange to return to AND and continue with x.
+            case BOTH:
+                stack[top++] = pc + arg;
+                break;
+
+            // x y: If x has failed return, else continue with y.
+            case AND:
+                if (! ok) pc = stack[--top];
+                break;
+
+            // x?, x*: jump to x, returning to OPT or MANY.
+            case MAYBE:
+                saveIn = in;
+                saveOut = out;
+                stack[top++] = pc + arg;
+                pc++;
+                break;
+
+            // x?: check success of x and return.
+            case OPT:
+                if (!ok && in == saveIn) {
+                    out = saveOut;
+                    ok = true;
+                }
+                pc = stack[--top];
+                break;
+
+            // x*: check success and return or continue to re-try x.
+            case MANY:
+                if (ok) {
+                    saveIn = in;
+                    saveOut = out;
+                }
+                else {
+                    if (!ok && in == saveIn) {
+                        out = saveOut;
+                        ok = true;
+                    }
+                    pc = stack[--top];
+                }
+                break;
+
+            // x+: jump to x, returning to THEN.
+            case DO:
+                stack[top++] = pc;
+                pc = pc + 3;
+                break;
+
+            // x+ = x x*: check first x, return or continue with x*
+            case THEN:
+                if (! ok) pc = stack[--top];
+                break;
+
+            // "a".."z": check first half of range; if succeed, continue with LE
+            case GE:
+                ok = true;
+                // TODO check length of input.
+                for (int i = 0; i < arg; i++) {
+                    byte ch = input[in+i];
+                    if (ch == '\0') break;
+                    if (ch < code[pc+i]) ok = false;
+                }
+                if (ok) pc = pc + arg;
+                else pc = stack[--top];
+                break;
+
+            // "a".."z": check second half of range and return.
+            case LE:
+                ok = true;
+                for (int i = 0; i < arg; i++) {
+                    byte ch = input[in+i];
+                    if (ch == '\0') break;
+                    if (ch > code[pc+i]) ok = false;
+                }
+                if (ok) pc = pc + arg;
+                pc = stack[--top];
+                break;
+
+
+                int low = node.left().value();
+                int high = node.right().value();
+                ok = false;
+                if (in < input.length()) {
+                    int ch = input.codePointAt(in);
+                    ok = (ch >= low) && (ch <= high);
+                    if (ok) {
+                        if (lookahead == 0 && out > 0) takeActions();
+                        int n = Character.charCount(ch);
+                        in += n;
+                        if (tracing) traceInput();
+                    }
+                }
+                break;
+
+            // [x], x&, x!: start a lookahead.
+            case LOOK:
+                saveIn = in;
+                saveOut = out;
+                look++;
+                stack[top++] = pc;
+                pc = pc + 1;
+                break;
+
+            // [x]: succeed and perform actions, or fail and discard them.
+            case TRY:
+                look--;
+                in = saveIn;
+                if (ok && look == 0) takeActions();
+            if (ok) parse(node.left());
+            else out = saveOut;
+            break;
+
+
+            LOOK, TRY, HAS, NOT, DROP,
+            RULE, CHAR, SET, STRING, CAT,
+            TAG, MARK, ACT0, ACT1, ACT2, ACT3, ACTN,
+
+
+        }
+
 case ACT: act(); break;
     }
 }
