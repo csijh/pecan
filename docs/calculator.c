@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -20,142 +21,151 @@ static byte code[] = {
     START, 8, RANGE1, 1, 48, RANGE2, 1, 57, ACT, number, STOP
 };
 
-// The parsing state, as a structure, allowing operations to be presented in
-// separate functions. Inlining of the functions should eliminate any overhead.
-struct state {
-    byte *input;
-    int *output, *stack;
-    int pc, start, in, out, saveIn, saveOut;
-    int ok, top, look, mark, markers, end;
-};
-typedef struct state state;
+// The parsing state, defined as a collection of global variables. (Global
+// variables normally reduce flexibility and clarity. Here, they prevent the
+// parse function from being thread safe or reentrant. On the other hand, they
+// allow the parser to be written as a collection of small, simple functions.)
+static byte *input;
+static int output[1000], stack[1000];
+static int pc, start, in, out, saveIn, saveOut;
+static int top, look, mark, markers;
+static bool ok, act, end;
 
-// Carry out delayed actions, which have been stored on the output stack,
-// between saveOut and out. The drop action discards input characters between
-// start and in, and the number actions turns them into an output integer.
-static inline void doActions(state *s) {
-    for (int i = s->saveOut; i < s->out; i++) {
-        int n;
-        switch (s->output[i]) {
-            case drop:
-                s->start = s->in;
-                break;
-            case number:
-                n = 0;
-                for (int i = s->start; i < s->in; i++) {
-                    n = n * 10 + (s->input[s->start + i] - '0');
-                }
-                s->output[s->out++] = n;
-                s->start = s->in;
-                break;
-        }
+// Get an integer from a substring of the input, between s and e
+static inline int getInt(int s, int e) {
+    int n = 0;
+    for (int i = s; i < e; i++) n = n * 10 + (input[s + i] - '0');
+    return n;
+}
+
+// Carry out delayed actions, stored on the output stack between saveOut and
+// out. Each action is stored as an opcode and a saved value of in. The drop
+// action discards input characters, and the number action turns them into an
+// output integer. Switch off the act flag which triggered the call.
+static inline void doActions() {
+    for (int i = saveOut; i < out; i++) {
+        int op = output[i] & 0xFF, oldIn = output[i] >> 24;
+        if (op == number) output[saveOut++] = getInt(start, oldIn);
+        start = oldIn;
     }
+    out = saveOut;
+    act = false;
 }
 
-// id = x: do nothing, continue with START. (RULE just labels an entry point.)
-static inline void doRule(state *s, int arg) {
+// The type of a function which represents one bytecode instruction.
+typedef void instruction(int arg);
+
+// id = x  Do nothing, continue with START. (Just label an entry point.)
+static void doRule(int arg) {
 }
 
-// id = x: entry point; continue with x returning to STOP.
-static inline void doStart(state *s, int arg) {
-    s->stack[s->top++] = s->pc + arg;
+// id = x  Entry point. Prepare, then continue with x, returning to STOP.
+static void doStart(int arg) {
+    pc = start = in = out = saveIn = saveOut = 0;
+    top = look = mark = markers = 0;
+    ok = act = end = false;
+    stack[top++] = pc + arg;
 }
 
-// id = x: after x, tidy up and return the result of parsing.
-static inline void doStop(state *s, int arg) {
-    if (s->ok && s->out > s->saveOut) doActions(s);
+// id = x  After x, tidy up and return the result of parsing.
+static void doStop(int arg) {
+    if (ok && out > saveOut) doActions();
     // TODO report errors properly
-    if (! s->ok) {
-        if (s->in > s->mark) s->markers = 0;
+    if (! ok) {
+        if (in > mark) markers = 0;
         printf("Parsing failed\n");
         exit(1);
     }
-    s->end = true;
+    end = true;
 }
 
-// id: skip forwards in the code. (Tail-call a remote rule.)
-static inline void doGo(state *s, int arg) {
-    s->pc = s->pc + arg;
+// id  Skip forwards in the code. (Tail-call a remote rule.)
+static inline void doGo(int arg) {
+    pc = pc + arg;
 }
 
-// id: skip backwards in the code, to tail-call a remote rule.
-static inline void doBack(state *s, int arg) {
-    s->pc = s->pc - arg;
+// id  Skip backwards in the code. (Tail-call a remote rule.)
+static inline void doBack(int arg) {
+    pc = pc - arg;
 }
 
-// x / y: Save current state, call x, returning to OR.
-static inline void doEither(state *s, int arg) {
-    s->saveIn = s->in;
-    s->saveOut = s->out;
-    s->stack[s->top++] = s->pc + arg;
+// x / y  Save current state, call x, returning to OR.
+static inline void doEither(int arg) {
+    saveIn = in;
+    saveOut = out;
+    stack[top++] = pc + arg;
 }
 
-// x / y: after x, return or continue with y.
-static inline void doOr(state *s, int arg) {
-    if (s->ok || s->in > s->saveIn) s->pc = s->stack[--s->top];
-    else s->out = s->saveOut;
+// x / y  After x, return or continue with y.
+static inline void doOr(int arg) {
+    if (ok || in > saveIn) pc = stack[--top];
+    else out = saveOut;
 }
 
-// x y: continue with x, returning to AND.
-static inline void doBoth(state *s, int arg) {
-    s->stack[s->top++] = s->pc + arg;
+// x y  Continue with x, returning to AND.
+static inline void doBoth(int arg) {
+    stack[top++] = pc + arg;
 }
 
-// x y: after x, if it failed return, else continue with y.
-static inline void doAnd(state *s, int arg) {
-    if (! s->ok) s->pc = s->stack[--s->top];
+// x y  After x, if it failed return, else continue with y.
+static inline void doAnd(int arg) {
+    if (! ok) pc = stack[--top];
 }
 
-// Parse an input string, producing an integer.
+// x?, x*  Save state and jump to x, returning to OPT or MANY.
+static inline void doMaybe(int arg) {
+    saveIn = in;
+    saveOut = out;
+    stack[top++] = pc + arg;
+    pc++;
+}
+
+// x?  After x, check success and return.
+static inline void doOpt(int arg) {
+    if (!ok && in == saveIn) {
+        out = saveOut;
+        ok = true;
+    }
+    pc = stack[--top];
+}
+
+// Define a jump table of functions, one for each opcode.
+static instruction *table[] = {
+    [STOP]=doStop, [OR]=doOr, [AND]=doAnd, [MAYBE]=doMaybe, [OPT]=doOpt, /*,
+    [MANY], [DO],
+    [LOOK], [TRY], [HAS], [NOT],
+    [RULE], [START], [GO], [BACK], [EITHER], [BOTH], [CHAR], [SET], [STRING], [RANGE1], [RANGE2], [LT],
+    [CAT], [TAG], [MARK], [ACT]*/
+};
+
+// Parse an input string, producing an integer. Each time round the main loop,
+// carry out any delayed actions then execute an opcode.
 int parse(byte *input) {
-    int output[1000], stack[1000];
-    state sData = {
-        .input = input, .output = output, .stack = stack,
-        .pc = 0, .start = 0, .in = 0, .out = 0, .saveIn = 0, .saveOut = 0,
-        .ok = 0, .top = 0, .look = 0, .mark = 0, .markers = 0, .end = 0
-    };
-    state *s = &sData;
-
-    while(! s->end) {
-        byte op = code[s->pc++];
+    while(! end) {
+        if (act) doActions();
+        byte op = code[pc++];
         byte arg = 0;
-        if (op >= RULE) arg = code[s->pc++];
+        if (op >= RULE) arg = code[pc++];
         if (op >= EXTEND) {
-            arg = (arg << 8) | code[s->pc++];
+            arg = (arg << 8) | code[pc++];
             op = op - EXTEND;
         }
         switch(op) {
-            case RULE:      doRule(s, arg); break;
-            case START:     doStart(s, arg); break;
-            case STOP:      doStop(s, arg); break;
-            case GO:        doGo(s, arg); break;
-            case EITHER:    doEither(s, arg); break;
-            case OR:        doOr(s, arg); break;
-            case BOTH:      doBoth(s, arg); break;
-            case AND:       doAnd(s, arg); break;
+            case RULE:      doRule(arg); break;
+            case START:     doStart(arg); break;
+            case STOP:      doStop(arg); break;
+            case GO:        doGo(arg); break;
+            case EITHER:    doEither(rg); break;
+            case OR:        doOr(arg); break;
+            case BOTH:      doBoth(arg); break;
+            case AND:       doAnd(arg); break;
         }
+
     }
-    return s->output[0];
+    return output[0];
 }
 
 /*
-            // x?, x*: jump to x, returning to OPT or MANY.
-            case MAYBE:
-                saveIn = in;
-                saveOut = out;
-                stack[top++] = pc + arg;
-                pc++;
-                break;
-
-            // x?: after x, check success and return.
-            case OPT:
-                if (!ok && in == saveIn) {
-                    out = saveOut;
-                    ok = true;
-                }
-                pc = stack[--top];
-                break;
-
             // x*: after x, check success and re-try x or return.
             case MANY:
                 if (ok) {
@@ -311,7 +321,7 @@ int parse(byte *input) {
 
             // Delay any action and return success.
             case ACT:
-                output[out++] = arg;
+                output[out++] = (in << 24) | arg;
                 ok = true;
                 pc = stack[--top];
                 break;
