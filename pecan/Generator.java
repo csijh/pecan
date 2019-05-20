@@ -9,32 +9,31 @@ import static pecan.Node.Flag.*;
 
 /* Converts grammar into bytecode. The normal translations are:
 
-    source    node        bytecode
+    source    bytecode
     ------------------------------
-    id = x    Rule x      RULE id START n <x> STOP    (entry point)
-    id        Id          GO n    or    GOBACK n
-    x / y     Or x y      EITHER n <x> OR <y>         (one byte length)
-    x y       AND x y     BOTH n <x> AND <y>
-    x?        Opt x       MAYBE OPT <x>
-    x*        MANY x      MAYBE MANY <x>
-    x+        Some x      DO THEN MAYBE MANY <x>
-    [x]       TRY x       LOOK TRY <x>
-    x&        Has x       LOOK HAS <x>
-    x!        Not x       LOOK NOT <x>
-    @a        Act a       ACT n                       (one byte index)
-    @         Drop        DROP
-    #e        Mark e      MARK n
-    10        Char 10     CHAR 10                     (ascii)
-    128       Char 128    STRING n "utf-8"
-    "a"       String "a"  STRING n "bytes"
-    'a'       Char 'a'    CHAR 'a'                    (ascii)
-    "pi"      Char 'pi'   STRING n "pi"
-    'ab'      Set 'ab'    SET n "ab"
-    "a".."z"  Range...    GE n "a" LE n "z"
-    0.."m"    Range...    LE n "m"
-    Nd        Cat Nd      CAT Nd
-    %id       Tag id      TAG n
-    `+`       Tag +       TAG n
+    id = x    RULE id START n <x> STOP    (entry point)
+    id        GO n    or    BACK n
+    x / y     EITHER n <x> OR <y>         (one byte length)
+    x y       BOTH n <x> AND <y>
+    x?        MAYBE OPT <x>
+    x*        MAYBE MANY <x>
+    x+        DO AND MAYBE MANY <x>
+    [x]       LOOK TRY <x>
+    x&        LOOK HAS <x>
+    x!        LOOK NOT <x>
+    @a        ACT n                       (one byte index)
+    @         DROP
+    #e        MARK n
+    10        CHAR 10                     (ascii)
+    128       STRING n "utf-8"
+    "a"       STRING n "bytes"
+    'a'       CHAR 'a'                    (ascii)
+    "pi"      STRING n "pi"
+    'ab'      SET n "ab"
+    "a".."z"  RANGE m "a" n "z"
+    <a>       LT n "a"
+    Nd        CAT Nd
+    %id       TAG n
 
 By default, only first rule is defined as an entry point (in which case RULE id
 is left out). There is an option to ask for more entry points. The bytecode can
