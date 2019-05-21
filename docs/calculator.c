@@ -9,7 +9,7 @@ typedef unsigned char byte;
 // An extended opcode EXTEND+OP has a two-byte, big-endian, unsigned argument.
 enum op {
     STOP, OR, AND, MAYBE, OPT, MANY, DO, LOOK, TRY, HAS, NOT,
-    RULE, START, GO, BACK, EITHER, BOTH, CHAR, SET, STRING, RANGE1, RANGE2, LT,
+    RULE, START, GO, BACK, EITHER, BOTH, CHAR, SET, STRING, LRANGE, HRANGE, LT,
     CAT, TAG, MARK, ACT,
     EXTEND
 };
@@ -18,46 +18,19 @@ enum op {
 enum action { drop, number };
 
 static byte code[] = {
-    START, 8, RANGE1, 1, 48, RANGE2, 1, 57, ACT, number, STOP
+    START, 8, LRANGE, 1, 48, HRANGE, 1, 57, ACT, number, STOP
 };
 
-// The parsing state, defined as a collection of global variables. (Global
-// variables normally reduce flexibility and clarity. Here, they prevent the
-// parse function from being thread safe or reentrant. On the other hand, they
-// allow the parser to be written as a collection of small, simple functions.)
-static byte *input;
-static int output[1000], stack[1000];
-static int pc, start, in, out, saveIn, saveOut;
-static int top, look, mark, markers;
-static bool ok, act, end;
-
-// Get an integer from a substring of the input, between s and e
-static inline int getInt(int s, int e) {
-    int n = 0;
-    for (int i = s; i < e; i++) n = n * 10 + (input[s + i] - '0');
-    return n;
-}
-
-// Carry out delayed actions, stored on the output stack between saveOut and
-// out. Each action is stored as an opcode and a saved value of in. The drop
-// action discards input characters, and the number action turns them into an
-// output integer. Switch off the act flag which triggered the call.
-static inline void doActions() {
-    for (int i = saveOut; i < out; i++) {
-        int op = output[i] & 0xFF, oldIn = output[i] >> 24;
-        if (op == number) output[saveOut++] = getInt(start, oldIn);
-        start = oldIn;
-    }
-    out = saveOut;
-    act = false;
+// Get an integer from a substring of the input.
+static inline int getInt(byte *input, int i, int j) {
+  int n = 0;
+  for (int k = i; k < j; k++) n = n * 10 + (input[i + k] - '0');
+  return n;
 }
 
 // The type of a function which represents one bytecode instruction.
 typedef void instruction(int arg);
 
-// id = x  Do nothing, continue with START. (Just label an entry point.)
-static void doRule(int arg) {
-}
 
 // id = x  Entry point. Prepare, then continue with x, returning to STOP.
 static void doStart(int arg) {
@@ -78,6 +51,23 @@ static void doStop(int arg) {
     }
     end = true;
 }
+
+/*
+// BOTH n x AND y
+static bool doBothAnd(int pc) {
+    pc++;
+    int n = code[pc++];
+    x = pc
+    AND = pc+n
+    y = AND + 1;
+    function f = table[code[pc++]];
+    function g = table[code[pc+n]]; // first of y
+    int save....
+    f();
+    check...return...
+    return g(); // no tail call
+}
+*/
 
 // id  Skip forwards in the code. (Tail-call a remote rule.)
 static inline void doGo(int arg) {
@@ -141,8 +131,46 @@ static instruction *table[] = {
 // Parse an input string, producing an integer. Each time round the main loop,
 // carry out any delayed actions then execute an opcode.
 int parse(byte *input) {
+
+    // The parsing state.
+    // TODO separate stack for delay, NB all catchup.
+    // TODO stack for saveIn, saveOut
+    int output[1000], delayed[1000], stack[1000];
+    int pc, start, in, out, delay;
+    int top, look, mark, markers;
+    bool ok, act, end;
+
     while(! end) {
-        if (act) doActions();
+
+        // Carry out any delayed actions, requested by the previous opcode
+        // setting the act flag. For each delayed action, the input position at
+        // the time of recording is stored.
+        if (act) {
+            act = false;
+            for (int i = 0; i < delay; i++) {
+                int op = delayed[i++];
+                int end = delayed[i];
+                if (op == number) output[out++] = getInt(input, start, end);
+                start = end;
+            }
+            delay = 0;
+        }
+        // Each action is stored as an opcode and a saved value of in. The drop
+        // action discards input characters, and the number action turns them into an
+        // output integer. Switch off the act flag which triggered the call.
+        static inline void doActions() {
+          for (int i = saveOut; i < out; i++) {
+              int op = output[i] & 0xFF, oldIn = output[i] >> 24;
+              if (op == number) output[saveOut++] = getInt(start, oldIn);
+                start = oldIn;
+            }
+            out = saveOut;
+            act = false;
+        }
+
+
+        // Carry out one instruction. Read in a one or two byte argument as
+        // appropriate, and then dispatch the opcode.
         byte op = code[pc++];
         byte arg = 0;
         if (op >= RULE) arg = code[pc++];
@@ -151,7 +179,10 @@ int parse(byte *input) {
             op = op - EXTEND;
         }
         switch(op) {
-            case RULE:      doRule(arg); break;
+
+            // id = x  label an entry point. continue with START.
+            case RULE: break;
+
             case START:     doStart(arg); break;
             case STOP:      doStop(arg); break;
             case GO:        doGo(arg); break;
