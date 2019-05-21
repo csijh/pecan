@@ -1,4 +1,4 @@
-// Pecan 5 checker. Free and open source. See licence.txt.
+// Pecan 1.0 checker. Free and open source. See licence.txt.
 
 package pecan;
 

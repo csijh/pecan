@@ -1,4 +1,4 @@
-// Pecan 5 nodes. Free and open source. See licence.txt.
+// Pecan 1.0 nodes. Free and open source. See licence.txt.
 
 package pecan;
 import java.util.*;

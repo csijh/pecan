@@ -1,4 +1,4 @@
-// Pecan 5 interpreter. Free and open source. See licence.txt.
+// Pecan 1.0 evaluator. Free and open source. See licence.txt.
 
 package pecan;
 
@@ -7,13 +7,12 @@ import java.text.*;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
 
-/* This interpreter works directly from the tree nodes, and can be used for
-testing, and for tracing. It also effectively defines the operational semantics
-of the grammar language.
+/* This evaluator provides symbolic execution of a grammar. It works directly
+from the tree nodes, and can be used for testing, and for tracing. It also
+effectively defines the operational semantics of the grammar language.
 
-The test input may be text, or tag names with possible white space in between.
-The output describes the external calls that would be made, with one line of
-text per call.
+The input may be text, or tag names with possible white space in between. The
+output describes the external calls that would be made, with one line per call.
 
 Actions are normally delayed until the next time progress is made, or discarded
 if parsing fails without progressing. During lookahead, actions are delayed
@@ -37,7 +36,7 @@ x y where x is an action (or SN and action) and y is FN
 
 */
 
-public class Interpreter implements Testable {
+public class Evaluator implements Testable {
     private boolean tracing = false, skipTrace = false;
     private String grammar;
     private boolean textInput, ok;
@@ -51,7 +50,7 @@ public class Interpreter implements Testable {
 
     public static void main(String[] args) {
         int line = 0;
-        Interpreter program = new Interpreter();
+        Evaluator program = new Evaluator();
         if (args != null) for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-trace")) program.tracing = true;
             else line = Integer.parseInt(args[i]);
@@ -70,7 +69,7 @@ public class Interpreter implements Testable {
         tracing = b;
     }
 
-    // Get the interpreter ready to run, with the given grammar and text.
+    // Get the Evaluator ready to run, with the given grammar and text.
     void prepare(String grammar, String text) throws ParseException {
         Stacker stacker = new Stacker();
         root = stacker.run(grammar);
