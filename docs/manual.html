@@ -959,6 +959,7 @@ features remaining are:</p>
 <code>#a</code>     an error marker
 <code>'a'</code>    a single character
 <code>#a</code>     a token tag
+<code>&lt;a></code>   a divider
 <code>x / y</code>  a choice
 <code>x y</code>    a sequence
 <code>x&amp;</code>     a 'has' lookahead
@@ -1030,6 +1031,7 @@ FN('') = true;  SP('') = SN('') = FP('') = false
 
 SP('a') = FN('a') = true;  SN('a') = FP('a') = false
 SP(%a) = FN(%a) = true;  SN(%a) = FP(%a) = false
+SN(&lt;a>) = FN(&lt;a>) = true; ...
 
 SN(x y) = SN(x) &amp;&amp; SN(y);
 SP(x y) = SP(x) &amp;&amp; SP(y) || SP(x) &amp;&amp; SN(y) || SN(x) &amp;&amp; SP(y);
@@ -1055,7 +1057,7 @@ grammar is well formed. If <code>WF</code> turns out to be false for any
 expression, that is reported as an error because it contains left recursion. The
 <code>WF</code> property is calculated by:</p>
 
-<pre>WF("") = WF(@a) = WF(#a) = WF('') = WF('a') = WF(%a) = true
+<pre>WF("") = WF(@a) = WF(#a) = WF('') = WF('a') = WF(%a) = WF(&lt;a>) = true
 WF(x y) = WF(x) &amp; (!SN(x) || WF(y))
 WF(x/y) = WF(x) &amp; WF(y)
 WF(x?) = WF(x/"") = WF(x)
