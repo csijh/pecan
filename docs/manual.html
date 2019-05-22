@@ -12,29 +12,11 @@
 <!--
 TODO: generate
 
-Have only one entry point. (Don't generate rules?)
+Have multiple entry points. (Don't generate rules?)
 Insist on all names distinct. (Or what? Prefix?)
-Insist on first character or tag to make parser choose rule.
-Option to add action to ACT opcode?
-Generate: OP, ACT, add, MARK, id, TAG, id, CHAR, int
-
 
 Have opcodes, actions, errors, tags, rules, bytes.
 Want to connect parser to grammar via enumerations.
-Template in any language contains e.g.
-<opcodes %s=%d, >
-In the printf-like string, %s is name, %d is number, other text is verbatim.
-Verbatim text after last % is separator text, not printed after last entry.
-
-TODO: interpreter
-
-Rename the Interpreter class.
-What about @i causing two switches?
-OR have @0, @1, @2, ... opcodes.
-How link up scanner enumeration of actions with parser enumeration of tags?
-Can we specify external enumerations? (@a = 3  OR  %id = 2)
-(Pecan chooses numbers for scanner actions, and for parser tags!)
-(Same set, same spellings, sorted maybe? @ and % first # for end?)
 
 -->
 
@@ -83,10 +65,10 @@ Can we specify external enumerations? (@a = 3  OR  %id = 2)
 <p>Pecan is a tool for developing and checking grammars, and generating scanners
 and parsers. It is aimed at parsers for programming languages, <a
 href="https://en.wikipedia.org/wiki/Domain-specific_language">domain specific
-languages</a>, and other unambiguous languages. It provides a precise grammar
-notation, which is independent of implementation language, based on recursive
-descent with lookahead. This manual describes Pecan version 1.0 which has these
-features:</p>
+languages</a>, and other unambiguous computer languages. It provides a precise
+grammar notation, which is independent of implementation language, based on
+recursive descent with lookahead. This manual describes Pecan version 1.0 which
+has these features:</p>
 
 <ul>
 
@@ -144,12 +126,12 @@ their original purpose of modelling natural languages, but this very power makes
 it unnecessarily difficult both to express and to parse machine-oriented
 languages using CFGs.</blockquote>
 
-<p>The most fundamental theoretical problem is that grammars can contain
+<p>One fundamental theoretical problem is that CFG grammars can contain
 ambiguities, and there is no computable algorithm to detect whether or not a
 grammar is unambiguous. There is also the associated practical problem that many
 published CFG grammars contain ambiguities. Some of these are local, i.e. a
-particular rule allows two possible parses, but there is a surrounding more
-global rule that resolves the ambiguity by only accepting one of the
+particular rule allows two possible parses, but there is a surrounding, more
+global, rule that resolves the ambiguity by only accepting one of the
 possibilities. But many ambiguities in published grammars are inherent, the
 ambiguity being resolved only by accompanying descriptive text or particular
 approaches to generating parsers.</p>
@@ -166,8 +148,8 @@ of their designs. They often have arbitrary heuristic rules for disambiguation.
 They often support a subset of CFG grammars which is not at all intuitive. They
 often use bottom-up parsing techniques to make parsers near-linear, which makes
 the way they operate impenetrable. And they often support actions and error
-reporting using embedded code fragments, which is extremely fragile and
-language-dependent approach.</p>
+reporting using embedded code fragments which are not part of the grammar. This
+is a very fragile and language-dependent approach.</p>
 
 <p>These problems with the CFG formalism might be worth putting up with, if the
 formalism had excellent theoretical or practical properties. But it doesn't.
@@ -185,20 +167,21 @@ a problem for PEG grammars are typically also a problem for the efficient LR or
 LALR subsets of CFG grammars.</p>
 
 <p>The theoretical and practical properties of the PEG formalism are superior to
-the CFG formalism in almost every measurable way. PEG grammars never contain
-any ambiguity, they have a direct operational meaning as parsers, they are
-composable, they are closed under various operations, and they can be parsed in
-linear time using the packrat algorithm. This makes the PEG grammar formalism a
-much better starting point for studying grammars and parsers.</p>
+the CFG formalism in almost every measurable way. PEG grammars never contain any
+ambiguity, they have a direct operational meaning as parsers, they are
+composable, they are closed under a variety of operations, and they can be
+parsed in linear time using the packrat algorithm. This makes the PEG grammar
+formalism a much better starting point for studying grammars and parsers.</p>
 
 <p>Unfortunately, there are practical problems with PEG parsers. Although the
 packrat algorithm is linear, it is slower and more space hungry than one would
-like for efficient large scale parsing. Also, because if its relatively
+like for efficient large scale parsing. Also, because of its relatively
 uncontrolled backtracking, it is difficult to produce accurate error messages,
-and difficult to express actions. And published PEG grammars can often be
+and difficult to express actions. Published PEG grammars can also often be
 rather unreadable, in the same way that regular expressions tend to be. As a
-result, PEG grammars are usually only used for search expressions or for small
-domain specific languages, and not for larger applications</p>
+result, PEG grammars are typically only used for search expressions, or for
+small domain specific languages, and not for larger applications such as full
+programming languages.</p>
 
 <p>There is also a relatively minor problem with PEG grammars, which is that
 they don't support left recursion. There have been attempts to add it, but the
@@ -228,10 +211,10 @@ grammar is known in advance. A system like that has a natural feel for
 programmers, often with good control over backtracking.</p>
 
 <p>If, however, an approach is needed which is not tied to a particular
-programming language, or if the grammar needs to be developed from scratch, or
-translated from a different formalism (which is common because of the prevalence
-of CFG grammars), or checked for consistency, or optimized to produce a fast
-parser, then there is a case for a separate formalism such as Pecan.</p>
+programming language, or if a grammar needs an extended development effort, or
+if it needs to be translated from the CFG formalism, or checked for consistency,
+or optimized to produce a fast parser, then there is a case for a separate
+formalism such as Pecan.</p>
 
 <h3>Pecan grammars</h3>
 
@@ -252,7 +235,7 @@ Having a separate notation for grammars, rather than writing a parser by hand,
 helps to focus attention on the various issues that have to be addressed,
 separately from the programming details, but that also makes grammars rather
 dense. If a grammar is not given in advance, creating it or translating it
-accurately can be very difficult. In addition, programmers typically use parser
+accurately can be difficult. In addition, programmers typically use parser
 generators only rarely, and are often not grammar experts. As a result, support
 for test-driven grammar development is an important feature of Pecan.</p>
 
@@ -284,7 +267,7 @@ an alias or equivalent, so that it can be run just by typing:</p>
 
 <h2 id="notation">Notation</h2>
 
-<p>The Pecan language is a grammar language for writing parsers, closely based
+<p>The Pecan language is a grammar language for writing parsers, based
 on the <a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">PEG</a>
 notation. Pecan uses the sequential choice operator <code>x/y</code> but, unlike
 the PEG notation, the operator does not automatically involve backtracking.
@@ -307,7 +290,9 @@ parsing expression. By default, the first rule specifies the output of the
 whole parsing process. For example, a parser might start with:</p>
 
 <pre>module = function+ end
+
 function = id arguments body
+
 end = Uc!
 ...
 </pre>
@@ -318,7 +303,7 @@ the input. So an explicit test is often included, as here, to check that the
 end of the input has been reached. In the <code>end</code> rule,
 <code>Uc!</code> means no Unicode character can be matched.</p>
 
-<p>The text of a parser is assumed to be encoded using UTF-8, so Unicode
+<p>The text of a grammar is assumed to be encoded using UTF-8, so Unicode
 characters can be included. A rule name starts with any Unicode letter and
 continues with Unicode letters or decimal digits or underscores or hyphens.</p>
 

@@ -1,4 +1,4 @@
-// Pecan 5 opcodes. Free and open source. See licence.txt.
+// Pecan 1.0 opcodes. Free and open source. See licence.txt.
 
 package pecan;
 

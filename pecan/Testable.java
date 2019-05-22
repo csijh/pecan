@@ -1,4 +1,4 @@
-// Pecan 5 test interface. Free and open source. See licence.txt.
+// Pecan 1.0 test interface. Free and open source. See licence.txt.
 
 package pecan;
 import java.text.*;

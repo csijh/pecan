@@ -7,12 +7,12 @@ Parser = pecan/Parser.java $(Test) $(Node)
 Binder = pecan/Binder.java $(Parser) $(Category)
 Checker = pecan/Checker.java $(Binder)
 Stacker = pecan/Stacker.java $(Checker)
-Interpreter = pecan/Interpreter.java $(Stacker)
+Evaluator = pecan/Evaluator.java $(Stacker)
 Code = pecan/Code.java
 Generator = pecan/Generator.java $(Stacker)
-Run = pecan/Run.java $(Interpreter)
+Run = pecan/Run.java $(Evaluator)
 # Analyser = pecan/Analyser.java $(Stacker)
-#Opcode Generator Interpreter:
+#Opcode Generator Evaluator:
 
 %: pecan/%.java
 	javac $($@)

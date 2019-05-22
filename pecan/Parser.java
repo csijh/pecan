@@ -1,4 +1,4 @@
-// Pecan 5 parser. Free and open source. See licence.txt.
+// Pecan 1.0 parser. Free and open source. See licence.txt.
 
 package pecan;
 
