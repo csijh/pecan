@@ -2,23 +2,15 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
 <head>
 <title>Pecan Manual</title>
-<style>pre { margin-left:40px; }</style>
+<style>
+  body { font-size: 120%; }
+  pre { margin-left:40px; }
+</style>
 </head>
 <body>
 
 <img src="pecan.png" width="300" height="65" />
 <hr/>
-
-<!--
-TODO: generate
-
-Have multiple entry points. (Don't generate rules?)
-Insist on all names distinct. (Or what? Prefix?)
-
-Have opcodes, actions, errors, tags, rules, bytes.
-Want to connect parser to grammar via enumerations.
-
--->
 
 <h1>Pecan Reference Manual</h1>
 
@@ -42,21 +34,22 @@ Want to connect parser to grammar via enumerations.
 </ul>
 </li>
 <li><a href="#testing">Testing</a></li>
-<li><a href="#checks">Consistency Checks</a>
+<li><a href="#checks">Consistency checks</a>
 <ul>
-<li><a href="#type">Type Checking</a></li>
-<li><a href="#loop">Loop Checking</a></li>
-<li><a href="#token">Token Checking</a></li>
-<li><a href="#output">Output Checking</a></li>
+<li><a href="#type">Type checking</a></li>
+<li><a href="#loop">Loop checking</a></li>
+<li><a href="#token">Token checking</a></li>
+<li><a href="#output">Output checking</a></li>
 </ul>
-<li><a href="#java">Generating Code</a>
+<li><a href="#java">Generating code</a>
 <ul>
 <li><a href="#code">Bytecode</a></li>
 </ul>
 </li>
-<li><a href="#side">Side Effects</a></li>
+<li><a href="#side">Side effects</a></li>
 </li>
 <li><a href="#transforms">Transforms</a></li>
+<li><a href="#changes">Recent changes</a></li>
 <li><a href="#pecan">The Pecan grammar</a></li>
 </ul>
 
@@ -86,21 +79,6 @@ has these features:</p>
 
 <li>an interpreter for the bytecode can be written in any language</li>
 
-</ul>
-
-<p>The previous version of Pecan was 0.4. Changes are:</p>
-
-<ul>
-<li>actions are now allowed at the start of a left hand choice</li>
-<li>actions are delayed in case they need to be discarded</li>
-<li>error markers are no longer postfix</li>
-<li>the range notation now supports strings</li>
-<li>string tags use double quotes instead of backquotes</li>
-<li>string tags have definitions to give them names</li>
-<li>separate grammar and test files are supported</li>
-<li>individual rules within a grammar can be tested</li>
-<li>one test file can be called from within another</li>
-<li>parser generation is via bytecode</li>
 </ul>
 
 <p>Other approaches to developing parsers are usually based on the <a
@@ -192,7 +170,7 @@ transform it away. Most uses of left recursion are very simple, of the kind
 <code>a = x | a y</code> which can be translated easily into <code>a = x
 y*</code>.</p>
 
-<h3>Recursive Descent Parsing</h3>
+<h3>Recursive descent parsing and combinators</h3>
 
 <p>Recursive descent parsers have the advantage of being efficient, intuitive,
 and capable of being hand-written. They can also be embedded in programming
@@ -231,13 +209,13 @@ automatically.</p>
 <p>The Pecan system explicitly provides support for the process of developing
 grammars, in the form of consistency checks on grammars, features for automated
 testing, and a context in which manual transformations can be carried out.
-Having a separate notation for grammars, rather than writing a parser by hand,
-helps to focus attention on the various issues that have to be addressed,
-separately from the programming details, but that also makes grammars rather
-dense. If a grammar is not given in advance, creating it or translating it
-accurately can be difficult. In addition, programmers typically use parser
-generators only rarely, and are often not grammar experts. As a result, support
-for test-driven grammar development is an important feature of Pecan.</p>
+Having a separate notation for grammars helps to focus attention on the various
+issues that have to be addressed, separately from the programming details.
+However, that also makes grammars rather dense. If a grammar is not given in
+advance, creating it or translating it accurately can be difficult. In addition,
+programmers typically use parser generators only rarely, and are often not
+grammar experts. As a result, support for test-driven grammar development is an
+important feature of Pecan.</p>
 
 <h2 id="install">Installation</h2>
 
@@ -336,7 +314,7 @@ opposed to:</p>
 <pre>x / y z
 </pre>
 
-<p>which means either parse <code>x</code>, or parse <code>y</code> and
+<p>which means either parse <code>x</code>, or else parse <code>y</code> and
 <code>z</code>.</p>
 
 <h3 id="continuations">Continuations</h3>
@@ -407,16 +385,16 @@ times, <code>+</code> to indicate that an item is to be repeated one or more
 times, and <code>?</code>  to indicate that an item is optional (i.e. repeated
 zero times or once). For example:</p>
 
-<pre>string = '"' ('"'! visible)* '"'
+<pre>string = '"' stringchar* '"'
 number = digit+
 call = function "(" arguments? ")"
 </pre>
 
 <p>The <code>string</code> rule specifies that a string consists of a double
-quote followed by any number of visible characters followed by a closing double
-quote. The <code>number</code> rule specifies that a number consists of one or
-more digits. The <code>call</code> rule specifies that a call consists of a
-function name followed by brackets, and the brackets may optionally contain
+quote followed by any number of allowable characters followed by a closing
+double quote. The <code>number</code> rule specifies that a number consists of
+one or more digits. The <code>call</code> rule specifies that a call consists of
+a function name followed by brackets, and the brackets may optionally contain
 arguments.</p>
 
 <p>The three expressions <code>x*</code>, <code>x+</code>, <code>x?</code> act
@@ -494,7 +472,8 @@ are always discarded.</p>
 
 <p>The fact that actions are not performed during speculative parsing restricts
 the possible context sensitive aspects of a language, which can only depend on
-actions outside of lookahead constructs.</p>
+actions outside of lookahead constructs. Lookahead is regarded only as a way of
+deciding which alternative to take.</p>
 
 <h3 id="text">Text</h3>
 
@@ -564,8 +543,8 @@ newline = 0d? 0a
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
 No, Pc, Pd, Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided.
-The name <code>Uc</code> represents all Unicode characters
-(<code>0..1114111</code>), and the others are the standard two-letter
+The name <code>Uc</code> represents all Unicode characters (code points
+<code>0..1114111</code>), and the others are the standard two-letter
 abbreviations for the Unicode general categories which partition all the code
 points. For example:</p>
 
@@ -593,14 +572,13 @@ visible = ' '..'~'
 ascii = 0..127
 </pre>
 
-<p>Each argument to the range operator must be a single character, specified
-using an integer or single quotes or a double quotes.</p>
+<p>Each argument to the range operator must be a single character (code point),
+specified using an integer or single quotes or double quotes.</p>
 
-<p>A further notation is a string of characters in angle brackets instead of
-double quotes. An expression such as <code>&lt;abc></code> does not match any
-input characters. It is a lookahead construct which succeeds if the remaining
-input, regarded as a string, is lexicographically less than <code>"abc"</code>.
-For example:</p>
+<p>A string in angle brackets <code>&lt;...></code> represents a two-way check.
+An expression such as <code>&lt;abc></code> does not match any input characters,
+but is a lookahead construct which succeeds if the remaining input, regarded as
+a string, is lexicographically less than <code>"abc"</code>. For example:</p>
 
 <pre>keyword = &lt;f> keyword12 / keyword34
 keyword12 = &lt;co> keyword1 / keyword2
@@ -611,8 +589,14 @@ keyword3 = "for" / "if" / "return" / "static"
 keyword4 = "switch" / "try" / "while"
 </pre>
 
-<p>The <code>&lt;f></code> matches if the input, regarded as a
-string, is lexicographically less than <code>"f"</code>.</p>
+<p>Here, interval halving is used to match keywords. The expression
+<code>&lt;f></code> succeeds if the remaining input, regarded as a string, is
+lexicographically less than <code>"f"</code>. Similarly, <code>&lt;co></code>
+distinguishes the keywords up to <code>"catch"</code> from the keywords
+<code>"continue"</code> onwards.</p>
+
+<p>The empty string <code>""</code> always succeeds, and the empty set
+<code>''</code> always fails:</p>
 
 <pre>succeed = ""
 fail = ''
@@ -620,61 +604,44 @@ fail = ''
 
 <p>They can occasionally be useful, e.g. in transformations.</p>
 
-<h3 id="tags">Tags</h3>
+<h3 id="tags">Tokens</h3>
 
-<p>Tags support parsers where the input consists of tokens produced a separate
-scanner. The input is thought of as an array of tokens instead of an array of
-characters. Each tag represents a specific kind of token.</p>
+<p>Support is needed for parsers where the input consists of tokens produced by
+a separate scanner. The input is thought of as an array of tokens instead of an
+array of characters.</p>
 
 <p>A tag is represented as a symbol consisting of the <code>%</code> character
-followed by a name. For example, a token-based parser for a simple calculator
-with no brackets might look like this:</p>
+followed by a name. Each tag represents a specific kind of token. For example, a
+token-based parser for a simple calculator with no brackets might look like
+this:</p>
 
 <pre>sum = term (%plus term @2add / %minus term @2subtract)* end
 term = number (%times number @2multiply / %over number @2divide)*
 number = %number @number
-...
+end = %
 </pre>
 
 <p>In this case, the input is an array of tokens with tags <code>%number</code>,
-<code>%plus</code>, <code>%minus</code>, <code>%times</code>,
-<code>%over</code>.</p>
-
-<p>The tag <code>%</code> with no name is matched only at the end of the input.
-This is equivalent to using <code>Uc!</code> in a scanner.</p>
+<code>%plus</code>, <code>%minus</code>, <code>%times</code> or
+<code>%over</code>. The tag <code>%</code> with no name is matched only at the
+end of the input. This is equivalent to using <code>Uc!</code> in a scanner.</p>
 
 <p>For greater readability, tags can be represented as strings. The simple
-calculator could be rewritten as:</p>
+calculator can be rewritten as:</p>
 
 <pre>sum = term ("+" term @2add / "-" term @2subtract)* end
 term = number ("*" number @2multiply / "/" number @2divide)*
 number = %number @number
-...
-</pre>
-
-<p>Any string used must be given a definitions which relates it to a named
-tag:</p>
-
-<pre>"+" = %plus
+end = %
+"+" = %plus
 "-" = %minus
 "*" = %times
 "/" = %over
 </pre>
 
-<p>This allows all tags to be associated with an enumerated type in the external
-code when a parser is generated.</p>
-
-<!--
-Instead of the generated code being given an array of tokens, calls are made to
-an external function which provides the next tag. This can be used to cope with
-non-context-free features of languages. For example, take the infamous situation
-with the C language where parsing depends on recognizing identifiers which have
-been defined as type names using <code>typedef</code>. A C scanner which is
-independent of parsing may emit tokens with an identifier tag, which may or may
-not turn out later to be type names. The external functions for a C parser
-would include symbol table construction, and could change the tags of tokens
-given to the parser, according to those symbol tables.</p>
--->
+<p>When a string is used, it must be given a definition which relates it to a
+named tag. This allows all tags to be associated with an enumerated type in the
+external code when a parser is generated.</p>
 
 <h3 id="actions">Actions</h3>
 
@@ -694,14 +661,14 @@ new item, and the new item should be pushed onto the stack. A parser as a whole
 ends with a single item on the stack, which is the output from the parsing
 process.</p>
 
-<p>The stack is provided and manipulated by external code when a full parser is
-generated. An action symbol such as <code>@2add</code> is translated into the
-execution of a fragment of external code. The parser could be part of a
-calculator, in which case the <code>add</code> action might add two numbers.
-Alternatively, the parser might become part of a compiler, in which case the
-<code>add</code> action might combine two expression trees into a larger tree.
-When executing a grammar symbolically for testing, an action simply causes the
-text of the action to be printed.</p>
+<p>The stack is provided and manipulated by external code when a parser is
+generated from the grammar. An action symbol such as <code>@2add</code> is
+translated into the execution of a fragment of external code. The parser could
+be part of a calculator, in which case the <code>add</code> action might add two
+numbers. Alternatively, the parser might become part of a compiler, in which
+case the <code>add</code> action might combine two expression trees into a
+larger tree. When executing a grammar symbolically for testing, the name of the
+action is simply printed out.</p>
 
 <p>An action has access to the characters or tokens from the input which have
 been matched since the previous action. For example:</p>
@@ -724,7 +691,7 @@ alternative in a choice must create or consume the same number of output items.
 Within a repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>,
 the inner expression <code>x</code> must have no net effect on the number of
 output items. A rule must produce a fixed number of output items. The first
-rule normally produced a single item, but this is not enforced, so that any
+rule normally produces a single item, but this is not enforced, so that any
 self-contained fragment of a grammar is legal, for testing.</p>
 
 <p>The compensation for these severe restrictions is that Pecan can carry out
@@ -755,37 +722,32 @@ identifiers can be expressed by:</p>
 </pre>
 
 <p>The <code>id</code> rule is assumed to push a single item onto the output
-stack. The <code>@list</code> action creates an empty list item. The
+stack. The <code>@list</code> action creates an empty list. The
 <code>@2add</code> action pops the list and most recent id, adds the id to the
-list, and pushes the result list back on the stack. The <code>@1end</code>
+list, and pushes the resulting list back on the stack. The <code>@1end</code>
 action does anything necessary to finalize the list.</p>
 
-<p>The external code may choose a different implementation with the same overall
-effect. For example, <code>@list</code> may mark a position in the output stack,
-<code>@add</code> may do nothing so that ids are left on the stack, and
-<code>@1end</code> may use the marked stack position to create an array out of
-the accumulated ids.</p>
+<p>The external code in a generated parser may choose a different implementation
+with the same overall effect. For example, <code>@list</code> may mark a
+position in the output stack, <code>@add</code> may do nothing so that ids
+accumulate on the stack, and <code>@1end</code> may use the marked stack
+position to create an array out of the accumulated ids. Alternatively,
+<code>@list</code> could create a linked list, and each subsequent
+<code>@2add</code> could chain the next id onto the end of the list.</p>
 
-<p>Alternatively, <code>@list</code> may push two null pointers onto the output
-stack, representing pointers to the first and last item of a linked list. The
-first <code>@2add</code> may detect the two nulls and replace them by two
-pointers to the first id. Each subsequent <code>@2add</code> may pop the last
-item off the stack, chain the new id to it, and push the new item back on the
-stack. Finally, the <code>@1end</code> action may discard the top item on the
-stack, leaving the completed linked list.</p>
-
-<p>Techniques like this can easily lead to a left hand alternative which begins
-with an action, for example:</p>
+<p>Techniques like this for handling variable-length lists can easily lead to a
+left hand alternative which begins with an action, for example:</p>
 
 <pre>@a x / y
 </pre>
 
-<p>The action <code>@a</code> is only performed if <code>x</code> succeeds,
-or if it progresses before failing. If <code>x</code> fails without progressing
-in the input, the action <code>@a</code> is not performed, and the next choice
-<code>y</code> is tried. To avoid the need to undo actions, the action
-<code>@a</code> is delayed. It is performed when <code>x</code> progresses, or
-discarded if <code>x</code> fails without progressing.</p>
+<p>The action <code>@a</code> is only performed if <code>x</code> succeeds, or
+if it progresses before failing. If <code>x</code> fails without progressing in
+the input, the action <code>@a</code> is not performed, and the next choice
+<code>y</code> is tried. In the external code, to avoid the need to undo
+actions, it is normal to delay the action <code>@a</code> and perform it when
+<code>x</code> progresses, or discard it if <code>x</code> fails without
+progressing.</p>
 
 <h3 id="errors">Errors</h3>
 
@@ -855,11 +817,11 @@ that the plus sign and spaces are discarded. The <code>letter</code> rule
 applies an error marker to a choice of Unicode categories, to avoid having to
 attach a marker to each one individually.</p>
 
-<p>With these rules, an error message like the one above might be generated,
-saying that an operator is expected. The fact that an extra digit on the
-preceding number, or a space, could also have allowed parsing to continue is not
-reported. That is because individual digits and spaces are not marked in the
-rules.</p>
+<p>With these rules, an incorrect operator might lead to an error message which
+says that an operator is expected. The fact that an extra digit on the preceding
+number, or a space, could also have allowed parsing to continue is not reported.
+That is because individual digits and spaces in the rules haven't been given
+markers.</p>
 
 <h2 id="testing">Testing</h2>
 
@@ -875,10 +837,10 @@ option switches on tracing, so that the individual steps taken during parsing
 are displayed. If a line number is given, only the single test that starts on
 that line of the test file is executed.</p>
 
-<p>A test file contains a number of sections separated by lines consisting of at
-least three equal signs. If a section contains a line of minus signs, then it is
-a test with sample input and expected output. If a section has no divider, it is
-a grammar which is used for subsequent tests, until another grammar is given.
+<p>A test file contains a number of sections separated by lines consisting of
+three or more equal signs. If a section contains a line of minus signs, then it
+is a test with sample input and expected output. If a section has no divider, it
+is a grammar which is used for subsequent tests, until another grammar is given.
 For example:</p>
 
 <pre>// Recognise one digit
@@ -941,7 +903,7 @@ single line which is the name of a file containing a grammar to be used for
 subsequent tests. This supports the common case where the grammar is in one file
 and its tests are in another. The second example is the name of a secondary test
 file to execute, allowing a suite of tests to be split across several files.
-There is no conflict between the first two examples, because a grammar file is
+There is no conflict between these first two examples, because a grammar file is
 equivalent to a test file which sets up a grammar but contains no tests. The
 third example is the name of a rule in the current grammar, to be used as an
 entry point for subsequent tests. It can be recognized by the lack of a dot
@@ -950,15 +912,15 @@ particular rules being kept as regression tests. In the final example, a section
 consists entirely of comment lines. The section has no effect, but can be used
 to explain tests.</p>
 
-<p>Test files are expected to use the UTF-8 encoding, but there is an escape
-convention which allows control characters or Unicode characters to be included
-as plain text. A backslash followed by digits represents a character by its
-decimal code, or by its hex code if the code starts with zero. Two backslashes
-are used to represent a single backslash, and a backslash followed by any other
-character removes that character. In particular, a backslash followed by a space
-can be used as a separator, and a backslash followed by a newline can be used to
-cancel the newline. For example, given that <code>960</code> is the decimal code
-for the character &#960;, then:</p>
+<p>Test files can use the UTF-8 encoding, but there is also an escape convention
+which allows control characters or Unicode characters to be included as plain
+text. A backslash followed by digits represents a character by its decimal code,
+or by its hex code if the code starts with zero. Two backslashes are used to
+represent a single backslash. A backslash followed by any other character
+removes that character. In particular, a backslash followed by a space can be
+used as a separator, and a backslash followed by a newline can be used to cancel
+the newline. For example, given that <code>960</code> is the decimal code for
+the character &#960;, then:</p>
 
 <ul style="list-style-type:none;">
 <li><code style="display:inline-block;width:5em;">\960x</code>
@@ -971,23 +933,48 @@ is the five characters <code>\960x</code></li>
 is a line ending in CR instead of LF</li>
 </ul>
 
-<h2 id="checks">Consistency Checks</h2>
+<h2 id="checks">Consistency checks</h2>
 
 <p>A number of checks are performed on a grammar which help to ensure
-consistency. As well as obvious checks, such as syntax checking of the grammar,
-and checking that each rule name is defined exactly once, the following further
-checks are done:</p>
+consistency. These equivalences hold, which explain some grammar features in
+terms of others:</p>
 
-<h3 id="type">Type Checking</h3>
+<pre>x?        &#8801;  x / ""
+x*        &#8801;  x x* / ""
+x+        &#8801;  x x*
+[x]       &#8801;  x&amp; x
+"ab"      &#8801;  ['a' 'b']
+'ab'      &#8801;  'a' / 'b'
+'a'..'z'  &#8801;  'a' / ... / 'z'
+Ll        &#8801;  'a' / ... / 'z' / ...
+</pre>
+
+<p>They help in describing how checks are made, because they reduce the number
+of features of the language that need to be dealt with separately. The core
+features remaining are:</p>
+
+<pre><code>''</code>     the empty set
+<code>""</code>     the empty string
+<code>@a</code>     an action (or drop)
+<code>#a</code>     an error marker
+<code>'a'</code>    a single character
+<code>#a</code>     a token tag
+<code>x / y</code>  a choice
+<code>x y</code>    a sequence
+<code>x&amp;</code>     a 'has' lookahead
+<code>x!</code>     a 'not' lookahead
+</pre>
+
+<h3 id="type">Input checking</h3>
+
+<p>Some obvious checks are done first, such as syntax checking of the grammar,
+and checking that each rule name is defined exactly once.</p>
 
 <p>A grammar is checked to see if it represents a text parser or a token parser.
 A text parser must contain no tags. A token parser must not contain numerical
 character codes or character sets or character ranges. If contains a string,
-there must be a definition of that string as a synonym for a tag.</p>
-
-<p>If the range operator is used, there is a check that each operand is a
-character, i.e. a numerical character code or a one-character string or
-one-character set, or a name which refers to one of those:</p>
+there must be a definition of that string as a synonym for a tag. There are also
+checks on the range operator:</p>
 
 <pre>digit = "0" .. "9"
 letter = 'a' .. 'z' / 'A' .. 'Z'
@@ -996,24 +983,23 @@ NUL = 0
 US = 31
 </pre>
 
-<p>These checks are implemented by classifying every expression in the grammar
-according to whether or not it refers to a single character.</p>
+<p>There is a check that each operand is a character, i.e. a numerical character
+code or a one-character string or a one-character set, or a name which refers to
+one of those.</p>
 
-<h3 id="loop">Loop Checking</h3>
+<h3 id="loop">Left recursion checking</h3>
 
-<p>Pecan checks that the grammar contains no obvious infinite loops. More
-precisely, Pecan checks for left recursion. The simplest example is where a
-rule mentions its own name at the start of its right hand side, or at the start
-of one of its alternatives:</p>
+<p>Pecan checks that the grammar contains no obvious infinite loops caused by
+left recursion. The simplest example is where a rule mentions its own name at
+the start of its right hand side, or at the start of one of its
+alternatives:</p>
 
 <pre>sum = sum "+" term / term
 </pre>
 
 <p>In a Pecan grammar, a rule of this form leads to an immediate infinite loop,
-and so is reported as an error.</p>
-
-<p>Indirect left recursion is also detected. That is where two or more rules
-mention each other at the beginning:</p>
+and so is reported as an error. Indirect left recursion is also detected. That
+is where two or more rules mention each other at the beginning:</p>
 
 <pre>expression1 = expression2 ...
 expression2 = expression1 ...
@@ -1028,13 +1014,66 @@ expression2 = expression1 ...
 beginning, the expression <code>label*</code> may succeed without any input
 being matched, and therefore an infinite loop ensues.</p>
 
+<p>Four boolean properties of expressions <code>SP</code>, <code>SN</code>,
+<code>FP</code>, <code>FN</code> are calculated for each expression, in a very
+similar way to PEG grammars. The <code>SP</code>, <code>SN</code> properties
+mean the expression can succeed with or without progress being made in the
+input, and <code>FP</code>, <code>FN</code> mean that an expression can fail,
+with or without progress. The way these are calculated for the remaining
+features of grammars are:</p>
+
+<pre>SN("") = true;  SP("") = FP("") = FN("") = false
+SN(@a) = true;  SP(@a) = FP(@a) = FN(@a) = false
+SN(#a) = true;  SP(#a) = FP(#a) = FN(#a) = false
+
+FN('') = true;  SP('') = SN('') = FP('') = false
+
+SP('a') = FN('a') = true;  SN('a') = FP('a') = false
+SP(%a) = FN(%a) = true;  SN(%a) = FP(%a) = false
+
+SN(x y) = SN(x) &amp;&amp; SN(y);
+SP(x y) = SP(x) &amp;&amp; SP(y) || SP(x) &amp;&amp; SN(y) || SN(x) &amp;&amp; SP(y);
+FN(x y) = FN(x) || SN(x) &amp;&amp; FN(y);
+FP(x y) = FP(x) || SN(x) &amp;&amp; FP(y) || SP(x) &amp;&amp; FN(y) || SP(x) &amp;&amp; FP(y);
+
+SN(x / y) = SN(x) || FN(x) &amp;&amp; SN(y);
+SP(x / y) = SP(x) || FN(x) &amp;&amp; SP(y);
+FN(x / y) = FN(x) &amp;&amp; FN(y);
+FP(x / y) = FP(x) || FN(x) &amp;&amp; FP(y);
+
+SN(x&amp;) = SN(x) || SP(x);
+FN(x&amp;) = FN(x) || FP(x);
+
+SN(x!) = FN(x) || FP(x);
+FN(x!) = SN(x) || SP(x);
+</pre>
+
+<p>Because the rules include recursion, these values are calculated repeatedly
+until they don't change (fixed point iteration). Once these values are known, a
+further boolean property, <code>WF</code> is calculated to check that the
+grammar is well formed. If <code>WF</code> turns out to be false for any
+expression, that is reported as an error because it contains left recursion. The
+<code>WF</code> property is calculated by:</p>
+
+<pre>WF("") = WF(@a) = WF(#a) = WF('') = WF('a') = WF(%a) = true
+WF(x y) = WF(x) &amp; (!SN(x) || WF(y))
+WF(x/y) = WF(x) &amp; WF(y)
+WF(x?) = WF(x/"") = WF(x)
+WF(x*) = WF(x) &amp; ~SN(x)
+WF(x+) = WF(xx*) = WF(x) &amp; ~SN(x)
+WF(x&amp;) = WF(x)
+WF(x!) = WF(x)
+
+
+</pre>
+
 <p>This check is implemented by finding out for each expression in the grammar
 whether or not it is optional, i.e. whether it can succeed without making any
 progress by matching some input. Then, for each rule, the rule names which it
 starts with are recorded, taking account of initial optional expressions.
 Finally, any loops within these recorded names are detected.</p>
 
-<h3 id="token">Token Checking</h3>
+<h3 id="token">Token checking</h3>
 
 <p>For grammars which have text as input, a check is made that all tokens
 produced are non-empty, so that continual progress is made through the
@@ -1083,7 +1122,7 @@ end = '' @end
 <p>This does cause an error, because after recognising the end of text, the
 scanner could continue to look for more tokens.</p>
 
-<h3 id="output">Output Checking</h3>
+<h3 id="output">Output checking</h3>
 
 <p>Actions are assumed to treat output items in a stack-like manner. Restrictive
 checks are made to guarantee consistent handling of output items. The arity of
@@ -1160,7 +1199,30 @@ have any overall effect on the stack size.</p>
 which always correctly produce one output item in practice, but which don't
 pass the checks.</p>
 
-<h2 id="java">Generating Code</h2>
+<h2 id="java">Generating code</h2>
+<!--
+TODO: generate
+
+Have multiple entry points. (Don't generate rules?)
+Insist on all names distinct. (Or what? Prefix?)
+
+Have opcodes, actions, errors, tags, rules, bytes.
+Want to connect parser to grammar via enumerations.
+
+-->
+
+<!--
+Instead of the generated code being given an array of tokens, calls are made to
+an external function which provides the next tag. This can be used to cope with
+non-context-free features of languages. For example, take the infamous situation
+with the C language where parsing depends on recognizing identifiers which have
+been defined as type names using <code>typedef</code>. A C scanner which is
+independent of parsing may emit tokens with an identifier tag, which may or may
+not turn out later to be type names. The external functions for a C parser
+would include symbol table construction, and could change the tags of tokens
+given to the parser, according to those symbol tables.</p>
+-->
+
 
 <p>Code is generated as a bytecode with an interpreter. This is somewhat
 similar to the table-driven techniques used in some other parser
@@ -1418,7 +1480,7 @@ categories as well as simple ascii characters.</p>
 
 <h3>The interpreter</h3>
 
-<h2 id="side">Side Effects</h2>
+<h2 id="side">Side effects</h2>
 
 <p>A grammar is linked with external code to make a practical parser. The
 actions in the grammar become calls to this external code. As well as
@@ -1463,19 +1525,38 @@ x / y == y / x          <em>under suitable conditions</em>
 <p>This theory has yet to be established, but it is envisaged that it would
 include the output building and error handling aspects of grammars.</p>
 
-<h2 id="pecan">The Pecan Grammar</h2>
+<h2 id="changes">Recent changes</h2>
+
+<p>The previous version of Pecan was 0.4. Changes in version 1.0 are:</p>
+
+<ul>
+<li>actions are now allowed at the start of a left hand choice</li>
+<li>actions are delayed in case they need to be discarded</li>
+<li>error markers are no longer postfix</li>
+<li>there notation <code>&lt;abc></code> has been added</li>
+<li>string tags use double quotes instead of backquotes</li>
+<li>string tags have definitions to give them names</li>
+<li>separate grammar and test files are supported</li>
+<li>individual rules within a grammar can be tested</li>
+<li>one test file can be called from within another</li>
+<li>parser generation is via bytecode</li>
+</ul>
+
+<h2 id="pecan">The Pecan grammar</h2>
 
 <p>Here is a Pecan parser for the Pecan language itself:</p>
 
-<pre>pecan = skip rules Uc!
-rules = rule (rules @2add)?
+<pre>pecan = skip definitions Uc!
+definitions = definition (definitions @2add)?
+definition = synonym / rule
+synonym = string equals tag @2synonym
 rule = id equals expression newline skip @2rule
 
 expression = term (slash expression @2or)?
 term = factor (term @2and)? / marker term @2handle
 factor = look atom @2look / not atom @2not / atom repetition?
 repetition = opt @2opt / any @2any / some @2some
-atom = id / action / tag / range / back / bracket
+atom = id / action / tag / range / divider / try / bracket
 
 id = letter alpha* @id gap
 action = '@' (digit* letter alpha* @act / @drop) gap
@@ -1483,11 +1564,12 @@ tag = "%" letter alpha* @ask gap
 marker = "#" letter alpha* @mark gap
 range = text (".." skip @ text @2range)?
 text = number / string / set
-back = sb rule se @3back
+try = sb rule se @3back
 bracket = rb rule re @3bracket
 
 number = (("1".."9") digit* / "0" hex*) @number gap
 string = '"' ('"'! visible)* '"' @string gap
+divider = '<' ('"'! visible)* '>' @divider gap
 set = "'" ("'"! visible)* "'" @set gap
 
 equals = "=" infix
@@ -1582,7 +1664,7 @@ cases bar one lead to a small enough number of cases, use a character or
 token-type switch. Otherwise, use a lookup to categorise the next character
 and switch on sets.</p>
 
-<h1>Old Pecan Notes</h1>
+<h1>Old Pecan notes</h1>
 
 <p>Soft failure means input position doesn't change (though it may have been
 reset by backtracking). Because of rule "commit only if input consumed", if
@@ -1598,7 +1680,7 @@ in preference to the expected symbol. If an error symbol is expected, then
 that is reported in preference to any previous expected symbols, even ones
 further on in the input.</p>
 
-<h2>Scanner Implementation</h2>
+<h2>Scanner implementation</h2>
 
 <p>The set expressions are analysed. The smallest intersections are computed
 and these form the base sets. Each set, possibly excluding any remaining
@@ -1607,7 +1689,7 @@ computed where each character is looked up to find its base class. Preferably,
 there are up to 8 or 16 or 32 or 64 bases, and the result can be a one-bit
 number.</p>
 
-<h2>Incremental Scanning</h2>
+<h2>Incremental scanning</h2>
 
 <p>Here are some restrictions so that a scanner can be used for incremental
 scanning, as in a syntax highlighting editor.</p>
