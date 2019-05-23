@@ -32,52 +32,7 @@ int doAction(int op, byte input[], int start, int end, int output[], int out) {
     return out;
 }
 
-// id  Skip backwards in the code. (Tail-call a remote rule.)
-static inline void doBack(int arg) {
-    pc = pc - arg;
-}
-
-// x / y  Save current state, call x, returning to OR.
-static inline void doEither(int arg) {
-    saveIn = in;
-    saveOut = out;
-    stack[top++] = pc + arg;
-}
-
-// x / y  After x, return or continue with y.
-static inline void doOr(int arg) {
-    if (ok || in > saveIn) pc = stack[--top];
-    else out = saveOut;
-}
-
-// x y  Continue with x, returning to AND.
-static inline void doBoth(int arg) {
-    stack[top++] = pc + arg;
-}
-
-// x y  After x, if it failed return, else continue with y.
-static inline void doAnd(int arg) {
-    if (! ok) pc = stack[--top];
-}
-
-// x?, x*  Save state and jump to x, returning to OPT or MANY.
-static inline void doMaybe(int arg) {
-    saveIn = in;
-    saveOut = out;
-    stack[top++] = pc + arg;
-    pc++;
-}
-
-// x?  After x, check success and return.
-static inline void doOpt(int arg) {
-    if (!ok && in == saveIn) {
-        out = saveOut;
-        ok = true;
-    }
-    pc = stack[--top];
-}
-
-// Define a jump table of functions, one for each opcode.
+/// Define a jump table of functions, one for each opcode.
 static instruction *table[] = {
     [STOP]=doStop, [OR]=doOr, [AND]=doAnd, [MAYBE]=doMaybe, [OPT]=doOpt, /*,
     [MANY], [DO],
@@ -91,11 +46,8 @@ static instruction *table[] = {
 int parse(byte *input) {
 
     // The parsing state.
-    // TODO separate stack for delay, NB all catchup.
-    // TODO stack for saveIn, saveOut
-    int output[1000], delayed[1000], stack[1000];
-    int pc, start, in, out, delay;
-    int top, look, mark, markers;
+    int stack[1000], delayed[1000], output[1000];
+    int pc, top, start, in, out, delay, look, mark, markers, saveIn, saveDelay;
     bool ok, act, end;
 
     while(! end) {
@@ -145,37 +97,77 @@ int parse(byte *input) {
                 stack[top++] = pc + arg;
                 break;
 
-                // id = x  After x, tidy up and arrange to return.
+            // id = x  After x, tidy up and arrange to return.
             case STOP:
                 if (ok && delay > 0) act = true;
                 end = true;
                 break;
 
-                // id  Skip forwards in the code. (Tail-call a remote rule.)
+            // id  Skip forwards in the code. (Tail-call a remote rule.)
             case GO:
                 pc = pc + arg;
                 break;
 
-            case EITHER:    doEither(rg); break;
-            case OR:        doOr(arg); break;
-            case BOTH:      doBoth(arg); break;
-            case AND:       doAnd(arg); break;
-        }
+            // id  Skip backwards in the code. (Tail-call a remote rule.)
+            case BACK:
+                pc = pc - arg;
+                break;
 
-    }
-    return output[0];
-}
+            // x / y  Save current state, call x, returning to OR.
+            case EITHER:
+                stack[top++] = in;
+                stack[top++] = delay;
+                stack[top++] = pc + arg;
+                break;
 
-/*
+            // x / y  After x, return or continue with y.
+            case OR:
+                saveDelay = stack[--top];
+                saveIn = stack[--top];
+                if (ok || in > saveIn) pc = stack[--top];
+                else delay = saveDelay;
+                break;
+
+            // x y  Continue with x, returning to AND.
+            case BOTH:
+                stack[top++] = pc + arg;
+                break;
+
+            // x y  After x, if it failed, return, else continue with y.
+            case AND:
+                if (! ok) pc = stack[--top];
+                break;
+
+            // x?, x*  Save state and jump to x, returning to OPT or MANY.
+            case MAYBE:
+                stack[top++] = in;
+                stack[top++] = delay;
+                stack[top++] = pc + arg;
+                pc++;
+                break;
+
+            // x?  After x, check success and return.
+            case OPT:
+                saveDelay = stack[--top];
+                saveIn = stack[--top];
+                if (!ok && in == saveIn) {
+                    delay = saveDelay;
+                    ok = true;
+                }
+                pc = stack[--top];
+                break;
+
             // x*: after x, check success and re-try x or return.
             case MANY:
                 if (ok) {
-                    saveIn = in;
-                    saveOut = out;
+                    stack[top-2] = in;
+                    stack[top-1] = delay;
                 }
                 else {
+                    saveDelay = stack[--top];
+                    saveIn = stack[--top];
                     if (!ok && in == saveIn) {
-                        out = saveOut;
+                        delay = saveDelay;
                         ok = true;
                     }
                     pc = stack[--top];
@@ -188,6 +180,13 @@ int parse(byte *input) {
                 pc = pc + 3;
                 break;
 
+
+        }
+
+    }
+}
+
+/*
             // [x], x&, x!: start a lookahead.
             case LOOK:
                 saveIn = in;

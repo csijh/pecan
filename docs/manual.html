@@ -1216,14 +1216,10 @@ pass the checks.</p>
 
 <h2 id="java">Generating code</h2>
 <!--
-TODO: generate
-
-Have multiple entry points. (Don't generate rules?)
-Insist on all names distinct. (Or what? Prefix?)
+TODO: Have multiple entry points. (Don't generate rules?)
+TODO: Insist on all names distinct. (Or what? Prefix?)
 
 Have opcodes, actions, errors, tags, rules, bytes.
-Want to connect parser to grammar via enumerations.
-
 -->
 
 <!--
@@ -1270,7 +1266,7 @@ written in any desired programming language, containing a placeholder:</p>
 </pre>
 
 <p>This must be on a line on its own, possibly preceded by spaces to specify an
-indent. The command inserts the bytecode into the interpreter, replacing the
+indent. The command inserts the bytecode into the interpreter, in place of the
 placeholder, to form the output file. The result is a parser which matches the
 grammar.</p>
 
@@ -1422,20 +1418,21 @@ call unless the interpreter's language supports it.</p>
 {x!}        =   LOOK NOT {x}
 </pre>
 
-<p>The <code>MAYBE</code> opcode initializes an optional construct, then causes
-a call to <code>{x}</code>, returning to <code>OPT</code>, which converts the
-result of <code>{x}</code> into the result of <code>x?</code>. The code
-<code>MAYBE OPT {x}</code> might be a little more readable if written as
-<code>MAYBE nx {x} OPT</code>, but the format shown above avoids the need for
-the argument <code>nx</code>. The <code>MANY</code> opcode is similarly executed
-after <code>{x}</code>. It checks the result of <code>{x}</code> to decide
-whether or not to call it again. The code for <code>x+</code> is equivalent to
-the code for <code>x x*</code>, except that the <code>DO</code> opcode avoids
-the need for a second copy of <code>{x}</code> by jumping forwards, and
-arranging for the call to return to <code>AND</code>. The <code>LOOK</code>
-opcode initializes any of the lookahead constructs, arranging to return to
-<code>TRY</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
-result.</p>
+<p>The <code>MAYBE</code> opcode initializes, then causes a call to
+<code>{x}</code>, returning to <code>OPT</code>. The <code>OPT which converts the result of
+<code>{x}</code> into the result of <code>x?</code>. The <code>MANY</code>
+opcode is similarly executed after <code>{x}</code>. It checks the result of
+<code>{x}</code> to decide whether or not to call it again. The code <code>MAYBE
+OPT {x}</code> might be a little more readable if written as <code>MAYBE nx {x}
+OPT</code>, but the format shown above avoids the need for the argument
+<code>nx</code>. In the case of <code>MANY</code>, there is the added advantage
+that <code>{x}</code> is easily called again. The code for <code>x+</code> is
+equivalent to the code for <code>x x*</code>, except that the <code>DO</code>
+opcode avoids the need for a second copy of <code>{x}</code> by jumping
+forwards, and arranging for the call to return to <code>AND</code>. The
+<code>LOOK</code> opcode initializes any of the lookahead constructs, arranging
+to return to <code>TRY</code> or <code>HAS</code> or <code>NOT</code> which
+sorts out the result.</p>
 
 <pre>{@a}        =   ACT a
 {@}         =   ACT 0
