@@ -9,69 +9,27 @@ typedef unsigned char byte;
 // An extended opcode EXTEND+OP has a two-byte, big-endian, unsigned argument.
 enum op {
     STOP, OR, AND, MAYBE, OPT, MANY, DO, LOOK, TRY, HAS, NOT,
-    RULE, START, GO, BACK, EITHER, BOTH, CHAR, SET, STRING, LRANGE, HRANGE, LT,
+    RULE, START, GO, BACK, EITHER, BOTH, CHAR, SET, STRING, LOW, HIGH, LT,
     CAT, TAG, MARK, ACT,
     EXTEND
 };
 
-// Action constants.
-enum action { drop, number };
+// Action constants. Reserve 0 for @ which drops characters.
+enum action { number = 1 };
 
 static byte code[] = {
-    START, 8, LRANGE, 1, 48, HRANGE, 1, 57, ACT, number, STOP
+    START, 8, LOW, 1, 48, HIGH, 1, 57, ACT, number, STOP
 };
 
-// Get an integer from a substring of the input.
-static inline int getInt(byte *input, int i, int j) {
-  int n = 0;
-  for (int k = i; k < j; k++) n = n * 10 + (input[i + k] - '0');
-  return n;
-}
-
-// The type of a function which represents one bytecode instruction.
-typedef void instruction(int arg);
-
-
-// id = x  Entry point. Prepare, then continue with x, returning to STOP.
-static void doStart(int arg) {
-    pc = start = in = out = saveIn = saveOut = 0;
-    top = look = mark = markers = 0;
-    ok = act = end = false;
-    stack[top++] = pc + arg;
-}
-
-// id = x  After x, tidy up and return the result of parsing.
-static void doStop(int arg) {
-    if (ok && out > saveOut) doActions();
-    // TODO report errors properly
-    if (! ok) {
-        if (in > mark) markers = 0;
-        printf("Parsing failed\n");
-        exit(1);
+// Carry out a (delayed) action, returning the updated value of 'out'.
+static inline
+int doAction(int op, byte input[], int start, int end, int output[], int out) {
+    if (op == number) {
+        int n = 0;
+        for (int i = start; i < end; i++) n = n * 10 + (input[i] - '0');
+        output[out++] = n;
     }
-    end = true;
-}
-
-/*
-// BOTH n x AND y
-static bool doBothAnd(int pc) {
-    pc++;
-    int n = code[pc++];
-    x = pc
-    AND = pc+n
-    y = AND + 1;
-    function f = table[code[pc++]];
-    function g = table[code[pc+n]]; // first of y
-    int save....
-    f();
-    check...return...
-    return g(); // no tail call
-}
-*/
-
-// id  Skip forwards in the code. (Tail-call a remote rule.)
-static inline void doGo(int arg) {
-    pc = pc + arg;
+    return out;
 }
 
 // id  Skip backwards in the code. (Tail-call a remote rule.)
@@ -149,25 +107,21 @@ int parse(byte *input) {
             act = false;
             for (int i = 0; i < delay; i++) {
                 int op = delayed[i++];
-                int end = delayed[i];
-                if (op == number) output[out++] = getInt(input, start, end);
-                start = end;
+                int oldIn = delayed[i];
+                out = doAction(op, input, start, oldIn, output, out);
+                start = oldIn;
             }
             delay = 0;
         }
-        // Each action is stored as an opcode and a saved value of in. The drop
-        // action discards input characters, and the number action turns them into an
-        // output integer. Switch off the act flag which triggered the call.
-        static inline void doActions() {
-          for (int i = saveOut; i < out; i++) {
-              int op = output[i] & 0xFF, oldIn = output[i] >> 24;
-              if (op == number) output[saveOut++] = getInt(start, oldIn);
-                start = oldIn;
-            }
-            out = saveOut;
-            act = false;
-        }
 
+        // At end, check success or failure and return.
+        // TODO report error markers better.
+        if (end) {
+            if (ok) return output[0];
+            if (in > mark) markers = 0;
+            printf("Parsing failed %x\n", markers);
+            exit(1);
+        }
 
         // Carry out one instruction. Read in a one or two byte argument as
         // appropriate, and then dispatch the opcode.
@@ -183,9 +137,25 @@ int parse(byte *input) {
             // id = x  label an entry point. continue with START.
             case RULE: break;
 
-            case START:     doStart(arg); break;
-            case STOP:      doStop(arg); break;
-            case GO:        doGo(arg); break;
+            // id = x  Entry point. Prepare, continue with x, returning to STOP.
+            case START:
+                pc = start = in = out = saveIn = saveOut = 0;
+                top = look = mark = markers = 0;
+                ok = act = end = false;
+                stack[top++] = pc + arg;
+                break;
+
+                // id = x  After x, tidy up and arrange to return.
+            case STOP:
+                if (ok && delay > 0) act = true;
+                end = true;
+                break;
+
+                // id  Skip forwards in the code. (Tail-call a remote rule.)
+            case GO:
+                pc = pc + arg;
+                break;
+
             case EITHER:    doEither(rg); break;
             case OR:        doOr(arg); break;
             case BOTH:      doBoth(arg); break;

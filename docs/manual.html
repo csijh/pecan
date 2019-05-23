@@ -46,7 +46,6 @@
 <li><a href="#code">Bytecode</a></li>
 </ul>
 </li>
-<li><a href="#side">Side effects</a></li>
 </li>
 <li><a href="#transforms">Transforms</a></li>
 <li><a href="#changes">Recent changes</a></li>
@@ -575,25 +574,22 @@ ascii = 0..127
 <p>Each argument to the range operator must be a single character (code point),
 specified using an integer or single quotes or double quotes.</p>
 
-<p>A string in angle brackets <code>&lt;...></code> represents a two-way check.
-An expression such as <code>&lt;abc></code> does not match any input characters,
-but is a lookahead construct which succeeds if the remaining input, regarded as
-a string, is lexicographically less than <code>"abc"</code>. For example:</p>
+<p>A divider is a string in angle brackets instead of double quotes
+<code>&lt;...></code> which represents a two-way check. An expression such as
+<code>&lt;abc></code> does not match any input characters, but is a lookahead
+construct which succeeds if the remaining input, regarded as a string, is
+lexicographically less than <code>"abc"</code>. For example:</p>
 
-<pre>keyword = &lt;f> keyword12 / keyword34
-keyword12 = &lt;co> keyword1 / keyword2
-keyword34 = &lt;sw> keyword3 / keyword4
-keyword1 = "break" / "case" / "catch"
-keyword2 = "continue" / "default" / "do" / "else"
-keyword3 = "for" / "if" / "return" / "static"
-keyword4 = "switch" / "try" / "while"
+<pre>keyword = &lt;do> keyword1 / keyword2
+keyword1 = "break" / "case" / "catch" / "continue" / "default"
+keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 </pre>
 
-<p>Here, interval halving is used to match keywords. The expression
-<code>&lt;f></code> succeeds if the remaining input, regarded as a string, is
-lexicographically less than <code>"f"</code>. Similarly, <code>&lt;co></code>
-distinguishes the keywords up to <code>"catch"</code> from the keywords
-<code>"continue"</code> onwards.</p>
+<p>Here, some keywords are listed in alphabetical order, and a divider is used
+to speed up their recognition by separating the keywords before
+<code>"do"</code> from the keywords from <code>"do"</code> onwards. The less and
+greater than signs used as brackets are also mnemonics for the two-way decision
+which a divider represents.</p>
 
 <p>The empty string <code>""</code> always succeeds, and the empty set
 <code>''</code> always fails:</p>
@@ -838,10 +834,10 @@ are displayed. If a line number is given, only the single test that starts on
 that line of the test file is executed.</p>
 
 <p>A test file contains a number of sections separated by lines consisting of
-three or more equal signs. If a section contains a line of minus signs, then it
-is a test with sample input and expected output. If a section has no divider, it
-is a grammar which is used for subsequent tests, until another grammar is given.
-For example:</p>
+three or more equal signs. If a section contains a line of minus signs as a
+separator, then it is a test with sample input and expected output. If a section
+has no minus sign separator, it is a grammar which is used for subsequent tests,
+until another grammar is given. For example:</p>
 
 <pre>// Recognise one digit
 number = ("0".."9") @number
@@ -936,46 +932,57 @@ is a line ending in CR instead of LF</li>
 <h2 id="checks">Consistency checks</h2>
 
 <p>A number of checks are performed on a grammar which help to ensure
-consistency. These equivalences hold, which explain some grammar features in
-terms of others:</p>
+consistency. For some features of grammars, namely numerical characters,
+non-empty strings and sets, ranges, categories, options, one-or-more repetitions
+and try, the results of the checks are clear from these example
+equivalences:</p>
 
-<pre>x?        &#8801;  x / ""
-x*        &#8801;  x x* / ""
-x+        &#8801;  x x*
-[x]       &#8801;  x&amp; x
+<pre>32        &#8801;  ' '
 "ab"      &#8801;  ['a' 'b']
 'ab'      &#8801;  'a' / 'b'
 'a'..'z'  &#8801;  'a' / ... / 'z'
 Ll        &#8801;  'a' / ... / 'z' / ...
+x?        &#8801;  x / ""
+x+        &#8801;  x x*
+[x]       &#8801;  x&amp; x
 </pre>
 
-<p>They help in describing how checks are made, because they reduce the number
-of features of the language that need to be dealt with separately. The core
-features remaining are:</p>
+<p>This reduces the number of features of grammars that need to be dealt with
+separately. The core features remaining are:</p>
 
 <pre><code>''</code>     the empty set
 <code>""</code>     the empty string
-<code>@a</code>     an action (or drop)
-<code>#a</code>     an error marker
-<code>'a'</code>    a single character
-<code>#a</code>     a token tag
-<code>&lt;a></code>   a divider
-<code>x / y</code>  a choice
+<code>@x</code>     an action (or drop)
+<code>#x</code>     an error marker
+<code>'x'</code>    a single character
+<code>#x</code>     a token tag
+<code>&lt;x></code>    a divider
+<code>x/y</code>    a choice
 <code>x y</code>    a sequence
+<code>x*</code>     a repetition
 <code>x&amp;</code>     a 'has' lookahead
 <code>x!</code>     a 'not' lookahead
 </pre>
+
+<p>The checks can be described under a number of headings.</p>
 
 <h3 id="type">Input checking</h3>
 
 <p>Some obvious checks are done first, such as syntax checking of the grammar,
 and checking that each rule name is defined exactly once.</p>
 
-<p>A grammar is checked to see if it represents a text parser or a token parser.
-A text parser must contain no tags. A token parser must not contain numerical
-character codes or character sets or character ranges. If contains a string,
-there must be a definition of that string as a synonym for a tag. There are also
-checks on the range operator:</p>
+<p>A grammar is then checked to see if it represents a text parser or a token
+parser. A text parser must contain no tags. A token parser must not contain
+numerical character codes or character sets or character ranges or dividers. If
+it contains a string, there must be a definition of that string as a synonym for
+a tag:</p>
+
+<pre>assign = id "=" expression
+...
+"=" = %eq
+</pre>
+
+<p>There are also checks on the range operator:</p>
 
 <pre>digit = "0" .. "9"
 letter = 'a' .. 'z' / 'A' .. 'Z'
@@ -984,16 +991,15 @@ NUL = 0
 US = 31
 </pre>
 
-<p>There is a check that each operand is a character, i.e. a numerical character
-code or a one-character string or a one-character set, or a name which refers to
-one of those.</p>
+<p>There is a check that each operand is a character (code point), i.e. a
+numerical character code or a one-character string or a one-character set, or a
+name which refers to one of those.</p>
 
 <h3 id="loop">Left recursion checking</h3>
 
-<p>Pecan checks that the grammar contains no obvious infinite loops caused by
-left recursion. The simplest example is where a rule mentions its own name at
-the start of its right hand side, or at the start of one of its
-alternatives:</p>
+<p>Pecan checks that the grammar contains no infinite loops caused by left
+recursion. The simplest example is where a rule mentions its own name at the
+start of its right hand side, or at the start of one of its alternatives:</p>
 
 <pre>sum = sum "+" term / term
 </pre>
@@ -1020,8 +1026,9 @@ being matched, and therefore an infinite loop ensues.</p>
 similar way to PEG grammars. The <code>SP</code>, <code>SN</code> properties
 mean the expression can succeed with or without progress being made in the
 input, and <code>FP</code>, <code>FN</code> mean that an expression can fail,
-with or without progress. The way these are calculated for the remaining
-features of grammars are:</p>
+with or without progress. The way these are calculated for the core features of
+grammars (using <code>&amp;</code> for 'and' and <code>|</code> for 'or', with
+<code>&amp;</code> binding tighter) are:</p>
 
 <pre>SN("") = true;  SP("") = FP("") = FN("") = false
 SN(@a) = true;  SP(@a) = FP(@a) = FN(@a) = false
@@ -1031,42 +1038,46 @@ FN('') = true;  SP('') = SN('') = FP('') = false
 
 SP('a') = FN('a') = true;  SN('a') = FP('a') = false
 SP(%a) = FN(%a) = true;  SN(%a) = FP(%a) = false
-SN(&lt;a>) = FN(&lt;a>) = true; ...
+SN(&lt;a>) = FN(&lt;a>) = true;  SP(&lt;a>) = FP(&lt;a>) = false
 
-SN(x y) = SN(x) &amp;&amp; SN(y);
-SP(x y) = SP(x) &amp;&amp; SP(y) || SP(x) &amp;&amp; SN(y) || SN(x) &amp;&amp; SP(y);
-FN(x y) = FN(x) || SN(x) &amp;&amp; FN(y);
-FP(x y) = FP(x) || SN(x) &amp;&amp; FP(y) || SP(x) &amp;&amp; FN(y) || SP(x) &amp;&amp; FP(y);
+SN(x y) = SN(x) &amp; SN(y);
+SP(x y) = SP(x) &amp; SP(y) | SP(x) &amp; SN(y) | SN(x) &amp; SP(y);
+FN(x y) = FN(x) | SN(x) &amp; FN(y);
+FP(x y) = FP(x) | SN(x) &amp; FP(y) | SP(x) &amp; FN(y) | SP(x) &amp; FP(y);
 
-SN(x / y) = SN(x) || FN(x) &amp;&amp; SN(y);
-SP(x / y) = SP(x) || FN(x) &amp;&amp; SP(y);
-FN(x / y) = FN(x) &amp;&amp; FN(y);
-FP(x / y) = FP(x) || FN(x) &amp;&amp; FP(y);
+SN(x/y) = SN(x) | FN(x) &amp; SN(y);
+SP(x/y) = SP(x) | FN(x) &amp; SP(y);
+FN(x/y) = FN(x) &amp; FN(y);
+FP(x/y) = FP(x) | FN(x) &amp; FP(y);
 
-SN(x&amp;) = SN(x) || SP(x);
-FN(x&amp;) = FN(x) || FP(x);
+SN(x*) = FN(x)
+SP(x*) = SP(x) &amp; FN(x)
+FP(x*) = FP(x)
+FN(x*) = false
 
-SN(x!) = FN(x) || FP(x);
-FN(x!) = SN(x) || SP(x);
+SN(x&amp;) = SN(x) | SP(x);  SP(x&amp;) = false
+FN(x&amp;) = FN(x) | FP(x);  FP(x&amp;) = false
+
+SN(x!) = FN(x) | FP(x);  SP(x!) = false
+FN(x!) = SN(x) | SP(x);  FP(x!) = false
 </pre>
 
-<p>Because the rules include recursion, these values are calculated repeatedly
-until they don't change (fixed point iteration). Once these values are known, a
-further boolean property, <code>WF</code> is calculated to check that the
-grammar is well formed. If <code>WF</code> turns out to be false for any
-expression, that is reported as an error because it contains left recursion. The
-<code>WF</code> property is calculated by:</p>
+<p>Because the rules include recursion, fixed point iteration is used, i.e. the
+values are calculated repeatedly until they don't change. If all the values are
+set to <code>false</code> at the start, the only possible changes are from
+<code>false</code> to <code>true</code>, so the iteration terminates.</p>
+
+<p>Once these values are known, a further boolean property, <code>WF</code> is
+calculated to check that the grammar is well formed. If <code>WF</code> turns
+out to be false for any expression, that is reported as an error because it
+contains left recursion. The <code>WF</code> property is calculated (using
+<code>~</code> for 'not') by:</p>
 
 <pre>WF("") = WF(@a) = WF(#a) = WF('') = WF('a') = WF(%a) = WF(&lt;a>) = true
-WF(x y) = WF(x) &amp; (!SN(x) || WF(y))
+WF(x y) = WF(x) &amp; (~SN(x) | WF(y))
 WF(x/y) = WF(x) &amp; WF(y)
-WF(x?) = WF(x/"") = WF(x)
-WF(x*) = WF(x) &amp; ~SN(x)
-WF(x+) = WF(xx*) = WF(x) &amp; ~SN(x)
 WF(x&amp;) = WF(x)
 WF(x!) = WF(x)
-
-
 </pre>
 
 <p>This check is implemented by finding out for each expression in the grammar
@@ -1076,6 +1087,8 @@ starts with are recorded, taking account of initial optional expressions.
 Finally, any loops within these recorded names are detected.</p>
 
 <h3 id="token">Token checking</h3>
+
+<hr/>
 
 <p>For grammars which have text as input, a check is made that all tokens
 produced are non-empty, so that continual progress is made through the
@@ -1226,9 +1239,9 @@ given to the parser, according to those symbol tables.</p>
 -->
 
 
-<p>Code is generated as a bytecode with an interpreter. This is somewhat
-similar to the table-driven techniques used in some other parser
-generators. Advantages of using the bytecode approach are:</p>
+<p>Code is generated as a bytecode with an interpreter. This is somewhat similar
+to the table-driven techniques used in bottom-up CFG-based parser generators.
+Advantages of using the bytecode approach are:</p>
 
 <ul>
 
@@ -1243,289 +1256,238 @@ and efficient way using a custom stack</li>
 
 </ul>
 
-<h3>Interpreter templates</h3>
+<h3>Interpreters</h3>
 
-<p>An interpreter for the bytecode can be written in any language. It is written
-as a template, which is filled in by the Pecan system from a grammar. The result
-is a parser which matches the grammar.</p>
+<p>A bytecode sequence is generated using a command of the form:</p>
 
-<p>The generated parser uses several sequences, which are generated by Pecan.
-These are the opcodes, actions, errors, tags, rules, and the bytecode bytes.
-Each of these can be inserted into the template using a placeholder in the
-template such as:</p>
-
-<pre>&lt;actions %s=%d, >
+<pre>pecan [-i interpreter] -o output grammar
 </pre>
 
-<p>A placeholder starts with a less than sign <code>&lt;</code>, and one of the
-keywords <code>opcodes</code>, <code>actions</code>, <code>errors</code>,
-<code>tags</code>, <code>rules</code>, <code>bytes</code>. The keyword is
-followed by a space, an insertion string and a greater than sign. The insertion
-string works rather like the <code>printf</code> function in C and equivalent
-formatted output functions in other languages. Each of the items in turn is
-inserted into the template under control of the string. Where the string
-contains the <code>%s</code> characters, the name of the item is printed. Where
-the string contains <code>%d</code>, the decimal number for the item is printed.
-Other characters are printed verbatim. The characters after the last percent
-item are treated as separator characters, and are not printed for the last
-item.</p>
+<p>The option <code>-i interpreter</code> specifies an interpreter source file,
+written in any desired programming language, containing a placeholder:</p>
 
-<p>For example, suppose a text-based parser for a calculator contains actions
-<code>@number</code>, <code>@2add</code>, <code>@2subtract</code>,
-<code>@2multiply</code>, <code>@2divide</code>, and the template contains the
-placeholder:</p>
-
-<pre>&lt;actions %s=%d, >
+<pre>&lt;pecan>
 </pre>
 
-<p>Then the text inserted into the template at that point, to replace the
-placeholder, is:</p>
+<p>This must be on a line on its own, possibly preceded by spaces to specify an
+indent. The command inserts the bytecode into the interpreter, replacing the
+placeholder, to form the output file. The result is a parser which matches the
+grammar.</p>
 
-<pre>number=0, add=1, divide=2, multiply=3, subtract=4
-</pre>
-
-<p>The actions are listed in order of arity and then, for each arity, in
-alphabetical order. This helps to ensure that if actions in a scanner represent
-token types, they can be matched up with the corresponding token tags in the
-associated parser.</p>
-
-<p>To create an enumerated type in C, the template could contain:</p>
-
-<pre>enum action { &lt;actions %s, > };
-</pre>
-
-<p>The generated parser would then contain the line:</p>
-
-<pre>enum action { number, add, divide, multiply, subtract };
-</pre>
-
-<p>Some example templates are provided.</p>
-
-<h3>The nature of the bytecode</h3>
-
-<p>A grammar is converted into an array of unsigned bytes. For example, suppose
-this is the grammar:</p>
+<p>The bytecode sequence is printed as text, as a comma-separated list of
+unsigned byte values. Those values which are opcodes, categories, tags, actions
+or error markers are represented symbolically. In addition, if multiple entry
+points are requested, rules names are also represented symbolically. Suppose the
+grammar file contains:</p>
 
 <pre>digit = "0".."9" @number
 </pre>
 
-<p>A template program is provided, containing a placeholder
-<code>&lt;pecan></code> for the position of the bytecode sequence. Suppose the
-template, in the C language, contains:</p>
+<p>Then the bytecode sequence generated might be:</p>
 
-<pre>...
-unsigned char code[] = {
-    &lt;pecan>
-};
-...
+<pre>START, 8, LOW, 1, 48, HIGH, 1, 57, ACT, number, STOP
 </pre>
 
-<p>Once the bytecode sequence is inserted into the template, the result is:</p>
+<p>The values of the symbols are specified by the surrounding interpreter, eg.
+using enumerations to define each symbol as a number in the range <code>0</code>
+to <code>255</code>. By default, the same names are used as in the grammar,
+after removing the prefix character. That means the names of actions, error
+markers and tags must normally all be distinct.</p>
 
-<pre>...
-unsigned char code[] = {
-    START, 8, GE, 1, 48, LE, 1, 57, ACT, number, STOP
-};
-...
+<p>An interpreter can be constructed by taking one of the example interpreters
+provided with Pecan, translating it into the desired programming language if
+necessary, and adapting it to a particular application by customising tags,
+actions and error handling as appropriate.</p>
+
+<h3>The bytecode</h3>
+
+<p>A grammar is converted into an array of unsigned bytes. The notation
+<code>{x}</code> means "the bytecode sequence generated for expression x" and
+<code>nx</code> stands for the number of bytes in <code>{x}</code>. For example,
+the normal translation of a rule is:</p>
+
+<pre>{id = x}   =   START nx {x} STOP
 </pre>
 
-<p>The bytecode is generated symbolically by Pecan. The template must provide
-definitions for the symbols in the bytecode, perhaps using enumerated types. The
-symbols include opcodes, actions, error markers, tags, and possibly rules to be
-used as entry points. The conversion from a grammar to a bytecode sequence uses
-these translation rules, where commas between bytes are omitted:</p>
+<p>In these descriptions, the commas which separate the bytes in the printed
+code are omitted. Some opcodes such as <code>STOP</code> take no argument.
+Others, like <code>START</code> are followed by a one-byte argument. The number
+<code>nx</code> can be thought of as a relative offset in the code,
+from the byte after <code>nx</code> to the <code>STOP</code>
+instruction. If the number <code>nx</code> exceeds <code>255</code>,
+then the translation becomes:</p>
 
-<pre>&lt;id = x>   =  RULE id START n<sub>x</sub> &lt;x> STOP
-&lt;id>       =  GO n
-&lt;'a'>      =  CHAR 'a'
-&lt;10>       =  CHAR 10
-&lt;128>      =  CHAR 194 128
-&lt;"ab">     =  STRING 2 'a' 'b'
-&lt;"&#960;">      =  STRING 2 207 128
-&lt;'&#960;'>      =  STRING 2 207 128
-&lt;'a&#960;'>     =  SET 3 'a' 207 128
-&lt;'a'..'z'> =  RANGE 'a' 'z'
-&lt;'&#945;'..'&#969;'> =  RANGE 206 177 207 137
-
-0.."m"    RANGE...    LE n "m"
-Nd        CAT Nd      CAT Nd
-%id       TAG id      TAG n
-#e        MARK e      MARK n
-
-
-&lt;x / y>   =  EITHER n &lt;x> OR &lt;y>
-&lt;x y>     =  BOTH n &lt;x> AND &lt;y>
-&lt;x?>      =  MAYBE OPT &lt;x>
-&lt;x*>      =  MAYBE MANY &lt;x>
-&lt;x+>      =  DO THEN MAYBE MANY &lt;x>
-&lt;[x]>     =  LOOK TRY &lt;x>
-&lt;x&amp;>  =  LOOK HAS &lt;x>
-&lt;x!>      =  LOOK NOT &lt;x>
-&lt;@>       =  DROP
-&lt;@a>      =  ACT0+n
+<pre>{id = x}   =   EXTEND+START nx1 nx2 {x} STOP
 </pre>
 
-<p>The upper case words <code>RULE</code>, <code>START</code> etc. are one-byte
-opcodes. An opcode may be followed by an argument. The notation
-<code>&lt;x></code> stands for the sequence of bytes generated for expression
-<code>x</code>, and <code>n<sub>x</sub></code> is its length.</p>
+<p>Here <code>EXTEND+START</code> is a single bytecode. The number
+<code>EXTEND</code> can be added to any opcode which normally takes a one-byte
+argument, to indicate that it instead takes a two-byte argument. The two bytes
+<code>nx1 = nx/256</code> and <code>nx2 = nx%256</code> represent
+<code>nx</code> in big-endian unsigned format. If multiple entry points are
+requested when generating the bytecode, then the rules which are to be used as
+entry points are labelled by generating them as:</p>
 
-<p>In the sequence generated for a grammar rule, the <code>RULE</code>
-instruction has no effect. It is only included to mark an entry point if
-multiple entry points are requested, otherwise it is omitted. The argument to
-the <code>RULE</code> opcode is the name of the rule, which the surrounding
-program defines as an integer identifier. The program can scan the bytecode
-sequence for entry points by using <code>n<sub>x</sub></code> to skip past the
-<code>STOP</code> instruction, to find the next entry point.</p>
-
-<p>The <code>START</code> instruction does any initialisation needed to begin a
-new parsing operation.  Its argument is the length of the sequence
-<code>&lt;x></code>. The length can also be thought of as a relative offset to
-the <code>STOP</code> instruction. The <code>START</code> instruction then
-pushes the address of the <code>STOP</code> instruction as a return address onto
-an execution stack, then jumps to the start of the sequence <code>&lt;x></code>.
-When <code>&lt;x></code> returns, it returns to the <code>STOP</code>
-instruction, which finishes the parsing operation.</p>
-
-<p>An expression which is just an identifier <code>id</code> is translated into
-<code>GO n</code> where <code>n</code> is a relative offset to the sequence
-<code>&lt;x></code>, where <code>x</code> is the right hand side of the rule
-<code>id = x</code> which defines <code>id</code>.</p>
-
-<p>In a straightforward bytecode implementation, with no optimization, each
-expression is compiled into a bytecode function which succeeds or fails. As an
-example, a choice <code>x / y</code> might be encoded as:</p>
-
-<pre>&lt;x / y>  =  EITHER m &lt;x> OR n &lt;y> RETURN
+<pre>{id = x}   =   RULE id START nx {x} STOP
 </pre>
 
-<p>Here <code>&lt;x></code> stands for the bytecode sequence generated from
-subexpression <code>x</code>, and <code>m</code> stands for its length.
-Similarly, <code>&lt;y></code> stands for the bytecode sequence generated from
-subexpression <code>y</code>, and <code>n</code> stands for its length. The
-<code>EITHER</code> opcode prepares for the choice, uses <code>m</code> to push
-the address of the <code>OR</code> opcode onto the execution stack as a return
-address, and jumps to the start of the <code>&lt;x></code> sequence. When that
-sequence ends, it returns to the <code>OR</code> bytecode. This checks whether
-it is appropriate to continue, pushes the address of the <code>RETURN</code>
-bytecode onto the execution stack, and jumps to the start of the
-<code>&lt;y></code> sequence. When that sequence ends, it returns to the
-<code>RETURN</code> opcode, which returns from the <code>&lt;x / y></code>
-sequence.</p>
+<p>The names of the entry point rules must be distinct from the other symbols
+generated. The entry point rules are generated one after the other from
+the start of the bytecode sequence. That allows the interpreter to scan the
+bytes, skipping the body <code>{x}</code> of each rule using the number
+<code>nx</code>, to find the entry points. When the name of a rule
+such as <code>id = x</code> is used elsewhere in the grammar, it is translated
+by one of:</p>
 
-<p>Immediately, there is an opportunity for a tail-call optimization. Instead of
-calling <code>&lt;y></code>, the <code>OR</code> opcode can jump to
-<code>&lt;y></code>, so the length <code>n</code> and the final
-<code>RETURN</code> opcode are not needed. The sequence becomes:</p>
-
-<pre>&lt;x / y>  =  EITHER m &lt;x> OR &lt;y>
+<pre>{id}       =   GO n
+{id}       =   BACK n
 </pre>
 
-<p>Now, the <code>EITHER</code> opcode assumes that <code>X</code> immediately
-follows <code>&amp;Y</code>. The full set of translations at this point,
-without further optimisation, is:</p>
+<p>The number <code>n</code> is an offset in the code to the body
+<code>{x}</code> of the relevant rule, relative to the next byte after
+<code>n</code>. The <code>GO</code> opcode is used when the offset is positive,
+and <code>BACK</code> is used, with a positive argument, when the offset is
+negative. For simple input:</p>
 
-<pre>r = x    RULE frame         frame = amount of call stack needed
-r        GO &amp;R              identifier: jump to its rule
-x / y    EITHER OR &amp;Y       call Y if X fails without progress
-x y      BOTH AND &amp;Y        call Y if X succeeds
-x?       REPEAT ONCE        call X: fail without progress becomes success
-x*       REPEAT MANY
-x+       DO THEN REPEAT MANY
-[x]      LOOK TRY
-x&amp;       LOOK HAS
-x!       LOOK NOT
-#m       MARK M
-%t       TAG T
-'abc'    SET 3 a b c
-"abc"    STRING 3 a b c
-10       STRING 1 10
-a..c     RANGE a c
-Lu       CAT Lu
-@        DROP
-@f       ACT f
+<pre>{'a'}       =   CHAR 97
+{"a"}       =   CHAR 97
+{97}        =   CHAR 97
+{%id}       =   TAG id
 </pre>
 
-<p>An important optimisation when generating code is to treat a choice between
-alternatives as a switch, where possible. For example, suppose a grammar
-contains a rule:</p>
+<p>The <code>CHAR</code> opcode is used for any notation which represents a
+single character which takes up one byte in UTF-8, i.e. is in the range
+<code>0</code> to <code>127</code>. A tag is translated using the
+<code>TAG</code> opcode. For strings:</p>
 
-<pre>token = id / number / string / ...
+<pre>{128}       =   STRING 2 194 128
+{"ab"}      =   STRING 2 97 98
+{""}        =   STRING 0
+{"&#960;"}       =   STRING 2 207 128
+{"a&#960;"}      =   STRING 3 97 207 128
+{'&#960;'}       =   STRING 2 207 128
+{&lt;ab>}      =   LESS 2 97 98
 </pre>
 
-<p>The alternative to be chosen depends on the next character in the input. An
-alternative such as <code>number</code> starts with a character from a set such
-as <code>'0123456789'</code>. Sometimes, the set may contain a single
-character, e.g. the alternative <code>string</code> may start with
-<code>'"'</code>. If these sets are disjoint, or can be made disjoint, then
-a switch can be used to implement the choice.</p>
+<p>If a single Unicode characters is greater than <code>127</code> or a string
+has more than one character, the <code>STRING</code> opcode is used, followed by
+the number of bytes of text, followed by the text in UTF-8 format. A string
+containing characters of mixed UTF-8 lengths causes no problem, because a UTF-8
+string can be matched byte by byte, without taking account of character
+boundaries. A divider is translated using the <code>LESS</code> opcode. The
+comparison between UTF-8 strings which it represents can similarly be done byte
+by byte. For sets:</p>
 
-<p>Pecan takes a very uniform approach to this situation. First, the entire
-grammar is analysed to find suitable disjoint sets of characters. Some of the
-sets may contain just one character. For example, set <code>0</code> might
-represent the upper case letters, set <code>1</code> the lower case letters,
-set <code>2</code> might represent <code>'0123456789'</code>,
-set <code>3</code> the character <code>'"'</code>, and so on. Each character
-is classified into one of these sets. This is done on the whole input as a
-separate pass before parsing begins, to avoid repetition as a result of
-backtracking. The <code>token</code> rule can then be represented as a
-switch:</p>
-
-<pre>SWITCH &amp;id &amp;id &amp;number &amp;string ...
+<pre>{''}        =   SET 0
+{'ab'}      =   SET 2 97 98
+{'&#945;&#946;'}      =   SET2 4 206 177 206 178
+{'a'..'z'}  =   LOW 1 97 HIGH 1 122
+{'&#945;'..'&#969;'}  =   LOW 2 206 177 HIGH 2 207 137
 </pre>
 
-<p>Both upper and lower case letters will trigger a jump to the <code>id</code>
-rule, a digit will cause a jump to the <code>number</code> rule,
-the <code>'"'</code> character causes a jump to the <code>string</code> rule,
-and so on. This technique covers non-ascii characters and Unicode general
-categories as well as simple ascii characters.</p>
+<p>The <code>SET</code> opcode is used for sets of one-byte characters, the
+<code>SET2</code> opcode for sets of two-byte characters and so on. A mixed set
+such as <code>'a&#960;'</code> is treated as <code>'a' / '&#960;'</code> so that
+each set opcode takes UTF-8 characters of a fixed length. A range is translated
+into the two opcodes <code>LOW</code> and <code>HIGH</code>. For categories:</p>
 
-<h3>The interpreter</h3>
+<pre>{Nd}        =   CAT Nd
+</pre>
 
-<h2 id="side">Side effects</h2>
+<p>A category is translated using the <code>CAT</code> opcode. This may be the
+most difficult opcode to implement, if the chosen programming language doesn't
+have a facility for finding the category of a character. In that case, a
+two-stage lookup table is needed. A two-stage table is included among the
+example interpreters provided.</p>
 
-<p>A grammar is linked with external code to make a practical parser. The
-actions in the grammar become calls to this external code. As well as
-manipulating the stack of output items, the external code may very well maintain
-a state of some kind, and the actions may have side effects on that state.</p>
+<pre>{x/y}       =   EITHER nx {x} OR {y}
+{x y}       =   BOTH nx {x} AND {y}
+</pre>
 
-<p>Such side effects are awkward, because they interact badly with lookahead. On
-the face of it, some system of undoing side effects would have to implemented,
-so that backtracking could be guaranteed to have the right effect. As well as
-returning to a previous position in the input, backtracking would need to undo
-any effects caused by actions. In Pecan, at present, this isn't done. Instead,
-actions are switched off during lookahead. It is assumed that lookahead is only
-used to ask simple syntactic questions, in order to resolve ambiguities.</p>
+<p>The <code>EITHER</code> or <code>BOTH</code> opcode initializes a choice or
+sequence, and <code>OR</code> or <code>AND</code> checks what happens after
+<code>{x}</code> to decide whether or not to continue with <code>{y}</code>. If
+the interpreter implements each opcode separately using a switch, then
+<code>EITHER</code> or <code>BOTH</code> can be thought of as causing a call to
+<code>{x}</code>, and <code>OR</code> or <code>AND</code> as causing a tail-call
+to <code>{y}</code>. If the interpreter uses functions, then a single function
+can deal with the two calls, but the call to <code>{y}</code> can't be a tail
+call unless the interpreter's language supports it.</p>
 
-<p>On the other hand, if side effects were not allowed to have any effect on
-parsing, some features of some languages couldn't be handled. The most infamous
-example is the C and C++ languages, where type names introduced using
-<code>typedef</code> need to be categorized properly to parse programs, and yet
-they can only be recognised after parsing their definitions, by maintaining a
-symbol table during parsing. This is handled in Pecan by allowing side effects
-to change the types of tokens which haven't yet been read.</p>
+<pre>{x?}        =   MAYBE OPT {x}
+{x*}        =   MAYBE MANY {x}
+{x+}        =   DO AND MAYBE MANY {x}
+{[x]}       =   LOOK TRY {x}
+{x&amp;}        =   LOOK HAS {x}
+{x!}        =   LOOK NOT {x}
+</pre>
+
+<p>The <code>MAYBE</code> opcode initializes an optional construct, then causes
+a call to <code>{x}</code>, returning to <code>OPT</code>, which converts the
+result of <code>{x}</code> into the result of <code>x?</code>. The code
+<code>MAYBE OPT {x}</code> might be a little more readable if written as
+<code>MAYBE nx {x} OPT</code>, but the format shown above avoids the need for
+the argument <code>nx</code>. The <code>MANY</code> opcode is similarly executed
+after <code>{x}</code>. It checks the result of <code>{x}</code> to decide
+whether or not to call it again. The code for <code>x+</code> is equivalent to
+the code for <code>x x*</code>, except that the <code>DO</code> opcode avoids
+the need for a second copy of <code>{x}</code> by jumping forwards, and
+arranging for the call to return to <code>AND</code>. The <code>LOOK</code>
+opcode initializes any of the lookahead constructs, arranging to return to
+<code>TRY</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
+result.</p>
+
+<pre>{@a}        =   ACT a
+{@}         =   ACT 0
+{#e}        =   MARK e
+</pre>
+
+<p>An action is translated using the <code>ACT</code> opcode. In enumerating the
+action symbols, the interpreter must reserve zero, which is generated for the
+drop action <code>@</code>. Actions need to be delayed, either because they are
+inside a try construct <code>[x]</code>, or because they are at the start of a
+left hand choice <code>@a x / y</code>. If the grammar is entirely context free,
+then all the actions can be delayed until the end of parsing. In the example
+interpreters provided, actions are delayed by a minimal amount, so that they can
+affect later parsing by adjusting the input to get context sensitive effects.
+Actions are delayed by being recorded symbolically, then either performed or
+discarded at the end of any lookahead construct, or whenever progress is made in
+the input. Error markers, signalled by the <code>MARK</code> opcode, are
+collected as a set, perhaps implemented as a bitmap, and cleared whenever a new
+marker is found further on in the input.</p>
+
+<p>Accurate details of what each opcode does can be gleaned from the provided
+interpreters and their comments.</p>
 
 <h2 id="transforms">Transforms</h2>
 
 <p>The Pecan grammar language is intended to be sufficiently simple and precise
-that an equational theory of transforms can be developed. This theory could be
-used to develop and justify automatic optimisations, or to build an assistant
-which would suggest and check user-driven transforms while developing grammars.
-The theory might include equations such as:</p>
+to support equational transforms. At present, such transforms are carried out
+manually and informally on grammars, but it is possible to imagine a theory of
+transforms being developed more formally and used to develop and justify
+automatic optimisations, or to build an assistant which would suggest and check
+user-driven transforms while developing grammars. Equations such as these can be
+used:</p>
 
 <pre>(x y) z == x (y z)
 (x / y) / z == x / (y / z)
 x+ == x x*
 x* = (x+)?
+x? = x / ""
 [[x] y] z == [x y] z
 [x y] z / [x u] v == [x] ([y] z / [u] v)
 (x / y) z = x z / y z
-x y / x z == x (y / z)  <em>under suitable conditions</em>
-x / y == y / x          <em>under suitable conditions</em>
 </pre>
 
-<p>This theory has yet to be established, but it is envisaged that it would
-include the output building and error handling aspects of grammars.</p>
+<p>Care has to be taken, because not all 'obvious' equations hold. For example,
+<code>x (y / z)</code> is not equivalent to <code>x y / x z</code> because if
+<code>x</code> succeeds, in the first case the parser is free to make the choice
+between <code>y</code> and <code>z</code>, but in the second case it is already
+committed to <code>y</code>. Also <code>x / y</code> and <code>y / x</code> are
+not equivalent. However, they are equivalent if it can be established that
+<code>x</code> and <code>y</code> begin differently. In these equations, actions
+and error markers are included, and the transformed expression has precisely the
+same output effect and error handling properties as the original.</p>
 
 <h2 id="changes">Recent changes</h2>
 
@@ -1535,7 +1497,7 @@ include the output building and error handling aspects of grammars.</p>
 <li>actions are now allowed at the start of a left hand choice</li>
 <li>actions are delayed in case they need to be discarded</li>
 <li>error markers are no longer postfix</li>
-<li>there notation <code>&lt;abc></code> has been added</li>
+<li>the divider notation <code>&lt;abc></code> has been added</li>
 <li>string tags use double quotes instead of backquotes</li>
 <li>string tags have definitions to give them names</li>
 <li>separate grammar and test files are supported</li>
@@ -1571,7 +1533,7 @@ bracket = rb rule re @3bracket
 
 number = (("1".."9") digit* / "0" hex*) @number gap
 string = '"' ('"'! visible)* '"' @string gap
-divider = '<' ('"'! visible)* '>' @divider gap
+divider = '&lt;' ('"'! visible)* '>' @divider gap
 set = "'" ("'"! visible)* "'" @set gap
 
 equals = "=" infix
