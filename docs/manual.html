@@ -1419,17 +1419,17 @@ call unless the interpreter's language supports it.</p>
 </pre>
 
 <p>The <code>MAYBE</code> opcode initializes, then causes a call to
-<code>{x}</code>, returning to <code>OPT</code>. The <code>OPT which converts the result of
-<code>{x}</code> into the result of <code>x?</code>. The <code>MANY</code>
-opcode is similarly executed after <code>{x}</code>. It checks the result of
-<code>{x}</code> to decide whether or not to call it again. The code <code>MAYBE
-OPT {x}</code> might be a little more readable if written as <code>MAYBE nx {x}
-OPT</code>, but the format shown above avoids the need for the argument
-<code>nx</code>. In the case of <code>MANY</code>, there is the added advantage
-that <code>{x}</code> is easily called again. The code for <code>x+</code> is
-equivalent to the code for <code>x x*</code>, except that the <code>DO</code>
-opcode avoids the need for a second copy of <code>{x}</code> by jumping
-forwards, and arranging for the call to return to <code>AND</code>. The
+<code>{x}</code>, returning to <code>OPT</code>. The <code>OPT</code> which
+converts the result of <code>{x}</code> into the result of <code>x?</code>. The
+<code>MANY</code> opcode is similarly executed after <code>{x}</code>. It checks
+the result of <code>{x}</code> to decide whether or not to call it again. The
+code <code>MAYBE OPT {x}</code> might be a little more readable if written as
+<code>MAYBE nx {x} OPT</code>, but the format shown above avoids the need for
+the argument <code>nx</code>. In the case of <code>MANY</code>, there is the
+added advantage that <code>{x}</code> is easily called again. The code for
+<code>x+</code> is equivalent to the code for <code>x x*</code>, except that the
+<code>DO</code> opcode avoids the need for a second copy of <code>{x}</code> by
+jumping forwards, and arranging for the call to return to <code>AND</code>. The
 <code>LOOK</code> opcode initializes any of the lookahead constructs, arranging
 to return to <code>TRY</code> or <code>HAS</code> or <code>NOT</code> which
 sorts out the result.</p>
@@ -1455,6 +1455,40 @@ marker is found further on in the input.</p>
 
 <p>Accurate details of what each opcode does can be gleaned from the provided
 interpreters and their comments.</p>
+
+<h2 id="interpreters">Example interpreters</h2>
+
+<p>There are some things that the example interpreters have in common. There is
+an array <code>input</code> of characters or tokens, and two indexes
+<code>start</code> and <code>in</code> into it. The items up to
+<code>start</code> have been processed, and <code>in</code> is the current
+position. So when a zero-arity action is performed, the items between
+<code>start</code> and <code>in</code> are processed, and <code>start</code> is
+updated to be equal to <code>in</code>.</p>
+
+<p>There is a list <code>output</code> of delayed actions. The variable
+<code>out</code> represents the current position in the list, i.e. the number of
+delayed actions.</p>
+
+<p>Actions must be delayed during lookaheads, and discarded on backtracking. The
+left hand expression <code>x</code> in a choice <code>x / y</code> also involves
+an implicit one-item lookahead. Since <code>x</code> may involve actions before
+matching anything, actions need to be delayed in this case too, and discarded if
+<code>x</code> fails.</p>
+
+<p>An approach is taken which delays actions whenever needed for correctness,
+yet delays them as little as possible to allow maximum context sensitivity.
+Every action is delayed when encountered by adding to the <code>output</code>
+list, and the current value of <code>in</code> is stored with it. For left hand
+choices and lookaheads, <code>out</code> is saved. If the construct fails or
+backtracks, accumulated actions are discarded by setting <code>out</code> to the
+saved value. Whenever progress is made in the input, other than in a lookahead
+construct, all the delayed actions are performed. (If a number of nested left
+hand choices are under way, and there is progress, all the left choices become
+committed, so it is correct to perform all the delayed actions at that point.)
+If a try <code>[x]</code> succeeds, any accumulated actions are kept, and if
+progress was made during <code>[x]</code>, all the delayed actions are
+performed.</p>
 
 <h2 id="transforms">Transforms</h2>
 
