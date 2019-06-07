@@ -1,45 +1,51 @@
-// Pecan 1.0 Unicode categories. Free and open source. See licence.txt.
+// Pecan 1.0 Unicode category support. Free and open source. See licence.txt.
 
 package pecan;
 
 import java.io.*;
 import java.util.*;
-import java.util.Scanner;
 import static java.lang.Character.*;
 
-/* These are the standard Unicode general categories. The name of each category
-is its standard two letter abbreviation, and the ordinal of each category is its
-Java type code (see Character.getType). One further constant is added, namely Uc
-representing all Unicode characters. Each category has a bitset giving its ascii
-content.
+/* Provide support for Unicode general categories, specifically for UTF-8
+characters, numerical characters, and category codes, in grammars. Although Java
+supports Unicode categories, the version of the standard supported varies, e.g.
+Java 8 supports Unicode 6.2. This class supports Unicode 12.0, making Pecan
+independent of the version of Java used to compile it.
 
-These Pecan classes get the category of a character using the Java library
-method Character.getType. However, to support scanners written in other
-languages, the main method of this class can be used to generate two byte-array
-tables as binary files table1.bin and table2.bin. They form a two-stage table
-for looking up the general category of a character.
+Constants are provided for the Unicode general categories. The name of each
+category is its two letter abbreviation, as defined by the Unicode standard and
+as used in grammars. Its ordinal is the same as its Java type code, as in
+Character.getType. One further constant is added, namely Uc representing all
+Unicode characters. Each category has a bitset giving its ascii content.
 
-The first table contains unsigned bytes which are indexes of blocks in the
-second table. The second table consists of all the distinct 256-byte blocks from
-the notional full table. A category can be found from these tables from an
-integer code point ch using:
+The main method generates two arrays of bytes, as binary files table1.bin and
+table2.bin. They are read in and used as a two-stage table for looking up the
+general category of a character. The main method may need to be run twice, not
+while the class is packaged in a jar file, to generate the files.
 
-    category = table2[(table1[ch>>8]&255)*256+(ch&255)];
+The files are generated from UnicodeData.txt, which has been copied from the
+Unicode standard at http://www.unicode.org/Public/12.0.0/ucd/UnicodeData.txt.
+The use of multi-stage tables is described in Chapter 5 of the Unicode standard.
+The files can also be used by parsers written in other languages.
 
-The masking of the entry from table1 is needed in Java because bytes are signed,
-but is not needed in other languages where the bytes can be declared as
-unsigned.
+The first array contains unsigned bytes which are indexes of blocks in the
+second table. The second array consists of all the distinct 256-byte blocks from
+the notional full table. By avoiding repetition of identical blocks, the tables
+take up about 40K, instead of 1M for the full table. A category can be found
+from these tables from an integer code point ch using one of these formulas.
 
-The file pecan/UnicodeData.txt file is the data file for version 12.0.0 of
-Unicode, copied from http://www.unicode.org/Public/12.0.0/ucd/UnicodeData.txt
-and the use of multi-stage tables is described in Chapter 5 of the Unicode
-standard. */
+    table2[(table1[ch>>8]&255)*256+(ch&255)];
+    table2[table1[ch>>8]*256+(ch&255)];
+
+The first is for languages like Java which have only signed bytes, the second is
+for languages where the bytes can be declared as unsigned. */
 
 enum Category {
     Cn, Lu, Ll, Lt, Lm, Lo, Mn, Me, Mc, Nd, Nl, No, Zs, Zl, Zp, Cc,
     Cf, Uc, Co, Cs, Pd, Ps, Pe, Pc, Po, Sm, Sc, Sk, So, Pi, Pf;
 
     final BitSet ascii;
+    private static byte[] table1, table2;
 
     Category() {
         ascii = new BitSet();
@@ -49,14 +55,43 @@ enum Category {
         }
     }
 
-    // Check that the ordinals correspond to Character.getType.
+    // Read a byte array from an input stream.
+    private static byte[] readBytes(InputStream in) {
+        ByteArrayOutputStream bs = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        try {
+            int len = in.read(buffer);
+            while (len >= 0) {
+                bs.write(buffer, 0, len);
+                len = in.read(buffer);
+            }
+            in.close();
+        }
+        catch (IOException e) { throw new Error(e); }
+        return bs.toByteArray();
+    }
+
+    // Get the category of a unicode character.
+    static Category get(int ch) {
+        return values()[table2[(table1[ch>>8]&255)*256+(ch&255)]];
+    }
+
+    private static void readFiles() {
+        table1 = readBytes(Category.class.getResourceAsStream("table1.bin"));
+        table2 = readBytes(Category.class.getResourceAsStream("table2.bin"));
+    }
+
+    // Read the files and check that the ordinals correspond to
+    // Character.getType.
     static {
+        try { readFiles(); }
+        catch (Exception err) { }
         for (Category cat : Category.values()) {
             if (cat.ordinal() != type(cat)) throw new Error("Bad");
         }
     }
 
-    // Type 17 is unallocated. Use it for Uc.
+    // Type 17 is unallocated in Java. Use it for Uc.
     private static int type(Category cat) {
         switch (cat) {
         case Uc: return 17;
@@ -96,24 +131,24 @@ enum Category {
 
     private static final int UNICODES = 1114112;
     private static final byte unassigned = (byte) Cn.ordinal();
-    private static byte[] table;
+    private static byte[] genTable;
     private static byte cat;
     private static int next;
-    private static byte[] table1;
-    private static byte[][] table2;
+    private static byte[] genTable1;
+    private static byte[][] genTable2;
     private static int nblocks;
 
     public static void main(String[] args) throws Exception {
-        table = new byte[UNICODES];
-        table1 = new byte[UNICODES / 256];
-        table2 = new byte[256][256];
+        genTable = new byte[UNICODES];
+        genTable1 = new byte[UNICODES / 256];
+        genTable2 = new byte[256][256];
         cat = unassigned;
         next = nblocks = 0;
-        File file = new File("pecan/UnicodeData.txt");
-        Scanner sc = new Scanner(file);
+        InputStream in = Category.class.getResourceAsStream("UnicodeData.txt");
+        Scanner sc = new Scanner(in);
         while (sc.hasNextLine()) addLine(sc.nextLine());
         sc.close();
-        while (next < UNICODES) table[next++] = unassigned;
+        while (next < UNICODES) genTable[next++] = unassigned;
         build();
         check();
         write();
@@ -123,9 +158,9 @@ enum Category {
     private static void addLine(String line) {
         String[] data = line.split(";");
         int ch = Integer.parseInt(data[0], 16);
-        while (ch > next) table[next++] = (byte) cat;
+        while (ch > next) genTable[next++] = (byte) cat;
         cat = (byte) valueOf(data[2]).ordinal();
-        table[next++] = (byte) cat;
+        genTable[next++] = (byte) cat;
         if (! data[1].endsWith(", First>")) cat = unassigned;
     }
 
@@ -133,17 +168,17 @@ enum Category {
     private static void build() {
         byte[] block = new byte[256];
         for (int i = 0; i < UNICODES/256; i++) {
-            for (int b=0; b<256; b++) block[b] = table[256*i + b];
+            for (int b=0; b<256; b++) block[b] = genTable[256*i + b];
             boolean done = false;
             for (int j=0; j<nblocks; j++) {
-                if (! Arrays.equals(block, table2[j])) continue;
-                table1[i] = (byte) j;
+                if (! Arrays.equals(block, genTable2[j])) continue;
+                genTable1[i] = (byte) j;
                 done = true;
                 break;
             }
             if (done) continue;
-            table1[i] = (byte) nblocks;
-            table2[nblocks++] = block;
+            genTable1[i] = (byte) nblocks;
+            genTable2[nblocks++] = block;
             block = new byte[256];
         }
     }
@@ -151,9 +186,13 @@ enum Category {
     // Check the generated tables against the Java library, for some early
     // characters where the Unicode version isn't a problem.
     private static void check() {
+        if (table1 == null) {
+            System.out.println("Run again to check generated files");
+            return;
+        }
         for (int ch = 0; ch < 512; ch++) {
-            int cat1 = table2[table1[ch>>8]&255][ch&255];
-            int cat2 = Character.getType(ch);
+            Category cat1 = get(ch);
+            Category cat2 = values()[Character.getType(ch)];
             if (cat1 != cat2) throw new Error("Bad tables " + ch);
         }
     }
@@ -162,11 +201,11 @@ enum Category {
     private static void write() throws Exception {
         File file = new File("pecan/table1.bin");
         OutputStream out = new FileOutputStream(file);
-        out.write(table1);
+        out.write(genTable1);
         out.close();
         file = new File("pecan/table2.bin");
         out = new FileOutputStream(file);
-        for (int i=0; i<nblocks; i++) out.write(table2[i]);
+        for (int i=0; i<nblocks; i++) out.write(genTable2[i]);
         out.close();
     }
 }

@@ -3,7 +3,7 @@
 package pecan;
 
 /* Op constants represent parsing expression operators, and are used to classify
-nodes. Later ops are used to generate bytecode. */
+nodes. */
 
 public enum Op {
     Rule,    // Definition, name = rhs, text is name, child is rhs

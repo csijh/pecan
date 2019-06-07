@@ -1539,60 +1539,72 @@ same output effect and error handling properties as the original.</p>
 
 <h2 id="pecan">The Pecan grammar</h2>
 
-<p>Here is a Pecan parser for the Pecan language itself:</p>
+<p>Here is a Pecan parser for the Pecan language itself. It includes scanning,
+actions, and error markers. The <code>gap</code> rule deals with the
+continuation line convention. It follows a token which can end a rule, and looks
+ahead for a possible continuation to see if the next newline should be skipped.
+Brackets are treated as tokens so that the extent in the source text of
+bracketed expressions can be calculated accurately.</p>
 
-<pre>pecan = skip definitions Uc!
-definitions = definition (definitions @2add)?
-definition = synonym / rule
+<pre>pecan = skip rules end
+rules = rule (rules @2add)?
+rule = definition / synonym
+definition = id equals expression newline skip @2rule
 synonym = string equals tag @2synonym
-rule = id equals expression newline skip @2rule
 
 expression = term (slash expression @2or)?
-term = factor (term @2and)? / marker term @2handle
-factor = look atom @2look / not atom @2not / atom repetition?
-repetition = opt @2opt / any @2any / some @2some
-atom = id / action / tag / range / divider / try / bracket
-
-id = letter alpha* @id gap
-action = '@' (digit* letter alpha* @act / @drop) gap
-tag = "%" letter alpha* @ask gap
-marker = "#" letter alpha* @mark gap
-range = text (".." skip @ text @2range)?
+term = factor (term @2and)?
+factor = atom postop*
+postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
+atom = id / action / marker / tag / range / divider / try / bracket
+range = text (dots text @2range)?
 text = number / string / set
-try = sb rule se @3back
-bracket = rb rule re @3bracket
+try = sb expression se @3back
+bracket = rb expression re @3bracket
 
-number = (("1".."9") digit* / "0" hex*) @number gap
-string = '"' ('"'! visible)* '"' @string gap
-divider = '&lt;' ('"'! visible)* '>' @divider gap
-set = "'" ("'"! visible)* "'" @set gap
+id = #id letter alpha* @id gap
+action = #action '@' (digit* letter alpha* @act / @drop) gap
+tag = #tag "%" letter alpha* @ask gap
+marker = #marker "#" letter alpha* @mark gap
+number = #number (("1".."9") digit* / "0" hex*) @number gap
+set = #set "'" ("'"! visible)* "'" @set gap
+string = #string '"' ('"'! visible)* '"' @string gap
+divider = #divider '&lt;' ('>'! visible)* '>' @divider gap
 
-equals = "=" infix
-slash = "/" infix
-look = "&amp;" prefix
-not = "!" prefix
-rb = '(' prefix
-sb = '[' prefix
-opt = "?" postfix
-any = "*" postfix
-some = "+" postfix
-re = ')' postfix
-sb = ']' postfix
+dots = #dots ".." skip @
+equals = #equals "=" skip @
+slash = #slash "/" skip @
+rb = #open '(' @token skip @
+sb = #open '[' @token skip @
+has = #look "&amp;" @token gap @
+not = #look "!" @token gap @
+opt = #query "?" @token gap @
+any = #many "*" @token gap @
+some = #some "+" @token gap @
+re = #close ')' @token gap @
+se = #close ']' @token gap @
 
-infix = skip @
-prefix = @token skip @
-postfix = @token gap @
 skip = (space / comment / newline)*
 gap = space* comment? continuation @
-continuation = [nl skip &amp;'=/)]']?
-newline = (10 / 13 10?) @
-comment = ["//"] visible* &amp;newline
+continuation = [nl skip '=/)]'&amp;]?
+newline = #newline 13? 10 @
+// --------
+comment = ["//"] visible* newline&amp;
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
 alpha = letter / digit
 letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
 hex = digit / 'ABCDEFabcdef'
+end = #end Uc!
 </pre>
+
+<p>The Unicode standard defines many different newline conventions which should
+be recognised by software handling arbitrary text files. However, for text files
+in computer languages, it seems better to promote uniformity. In fact, there is
+a lot to be said for insisting that all such text files be stored using LF
+newlines, even on Windows now that Notepad accepts LF. However, as a temporary
+practical concession, Pecan supports CR+LF newlines.</p>
+
 <!-- Write a Haskell version of Pecan, then prove it. -->
 
 <!--

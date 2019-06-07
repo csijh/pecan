@@ -7,9 +7,10 @@ import static pecan.Op.*;
 /* A Node represents any parsing expression, together with annotation
 information which is gathered about it during the various passes.
 
-The node class extends the info class and has an op, a text range in the source,
-and up to two child nodes. If the left node is null, the right node represents a
-cross-reference link instead of a child node. */
+A node has an op, a text range in the source, and up to two child nodes. If the
+left node is null, the right node represents a cross-reference link instead of a
+child node. For more information about annotations, see the Pecan class which
+handles them. */
 
 class Node {
 
@@ -79,7 +80,7 @@ class Node {
     // Construct a node with no subnodes.
     Node(Op o, String s, int b, int e) { this(o, null, null, s, b, e); }
 
-    // Copy a node with given children. Leave out info except value.
+    // Copy a node, with given children. Leave out info except value.
     Node copy(Node x, Node y) {
         Node n = new Node(op, x, y, source, start, end);
         n.value(value());

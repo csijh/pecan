@@ -7,7 +7,8 @@ import java.text.*;
 import static pecan.Op.*;
 import static java.lang.Character.*;
 
-/* Parse a Pecan source text, producing a tree. */
+/* Parse a Pecan source text, assumed to be in UTF8 format, producing a tree.
+The parser has been hand-translated from the pecan grammar in the comments. */
 
 class Parser implements Testable {
     private String source;
@@ -24,7 +25,7 @@ class Parser implements Testable {
     }
 
     // Parse the grammar, returning a node (or error report).
-    Node run(String s) throws ParseException {
+    Node run(byte[] s) throws ParseException {
         source = s;
         if (output == null) output = new Node[1];
         start = in = out = 0;
@@ -32,13 +33,12 @@ class Parser implements Testable {
         return prune(output[0]);
     }
 
-    // pecan = skip rules Uc! #end
+    // pecan = skip rules end
     private boolean pecan() throws ParseException {
         skip();
-        if (! rules()) err(in, in, "expecting rule");
-        if (in >= source.length()) return true;
-        err(in, in, "expecting rule or end of text");
-        return false;
+        if (! rules()) err(in, in, "expecting id, string");
+        if (! end()) err(in, in, "expecting end of text");
+        return true;
     }
 
     // rules = rule (rules @2add)?
@@ -49,8 +49,14 @@ class Parser implements Testable {
         return true;
     }
 
-    // rule = id equals expression newline skip @2rule
+    // rule = definition / synonym
     private boolean rule() throws ParseException {
+        if (definition()) return true;
+        synonym();
+    }
+
+    // definition = id equals expression newline skip @2rule
+    private boolean definition() throws ParseException {
         if (! id()) return false;
         if (! infix('=')) err(in, in, "expecting =");
         if (! expression()) err(in, in, "expecting expression");
@@ -58,6 +64,14 @@ class Parser implements Testable {
         skip();
         doRule();
         return true;
+    }
+
+    // synonym = string equals tag @2synonym
+    private boolean synonym() throws ParseException {
+        if (! string()) return false;
+        if (! infix('=')) err(in, in, "expecting =");
+        if (! tag()) err(in, in, "expecting tag");
+
     }
 
     // expression = term (slash expression @2or)?
@@ -84,7 +98,7 @@ class Parser implements Testable {
         return true;
     }
 
-    // postop = opt / any / some / has / not
+    // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
     private boolean postop() throws ParseException {
         if (postfix('?', Opt)) return true;
         if (postfix('*', Many)) return true;
@@ -94,79 +108,16 @@ class Parser implements Testable {
         return false;
     }
 
-    // atom = id / action / marker / tag / range / try / bracket
+    // atom = id / action / marker / tag / range / divider / try / bracket
     private boolean atom() throws ParseException {
         if (id()) return true;
         if (action()) return true;
         if (marker()) return true;
         if (tag()) return true;
         if (range()) return true;
+        if (divider()) return true;
         if (try_()) return true;
         if (bracket()) return true;
-        return false;
-    }
-
-    // id = letter alpha* @id gap
-    private boolean id() throws ParseException {
-        if (! letter()) return false;
-        while (alpha()) { }
-        doName(Id);
-        gap();
-        return true;
-    }
-
-    // action = '@' (digit* letter alpha* @act / @drop) gap
-    private boolean action() throws ParseException {
-        if (! accept('@')) return false;
-        if (digit()) {
-            while (digit()) { }
-            if (! letter()) err(in, in, "expecting letter");
-            while (alpha()) { }
-            doName(Act);
-        }
-        else if (letter()) {
-            while (alpha()) { }
-            doName(Act);
-        }
-        else doName(Drop);
-        gap();
-        return true;
-    }
-
-    // marker = "#" letter alpha* @mark @2marker gap
-    private boolean marker() throws ParseException {
-        if (! accept('#')) return false;
-        if (! letter()) err(in, in, "expecting letter");
-        while (true) {
-            if (! alpha()) break;
-        }
-        doName(Mark);
-        gap();
-        return true;
-    }
-
-    // tag = "%" (letter alpha*)? @tag gap / '`' ('`'! ascii)* '`' @tag gap
-    private boolean tag() throws ParseException {
-        if (accept('%')) {
-            if (letter()) {
-                while (true) {
-                    if (! alpha()) break;
-                }
-            }
-            doName(Tag);
-            gap();
-            return true;
-        }
-        else if (accept('`')) {
-            while (true) {
-                if (accept('`')) break;
-                if (visible()) continue;
-                err(in, in, "expecting visible character or `");
-            }
-            doName(Tag);
-            gap();
-            return true;
-        }
         return false;
     }
 
@@ -205,7 +156,61 @@ class Parser implements Testable {
         return true;
     }
 
-    // number = (("1".."9") digit* / "0" hex*) @number gap
+    // id = #id letter alpha* @id gap
+    private boolean id() throws ParseException {
+        if (! letter()) return false;
+        while (alpha()) { }
+        doName(Id);
+        gap();
+        return true;
+    }
+
+    // action = #action '@' (digit* letter alpha* @act / @drop) gap
+    private boolean action() throws ParseException {
+        if (! accept('@')) return false;
+        if (digit()) {
+            while (digit()) { }
+            if (! letter()) err(in, in, "expecting letter");
+            while (alpha()) { }
+            doName(Act);
+        }
+        else if (letter()) {
+            while (alpha()) { }
+            doName(Act);
+        }
+        else doName(Drop);
+        gap();
+        return true;
+    }
+
+    // tag = #tag "%" letter alpha* @ask gap
+    private boolean tag() throws ParseException {
+        if (accept('%')) {
+            if (letter()) {
+                while (true) {
+                    if (! alpha()) break;
+                }
+            }
+            doName(Tag);
+            gap();
+            return true;
+        }
+        return false;
+    }
+
+    // marker = #marker "#" letter alpha* @mark gap
+    private boolean marker() throws ParseException {
+        if (! accept('#')) return false;
+        if (! letter()) err(in, in, "expecting letter");
+        while (true) {
+            if (! alpha()) break;
+        }
+        doName(Mark);
+        gap();
+        return true;
+    }
+
+    // number = #number (("1".."9") digit* / "0" hex*) @number gap
     private boolean number() throws ParseException {
         if (! digit()) return false;
         boolean isHex = source.charAt(in-1) == '0';
@@ -216,7 +221,20 @@ class Parser implements Testable {
         return true;
     }
 
-    // string = '"' ('"'! visible)* '"' @string gap
+    // set = #set "'" ("'"! visible)* "'" @set gap
+    private boolean set() throws ParseException {
+        if (! accept('\'')) return false;
+        while (true) {
+            if (accept('\'')) break;
+            if (visible()) continue;
+            err(in, in, "expecting visible character or '");
+        }
+        doName(Set);
+        gap();
+        return true;
+    }
+
+    // string = #string '"' ('"'! visible)* '"' @string gap
     private boolean string() throws ParseException {
         if (! accept('"')) return false;
         while (true) {
@@ -229,15 +247,15 @@ class Parser implements Testable {
         return true;
     }
 
-    // set = "'" ("'"! ascii)* "'" @set gap
-    private boolean set() throws ParseException {
-        if (! accept('\'')) return false;
+    // string = #divider '<' ('>'! visible)* '>' @divider gap
+    private boolean divider() throws ParseException {
+        if (! accept('"')) return false;
         while (true) {
-            if (accept('\'')) break;
+            if (accept('"')) break;
             if (visible()) continue;
-            err(in, in, "expecting visible character or '");
+            err(in, in, "expecting visible character or \"");
         }
-        doName(Set);
+        doName(String);
         gap();
         return true;
     }
@@ -251,47 +269,34 @@ class Parser implements Testable {
         return true;
     }
 
-    // Parse an (ascii) infix symbol, which can be discarded.
-    // equals = "=" infix
-    // slash = "/" infix
-    // infix = skip @
+    // equals = "=" skip @
+    // slash = "/" skip @
     private boolean infix(char c) throws ParseException {
-        if (in >= source.length()) return false;
-        if (source.charAt(in) != c) return false;
-        in++;
+        if (! accept(c)) return false;
         skip();
         start = in;
         return true;
     }
 
-    // Parse a prefix symbol, and push on the stack as a temporary node
-    // to mark its position
-    // rb = '(' prefix
-    // sb = '[' prefix
-    // prefix = @token skip @
+    // rb = '(' @token skip @
+    // sb = '[' @token skip @
     private boolean prefix(char c) throws ParseException {
-        if (in >= source.length()) return false;
-        if (source.charAt(in) != c) return false;
-        in++;
+        if (! accept(c)) return false;
         doToken();
         skip();
         start = in;
         return true;
     }
 
-    // Parse a postfix symbol and push on the stack as a temporary node
-    // to mark its position
+    // has = "&" @1has gap @
+    // not = "!" @1not gap @
     // opt = "?" @1opt gap @
     // any = "*" @1any gap @
     // some = "+" @1some gap @
-    // has = "&" @1has gap @
-    // not = "!" @1not gap @
     // re = ')' @token gap @
     // sb = ']' @token gap @
     private boolean postfix(char c, Op op) throws ParseException {
-        if (in >= source.length()) return false;
-        if (source.charAt(in) != c) return false;
-        in++;
+        if (! accept(c)) return false;
         if (op != null) doPostfix(op);
         else doToken();
         gap();
@@ -299,92 +304,72 @@ class Parser implements Testable {
         return true;
     }
 
-    // Skip is an optional sequence of white space or comments
     // skip = (space / comment / newline)*
-    // space = ' '
     private void skip() throws ParseException {
         while (true) {
-            if (in < source.length() && source.charAt(in) == ' ') {
-                in++;
-            }
+            if (accept(' ')) { }
             else if (comment()) { }
             else if (newline()) { }
             else break;
         }
     }
 
-    // A gap follows a token which can end a rule. It looks ahead for a
-    // possible continuation to see if the next newline should be skipped.
     // gap = space* comment? continuation @
     private void gap() throws ParseException {
-        while (in < source.length() && source.charAt(in) == ' ') in++;
+        while (accept(' ')) { }
         comment();
         continuation();
         start = in;
     }
 
-    // continuation = [newline skip &'=/)]']?
+    // continuation = [newline skip '=/)]'&]?
     private void continuation() throws ParseException {
         int saveIn = in;
         if (! newline()) return;
         skip();
-        if (in < source.length() && "=/)]".indexOf(source.charAt(in)) >= 0) {
-            return;
-        }
+        if (look("=/)]")) return;
         in = saveIn;
     }
 
-    // newline = (10 / 133 / 8232 / 13 (10/133)?) @
-    // NEL = 133
-    // LS = 8232
-    boolean first = true;
+    // newline = #newline 13? 10 @
     private boolean newline() {
-        if (in >= source.length()) return false;
-        if (source.charAt(in) == 10) in++;
-        else if (source.charAt(in) == 133) in++;
-        else if (source.charAt(in) == 8232) in++;
-        else if (source.charAt(in) == 13) {
-            in++;
-            if (in < source.length()) {
-                if (source.charAt(in) == 10) in++;
-                else if (source.charAt(in) == 133) in++;
-            }
-        }
-        else return false;
+        accept('\r');
+        boolean t = accept('\n');
         start = in;
-        return true;
+        return t;
     }
 
-    // comment = "//" visible* &newline
+    // comment = "//" visible* newline&
     private boolean comment() throws ParseException {
         if (! accept('/')) return false;
         if (! accept('/')) { in--; return false; }
-        while (true) {
-            if (in >= source.length()) err(in, in, "expecting newline");
-            int c = source.codePointAt(in);
-            if (c == '\r' || c == '\n') return true;
-            int type = Character.getType(c);
-            if (type == UNASSIGNED
-             || type == CONTROL) err(in, in, "bad character");
-            if (type == PRIVATE_USE) err(in, in, "bad character");
-            if (type == SURROGATE) err(in, in, "bad character");
-            if (type == LINE_SEPARATOR) err(in, in, "bad character");
-            if (type == PARAGRAPH_SEPARATOR) err(in, in, "bad character");
-            in += Character.charCount(c);
-        }
+        while (visible()) { }
+        if (! look("\r\n")) err(in, in, "expecting newline");
     }
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
     private boolean visible() {
         if (in >= source.length()) return false;
         int c = source.codePointAt(in);
-        int type = Character.getType(c);
-        if (type == UNASSIGNED || type == CONTROL || type == PRIVATE_USE ||
-            type == SURROGATE || type == LINE_SEPARATOR ||
-            type == PARAGRAPH_SEPARATOR) return false;
+        Category cat = Category.get(c);
+        if (cat == Cn || cat == Cc) err(in, in, "bad character");
+        if (cat == Co || cat == Cs) err(in, in, "bad character");
+        if (cat == Zl || cat == Zp) err(in, in, "bad character");
         in += Character.charCount(c);
         return true;
     }
+//------------------------------------------
+alpha = letter / digit
+letter = Lu / Ll / Lt / Lm / Lo
+digit = Nd
+hex = digit / 'ABCDEFabcdef'
+end = #end Uc!
+
+    // end = #end Uc!
+    private boolean end() throws ParseException {
+        return in >= source.length();
+    }
+
 
     // ascii = ' ' .. '~'
     private boolean ascii() {
@@ -423,6 +408,9 @@ class Parser implements Testable {
 
     // hex = digit / 'ABCDEFabcdef'
     private boolean hex() {
+        if (accept('A', 'F')) return true;
+        if (accept('a', 'f')) return true;
+
         if (in >= source.length()) return false;
         int ch = source.codePointAt(in);
         if (Character.isDigit(ch)) { in++; return true; }
@@ -430,7 +418,7 @@ class Parser implements Testable {
         return false;
     }
 
-    // Check whether a character (ascii) appears next in the input.
+    // Check if a character (ascii) appears next in the input.
     private boolean accept(char ch) {
         if (in >= source.length()) return false;
         if (source.charAt(in) != ch) return false;
@@ -438,7 +426,26 @@ class Parser implements Testable {
         return true;
     }
 
-    // Check that a symbol appears next in the input.
+    // Check if a character (ascii) in a given range appears next in the input.
+    private boolean accept(char first, char last) {
+        if (in >= source.length()) return false;
+        if (source.charAt(in) < first || source.charAt(in) > last) return false;
+        in++;
+        return true;
+    }
+
+    // Check for any one of the (ascii) characters in the given string.
+    private boolean look(String s) {
+        if (in >= source.length()) return false;
+        char ch = source.charAt(in);
+        boolean found = false;
+        for (int i = 0; i < s.length() && ! found; i++) {
+            if (ch == s.charAt(i)) found = true;
+        }
+        return found;
+    }
+
+    // Check that a symbol (ascii) appears next in the input.
     private void expect(char sym, String s) throws ParseException {
         if (in >= source.length()) err(in, in, "expecting " + s);
         if (source.charAt(in) != sym) err(in, in, "expecting " + s);
@@ -519,7 +526,7 @@ class Parser implements Testable {
     // text "x" would spoil the text range convention, e.g. expression "(x)y"
     // would end up with text "x)y" So, two nodes are created, one for "(x)" and
     // one for "x". The outer "(x)" node ensures that ancestor nodes have the
-    // right ramge. Then the outer node is discarded after parsing is over. To
+    // right range. Then the outer node is discarded after parsing is over. To
     // avoid having an extra temporary Op constant which would pollute later
     // passes, a temporary "(x)" node has a null Op.
 
