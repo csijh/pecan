@@ -73,7 +73,8 @@ enum Category {
 
     // Get the category of a unicode character.
     static Category get(int ch) {
-        return values()[table2[(table1[ch>>8]&255)*256+(ch&255)]];
+        Category[] cats = values();
+        return cats[table2[(table1[ch>>8]&255)*256+(ch&255)]];
     }
 
     private static void readFiles() {

@@ -5,7 +5,8 @@ package pecan;
 import java.util.*;
 import java.text.*;
 import static pecan.Op.*;
-import static java.lang.Character.*;
+import static pecan.Parser.Marker;
+//import static java.lang.Character;
 
 /* Parse a Pecan source text, assumed to be in UTF8 format, producing a tree.
 The parser has been hand-translated from the pecan grammar in the comments. */
@@ -13,175 +14,162 @@ The parser has been hand-translated from the pecan grammar in the comments. */
 class Parser implements Testable {
     private String source;
     private Node[] output;
-    private int start, in, out;
+    private int start, in, out, marked;
+    private EnumSet<Marker> markers = new EnumSet<>();
 
     public static void main(String[] args) {
         if (args.length == 0) Test.run(new Parser());
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
+    private enum Marker {
+        ID, ACTION, STRING, END_OF_TEXT
+    }
+
     public String test(String g, String s) throws ParseException {
         return "" + run(g);
     }
 
-    // Parse the grammar, returning a node (or error report).
-    Node run(byte[] s) throws ParseException {
+    // Parse the grammar, returning a node (or exception).
+    Node run(String s) throws ParseException {
         source = s;
         if (output == null) output = new Node[1];
         start = in = out = 0;
-        pecan();
+        try { pecan(); }
+        catch (ParseException e) {
+            if (marked < in) markers.clear();
+            err(in, in, "expecting " + markers);
+        }
         return prune(output[0]);
     }
 
     // pecan = skip rules end
-    private boolean pecan() throws ParseException {
-        skip();
-        if (! rules()) err(in, in, "expecting id, string");
-        if (! end()) err(in, in, "expecting end of text");
-        return true;
+    private boolean pecan() {
+        return skip() && rules() && end();
     }
 
     // rules = rule (rules @2add)?
-    private boolean rules() throws ParseException {
+    private boolean rules() {
         if (! rule()) return false;
-        if (! rules()) return true;
-        doAdd();
-        return true;
+        int in0 = in;
+        return rules() && doAdd() || in == in0;
     }
 
     // rule = definition / synonym
-    private boolean rule() throws ParseException {
-        if (definition()) return true;
-        synonym();
+    private boolean rule() {
+        int in0 = in;
+        return definition() || in == in0 && synonym();
     }
 
     // definition = id equals expression newline skip @2rule
-    private boolean definition() throws ParseException {
-        if (! id()) return false;
-        if (! infix('=')) err(in, in, "expecting =");
-        if (! expression()) err(in, in, "expecting expression");
-        if (! newline()) err(in, in, "expecting newline");
-        skip();
-        doRule();
-        return true;
+    private boolean definition() {
+        return id() && infix('=') && exp() && newline() && skip() && doRule();
     }
 
-    // synonym = string equals tag @2synonym
-    private boolean synonym() throws ParseException {
-        if (! string()) return false;
-        if (! infix('=')) err(in, in, "expecting =");
-        if (! tag()) err(in, in, "expecting tag");
-
+    // synonym = string equals tag @2rule
+    private boolean synonym() {
+        return string() && infix('=') && tag() && doRule();
     }
 
     // expression = term (slash expression @2or)?
-    private boolean expression() throws ParseException {
+    private boolean exp() {
         if (! term()) return false;
-        if (! infix('/')) return true;
-        if (! expression()) err(in, in, "expecting expression");
-        doInfix(Or);
-        return true;
+        int in0 = in;
+        return infix('/') && exp() && doInfix(Or) || in == in0;
     }
 
     // term = factor (term @2and)?
-    private boolean term() throws ParseException {
+    private boolean term() {
         if (! factor()) return false;
-        if (! term()) return true;
-        doInfix(And);
-        return true;
+        int in0 = in;
+        return term() && doInfix(And) || in == in0;
     }
 
     // factor = atom postop*
-    private boolean factor() throws ParseException {
+    private boolean factor() {
         if (! atom()) return false;
-        while (postop()) { }
-        return true;
+        int in0 = in;
+        while (postop()) { in0 = in; }
+        return in0 == in;
     }
 
     // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-    private boolean postop() throws ParseException {
-        if (postfix('?', Opt)) return true;
-        if (postfix('*', Many)) return true;
-        if (postfix('+', Some)) return true;
-        if (postfix('&', Has)) return true;
-        if (postfix('!', Not)) return true;
-        return false;
+    private boolean postop() {
+        return (
+            postfix('?', Opt)) ||
+            postfix('*', Many)) ||
+            postfix('+', Some)) ||
+            postfix('&', Has)) ||
+            postfix('!', Not)
+        );
     }
 
     // atom = id / action / marker / tag / range / divider / try / bracket
-    private boolean atom() throws ParseException {
-        if (id()) return true;
-        if (action()) return true;
-        if (marker()) return true;
-        if (tag()) return true;
-        if (range()) return true;
-        if (divider()) return true;
-        if (try_()) return true;
-        if (bracket()) return true;
-        return false;
+    private boolean atom() {
+        int in0 = in;
+        return (
+            id() ||
+            in0 == n && action() ||
+            in0 == n && marker() ||
+            in0 == n && tag() ||
+            in0 == n && range() ||
+            in0 == n && divider() ||
+            in0 == n && try_() ||
+            in0 == n && bracket()
+        );
     }
 
     // range = text (dots text @2range)?
-    private boolean range() throws ParseException {
+    private boolean range() {
         if (! text()) return false;
-        if (! dots()) return true;
-        if (! text()) err(in, in, "expecting character");
-        doInfix(Range);
-        return true;
+        int in0 = in;
+        return dots() && text() && doInfix(Range) || in == in0;
     }
 
     // text = number / string / set
-    private boolean text() throws ParseException {
-        if (number()) return true;
-        if (string()) return true;
-        if (set()) return true;
-        return false;
+    private boolean text() {
+        int in0 = in;
+        return (
+            number() ||
+            in == in0 && string() ||
+            in == in0 && set()
+        );
     }
 
     // try = sb expression se @3try
-    private boolean try_() throws ParseException {
-        if (! prefix('[')) return false;
-        if (! expression()) err(in, in, "expecting expression");
-        if (! postfix(']', null)) err(in, in, "expecting ]");
-        doBack();
+    private boolean try_() {
+        return prefix('[') && exp() && postfix(']', null) && doTry();
         return true;
     }
 
     // bracket = rb expression re @3bracket
-    private boolean bracket() throws ParseException {
-        if (! prefix('(')) return false;
-        if (! expression()) err(in, in, "expecting expression");
-        if (! postfix(')', null)) err(in, in, "expecting )");
-        doBracket();
-        return true;
+    private boolean bracket() {
+        return prefix('(') && exp() && postfix(')', null) && doBracket();
     }
 
     // id = #id letter alpha* @id gap
     private boolean id() throws ParseException {
-        if (! letter()) return false;
+        if (! (mark(ID) && letter())) return false;
         while (alpha()) { }
-        doName(Id);
-        gap();
-        return true;
+        return doName(Id) && gap();
     }
 
     // action = #action '@' (digit* letter alpha* @act / @drop) gap
     private boolean action() throws ParseException {
+        mark(ACTION);
         if (! accept('@')) return false;
-        if (digit()) {
-            while (digit()) { }
-            if (! letter()) err(in, in, "expecting letter");
+        int in0 = in;
+        while (digit()) { }
+        if (letter()) {
             while (alpha()) { }
             doName(Act);
         }
-        else if (letter()) {
-            while (alpha()) { }
-            doName(Act);
-        }
-        else doName(Drop);
-        gap();
-        return true;
+        if (in == in0) doName(Drop);
+        else return false;
+        return gap();
     }
+
+//--------------------------------
 
     // tag = #tag "%" letter alpha* @ask gap
     private boolean tag() throws ParseException {
@@ -305,13 +293,14 @@ class Parser implements Testable {
     }
 
     // skip = (space / comment / newline)*
-    private void skip() throws ParseException {
+    private boolean skip() throws ParseException {
         while (true) {
             if (accept(' ')) { }
             else if (comment()) { }
             else if (newline()) { }
             else break;
         }
+        return true;
     }
 
     // gap = space* comment? continuation @
@@ -324,11 +313,11 @@ class Parser implements Testable {
 
     // continuation = [newline skip '=/)]'&]?
     private void continuation() throws ParseException {
-        int saveIn = in;
+        int in0 = in;
         if (! newline()) return;
         skip();
         if (look("=/)]")) return;
-        in = saveIn;
+        in = in0;
     }
 
     // newline = #newline 13? 10 @
@@ -481,19 +470,21 @@ end = #end Uc!
 
     // @2rule
     // A rule's text is the name, and its left subnode is the RHS
-    private void doRule() {
+    private boolean doRule() {
         Node rhs = output[--out];
         Node lhs = output[--out];
         Node eq = new Node(Rule, rhs, source, lhs.start(), lhs.end());
         output[out++] = eq;
+        return true;
     }
 
     // @2add
-    private void doAdd() {
+    private boolean doAdd() {
         Node defs = output[--out];
         Node def = output[--out];
         def.right(defs);
         output[out++] = def;
+        return true;
     }
 
     // Infix operator: one of @2or, @2and, @2range
@@ -512,7 +503,7 @@ end = #end Uc!
     }
 
     // Convert "[" x "]" into Try x
-    private void doBack() {
+    private void doTry() {
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];

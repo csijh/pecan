@@ -1550,7 +1550,7 @@ bracketed expressions can be calculated accurately.</p>
 rules = rule (rules @2add)?
 rule = definition / synonym
 definition = id equals expression newline skip @2rule
-synonym = string equals tag @2synonym
+synonym = string equals tag @2rule
 
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
