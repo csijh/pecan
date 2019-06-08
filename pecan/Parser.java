@@ -23,7 +23,7 @@ class Parser implements Testable {
     }
 
     private enum Marker {
-        ID, ACTION, STRING, END_OF_TEXT
+        ID, ACTION, TAG, MARKER, NUMBER, STRING, NEWLINE, END_OF_TEXT
     }
 
     public String test(String g, String s) throws ParseException {
@@ -109,13 +109,13 @@ class Parser implements Testable {
         int in0 = in;
         return (
             id() ||
-            in0 == n && action() ||
-            in0 == n && marker() ||
-            in0 == n && tag() ||
-            in0 == n && range() ||
-            in0 == n && divider() ||
-            in0 == n && try_() ||
-            in0 == n && bracket()
+            in == in0 && action() ||
+            in == in0 && marker() ||
+            in == in0 && tag() ||
+            in == in0 && range() ||
+            in == in0 && divider() ||
+            in == in0 && try_() ||
+            in == in0 && bracket()
         );
     }
 
@@ -138,24 +138,23 @@ class Parser implements Testable {
 
     // try = sb expression se @3try
     private boolean try_() {
-        return prefix('[') && exp() && postfix(']', null) && doTry();
-        return true;
+        return open('[') && exp() && close(']') && doTry();
     }
 
     // bracket = rb expression re @3bracket
     private boolean bracket() {
-        return prefix('(') && exp() && postfix(')', null) && doBracket();
+        return open('(') && exp() && close(')') && doBracket();
     }
 
     // id = #id letter alpha* @id gap
-    private boolean id() throws ParseException {
+    private boolean id() {
         if (! (mark(ID) && letter())) return false;
         while (alpha()) { }
         return doName(Id) && gap();
     }
 
     // action = #action '@' (digit* letter alpha* @act / @drop) gap
-    private boolean action() throws ParseException {
+    private boolean action() {
         mark(ACTION);
         if (! accept('@')) return false;
         int in0 = in;
@@ -169,111 +168,75 @@ class Parser implements Testable {
         return gap();
     }
 
-//--------------------------------
-
-    // tag = #tag "%" letter alpha* @ask gap
-    private boolean tag() throws ParseException {
-        if (accept('%')) {
-            if (letter()) {
-                while (true) {
-                    if (! alpha()) break;
-                }
-            }
-            doName(Tag);
-            gap();
-            return true;
-        }
-        return false;
+    // tag = #tag "%" letter alpha* @tag gap
+    private boolean tag() {
+        if (! (mark(TAG) && accept('%') && letter())) return false;
+        while (alpha()) { }
+        return doName(Tag) && gap();
     }
 
     // marker = #marker "#" letter alpha* @mark gap
-    private boolean marker() throws ParseException {
-        if (! accept('#')) return false;
-        if (! letter()) err(in, in, "expecting letter");
-        while (true) {
-            if (! alpha()) break;
-        }
-        doName(Mark);
-        gap();
-        return true;
+    private boolean marker() {
+        if (! (mark(MARKER) && accept('#') && letter())) return false;
+        while (alpha()) { }
+        return doName(Mark) && gap();
     }
 
     // number = #number (("1".."9") digit* / "0" hex*) @number gap
-    private boolean number() throws ParseException {
+    private boolean number() {
+        mark(NUMBER);
         if (! digit()) return false;
         boolean isHex = source.charAt(in-1) == '0';
         if (isHex) while (hex()) { }
         else while (digit()) { }
-        doName(Char);
-        gap();
-        return true;
+        return doName(Char) && gap();
     }
 
     // set = #set "'" ("'"! visible)* "'" @set gap
-    private boolean set() throws ParseException {
+    private boolean set() {
+        mark(SET);
         if (! accept('\'')) return false;
-        while (true) {
-            if (accept('\'')) break;
-            if (visible()) continue;
-            err(in, in, "expecting visible character or '");
-        }
-        doName(Set);
-        gap();
-        return true;
+        while (! look('\'') && visible()) { }
+        return accept('\'') && doName(Set) && gap();
     }
 
     // string = #string '"' ('"'! visible)* '"' @string gap
-    private boolean string() throws ParseException {
+    private boolean string() {
+        mark(STRING);
         if (! accept('"')) return false;
-        while (true) {
-            if (accept('"')) break;
-            if (visible()) continue;
-            err(in, in, "expecting visible character or \"");
-        }
-        doName(String);
-        gap();
-        return true;
+        while (! look('"') && visible()) { }
+        return accept('"') && doName(String) && gap();
     }
 
-    // string = #divider '<' ('>'! visible)* '>' @divider gap
-    private boolean divider() throws ParseException {
-        if (! accept('"')) return false;
-        while (true) {
-            if (accept('"')) break;
-            if (visible()) continue;
-            err(in, in, "expecting visible character or \"");
-        }
-        doName(String);
-        gap();
-        return true;
+    // divider = #divider '<' ('>'! visible)* '>' @divider gap
+    private boolean divider() {
+        mark(DIVIDER);
+        if (! accept('<')) return false;
+        while (! look('>') && visible()) { }
+        return accept('>') && doName(Divider) && gap();
     }
 
     // dots = ".." skip @
-    private boolean dots() throws ParseException {
-        if (! accept('.')) return false;
-        expect('.', "dot");
-        skip();
-        start = in;
-        return true;
+    private boolean dots() {
+        return accept('.') && accept('.') && skip() && drop();
     }
 
     // equals = "=" skip @
     // slash = "/" skip @
-    private boolean infix(char c) throws ParseException {
-        if (! accept(c)) return false;
-        skip();
-        start = in;
-        return true;
+    private boolean infix(char c) {
+        return accept(c) && skip() && drop();
     }
 
     // rb = '(' @token skip @
     // sb = '[' @token skip @
-    private boolean prefix(char c) throws ParseException {
-        if (! accept(c)) return false;
-        doToken();
-        skip();
-        start = in;
-        return true;
+    private boolean open(char c) {
+        return accept(c) && doToken() && skip() && drop();
+    }
+
+    // re = ')' @token gap @
+    // sb = ']' @token gap @
+    private boolean close(char c) {
+        return accept(c) && doToken() && gap() && drop();
     }
 
     // has = "&" @1has gap @
@@ -281,59 +244,52 @@ class Parser implements Testable {
     // opt = "?" @1opt gap @
     // any = "*" @1any gap @
     // some = "+" @1some gap @
-    // re = ')' @token gap @
-    // sb = ']' @token gap @
-    private boolean postfix(char c, Op op) throws ParseException {
-        if (! accept(c)) return false;
-        if (op != null) doPostfix(op);
-        else doToken();
-        gap();
-        start = in;
-        return true;
+    private boolean postfix(char c, Op op) {
+        return accept(c) && doPostfix(op) && gap() && drop();
     }
 
     // skip = (space / comment / newline)*
-    private boolean skip() throws ParseException {
-        while (true) {
-            if (accept(' ')) { }
-            else if (comment()) { }
-            else if (newline()) { }
-            else break;
-        }
-        return true;
+    private boolean skip() {
+        int in0 = in;
+        while (accept(' ') || comment() || in == in0 && newline()) { in0 = in; }
+        return in == in0;
     }
 
     // gap = space* comment? continuation @
-    private void gap() throws ParseException {
+    private boolean gap() {
         while (accept(' ')) { }
+        int in0 = in;
         comment();
-        continuation();
-        start = in;
+        if (in != in0) return false;
+        return continuation() && drop();
     }
 
     // continuation = [newline skip '=/)]'&]?
-    private void continuation() throws ParseException {
+    private boolean continuation() {
         int in0 = in;
-        if (! newline()) return;
-        skip();
-        if (look("=/)]")) return;
-        in = in0;
+        boolaen t = newline() && skip() && (
+            look('=') || look('/') || look(')') || look(']')
+        );
+        if (! t) in = in0;
+        return true;
     }
 
     // newline = #newline 13? 10 @
     private boolean newline() {
-        accept('\r');
-        boolean t = accept('\n');
-        start = in;
-        return t;
+        mark(NEWLINE);
+        return (accept('\r') || true) && accept('\n') && drop();
     }
+
+//--------------------------------
+
+
 
     // comment = "//" visible* newline&
     private boolean comment() throws ParseException {
         if (! accept('/')) return false;
         if (! accept('/')) { in--; return false; }
         while (visible()) { }
-        if (! look("\r\n")) err(in, in, "expecting newline");
+        if (! (look('\r') || look('\n'))) err(in, in, "expecting newline");
     }
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
@@ -347,6 +303,13 @@ class Parser implements Testable {
         in += Character.charCount(c);
         return true;
     }
+
+    // @
+    private boolean drop() {
+        start = in;
+        return true;
+    }
+
 //------------------------------------------
 alpha = letter / digit
 letter = Lu / Ll / Lt / Lm / Lo
@@ -423,15 +386,10 @@ end = #end Uc!
         return true;
     }
 
-    // Check for any one of the (ascii) characters in the given string.
-    private boolean look(String s) {
+    // Check for the given (ascii) character next in the input.
+    private boolean look(char c) {
         if (in >= source.length()) return false;
-        char ch = source.charAt(in);
-        boolean found = false;
-        for (int i = 0; i < s.length() && ! found; i++) {
-            if (ch == s.charAt(i)) found = true;
-        }
-        return found;
+        return source.charAt(in) == c;
     }
 
     // Check that a symbol (ascii) appears next in the input.

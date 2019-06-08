@@ -1564,7 +1564,7 @@ bracket = rb expression re @3bracket
 
 id = #id letter alpha* @id gap
 action = #action '@' (digit* letter alpha* @act / @drop) gap
-tag = #tag "%" letter alpha* @ask gap
+tag = #tag "%" letter alpha* @tag gap
 marker = #marker "#" letter alpha* @mark gap
 number = #number (("1".."9") digit* / "0" hex*) @number gap
 set = #set "'" ("'"! visible)* "'" @set gap
