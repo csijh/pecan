@@ -476,48 +476,46 @@ deciding which alternative to take.</p>
 
 <h3 id="text">Text</h3>
 
-<p>Text notations are used to match input characters. Double quotes indicate a
-string of characters, which are matched in sequence. For example:</p>
-
-<pre>keyword = "int" / "if" / "while" / ...
-pi = "&#960;"
-</pre>
-
-<p>The string <code>"int"</code> only matches if all three characters appear in
-the input in sequence, i.e. it is equivalent to <code>["i" "n" "t"]</code>. The
-square brackets indicate that if a string matches only partially, the input
-position returns to the beginning of the string, and other alternatives can be
-tried. Any Unicode characters can be used in a string, using the UTF-8 encoding
-in the grammar file.</p>
-
-<p>Single quotes indicate a set of alternative characters, any one of which can
-be matched. For example:</p>
+<p>Text notations are used to match input characters. Single quotes indicate
+individual characters, e.g. <code>'x'</code> matches the letter <code>x</code>.
+Several characters in single quotes indicate a set of alternatives, any one of
+which can be matched. For example:</p>
 
 <pre>op = '+-*/'
-number = '0123456789'+
+digit = '0123456789'
 </pre>
 
 <p>The expression <code>'+-*/'</code> matches any one of the four arithmetic
 operator characters, and is equivalent to <code>'+' / '-' / '*' / '/'</code>.
 The expression <code>'0123456789'</code> matches any digit.</p>
 
+<p>Double quotes indicate a string of characters, which are matched in sequence.
+For example:</p>
+
+<pre>keyword = "int" / "if" / "while" / ...
+pi = "&#960;"
+</pre>
+
+<p>The string <code>"int"</code> only matches if all three characters appear in
+the input in sequence, i.e. it is equivalent to <code>['i' 'n' 't']</code>. The
+square brackets indicate that if a string matches only partially, the input
+position returns to the beginning of the string, and other alternatives can be
+tried. Any Unicode characters can be used in a string, using the UTF-8 encoding
+in the grammar file.</p>
+
 <p>Single characters can be represented using either single or double
 quotes. For example:</p>
 
-<pre>assign = id '=' exp
-block = "{" statements "}"
-double_quote = '"'
+<pre>double_quote = '"'
 single_quote = "'"
 </pre>
 
-<p>Although the single quote set notation may contain Unicode characters, each
-code point is treated as a separate character. In any situation where graphemes
-might be involved, the string notation should be used instead. For example, the
-set <code>'éè'</code> is visually ambiguous. It could contain two to four code
-points, depending on whether combiners are used. Pecan does no normalization,
-which must be handled via actions, so care needs to be taken. If combiners are
-used yet the set needs to be regarded as containing only two characters, it
-should be written:</p>
+<p>Although Unicode characters may be used, each code point is treated as a
+separate character. Where graphemes might be involved, care needs to be taken.
+For example, <code>'é'</code> is visually ambiguous because it could contain one
+or two code points, depending on whether a combiner is used. Writing it instead
+as <code>"é"</code> reduces potential ambiguity. Similarly, <code>'éè'</code> is
+better written as:</p>
 
 <pre>"é" / "è"
 </pre>
@@ -1605,374 +1603,13 @@ a lot to be said for insisting that all such text files be stored using LF
 newlines, even on Windows now that Notepad accepts LF. However, as a temporary
 practical concession, Pecan supports CR+LF newlines.</p>
 
-<!-- Write a Haskell version of Pecan, then prove it. -->
-
 <!--
-<h2>Notes</h2>
-
-<p>Error sets are reported in a standard order (TreeSet) so that alternatives
-can be swapped by the optimiser if they start differently, e.g. if there are
-alternatives x/y/z and y starts with a keyword whereas x and z start with an
-id, then the optimiser might transform to y/(x/z) to allow a case switch on the
-outer choice, while the alternatives of the inner choice are kept in order.</p>
-
-<h2>Implementation</h2>
-
-<p>Generate direct code: problems are (b) incremental or
-stream (c) no tail-call optn. Possible optimisations are: (a) inlining
-especially for short non-recursive defs but also of initial calls to avoid
-call-downs, and final calls to avoid tail-calls (although it isn't clear there
-are many true tail-calls). (b) Case switching for alternatives. (c) @ID@
-becomes SKIP. For case-switching in a parser, there can just be a case per
-type (requires us to go back to constants!)  For case switching in a scan*,
-there is a case per character, or a case per kind if compactness is needed,
-where a kind is a minimal set.</p>
-
-<p>Full table-driven approach: problems are (a) not much opportunity for
-compiler optn (b) case switch per 'line of code' (c) not easy to
-understand or debug</p>
-
-<p>Want compromise. A case per rule doesn't work, because in</p>
-
-<pre>case P:
-  ok = CALL(Q);
-  if (ok) ok = CALL(R);
-</pre>
-
-<p>the simulated call to Q, using our own stack, needs a return address between
-the two statements, so the case labels are not enough.</p>
-
-<p>A table where each position in the code represents an expression can
-work:</p>
-
-<pre>P:  AND P2 P3
-P2: CALL Q
-P3: CALL(R);
-</pre>
-
-<p>A problem is (again) what is the return address to put on the local stack
-while calling Q? (It needs to be between the halves of the AND.)</p>
-
-<p>Maybe a more-or-less direct translation of the direct code could work:</p>
-
-<pre>P:  CALL Q   (represents ok = q() )
-    IF P2         (represents if (ok) ok = r() )
-    CALL(R)
-P2: END           (represents if (!ok) out = out3; )
-</pre>
-
-<p>Case switch optimisation: Find all the starter sets for the alternatives,
-and check overlap. If there are sufficient <i>distinct</i> sets, try for a
-case switch, treating an error handler as "everything else". Sort, combining
-alternatives with overlapping sets, making sure swapping is valid, and leaving
-an error handler last. Aside from the error-handler, work out which new
-alternative is best put last to act as default, to save cases. If all the
-cases bar one lead to a small enough number of cases, use a character or
-token-type switch. Otherwise, use a lookup to categorise the next character
-and switch on sets.</p>
-
-<h1>Old Pecan notes</h1>
-
-<p>Soft failure means input position doesn't change (though it may have been
-reset by backtracking). Because of rule "commit only if input consumed", if
-soft failure, output may have to be reset. In particular, apart from backtrack
-or lookahead features, in a sequence, if it fails on second or subsequent item,
-but without eating any input, then output position needs to be reset.</p>
-
-<p>The <code>failWith</code> method usually returns the list of symbols which
-have been tried but have failed, so that a standard message such as "expecting
-name, number or string" can be generated. However, if the failure is due to an
-error token in the input, that is taken to be a scanner error, and is reported
-in preference to the expected symbol. If an error symbol is expected, then
-that is reported in preference to any previous expected symbols, even ones
-further on in the input.</p>
-
-<h2>Scanner implementation</h2>
-
-<p>The set expressions are analysed. The smallest intersections are computed
-and these form the base sets. Each set, possibly excluding any remaining
-single characters, is expressed as a union of the base classes. A table is
-computed where each character is looked up to find its base class. Preferably,
-there are up to 8 or 16 or 32 or 64 bases, and the result can be a one-bit
-number.</p>
-
-<h2>Incremental scanning</h2>
-
-<p>Here are some restrictions so that a scanner can be used for incremental
-scanning, as in a syntax highlighting editor.</p>
-
-<ul>
-
-<li>Each token is a non-empty exact substring of the source text, with a
-classifying tag. The tokens exactly divide up the text, each starting where the
-previous one ends. White space tokens can be discarded at some higher
-level.</li>
-
-<li>The scanner never fails. Error tokens are produced instead, distinguished
-by tag. Scanning continues as normal afterwards. This allows syntax
-highlighting of incorrect programs, and also allows scanning errors to be
-reported during parsing so that, to the user, scanning and parsing appear to be
-a single pass.</li>
-
-</ul>
-
-<p>With any rescanning mechanism, the amount of lookahead must be known:</p>
-
-<ul>
-
-<li>The amount of lookahead at the end of a token must be known. The lookahead
-may be globally limited (e.g. always at most one character) or limited per
-token type (two characters for a string literal). Otherwise, the scanner must
-keep track of a "high water mark", i.e. the furthest point in the text that was
-read from the start of scanning up to producing the current token, and use that
-to form a global lookahead limit, or encode the lookahead in the token type.
-Perhaps a max lookahead can be declared, and if the actual lookahead ever
-exceeds that, an error or change of strategy is indicated. (The default can be
-simply to track the max lookahead, and an option can switch on a lookahead per
-token.)</li>
-
-</ul>
-
-<p>Re-scanning after a change of text consists of finding the rightmost
-unaffected token, i.e. the end of the token plus the amount of lookahead does
-not reach the text which has changed. Re-scanning continues until the text
-resynchronises, i.e. a new token 'exactly matches' an old one.</p>
-
-<p>Simple scanners can get away with a small fixed number of states. For
-example, JSP mixes HTML with Java, or splitting multi-line (but not nested)
-comments into one-line tokens to speed up incremental highlighting. For that,
-you need:</p>
-
-<ul>
-
-<li>The scanner can be in one of a small number of 'memory free' states. Given
-the current state and position in the source text, the next token can be found
-purely by working forwards in the text. In other words, there must be no
-backtracking back past the start of a token.</li>
-
-<li>Each tag (token type) completely defines an end state, which is the start
-state for scanning the next token. There is a fixed start state, and after
-that the parser state is completely determined by the end state of the tag just
-generated. For example, if scanning JSP, there can be a Java state and an HTML
-state. The token tags distinguish between Java tokens, HTML tokens, and
-transitional tokens in each direction. This would include distinguishing
-between Java whitespace or error tokens, and HTML whitespace or error
-tokens.</li>
-
-</ul>
-
-<p>Having a fixed number of parsing states is no good for nesting situations.
-Nested comments require a state which counts the depth of nesting. Multiple
-types of nested brackets require a state which keeps track of the whole
-sequence of open brackets.</p>
-
-<p>For interactive applications such as syntax highlighting, it is recommended
-that very large tokens be avoided. For example, multi-line comments can be
-divided into one-line pieces (with tags "start of comment", "middle of
-comment", "end of comment"). This needs an extra scanner state ("inside
-multi-line comment"). If the comments are nested, it needs an infinite number
-of states. On the other hand, changing the start or end of a multiline comment
-is likely to involve rescanning the whole token or the whole of the rest of the
-source text anyway, and this is not necessarily slow, so maybe it is ok to
-leave it.</p>
-
-<p>An alternative is fully automated incremental scanning. An interpretive
-approach is used with a custom execution stack. For each token, a position in
-the execution stack is recorded. Although an individual rule never goes below
-its original starting point, and indeed always returns exactly to it,
-nevertheless further processing after the rule may combine the stack and destroy
-the information before the rule's starting point. So, the stack needs to be
-orgaised as a history stack. When a rule returns, instead of popping an item
-off the stack, a skip is pushed on the stack saying that part of the stack is
-to be ignored. See HistoryStack.java. The state at the time a token is
-created can be stored with it, instead of assuming the type can be used as a
-state.</p>
-
-<h2>Stream Scanning</h2>
-
-<p>Stream scanning can be done using the re-scanning mechanism. Scanning is
-done a buffer of text at a time. Each new buffer is regarded as a change to
-the end of the text, adding some more. For each buffer, all tokens where the
-high water mark does not reach the end of the text can be emitted, before the
-next buffer is processed.</p>
-
-<h2>Incremental Scanning with Finite States</h2>
-
-<p>It should be possible to check a normal grammer to see if it can be made
-incremental with a fixed number of states rather than the more general history
-stack mechanism. Subexpressions of the grammar (rules) are classified as (a)
-not producing any tokens or (b) producing one token at the end or (c) looping.
-A looping rule cannot appear as a subrule of a larger expression, except in
-alternatives of a defined rule. A looping rule or alternative must consist of
-a part which produces a token at the end, followed by the name of a defined
-looping rule. Each occurrence of a particular token type must be followed by
-the same looping rule. This should be enough to ensure that when a token is
-produced, there is ony one tail-recursive return address on the execution
-stack, and that is for a named rule which can be returned to later using just
-the type of the previous token.</p>
-
-<h2>Keywords</h2>
-
-<p>Suppose a language has <code>int</code> as a keyword, but also allows
-identifiers such as <code>intx</code> that begin with <code>int</code>. Then
-there appear to be two possibilities. One is to use lookahead, the advantage
-of which is that the rule for each keyword and the rule for identifiers can be
-expressed separately:</p>
-
-<pre>    token = int / ... / id
-    int = "int" [non-letter-or-digit] ! #
-    id = letter letter-or-digit* id#
-</pre>
-
-<p>Note, however, that the id rule must be the last alternative, to express the
-fact that it excludes keywords, which does not fit in with the idea in PEG of
-combining scanner and parser grammars, because then the id rule would have to
-stand alone. The other alternative, avoiding lookahead, is for the identifier
-rule to be intertwined with the keyword rules, e.g.:</p>
-
-<pre>    token = "int" ! key / ... / other_id
-    key = letter-or-digit+ id# / #
-</pre>
-
-<p>Either way, it would be helpful to rely on a couple of simple optimisations.
-One is common prefix elimination, e.g.</p>
-
-<pre>    x y / x z    == &gt;    x (y / z)
-</pre>
-
-<p>This helps to make sure that alternatives begin with disjoint character
-sets. That allows a second optimisation, which is switching, e.g.:</p>
-
-<pre>    'a' ... / 'b' ... / digit ... / ...
-</pre>
-
-<p>Instead of trying each alternative in turn, code is generated to (a) convert
-each character into a small integer representing a disjoint character set, and
-(b) do a switch on that integer to jump to the right alternative.</p>
-
-<h2>Incremental Parsing</h2>
-
-<p>To support this, a table-driven implementation is used, so that parsing can
-be suspended, the current position in the execution stack can be changed, and
-parsing can be resumed. The execution stack is a history stack.</p>
-
-<p>After parsing, each node carries with it the start and end positions in the
-source text, a lookahead based on the high water mark (furthest position
-forward in the source text on creation) and the parsing end-state
-(i.e. position in the execution stack) at the moment of creation.</p>
-
-<p>The input is an array of characters or tokens with a current marker in it.
-The output is an array (stack) of actions with an end marker. The actions
-typically build nodes, but are not executed until parsing is complete, so that
-backtracking can be done without side-effects. When each output action is
-pushed, the position in the execution stack is recorded with it. After
-parsing, the final execution stack is kept to support incremental
-re-parsing.</p>
-
-<p>To re-parse a region of source text which has changed, find the last output
-action whose high water mark is before the changed text. Take the next node,
-and move to the parent until the node's range covers the changed text. Use its
-parsing start-state and start position to restart parsing. Stop reparsing when
-synchronisation occurs (same end position and parsing state (and hwm?) when an
-output action is created). The array of output actions consists of parts a, b
-and c where b is the new part. The nodes corresponding in part a can be kept
-intact. The actions in part b are used to create new nodes. Where nodes in
-part c had nodes in part b as subnodes, those subnodes need to be replaced
-somehow.</p>
-
-<p>One way is to scan part c (but this doesn't feel good because it is not
-limited). It is a rapid replay, simulating just the number of nodes beyond the
-new ones, not their values. However, it almost certainly means replaying to
-the end of the file, past a lot of irrelevant stuff.</p>
-
-<p>Another is keep track of the correspondence between old and new nodes by
-replay both b and oldb (the old counterpart of section b) together. Then
-replace the old node in its parent by the new node. From each node, you need
-to be able to reach its parent, and its position within its parent.</p>
-
-<p>To make this work, a lot of consistency checks are needed. In particular,
-if the execution stack ever goes below the point recorded in an output action,
-this must be due to backtracking which will also remove the output action.</p>
-
-<p>Each expression in the grammar forms a rule. A rule may consume input, may
-produce output, and may succeed or fail. A failure is soft if no input has
-been consumed, hard otherwise. A backtracking operation (lookahead or failed
-commit) must restore the input position, and output position, and execution
-stack, to what it was. A soft failure which consumes no input but produces
-output must discard the output produced by restoring the output position to
-what it was. For example, suppose there is a sequence <code>x y</code> where
-<code>x</code> is just an output action, and then <code>y</code> fails. This
-is a soft failure of <code>x y</code>, and any output produced by
-<code>x</code> must be discarded.</p>
-
-<h2>Interpretive Execution</h2>
-
-<p>The purpose of custom interpretive execution is to have our own execution
-stack, organised as a history stack which can be restarted at any point. It
-contains return addresses and saved local variables. One choice for an
-interpretive style of code seems to be this.</p>
-
-<pre>SEQ x AND y AND z END
-
-SEQ: push(out), call(p+1)   [[ = push(p+2), jump(*(p+1)) ]]
-AND: if fail { out=pop(); return } else call(p+1)
-call: if return address goes to END, TAILCALL
-
-ALT: push(in), call(p+1)
-OR: if succeed return; if (in > saveIn) return; call(p+1)
-</pre>
-
-<p>The AND instruction forms a return address for execution to return to after
-executing the previous instruction. The call() operation checks for the end of
-an AND sequence, and does a tail call instead. (An alternative would be to
-have a different final version of AND, and/or to pre-process to change the last
-ANDs to tail call versions.)</p>
-
-<p>Alt: on success or hard failure of an alternative, return. On soft failure,
-try next. Need to store 'in' to test for soft failure. Don't need to store
-'out' because each alternative which soft-fails restores 'out', as does the one
-which hard-fails.</p>
-
-<p>Seq: on failure, restore 'out' and return. If all items succeed, return
-success. Need to store 'out' to restore it. Restoring 'out' on hard failure
-should be no problem, because parsing will crash or there is a surrounding
-backtrack.</p>
-
-<p>Try: save in, do x, if it fails restore in. Don't need to restore out if x
-restores out on failure.</p>
-
-<p>Look: save in and out, do x, if it fails restore in. If x succeeds, must
-restore both in and out.</p>
-
-<p>Opt: x? is essentially x / nothing. If x succeeds, ok. If x hard-fails,
-ok. If x soft-fails, report success (and out has been restored). Must store
-in to test for soft-fail.</p>
-
-<p>Any: x* is x x* / nothing. If x succeeds n times and then hard fails, ok.
-If x succeeds n times and then soft fails, out is restored by the soft failure,
-report success. Need to store in to test for soft failure.</p>
-
-<p>Some: x+ is x x*. If x fails, ok. If it succeeds, do as for Any. Need to
-store in.</p>
-
-<p>Atom: If succeeds, moves in and adds SKIP to output. Else soft-fails.
-Cooperates in collecting expected bitset via global failPosition and
-failTags. Not needed for re-parsing?</p>
-
-<p>Act: add given action to output.</p>
-
-<p>IDEA: can we check for separability of the scanner from the parser?  Maybe
-like this. Take the whole grammar, and discard all the tree-like actions which
-build nodes. Radically simplify the resulting grammar down to its bare
-essentials. See if there is ever any backtracking past the creation of a token
-which results in a different token or token type.</p>
-
 <h2>Tutorial Topics</h2>
 
 <p>Topics: grammar operators, left recursion, right recursion, iteration.
 Stack-based actions. Actions not done and undone if backtrack. Actions can do
 stuff or build trees. Built-in scanning and drawbacks. Separate scanner. How
-to join then up. Incremental scanning. Incremental parsing?</p>
+to join then up.</p>
 -->
 
 </body>
