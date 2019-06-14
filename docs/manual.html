@@ -514,8 +514,8 @@ single_quote = "'"
 separate character. Where graphemes might be involved, care needs to be taken.
 For example, <code>'é'</code> is visually ambiguous because it could contain one
 or two code points, depending on whether a combiner is used. Writing it instead
-as <code>"é"</code> reduces potential ambiguity. Similarly, <code>'éè'</code> is
-better written as:</p>
+as <code>"é"</code> reduces the potential ambiguity. Similarly,
+<code>'éè'</code> is better written as:</p>
 
 <pre>"é" / "è"
 </pre>
@@ -586,8 +586,8 @@ keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 <p>Here, some keywords are listed in alphabetical order, and a divider is used
 to speed up their recognition by separating the keywords before
 <code>"do"</code> from the keywords from <code>"do"</code> onwards. The less and
-greater than signs used as brackets are also mnemonics for the two-way decision
-which a divider represents.</p>
+greater than signs used as angle brackets are also mnemonics for the two-way
+decision which a divider represents.</p>
 
 <p>The empty string <code>""</code> always succeeds, and the empty set
 <code>''</code> always fails:</p>
@@ -1586,10 +1586,9 @@ skip = (space / comment / newline)*
 gap = space* comment? continuation @
 continuation = [nl skip '=/)]'&amp;]?
 newline = #newline 13? 10 @
-// --------
 comment = ["//"] visible* newline&amp;
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
-alpha = letter / digit
+alpha = letter / digit / '_' / '-'
 letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
 hex = digit / 'ABCDEFabcdef'

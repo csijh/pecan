@@ -20,6 +20,7 @@ public enum Op {
     Char,    // Single unicode character as a number, e.g. 13 or 0D
     String,  // Character sequence, "..."
     Set,     // Choice of characters, '...'
+    Divider, // Lookahead for text less than string, <...>
     Range,   // Character range, x..y
     Cat,     // Unicode category, e.g. Lu
     Tag,     // Match a type of token.

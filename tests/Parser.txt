@@ -21,14 +21,14 @@ Rule x
     Id z
 ==========
 ----------
-Error on line 1: expecting rule
+Error on line 1: expecting id, string, newline
 
 ^
 ==========
-// Expecting equals
+// Expecting =
 x
 ----------
-Error on line 2: expecting =
+Error on line 2: expecting equals
 x
  ^
 ==========
@@ -36,15 +36,6 @@ x
 x = x
 y = y
 ---------
-Rule x
-  Id x
-Rule y
-  Id y
-==========
-// Old Mac \r line endings
-x=x\13\
-y=y\13\
-----------
 Rule x
   Id x
 Rule y

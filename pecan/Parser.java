@@ -4,8 +4,9 @@ package pecan;
 
 import java.util.*;
 import java.text.*;
+import static pecan.Category.*;
 import static pecan.Op.*;
-import static pecan.Parser.Marker;
+import static pecan.Parser.Marker.*;
 //import static java.lang.Character;
 
 /* Parse a Pecan source text, assumed to be in UTF8 format, producing a tree.
@@ -14,31 +15,54 @@ The parser has been hand-translated from the pecan grammar in the comments. */
 class Parser implements Testable {
     private String source;
     private Node[] output;
-    private int start, in, out, marked;
-    private EnumSet<Marker> markers = new EnumSet<>();
+    private int start, in, out, lookahead, marked;
+    private Set<Marker> markers = EnumSet.noneOf(Marker.class);
 
     public static void main(String[] args) {
         if (args.length == 0) Test.run(new Parser());
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
-    private enum Marker {
-        ID, ACTION, TAG, MARKER, NUMBER, STRING, NEWLINE, END_OF_TEXT
+    enum Marker {
+        ID, ACTION, TAG, MARKER, NUMBER, SET, STRING, DIVIDER, NEWLINE,
+        EQUALS,
+        END_OF_TEXT
     }
 
     public String test(String g, String s) throws ParseException {
         return "" + run(g);
     }
 
+    private boolean mark(Marker m) {
+        if (lookahead > 0) return true;
+        if (marked > in) throw new Error("marked " + marked + " in " + in);
+        if (marked < in) {
+            markers.clear();
+            marked = in;
+        }
+        markers.add(m);
+        return true;
+    }
+
+    private String message() {
+        String s = "";
+        for (Marker m : markers) {
+            if (s.length() > 0) s = s + ", ";
+            s = s + m.toString().toLowerCase();
+        }
+        return s;
+    }
+
     // Parse the grammar, returning a node (or exception).
     Node run(String s) throws ParseException {
         source = s;
         if (output == null) output = new Node[1];
-        start = in = out = 0;
-        try { pecan(); }
-        catch (ParseException e) {
+        start = in = out = lookahead = marked = 0;
+        markers.clear();
+        boolean ok = pecan();
+        if (! ok) {
             if (marked < in) markers.clear();
-            err(in, in, "expecting " + markers);
+            err(in, in, "expecting " + message());
         }
         return prune(output[0]);
     }
@@ -63,12 +87,12 @@ class Parser implements Testable {
 
     // definition = id equals expression newline skip @2rule
     private boolean definition() {
-        return id() && infix('=') && exp() && newline() && skip() && doRule();
+        return id() && equals() && exp() && newline() && skip() && doRule();
     }
 
     // synonym = string equals tag @2rule
     private boolean synonym() {
-        return string() && infix('=') && tag() && doRule();
+        return string() && equals() && tag() && doRule();
     }
 
     // expression = term (slash expression @2or)?
@@ -96,10 +120,10 @@ class Parser implements Testable {
     // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
     private boolean postop() {
         return (
-            postfix('?', Opt)) ||
-            postfix('*', Many)) ||
-            postfix('+', Some)) ||
-            postfix('&', Has)) ||
+            postfix('?', Opt) ||
+            postfix('*', Many) ||
+            postfix('+', Some) ||
+            postfix('&', Has) ||
             postfix('!', Not)
         );
     }
@@ -218,10 +242,15 @@ class Parser implements Testable {
 
     // dots = ".." skip @
     private boolean dots() {
+        if (! look("..")) return false;
         return accept('.') && accept('.') && skip() && drop();
     }
 
-    // equals = "=" skip @
+    // equals = #equals "=" skip @
+    private boolean equals() {
+        return mark(EQUALS) && accept('=') && skip() && drop();
+    }
+
     // slash = "/" skip @
     private boolean infix(char c) {
         return accept(c) && skip() && drop();
@@ -267,9 +296,11 @@ class Parser implements Testable {
     // continuation = [newline skip '=/)]'&]?
     private boolean continuation() {
         int in0 = in;
-        boolaen t = newline() && skip() && (
+        lookahead++;
+        boolean t = newline() && skip() && (
             look('=') || look('/') || look(')') || look(']')
         );
+        lookahead--;
         if (! t) in = in0;
         return true;
     }
@@ -280,27 +311,28 @@ class Parser implements Testable {
         return (accept('\r') || true) && accept('\n') && drop();
     }
 
-//--------------------------------
-
-
-
     // comment = "//" visible* newline&
-    private boolean comment() throws ParseException {
-        if (! accept('/')) return false;
-        if (! accept('/')) { in--; return false; }
+    private boolean comment() {
+        if (! look("//")) return false;
+        accept('/');
+        accept('/');
         while (visible()) { }
-        if (! (look('\r') || look('\n'))) err(in, in, "expecting newline");
+        int in0 = in;
+        lookahead++;
+        boolean t = newline();
+        lookahead--;
+        if (! t) in = in0;
+        return t;
     }
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
     private boolean visible() {
         if (in >= source.length()) return false;
-        int c = source.codePointAt(in);
-        Category cat = Category.get(c);
-        if (cat == Cn || cat == Cc) err(in, in, "bad character");
-        if (cat == Co || cat == Cs) err(in, in, "bad character");
-        if (cat == Zl || cat == Zp) err(in, in, "bad character");
-        in += Character.charCount(c);
+        int ch = source.codePointAt(in);
+        Category cat = Category.get(ch);
+        if (cat == Cn || cat == Cc || cat == Co) return false;
+        if (cat == Cs || cat == Zl || cat == Zp) return false;
+        in += Character.charCount(ch);
         return true;
     }
 
@@ -310,64 +342,40 @@ class Parser implements Testable {
         return true;
     }
 
-//------------------------------------------
-alpha = letter / digit
-letter = Lu / Ll / Lt / Lm / Lo
-digit = Nd
-hex = digit / 'ABCDEFabcdef'
-end = #end Uc!
-
-    // end = #end Uc!
-    private boolean end() throws ParseException {
-        return in >= source.length();
-    }
-
-
-    // ascii = ' ' .. '~'
-    private boolean ascii() {
-        if (in >= source.length()) return false;
-        char ch = source.charAt(in);
-        return ch >= ' ' && ch <= '~';
-    }
-
     // alpha = letter / digit / '_' / '-'
     private boolean alpha() {
-        if (in >= source.length()) return false;
-        int ch = source.codePointAt(in);
-        if (ch != '_' && ch != '-' &&
-            ! Character.isLetter(ch) && ! Character.isDigit(ch)) return false;
-        in += Character.charCount(ch);
-        return true;
+        return letter() || digit() || accept('_') || accept('-');
     }
 
-    // letter = Lu / Ll / Lt / Lm / Lo
-    private boolean letter() {
-        if (in >= source.length()) return false;
-        int ch = source.codePointAt(in);
-        if (! Character.isLetter(ch)) return false;
-        in += Character.charCount(ch);
-        return true;
+    // hex = digit / 'ABCDEFabcdef'
+    private boolean hex() {
+        return digit() || accept('A', 'F') || accept('a', 'f');
     }
 
     // digit = Nd
     private boolean digit() {
         if (in >= source.length()) return false;
         int ch = source.codePointAt(in);
-        if (! Character.isDigit(ch)) return false;
-        in += Character.charCount(ch);
-        return true;
+        Category cat = Category.get(ch);
+        if (cat == Nd) in += Character.charCount(ch);
+        return cat == Nd;
     }
 
-    // hex = digit / 'ABCDEFabcdef'
-    private boolean hex() {
-        if (accept('A', 'F')) return true;
-        if (accept('a', 'f')) return true;
-
+    // letter = Lu / Ll / Lt / Lm / Lo
+    private boolean letter() {
         if (in >= source.length()) return false;
         int ch = source.codePointAt(in);
-        if (Character.isDigit(ch)) { in++; return true; }
-        if ("ABCDEFabcdef".indexOf(ch) >= 0) { in++; return true; }
-        return false;
+        Category cat = Category.get(ch);
+        boolean ok = (
+            cat == Lu || cat == Ll || cat == Lt || cat == Lm || cat == Lo
+        );
+        if (ok) in += Character.charCount(ch);
+        return ok;
+    }
+
+    // end = #end Uc!
+    private boolean end() {
+        return in >= source.length();
     }
 
     // Check if a character (ascii) appears next in the input.
@@ -392,11 +400,13 @@ end = #end Uc!
         return source.charAt(in) == c;
     }
 
-    // Check that a symbol (ascii) appears next in the input.
-    private void expect(char sym, String s) throws ParseException {
-        if (in >= source.length()) err(in, in, "expecting " + s);
-        if (source.charAt(in) != sym) err(in, in, "expecting " + s);
-        in++;
+    // Check for the given (ascii) string next in the input.
+    private boolean look(String s) {
+        if (in + s.length() > source.length()) return false;
+        for (int i = 0; i < s.length(); i++) {
+            if (source.charAt(in + i) != s.charAt(i)) return false;
+        }
+        return true;
     }
 
     // Generate an error report.
@@ -409,21 +419,23 @@ end = #end Uc!
     // text range to form the text range of the new node.
 
     // @token (temporary token, used to get the right text range)
-    private void doToken() {
+    private boolean doToken() {
         if (out >= output.length) {
             output = Arrays.copyOf(output, output.length * 2);
         }
         output[out++] = new Node(null, source, start, in);
         start = in;
+        return true;
     }
 
     // Name: one of @id, @drop, @action, @tag, @err
-    private void doName(Op op) {
+    private boolean doName(Op op) {
         if (out >= output.length) {
             output = Arrays.copyOf(output, output.length * 2);
         }
         output[out++] = new Node(op, source, start, in);
         start = in;
+        return true;
     }
 
     // @2rule
@@ -446,27 +458,30 @@ end = #end Uc!
     }
 
     // Infix operator: one of @2or, @2and, @2range
-    private void doInfix(Op op) {
+    private boolean doInfix(Op op) {
         Node y = output[--out];
         Node x = output[--out];
         Node r = new Node(op, x, y, source, x.start(), y.end());
         output[out++] = r;
+        return true;
     }
 
     // Do postfix operator: one of @1opt, @1any, @1some, ...
-    private void doPostfix(Op op) {
+    private boolean doPostfix(Op op) {
         Node x = output[--out];
         Node y = new Node(op, x, source, x.start(), in);
         output[out++] = y;
+        return true;
     }
 
     // Convert "[" x "]" into Try x
-    private void doTry() {
+    private boolean doTry() {
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];
         Node r = new Node(Try, x, source, open.start(), close.end());
         output[out++] = r;
+        return true;
     }
 
     // There is a subtle difficulty with bracketed subexpressions "(x)". To have
@@ -480,12 +495,13 @@ end = #end Uc!
     // passes, a temporary "(x)" node has a null Op.
 
     // Convert "(" x ")" into "(x)", with child x.
-    private void doBracket() {
+    private boolean doBracket() {
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];
         Node r = new Node(null, x, source, open.start(), close.end());
         output[out++] = r;
+        return true;
     }
 
     // Remove "(x)" nodes, i.e. nodes with a null Op, from a subtree.
