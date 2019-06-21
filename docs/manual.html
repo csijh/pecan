@@ -1548,7 +1548,7 @@ bracketed expressions can be calculated accurately.</p>
 rules = rule (rules @2add)?
 rule = definition / synonym
 definition = id equals expression newline skip @2rule
-synonym = string equals tag @2rule
+synonym = string equals tag newline skip @2rule
 
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
@@ -1560,14 +1560,14 @@ text = number / string / set
 try = sb expression se @3back
 bracket = rb expression re @3bracket
 
-id = #id letter alpha* @id gap
-action = #action '@' (digit* #letter letter alpha* @act / @drop) gap
-tag = #tag "%" letter alpha* @tag gap
-marker = #marker "#" #letter letter alpha* @mark gap
-number = #number (("1".."9") digit* / "0" hex*) @number gap
-set = #set "'" ("'"! visible)* #quote "'" @set gap
-string = #string '"' ('"'! visible)* #quote '"' @string gap
-divider = #divider '&lt;' ('>'! visible)* '>' @divider gap
+id = #atom letter alpha* @id gap
+action = '@' (digit* #letter letter alpha* @act / @drop) gap
+tag = "%" (letter alpha*)? @tag gap
+marker = "#" #letter letter alpha* @mark gap
+number = (("1".."9") digit* / "0" hex*) @number gap
+set = "'" ("'"! visible)* #quote "'" @set gap
+string = '"' ('"'! visible)* #quote '"' @string gap
+divider = '&lt;' ('>'! visible)* '>' @divider gap
 
 dots = '.' #dot '.' skip @
 equals = #equals "=" skip @

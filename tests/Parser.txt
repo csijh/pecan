@@ -21,7 +21,7 @@ Rule x
     Id z
 ==========
 ----------
-Error on line 1: expecting newline, string, id
+Error on line 1: expecting newline, atom
 
 ^
 ==========
@@ -93,7 +93,7 @@ Rule y
 x = x
 y = y\
 ----------
-Error on line 3: expecting newline, set, string, number, divider, id, action, tag, marker
+Error on line 3: expecting newline, atom
 y = y
      ^
 ==========
@@ -123,7 +123,7 @@ Rule y
 // Scanner error
 x = |y|
 ----------
-Error on line 2: expecting newline, set, string, number, divider, id, action, tag, marker
+Error on line 2: expecting newline, atom
 x = |y|
     ^
 ==========
@@ -166,7 +166,7 @@ x
 // Expecting atom
 x = /
 ----------
-Error on line 2: expecting newline, set, string, number, divider, id, action, tag, marker
+Error on line 2: expecting newline, atom
 x = /
     ^
 ==========
@@ -174,14 +174,14 @@ x = /
 x = (y
 y = z
 ----------
-Error on line 2: expecting bracket, set, string, number, divider, id, action, tag, marker
+Error on line 2: expecting bracket, atom
 x = (y
       ^
 ==========
 // Dot in the wrong place
 x = .
 ----------
-Error on line 2: expecting newline, set, string, number, divider, id, action, tag, marker
+Error on line 2: expecting newline, atom
 x = .
     ^
 ==========
@@ -347,7 +347,7 @@ Rule assignment
 x = y /
 z / /
 ----------
-Error on line 3: expecting expression
+Error on line 3: expecting newline, atom
 z / /
     ^
 ==========
@@ -730,36 +730,32 @@ Rule range
     String "\195101"
     Set '\195101'
 ==========
-// Angle brackets no longer accepted
-set = "'" (<"'"> visible)* ("'" @Set / #BADSet) skip1
+// Angle brackets now used for dividers
+keyword = <do> keyword1 / keyword2
+keyword1 = "break" / "case" / "catch" / "continue" / "default"
+keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 ----------
-Error on line 2: expecting expression
-set = "'" (<"'"> visible)* ("'" @Set / #BADSet) skip1
-           ^
-==========
-// Check NEL line endings
-x=x\133y=y\133\
-----------
-Rule x
-  Id x
-Rule y
-  Id y
-==========
-// Check \r NEL line endings
-x=x\13\133y=y\13\133\
-----------
-Rule x
-  Id x
-Rule y
-  Id y
-==========
-// Check LS line endings
-x=x\8232y=y\8232\
-----------
-Rule x
-  Id x
-Rule y
-  Id y
+Rule keyword
+  Or <do> keyword1 / keyword2
+    And <do> keyword1
+      Divider <do>
+      Id keyword1
+    Id keyword2
+Rule keyword1
+  Or "break" / "case" / "catch" / "continue" / "default"
+    String "break"
+    String "case"
+    String "catch"
+    String "continue"
+    String "default"
+Rule keyword2
+  Or "do" / "else" / "for" / "if" / "switch" / "while"
+    String "do"
+    String "else"
+    String "for"
+    String "if"
+    String "switch"
+    String "while"
 ==========
 end = #end Uc!
 ----------
@@ -781,20 +777,20 @@ a-b = xy-
 Rule a-b
   Id xy-
 ==========
-// Tag with backquotes
-x = `++`
+// Tag as a string
+x = "++"
+"++" = %plusplus
 ----------
 Rule x
-  Tag `++`
+  String "++"
+Rule "++"
+  Tag %plusplus
 ==========
-// End-of-file tags
-end1 = %
-end2 = ``
+// End-of-file tag
+end = %
 ----------
-Rule end1
+Rule end
   Tag %
-Rule end2
-  Tag ``
 ==========
 // Backslash in quotes
 bs = '\\'

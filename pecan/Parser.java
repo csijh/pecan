@@ -23,8 +23,7 @@ class Parser implements Testable {
     }
 
     enum Marker {
-        NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, SET, STRING, NUMBER,
-        DIVIDER, ID, ACTION, TAG, MARKER, END_OF_TEXT
+        NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, END_OF_TEXT
     }
 
     public String test(String g, String s) throws ParseException {
@@ -88,9 +87,9 @@ class Parser implements Testable {
         return id() && equals() && exp() && newline() && skip() && doRule();
     }
 
-    // synonym = string equals tag @2rule
+    // synonym = string equals tag newline skip @2rule
     private boolean synonym() {
-        return string() && equals() && tag() && doRule();
+        return string() && equals() && tag() && newline() && skip() && doRule();
     }
 
     // expression = term (slash expression @2or)?
@@ -170,14 +169,13 @@ class Parser implements Testable {
 
     // id = #id letter alpha* @id gap
     private boolean id() {
-        if (! (mark(ID) && letter())) return false;
+        if (! (mark(ATOM) && letter())) return false;
         while (alpha()) { }
         return doName(Id) && gap();
     }
 
-    // action = #action '@' (digit* #letter letter alpha* @act / @drop) gap
+    // action = '@' (digit* #letter letter alpha* @act / @drop) gap
     private boolean action() {
-        mark(ACTION);
         if (! accept('@')) return false;
         int in0 = in;
         while (digit()) { }
@@ -192,24 +190,24 @@ class Parser implements Testable {
         return gap();
     }
 
-    // tag = #tag "%" letter alpha* @tag gap
+    // tag = "%" (letter alpha*)? @tag gap
     private boolean tag() {
-        if (! (mark(TAG) && accept('%') && letter())) return false;
-        while (alpha()) { }
+        if (! accept('%')) return false;
+        if (letter()) {
+            while (alpha()) { }
+        }
         return doName(Tag) && gap();
     }
 
-    // marker = #marker "#" #letter letter alpha* @mark gap
+    // marker = "#" #letter letter alpha* @mark gap
     private boolean marker() {
-        mark(MARKER);
         if (! (accept('#') && mark(LETTER) && letter())) return false;
         while (alpha()) { }
         return doName(Mark) && gap();
     }
 
-    // number = #number (("1".."9") digit* / "0" hex*) @number gap
+    // number = (("1".."9") digit* / "0" hex*) @number gap
     private boolean number() {
-        mark(NUMBER);
         if (! digit()) return false;
         boolean isHex = source.charAt(in-1) == '0';
         if (isHex) while (hex()) { }
@@ -217,25 +215,22 @@ class Parser implements Testable {
         return doName(Char) && gap();
     }
 
-    // set = #set "'" ("'"! visible)* #quote "'" @set gap
+    // set = "'" ("'"! visible)* #quote "'" @set gap
     private boolean set() {
-        mark(SET);
         if (! accept('\'')) return false;
         while (! look('\'') && visible()) { }
         return mark(QUOTE) && accept('\'') && doName(Set) && gap();
     }
 
-    // string = #string '"' ('"'! visible)* #quote '"' @string gap
+    // string = '"' ('"'! visible)* #quote '"' @string gap
     private boolean string() {
-        mark(STRING);
         if (! accept('"')) return false;
         while (! look('"') && visible()) { }
         return mark(QUOTE) && accept('"') && doName(String) && gap();
     }
 
-    // divider = #divider '<' ('>'! visible)* '>' @divider gap
+    // divider = '<' ('>'! visible)* '>' @divider gap
     private boolean divider() {
-        mark(DIVIDER);
         if (! accept('<')) return false;
         while (! look('>') && visible()) { }
         return accept('>') && doName(Divider) && gap();
