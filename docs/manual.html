@@ -1561,32 +1561,32 @@ try = sb expression se @3back
 bracket = rb expression re @3bracket
 
 id = #id letter alpha* @id gap
-action = #action '@' (digit* letter alpha* @act / @drop) gap
+action = #action '@' (digit* #letter letter alpha* @act / @drop) gap
 tag = #tag "%" letter alpha* @tag gap
-marker = #marker "#" letter alpha* @mark gap
+marker = #marker "#" #letter letter alpha* @mark gap
 number = #number (("1".."9") digit* / "0" hex*) @number gap
-set = #set "'" ("'"! visible)* "'" @set gap
-string = #string '"' ('"'! visible)* '"' @string gap
+set = #set "'" ("'"! visible)* #quote "'" @set gap
+string = #string '"' ('"'! visible)* #quote '"' @string gap
 divider = #divider '&lt;' ('>'! visible)* '>' @divider gap
 
-dots = #dots ".." skip @
+dots = '.' #dot '.' skip @
 equals = #equals "=" skip @
 slash = #slash "/" skip @
-rb = #open '(' @token skip @
-sb = #open '[' @token skip @
+rb = "(" @token skip @
+sb = "[" @token skip @
 has = #look "&amp;" @token gap @
 not = #look "!" @token gap @
 opt = #query "?" @token gap @
 any = #many "*" @token gap @
 some = #some "+" @token gap @
-re = #close ')' @token gap @
-se = #close ']' @token gap @
+re = #bracket ")" @token gap @
+se = #bracket "]" @token gap @
 
 skip = (space / comment / newline)*
 gap = space* comment? continuation @
 continuation = [nl skip '=/)]'&amp;]?
 newline = #newline 13? 10 @
-comment = ["//"] visible* newline&amp;
+comment = ["//"] visible* newline
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
 alpha = letter / digit / '_' / '-'
 letter = Lu / Ll / Lt / Lm / Lo

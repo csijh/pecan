@@ -21,7 +21,7 @@ Rule x
     Id z
 ==========
 ----------
-Error on line 1: expecting id, string, newline
+Error on line 1: expecting newline, string, id
 
 ^
 ==========
@@ -93,7 +93,7 @@ Rule y
 x = x
 y = y\
 ----------
-Error on line 3: expecting newline
+Error on line 3: expecting newline, set, string, number, divider, id, action, tag, marker
 y = y
      ^
 ==========
@@ -121,23 +121,23 @@ Rule y
   Id z
 ==========
 // Scanner error
-x = <y>
+x = |y|
 ----------
-Error on line 2: expecting expression
-x = <y>
+Error on line 2: expecting newline, set, string, number, divider, id, action, tag, marker
+x = |y|
     ^
 ==========
 // Incomplete string
 x = "abc
 ----------
-Error on line 2: expecting visible character or "
+Error on line 2: expecting quote
 x = "abc
         ^
 ==========
 // Incomplete set
 x = 'abc
 ----------
-Error on line 2: expecting visible character or '
+Error on line 2: expecting quote
 x = 'abc
         ^
 ==========
@@ -159,14 +159,14 @@ Rule y
 // Expecting equals
 x
 ----------
-Error on line 2: expecting =
+Error on line 2: expecting equals
 x
  ^
 ==========
 // Expecting atom
 x = /
 ----------
-Error on line 2: expecting expression
+Error on line 2: expecting newline, set, string, number, divider, id, action, tag, marker
 x = /
     ^
 ==========
@@ -174,14 +174,14 @@ x = /
 x = (y
 y = z
 ----------
-Error on line 2: expecting )
+Error on line 2: expecting bracket, set, string, number, divider, id, action, tag, marker
 x = (y
       ^
 ==========
 // Dot in the wrong place
 x = .
 ----------
-Error on line 2: expecting expression
+Error on line 2: expecting newline, set, string, number, divider, id, action, tag, marker
 x = .
     ^
 ==========

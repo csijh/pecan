@@ -7,7 +7,6 @@ import java.text.*;
 import static pecan.Category.*;
 import static pecan.Op.*;
 import static pecan.Parser.Marker.*;
-//import static java.lang.Character;
 
 /* Parse a Pecan source text, assumed to be in UTF8 format, producing a tree.
 The parser has been hand-translated from the pecan grammar in the comments. */
@@ -24,9 +23,8 @@ class Parser implements Testable {
     }
 
     enum Marker {
-        ID, ACTION, TAG, MARKER, NUMBER, SET, STRING, DIVIDER, NEWLINE,
-        EQUALS,
-        END_OF_TEXT
+        NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, SET, STRING, NUMBER,
+        DIVIDER, ID, ACTION, TAG, MARKER, END_OF_TEXT
     }
 
     public String test(String g, String s) throws ParseException {
@@ -177,18 +175,20 @@ class Parser implements Testable {
         return doName(Id) && gap();
     }
 
-    // action = #action '@' (digit* letter alpha* @act / @drop) gap
+    // action = #action '@' (digit* #letter letter alpha* @act / @drop) gap
     private boolean action() {
         mark(ACTION);
         if (! accept('@')) return false;
         int in0 = in;
         while (digit()) { }
-        if (letter()) {
+        mark(LETTER);
+        boolean t = letter();
+        if (in > in0 && ! t) return false;
+        if (t) {
             while (alpha()) { }
             doName(Act);
         }
-        if (in == in0) doName(Drop);
-        else return false;
+        else doName(Drop);
         return gap();
     }
 
@@ -199,9 +199,10 @@ class Parser implements Testable {
         return doName(Tag) && gap();
     }
 
-    // marker = #marker "#" letter alpha* @mark gap
+    // marker = #marker "#" #letter letter alpha* @mark gap
     private boolean marker() {
-        if (! (mark(MARKER) && accept('#') && letter())) return false;
+        mark(MARKER);
+        if (! (accept('#') && mark(LETTER) && letter())) return false;
         while (alpha()) { }
         return doName(Mark) && gap();
     }
@@ -216,20 +217,20 @@ class Parser implements Testable {
         return doName(Char) && gap();
     }
 
-    // set = #set "'" ("'"! visible)* "'" @set gap
+    // set = #set "'" ("'"! visible)* #quote "'" @set gap
     private boolean set() {
         mark(SET);
         if (! accept('\'')) return false;
         while (! look('\'') && visible()) { }
-        return accept('\'') && doName(Set) && gap();
+        return mark(QUOTE) && accept('\'') && doName(Set) && gap();
     }
 
-    // string = #string '"' ('"'! visible)* '"' @string gap
+    // string = #string '"' ('"'! visible)* #quote '"' @string gap
     private boolean string() {
         mark(STRING);
         if (! accept('"')) return false;
         while (! look('"') && visible()) { }
-        return accept('"') && doName(String) && gap();
+        return mark(QUOTE) && accept('"') && doName(String) && gap();
     }
 
     // divider = #divider '<' ('>'! visible)* '>' @divider gap
@@ -240,10 +241,9 @@ class Parser implements Testable {
         return accept('>') && doName(Divider) && gap();
     }
 
-    // dots = ".." skip @
+    // dots = '.' #dot '.' skip @
     private boolean dots() {
-        if (! look("..")) return false;
-        return accept('.') && accept('.') && skip() && drop();
+        return accept('.') && mark(DOT) && accept('.') && skip() && drop();
     }
 
     // equals = #equals "=" skip @
@@ -256,16 +256,16 @@ class Parser implements Testable {
         return accept(c) && skip() && drop();
     }
 
-    // rb = '(' @token skip @
-    // sb = '[' @token skip @
+    // rb = "(" @token skip @
+    // sb = "[" @token skip @
     private boolean open(char c) {
         return accept(c) && doToken() && skip() && drop();
     }
 
-    // re = ')' @token gap @
-    // sb = ']' @token gap @
+    // re = #bracket ")" @token gap @
+    // se = #bracket "]" @token gap @
     private boolean close(char c) {
-        return accept(c) && doToken() && gap() && drop();
+        return mark(BRACKET) && accept(c) && doToken() && gap() && drop();
     }
 
     // has = "&" @1has gap @
@@ -311,18 +311,13 @@ class Parser implements Testable {
         return (accept('\r') || true) && accept('\n') && drop();
     }
 
-    // comment = "//" visible* newline&
+    // comment = "//" visible* newline
     private boolean comment() {
         if (! look("//")) return false;
         accept('/');
         accept('/');
         while (visible()) { }
-        int in0 = in;
-        lookahead++;
-        boolean t = newline();
-        lookahead--;
-        if (! t) in = in0;
-        return t;
+        return newline();
     }
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
