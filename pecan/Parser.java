@@ -23,7 +23,7 @@ class Parser implements Testable {
     }
 
     enum Marker {
-        NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, END_OF_TEXT
+        NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, TAG, END_OF_TEXT
     }
 
     public String test(String g, String s) throws ParseException {
@@ -76,20 +76,9 @@ class Parser implements Testable {
         return rules() && doAdd() || in == in0;
     }
 
-    // rule = definition / synonym
+    // rule = id equals expression newline skip @2rule
     private boolean rule() {
-        int in0 = in;
-        return definition() || in == in0 && synonym();
-    }
-
-    // definition = id equals expression newline skip @2rule
-    private boolean definition() {
         return id() && equals() && exp() && newline() && skip() && doRule();
-    }
-
-    // synonym = string equals tag newline skip @2rule
-    private boolean synonym() {
-        return string() && equals() && tag() && newline() && skip() && doRule();
     }
 
     // expression = term (slash expression @2or)?

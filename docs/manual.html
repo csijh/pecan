@@ -1527,8 +1527,7 @@ same output effect and error handling properties as the original.</p>
 <li>actions are delayed in case they need to be discarded</li>
 <li>error markers are no longer postfix</li>
 <li>the divider notation <code>&lt;abc></code> has been added</li>
-<li>string tags use double quotes instead of backquotes</li>
-<li>string tags have definitions to give them names</li>
+<li>tags with backquotes have been removed</li>
 <li>separate grammar and test files are supported</li>
 <li>individual rules within a grammar can be tested</li>
 <li>one test file can be called from within another</li>
@@ -1546,9 +1545,7 @@ bracketed expressions can be calculated accurately.</p>
 
 <pre>pecan = skip rules end
 rules = rule (rules @2add)?
-rule = definition / synonym
-definition = id equals expression newline skip @2rule
-synonym = string equals tag newline skip @2rule
+rule = id equals expression newline skip @2rule
 
 expression = term (slash expression @2or)?
 term = factor (term @2and)?

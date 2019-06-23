@@ -12,6 +12,16 @@ Rule x
     String "x" 120
     Act @1act 0
 ==========
+// A divider
+x = <abc> "y" / "z"
+----------
+Rule x
+  Or <abc> "y" / "z"
+    And <abc> "y"
+      Divider <abc>
+      String "y" 121
+    String "z" 122
+==========
 // Brackets
 exp = (exp) END
 END = 10

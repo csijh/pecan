@@ -10,7 +10,7 @@ import static pecan.Node.Flag.*;
 import static java.lang.Character.*;
 
 /* Carry out binding:
-Create cross-references from ids to their definitions.
+Create cross-references from ids and string synonyms to their definitions.
 Recognise unicode category names.
 Check for missing or duplicate definitions.
 For tags/markers/actions, set the value to a unique sequence number.
@@ -150,6 +150,7 @@ class Binder implements Testable {
         case Char: bindChar(node); break;
         case String: bindString(node); break;
         case Set: bindSet(node); break;
+        case Divider: break;
         case Range: bindRange(node); break;
         case Cat: bindCat(node); break;
         case Mark: bindMark(node); break;
@@ -186,7 +187,7 @@ class Binder implements Testable {
         case Char: case Range: case Cat:
             node.set(TextInput);
             break;
-        case String:
+        case String: case Divider:
             if (! node.text().equals("\"\"")) node.set(TextInput);
             break;
         case Set:

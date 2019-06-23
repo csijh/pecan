@@ -777,15 +777,6 @@ a-b = xy-
 Rule a-b
   Id xy-
 ==========
-// Tag as a string
-x = "++"
-"++" = %plusplus
-----------
-Rule x
-  String "++"
-Rule "++"
-  Tag %plusplus
-==========
 // End-of-file tag
 end = %
 ----------
