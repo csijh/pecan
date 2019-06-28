@@ -27,11 +27,11 @@ Validity WF(x) is calculated by iterating to a fixed point, using:
   WF(x+) = WF(xx*) = WF(x) & ~SN(x)
   WF(x!) = WF(x)
 
-A minor change from version 4 is that if a left hand alternative can't fail with
-no progress, so that the right hand alternative is inaccessible, it is no longer
-reported as an error (so that transformations remain valid).
+A minor change from version 0.4 is that if a left hand alternative can't fail
+with no progress, so that the right hand alternative is inaccessible, it is no
+longer reported as an error (so that transformations remain valid).
 
-A major change from version 4 is that actions are now allowed at the start of
+A major change from version 0.4 is that actions are now allowed at the start of
 the left hand item in a choice, as in (@a x / y). This is for uniformity and
 consistency, especially where transformations are concerned. To obtain the
 effect of undoing the action if the left choice mismatches, actions are delayed
@@ -242,18 +242,10 @@ class Checker implements Testable {
             break;
         case Or:
             nAA = xAA || yAA;
-// x acts and fails w/o progrssing, then y doesn't progress
-//            nAB ||= xAB && xFN && (ySN || yFN);
-// x fails w/o progrssing, then y acts without progressing.
-//            nAB ||= xFN && yAB;
-//          if (xAB) err(x, "alternative can act without progressing");
             nAB = yAB;
-//          if (! x.has(FN)) err(y, "unreachable alternative");
             break;
         case Opt: case Many: case Some:
             nAA = xAA;
-//          if (xAB) err(x, "component can act without progressing");
-//          if (! x.has(FN)) err(node, "unreachable repetition");
             break;
         default:
             throw new Error("Type " + node.op() + " not implemented");

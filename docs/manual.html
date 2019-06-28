@@ -620,23 +620,6 @@ end = %
 <code>%over</code>. The tag <code>%</code> with no name is matched only at the
 end of the input. This is equivalent to using <code>Uc!</code> in a scanner.</p>
 
-<p>For greater readability, tags can be represented as strings. The simple
-calculator can be rewritten as:</p>
-
-<pre>sum = term ("+" term @2add / "-" term @2subtract)* end
-term = number ("*" number @2multiply / "/" number @2divide)*
-number = %number @number
-end = %
-"+" = %plus
-"-" = %minus
-"*" = %times
-"/" = %over
-</pre>
-
-<p>When a string is used, it must be given a definition which relates it to a
-named tag. This allows all tags to be associated with an enumerated type in the
-external code when a parser is generated.</p>
-
 <h3 id="actions">Actions</h3>
 
 <p>Actions allow a parser to operate on values or data structures, using a
