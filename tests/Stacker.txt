@@ -7,13 +7,6 @@ Rule x 1,0
     Act @Id 1,0
     Drop @ 0,0
 ==========
-// Two items
-x = @Id @Id @1add
-----------
-Error on line 2: parser produces 2 output items, not 1
-x = @Id @Id @1add
-^
-==========
 // Well-formed but non-terminating grammar
 x = 'a' x @b
 ----------

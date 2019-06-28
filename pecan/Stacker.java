@@ -7,8 +7,10 @@ import java.util.*;
 import java.io.*;
 import static pecan.Op.*;
 
-/* This pass checks that output handling is consistent, that precisely one
-final output item is produced, and that there is no stack underflow.
+/* This pass checks that output handling is consistent, that a fixed number of
+output items is produced for any given rule, and that there is no stack
+underflow. (This is a change from version 0.4, where the first rule was forced
+to produce a single output item. This is to support grammar fragments.)
 
 A NET number is calculated for each node, representing the overall change in
 output stack size, positive or negative, as a result of parsing. The value for
@@ -16,8 +18,7 @@ each node starts as UNKNOWN and is set at most once, so iterating to a fixed
 point terminates. Recursion is resolved by deducing a result for a node such as
 x / y when the result for only one subnode is known. Not all NET values may
 become known, even for a well-formed grammar, because of non-terminating
-recursion such as x = 'a' x and this is reported as an error. It is checked that
-the NET value for the first rule is one.
+recursion such as x = 'a' x and this is reported as an error.
 
 To test for lack of underflow, a LOW number is calculated for each node. This
 represents the low water mark, i.e. the lowest point that the output stack
@@ -32,7 +33,9 @@ termination by fixed point. For example x = 'a' / 'b' @2c x @d has a
 well-defined net effect of zero, but takes an arbitrary number of items off the
 stack before compensating by putting items back on. To deal with this, an
 arbitrary limit of -100 is put on LOW values, beyond which it is assumed that
-there is an infinite loop at work. */
+there is an infinite loop at work.
+
+TODO: improve by detecting repeated configurations. */
 
 class Stacker implements Testable {
     private String source;
@@ -57,7 +60,6 @@ class Stacker implements Testable {
         changed = true;
         while (changed) { changed = false; net(root); }
         checkNet(root);
-        checkRoot(root);
         changed = true;
         while (changed) { changed = false; low(root); }
         checkLow(root);
@@ -79,8 +81,8 @@ class Stacker implements Testable {
         if (x != null) { net(x); xNet = x.NET(); }
         if (y != null) { net(y); yNet = y.NET(); }
         switch(node.op()) {
-        case Drop: case String: case Set:  case Range: case Cat: case Tag:
-        case Some: case Many: case Opt: case Has: case Not: case Char:
+        case Drop: case String: case Set: case Divider: case Range: case Cat:
+        case Tag: case Some: case Many: case Opt: case Has: case Not: case Char:
         case Mark:
             nNet = 0;   break;
         case Act:
@@ -131,12 +133,6 @@ class Stacker implements Testable {
         }
     }
 
-    // Check that the first rule produces exactly one output.
-    private void checkRoot(Node root) throws ParseException {
-        if (root.NET() == 1) return;
-        err(root, "parser produces " + root.NET() + " output items, not 1");
-    }
-
     // Calculate the LOW value for a node.
     private void low(Node node) {
         int xLow = 0, yLow = 0, nLow = 0, oLow = node.LOW();
@@ -144,7 +140,7 @@ class Stacker implements Testable {
         if (x != null) { low(x); xLow = x.LOW(); }
         if (y != null) { low(y); yLow = y.LOW(); }
         switch(node.op()) {
-        case Drop: case String: case Set: case Char: case Range:
+        case Drop: case String: case Set: case Char: case Divider: case Range:
         case Cat: case Tag: case Mark:
             break;
         case Act:
