@@ -3,7 +3,6 @@
 package pecan;
 
 import java.util.*;
-import java.text.*;
 import static pecan.Category.*;
 import static pecan.Op.*;
 import static pecan.Parser.Marker.*;
@@ -26,7 +25,7 @@ class Parser implements Testable {
         NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, TAG, END_OF_TEXT
     }
 
-    public String test(String g, String s) throws ParseException {
+    public String test(String g, String s) {
         return "" + run(g);
     }
 
@@ -51,15 +50,16 @@ class Parser implements Testable {
     }
 
     // Parse the grammar, returning a node (or exception).
-    Node run(String s) throws ParseException {
+    Node run(String s) {
         source = s;
         if (output == null) output = new Node[1];
         start = in = out = lookahead = marked = 0;
         markers.clear();
         boolean ok = pecan();
         if (! ok) {
-            if (marked < in) markers.clear();
-            err(in, in, "expecting " + message());
+            Node err = new Node(Error, s, in, in);
+            err.note(Node.err(s, in, in, "expecting " + message()));
+            return err;
         }
         return prune(output[0]);
     }
@@ -386,11 +386,6 @@ class Parser implements Testable {
             if (source.charAt(in + i) != s.charAt(i)) return false;
         }
         return true;
-    }
-
-    // Generate an error report.
-    private void err(int s, int e, String m) throws ParseException {
-        throw new ParseException(Node.err(source, s, e, m), 0);
     }
 
     // In general, each node building function takes a number of previous nodes,

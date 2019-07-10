@@ -6,6 +6,7 @@ package pecan;
 nodes. */
 
 public enum Op {
+    Error,   // Parse error, with message in note field
     Rule,    // Definition, name = rhs, text is name, child is rhs
     Id,      // Identifier, with cross-reference to its definition
     Or,      // Choice, x / y, right associative

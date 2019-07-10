@@ -21,7 +21,7 @@ markers are gathered as a bit set, with a mark variable to record the position
 in the input at which they were encountered. When a new marker is encountered,
 and the input has progressed beyond the mark position, the old markers are
 discarded and the mark updated. Old markers are also discarded when an error is
-reported if the input position has progressed beyond the mark. Markers are
+reported, if the input position has progressed beyond the mark. Markers are
 ignored during lookahead.
 
 TODO: work out which actions need to be delayed (or max no).

@@ -6,11 +6,10 @@ import java.io.*;
 import java.util.*;
 import static java.lang.Character.*;
 
-/* Provide support for Unicode general categories, specifically for UTF-8
-characters, numerical characters, and category codes, in grammars. Although Java
-supports Unicode categories, the version of the standard supported varies, e.g.
-Java 8 supports Unicode 6.2. This class supports Unicode 12.0, making Pecan
-independent of the version of Java used to compile it.
+/* Provide support for Unicode general categories, as used in grammars. Although
+Java supports Unicode categories, the version of the standard supported varies,
+e.g. Java 8 supports Unicode 6.2. This class supports Unicode 12.0, and makes
+Pecan independent of the version of Java used to compile it.
 
 Constants are provided for the Unicode general categories. The name of each
 category is its two letter abbreviation, as defined by the Unicode standard and

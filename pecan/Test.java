@@ -100,7 +100,8 @@ public class Test {
                 continue;
             }
             String out;
-            try { out = object.test(test.grammar, test.input); }
+            out = object.test(test.grammar, test.input);
+            /*
             catch (ParseException e) {
                 out = e.getMessage();
                 if (out == null) out = "" + e;
@@ -112,6 +113,7 @@ public class Test {
                     out += t + "\n";
                 }
             }
+            */
             String message = test.check(out);
             if (message == null) { passed++; continue; }
             System.err.print(message);
@@ -253,6 +255,7 @@ public class Test {
     private String check(String out) {
         out = escape(out);
         if (out.equals(output)) return null;
+        System.out.println("#"+out+"-"+output+";");
         String result = "";
         result += "Fail test on line " + lineNo + " of " + fileName + ":\n";
         result += "---------- Expected ----------\n";

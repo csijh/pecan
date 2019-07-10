@@ -10,12 +10,7 @@ import java.nio.charset.*;
 
 /* Read in a file of tests and run them:
 
-    java -jar pecan.jar [-trace] grammar tests [line]
-
-TODO:
-    pecan tests   OR   pecan grammar tests
-
-
+    java -jar pecan.jar [-trace] [line] testfile
 */
 
 class Run implements Testable {
@@ -41,30 +36,30 @@ class Run implements Testable {
     private static void usage() {
         System.err.println(
             "Usage:\n" +
-            "    pecan [-trace] [line] testsfile\n" +
+            "    pecan [-trace] [line] testfile\n" +
             "Or:\n" +
-            "    java -jar pecan.jar [-trace] [line] testsfile\n");
+            "    java -jar pecan.jar [-trace] [line] testfile\n");
         System.exit(1);
     }
 
     // Run a test passed from the Test class.
     public String test(String grammar, String input) throws ParseException {
-        Interpreter interpreter = new Interpreter();
-        if (tracing) interpreter.trace(true);
-        return interpreter.test(grammar, input);
+        Evaluator evaluator = new Evaluator();
+        if (tracing) evaluator.trace(true);
+        return evaluator.test(grammar, input);
     }
 
 /*
-    // Run tests from the command line file through the interpreter.
+    // Run tests from the command line file through the evaluator.
     void run(String grammarFile, String testsFile) throws IOException {
         int passed = 0;
         String message = null;
         String grammar = new String(Files.readAllBytes(Paths.get(grammarFile)), StandardCharsets.UTF_8);
         List<Test> tests = Test.extract(".", testsFile);
         System.out.println("#tests = " + tests.size());
-        Interpreter interpreter = new Interpreter();
+        Evaluator evaluator = new Evaluator();
         for (Test test : tests) {
-            interpreter.prepare(grammar, test.input);
+            evaluator.prepare(grammar, test.input);
 
         }
 
@@ -99,7 +94,7 @@ class Run implements Testable {
     // unit testing, but files are created and run in the TestFiles directory.
 
     private void itest(String[] args) throws IOException {
-        if (args.length == 1) Interpreter.main(new String[] { });
+        if (args.length == 1) Evaluator.main(new String[] { });
         int n = (args.length == 1) ? 0 : Integer.parseInt(args[1]);
         String grammar = "pecan/TestFiles/grammar.txt";
         String tests = "pecan/TestFiles/tests.txt";

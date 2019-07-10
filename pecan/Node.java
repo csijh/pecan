@@ -62,7 +62,7 @@ class Node {
     int LEN() { return LEN; }
     void LEN(int n) { LEN = n; }
 
-// ---------- The structral fields and methods --------------------------------
+// ---------- The structural fields and methods -------------------------------
 
     private Op op;
     private String source;
@@ -133,6 +133,7 @@ class Node {
     // node, and any note attached by one of the passes. Indent a chain of Rule
     // nodes, or subnodes of a chain of And or Or nodes, by the same amount.
     private String toString(String indent) {
+        if (op == Error) return note();
         String s = indent + op + " ";
         String text = text();
         if (! text.contains("\n")) s += text;
@@ -199,7 +200,7 @@ class Node {
         for (int i=0; i<col; i++) error += ' ';
         for (int i=0; i<(end-start); i++) error += '^';
         if (end == start) error += '^';
-        return error + "\n";
+        return error;
     }
 
     // Extract the line of text containing a given position.

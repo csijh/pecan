@@ -37,7 +37,7 @@ rule
 ----------
 2
 ..........
-Error on line 2: expecting =
+Error on line 2: expecting equals
 rule
     ^
 ==========
