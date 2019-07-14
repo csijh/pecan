@@ -3,7 +3,6 @@
 package pecan;
 
 import java.io.*;
-import java.text.*;
 import java.util.*;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
@@ -34,12 +33,13 @@ class Binder implements Testable {
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
-    public String test(String g, String s) throws ParseException {
-        return "" + run(g);
+    public String test(String g, String s) {
+        try { return "" + run(g); }
+        catch (Exception e) { return e.getMessage() + "\n"; }
     }
 
     // Run the passes up to the binder on the given source text.
-    Node run(String s) throws ParseException {
+    Node run(String s) throws Exception {
         source = s;
         Parser parser = new Parser();
         Node root = parser.run(source);
@@ -47,7 +47,7 @@ class Binder implements Testable {
     }
 
     // Bind a grammar. Gather the names, then allocate, then scan the nodes.
-    Node bind(Node root) throws ParseException {
+    Node bind(Node root) throws Exception {
         cats = new HashSet<String>();
         for (Category cat : Category.values()) cats.add(cat.toString());
         rules = new LinkedHashMap<String,Node>();
@@ -68,7 +68,7 @@ class Binder implements Testable {
     // For actions, temporarily record the arity of each name.
     // For actions, create an Id node representing the name and arity.
     // Then for a duplicate action, check that the arity matches.
-    private void gather(Node node) throws ParseException {
+    private void gather(Node node) throws Exception {
         String name;
         boolean defined;
         switch (node.op()) {
@@ -140,7 +140,7 @@ class Binder implements Testable {
 
     // Traverse the tree, bottom up, and check each node.
     // For tags, markers and actions, set value to sequence number.
-    private void scan(Node node) throws ParseException {
+    private void scan(Node node) throws Exception {
         if (node.left() != null) scan(node.left());
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
@@ -161,7 +161,7 @@ class Binder implements Testable {
     }
 
     // Calculate the TextInput and TokenInput flags.
-    void classify(Node node)  throws ParseException {
+    void classify(Node node)  throws Exception {
         boolean xTxt = false, yTxt = false, xTok = false, yTok = false;
         Node x = node.left(), y = node.right();
         if (x != null) {
@@ -204,7 +204,7 @@ class Binder implements Testable {
     }
 
     // Bind an id to its defining rule, creating a cross-reference.
-    private void bindId(Node node) throws ParseException {
+    private void bindId(Node node) throws Exception {
         String name = node.text();
         Node rule = rules.get(name);
         if (rule == null) err(node, "unknown name");
@@ -212,7 +212,7 @@ class Binder implements Testable {
     }
 
     // Find the character code represented by a number and check in range.
-    private void bindChar(Node node) throws ParseException {
+    private void bindChar(Node node) throws Exception {
         int ch;
         if (node.text().charAt(0) != '0') ch = Integer.parseInt(node.text());
         else ch = Integer.parseInt(node.text(), 16);
@@ -232,7 +232,7 @@ class Binder implements Testable {
 
     // Check that a set has distinct ASCII characters.
     // Check whether it is a single character.
-    private void bindSet(Node node) throws ParseException {
+    private void bindSet(Node node) throws Exception {
         String chars = node.text();
         chars = chars.substring(1, chars.length() - 1);
         for (int i=0; i<chars.length(); ) {
@@ -254,7 +254,7 @@ class Binder implements Testable {
     }
 
     // Check that a range has a single character at each end and is non-empty.
-    private void bindRange(Node node) throws ParseException {
+    private void bindRange(Node node) throws Exception {
         int from = node.left().value();
         int to = node.right().value();
         if (from < 0) err(node.left(), "expecting single character");
@@ -263,35 +263,35 @@ class Binder implements Testable {
     }
 
     // Bind a category: the value is a bit or bits.
-    private void bindCat(Node node) throws ParseException {
+    private void bindCat(Node node) throws Exception {
         Category cat = Category.valueOf(node.text());
         node.value((cat == Category.Uc) ? 0xEFFFFFFF : (1 << cat.ordinal()));
         node.note("" + node.value());
     }
 
     // Bind a marker.
-    private void bindMark(Node node) throws ParseException {
+    private void bindMark(Node node) throws Exception {
         node.value(markers.get(node.text().substring(1)));
         node.note("" + node.value());
     }
 
     // Bind a tag.
-    private void bindTag(Node node) throws ParseException {
+    private void bindTag(Node node) throws Exception {
         node.value(tags.get(node.text().substring(1)));
         node.note("" + node.value());
     }
 
     // Bind an action
-    private void bindAct(Node node) throws ParseException {
+    private void bindAct(Node node) throws Exception {
         String name = node.ref().text();
         node.value(actions.get(name));
         node.note("" + node.value());
     }
 
     // Report an error and stop.
-    private void err(Node r, String m) throws ParseException {
+    private void err(Node r, String m) throws Exception {
         int s = r.start();
         int e = r.end();
-        throw new ParseException(Node.err(source, s, e, m), 0);
+        throw new Exception(Node.err(source, s, e, m));
     }
 }
