@@ -34,16 +34,21 @@ class Binder implements Testable {
     }
 
     public String test(String g, String s) {
-        try { return "" + run(g); }
-        catch (Exception e) { return e.getMessage() + "\n"; }
+        return "" + run(g);
     }
 
     // Run the passes up to the binder on the given source text.
-    Node run(String s) throws Exception {
+    Node run(String s) {
         source = s;
         Parser parser = new Parser();
         Node root = parser.run(source);
-        return bind(root);
+        if (root.op() == Error) return root;
+        try { return bind(root); }
+        catch (Exception e) {
+            Node err = new Node(Error, s, 0, 0);
+            err.note(e.getMessage());
+            return err;
+        }
     }
 
     // Bind a grammar. Gather the names, then allocate, then scan the nodes.

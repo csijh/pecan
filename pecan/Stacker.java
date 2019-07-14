@@ -2,7 +2,6 @@
 
 package pecan;
 
-import java.text.*;
 import java.util.*;
 import java.io.*;
 import static pecan.Op.*;
@@ -48,21 +47,27 @@ class Stacker implements Testable {
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
-    public String test(String g, String s) throws ParseException {
+    public String test(String g, String s) {
         return "" + run(g);
     }
 
-    Node run(String text) throws ParseException {
+    Node run(String text) {
         source = text;
         Checker checker = new Checker();
         Node root = checker.run(source);
+        if (root.op() == Error) return root;
         clear(root);
         changed = true;
         while (changed) { changed = false; net(root); }
-        checkNet(root);
+        String message = checkNet(root);
         changed = true;
         while (changed) { changed = false; low(root); }
-        checkLow(root);
+        if (message == null) message = checkLow(root);
+        if (message != null) {
+            Node err = new Node(Error, source, 0, 0);
+            err.note(message);
+            return err;
+        }
         return root;
     }
 
@@ -109,28 +114,30 @@ class Stacker implements Testable {
     }
 
     // Check the consistency of NET values.
-    private void checkNet(Node node) throws ParseException {
+    private String checkNet(Node node) {
         int xNet = UNKNOWN, yNet = UNKNOWN;
         Node x = node.left(), y = node.right();
         if (x != null) { checkNet(x); xNet = x.NET(); }
         if (y != null) { checkNet(y); yNet = y.NET(); }
         if (node.NET() == UNKNOWN) {
-            err(node, "unable to calculate number of output items produced");
+            return err(
+                node, "unable to calculate number of output items produced");
         }
         switch(node.op()) {
         case Or:
             if (xNet != UNKNOWN && yNet != UNKNOWN && xNet != yNet) {
-                err(node, "choices produce unequal numbers of outputs");
+                return err(node, "choices produce unequal numbers of outputs");
             }
             break;
         case Some: case Many: case Opt:
             if (xNet != UNKNOWN && xNet != 0) {
-                err(node, "subrule produces or consumes output items");
+                return err(node, "subrule produces or consumes output items");
             }
             break;
         default:
             break;
         }
+        return null;
     }
 
     // Calculate the LOW value for a node.
@@ -171,12 +178,13 @@ class Stacker implements Testable {
     }
 
     // Check for underflow of the first rule.
-    private void checkLow(Node node) throws ParseException {
-        if (node.LOW() < 0) err(node, "outputs may underflow");
+    private String checkLow(Node node) {
+        if (node.LOW() < 0) return err(node, "outputs may underflow");
+        else return null;
     }
 
-    // Report an error and stop.
-    private void err(Node r, String m) throws ParseException {
-        throw new ParseException(Node.err(source, r.start(), r.end(), m), 0);
+    // Report an error.
+    private String err(Node r, String m) {
+        return Node.err(source, r.start(), r.end(), m);
     }
 }

@@ -3,7 +3,6 @@
 package pecan;
 
 import java.util.*;
-import java.text.*;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
 
@@ -59,7 +58,7 @@ public class Evaluator implements Testable {
         Test.run(program, line);
     }
 
-    public String test(String grammar, String input) throws ParseException {
+    public String test(String grammar, String input) {
         prepare(grammar, input);
         return run();
     }
@@ -70,7 +69,7 @@ public class Evaluator implements Testable {
     }
 
     // Get the Evaluator ready to run, with the given grammar and text.
-    void prepare(String grammar, String text) throws ParseException {
+    void prepare(String grammar, String text) {
         Stacker stacker = new Stacker();
         root = stacker.run(grammar);
         textInput = root.has(TextInput);
@@ -89,8 +88,9 @@ public class Evaluator implements Testable {
     }
 
     // Run the parser
-    String run() throws ParseException {
+    String run() {
         if (tracing) traceInput();
+        if (root.op() == Error) return root.note() + "\n";
         parse(root.left());
         if (in > mark) failures.clear();
         takeActions();
@@ -105,6 +105,7 @@ public class Evaluator implements Testable {
                 s += markers[i];
             }
             output.append(Node.err(input, in, in, s));
+            output.append("\n");
         }
         return output.toString();
     }

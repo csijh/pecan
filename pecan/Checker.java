@@ -2,7 +2,6 @@
 
 package pecan;
 
-import java.text.*;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
 
@@ -52,22 +51,29 @@ class Checker implements Testable {
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
-    public String test(String g, String s) throws ParseException {
-        return "" + run(g);
+    public String test(String g, String s) {
+        try { return "" + run(g); }
+        catch (Exception e) { return e.getMessage() + "\n"; }
     }
 
     // Run the checker on the given source text.
-    Node run(String text) throws ParseException {
+    Node run(String text) {
         source = text;
         Binder binder = new Binder();
         Node root = binder.run(text);
+        if (root.op() == Error) return root;
         changed = true;
         while (changed) { changed = false; progress(root); }
         changed = true;
         while (changed) { changed = false; valid(root); }
         changed = true;
         while (changed) { changed = false; acting(root); }
-        check(root);
+        try { check(root); }
+        catch (Exception e) {
+            Node err = new Node(Error, text, 0, 0);
+            err.note(e.getMessage());
+            return err;
+        }
         return root;
     }
 
@@ -157,6 +163,8 @@ class Checker implements Testable {
             nSN = xFN || xFP;
             nFN = xSN || xSP;
             break;
+        case Error:
+            break;
         default:
             throw new Error("Type " + node.op() + " not implemented");
         }
@@ -192,6 +200,7 @@ class Checker implements Testable {
         case Or:    nWF = xWF && yWF;                   break;
         case Many:
         case Some:  nWF = xWF && ! x.has(SN);           break;
+        case Error:                                     break;
         default:
             throw new Error("Type " + node.op() + " not implemented");
         }
@@ -200,14 +209,14 @@ class Checker implements Testable {
     }
 
     // Find a lowest level invalid node to report.
-    private void check(Node node) throws ParseException {
+    private void check(Node node) throws Exception {
         if (node.left() != null) check(node.left());
         if (node.right() != null) check(node.right());
         if (! node.has(WF)) err(node, "potential infinite loop");
     }
 
     // Calculate AA and AB. No longer report errors.
-    private void acting(Node node) throws ParseException {
+    private void acting(Node node) {
         boolean xAA = false, yAA = false, nAA = false, oAA = node.has(AA);
         boolean xAB = false, yAB = false, nAB = false, oAB = node.has(AB);
         Node x = node.left(), y = node.right();
@@ -216,7 +225,7 @@ class Checker implements Testable {
         switch (node.op()) {
             // Has and Not have actions switched off, so don't have AA or AB.
         case Char: case Range: case Cat: case String: case Set: case Tag:
-        case Mark: case Has: case Not:
+        case Mark: case Has: case Not: case Error:
             break;
         // If [x] succeeds, x is executed a second time with actions on.
         case Try:
@@ -255,9 +264,9 @@ class Checker implements Testable {
     }
 
     // Report an error and stop.
-    private void err(Node r, String m) throws ParseException {
+    private void err(Node r, String m) throws Exception {
         int s = r.start();
         int e = r.end();
-        throw new ParseException(Node.err(source, s, e, m), 0);
+        throw new Exception(Node.err(source, s, e, m));
     }
 }

@@ -49,7 +49,7 @@ class Parser implements Testable {
         return s;
     }
 
-    // Parse the grammar, returning a node (or exception).
+    // Parse the grammar, returning a node (possibly an error node).
     Node run(String s) {
         source = s;
         if (output == null) output = new Node[1];

@@ -12,7 +12,7 @@ x = 'a' x @b
 ----------
 Error on line 2: unable to calculate number of output items produced
 x = 'a' x @b
-        ^
+^
 ==========
 // Low water mark continually decreasing
 x = 'a' @a / 'b' @2c x @d

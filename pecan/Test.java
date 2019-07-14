@@ -255,7 +255,6 @@ public class Test {
     private String check(String out) {
         out = escape(out);
         if (out.equals(output)) return null;
-        System.out.println("#"+out+"-"+output+";");
         String result = "";
         result += "Fail test on line " + lineNo + " of " + fileName + ":\n";
         result += "---------- Expected ----------\n";
