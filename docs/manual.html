@@ -862,8 +862,9 @@ Fail test on line 24 of tests.txt:
 pecan -trace 24 tests.txt
 </pre>
 
-<p>A section of the test file can have some other special forms. Examples of
-each possibility are:</p>
+<p>A section of the test file can consist of a single line. If the line doesn't
+contain an equal sign, it has a special meaning. Examples of each possibility
+are:</p>
 
 <pre>grammar.pecan
 ==========
@@ -874,16 +875,15 @@ number
 // Comment
 </pre>
 
-<p>Each of these cases can be distinguished from a grammar, because there is no
-rule which contains an equal sign. In the first example, a section consists of a
-single line which is the name of a file containing a grammar to be used for
+<p>In the first example, which is recognised by the presence of a dot, the
+section consists of the name of a file containing a grammar to be used for
 subsequent tests. This supports the common case where the grammar is in one file
 and its tests are in another. The second example is the name of a secondary test
 file to execute, allowing a suite of tests to be split across several files.
 There is no conflict between these first two examples, because a grammar file is
 equivalent to a test file which sets up a grammar but contains no tests. The
 third example is the name of a rule in the current grammar, to be used as an
-entry point for subsequent tests. It can be recognized by the lack of a dot
+entry point for subsequent tests. It can be recognised by the lack of a dot
 character. This allows a grammar to be developed rule by rule, with old tests on
 particular rules being kept as regression tests. In the final example, a section
 consists entirely of comment lines. The section has no effect, but can be used
