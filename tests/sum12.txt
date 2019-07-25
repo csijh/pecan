@@ -5,29 +5,29 @@ plus = #operator "+" @
 minus = #operator "-" @
 digit = #digit "0".."9"
 end = #newline 13? 10 @
-----------
+==========
 2
-..........
+----------
 number 2
 ==========
 42
-..........
+----------
 number 42
 ==========
 2+40
-..........
+----------
 number 2
 number 40
 add
 ==========
 2+40%
-..........
+----------
 Error on line 1: expecting digit, newline, operator
 2+40%
     ^
 ==========
 2+10+12+18
-..........
+----------
 number 2
 number 10
 add
@@ -37,7 +37,7 @@ number 18
 add
 ==========
 2-10+53-3
-..........
+----------
 number 2
 number 10
 subtract
@@ -47,7 +47,7 @@ number 3
 subtract
 ==========
 2+
-..........
+----------
 Error on line 1: expecting digit
 2+
   ^

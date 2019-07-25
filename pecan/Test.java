@@ -129,10 +129,11 @@ public class Test {
     // Extract tests from a given file.
     static List<Test> extract(String fileName) {
         Path path = Paths.get(fileName);
+        System.out.println("ext " + fileName);
         List<String> lines = null;
         try { lines = Files.readAllLines(path, StandardCharsets.UTF_8); }
         catch (Exception e) {
-            System.err.println("Error: can't read " + fileName);
+            System.err.println("Error: can't read " + fileName + e);
             System.exit(1);
         }
         return readTests(fileName, lines);
@@ -179,6 +180,9 @@ public class Test {
             else if (test.input.indexOf('=') >= 0) test.isGrammar = true;
             else if (test.input.indexOf('.') >= 0) test.isSubfile = true;
             else test.isEntry = true;
+        }
+        if (test.isSubfile || test.isEntry) {
+            test.input = test.input.substring(0, test.input.length() - 1);
         }
         else if (endi == end) test.isGrammar = true;
         return test;

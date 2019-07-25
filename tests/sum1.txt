@@ -1,6 +1,6 @@
 // From the calculator tutorial, step 1.
 digit = "0".."9" @number
-----------
+==========
 2
-..........
+----------
 number 2

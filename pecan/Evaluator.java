@@ -58,8 +58,16 @@ public class Evaluator implements Testable {
         Test.run(program, line);
     }
 
-    public String test(String grammar, String input) {
-        prepare(grammar, input);
+    // Set up grammar for subsequent tests
+    public void grammar(String g) {
+        grammar = g;
+        Stacker stacker = new Stacker();
+        root = stacker.run(grammar);
+        textInput = root.has(TextInput);
+    }
+
+    public String test(String input) {
+        prepare(input);
         return run();
     }
 
@@ -68,11 +76,8 @@ public class Evaluator implements Testable {
         tracing = b;
     }
 
-    // Get the Evaluator ready to run, with the given grammar and text.
-    void prepare(String grammar, String text) {
-        Stacker stacker = new Stacker();
-        root = stacker.run(grammar);
-        textInput = root.has(TextInput);
+    // Get the Evaluator ready to run, with the given input.
+    void prepare(String text) {
         input = text;
         ok = true;
         start = 0;

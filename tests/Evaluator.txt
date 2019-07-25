@@ -34,51 +34,51 @@ sum16b.txt
 ==========
 // Bad grammar
 rule
-----------
+==========
 2
-..........
+----------
 Error on line 2: expecting equals
 rule
     ^
 ==========
 // Try succeeds
 dots = ['.' '.'] @dots / '.' '3' @num
-----------
+==========
 ..
-..........
+----------
 dots ..
 ==========
 // Try fails
 dots = ['.' '.'] @dots / '.' '3' @num
-----------
+==========
 .3
-..........
+----------
 num .3
 ==========
 // String has a built-in try
 op = "<=" @le / "<" @lt
-----------
+==========
 x
-..........
+----------
 Error on line 1:
 x
 ^
 ==========
 <=
-..........
+----------
 le <=
 ==========
 <
-..........
+----------
 lt <
 ==========
 // Error marker not reached
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
-----------
+==========
 xyx
-..........
+----------
 tokens
 x x
 add
@@ -91,9 +91,9 @@ add
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
-----------
+==========
 z
-..........
+----------
 tokens
 z z
 add
@@ -102,22 +102,22 @@ add
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
-----------
+==========
 
-..........
+----------
 Error on line 1: expecting err
 
 ^
 ==========
 // Category succeeds or fails
 token = Ll @letter
-----------
+==========
 x
-..........
+----------
 letter x
 ==========
 X
-..........
+----------
 Error on line 1:
 X
 ^
@@ -125,9 +125,9 @@ X
 // Scanner
 tokens = @tokens token+
 token = Ll @1lower / Lu @1upper
-----------
+==========
 xYz
-..........
+----------
 tokens
 lower x
 upper Y
@@ -135,15 +135,15 @@ lower z
 ==========
 // Token parser using queries
 sum = %num @num (%plus @ %num @num @2add)*
-----------
+==========
 id
-..........
+----------
 Error on line 1:
 id
 ^
 ==========
 num plus num
-..........
+----------
 num
 num
 add
@@ -154,34 +154,34 @@ term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
 atom = number / "(" @ sum ")" @
 number = ("0".."9")+ @number
 end = 13? 10 @
-----------
+==========
 2+2
-..........
+----------
 number 2
 number 2
 add
 ==========
 x = 'x' end @x
 end = #end Uc!
-----------
+==========
 x
-..........
+----------
 Error on line 1: expecting end
 x
  ^
 ==========
 x\
-..........
+----------
 x x
 ==========
 // Check that an action at the start of a left hand alternative is delayed so
 // that it happens only if the alternative is chosen.
 test = @left "0" / @right "1"
-----------
+==========
 0
-..........
+----------
 left
 ==========
 1
-..........
+----------
 right
