@@ -170,6 +170,7 @@ public class Test {
         for (int i=start; i<end; i++) if (all(lines.get(i), '-')) endi = i;
         if (endi < 0) endi = end;
         Test test = new Test();
+        test.input = test.output = "";
         test.lineNo = start + 1;
         for (int i=start; i<endi; i++) test.input += lines.get(i) + "\n";
         for (int i=endi+1; i<end; i++) test.output += lines.get(i) + "\n";
