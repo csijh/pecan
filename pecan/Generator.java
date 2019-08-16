@@ -11,87 +11,37 @@ import static pecan.Node.Flag.*;
 
     source    bytecode
     ------------------------------
-    id = x    RULE id START n <x> STOP    (entry point)
+    id = x    START nx {x} STOP
+    id = x    RULE id START nx {x} STOP   (if explicit entry point)
     id        GO n    or    BACK n
-    x / y     EITHER n <x> OR <y>         (one byte length)
-    x y       BOTH n <x> AND <y>
-    x?        MAYBE OPT <x>
-    x*        MAYBE MANY <x>
-    x+        DO AND MAYBE MANY <x>
-    [x]       LOOK TRY <x>
-    x&        LOOK HAS <x>
-    x!        LOOK NOT <x>
-    @a        ACT n                       (one byte index)
+    x / y     EITHER n {x} OR {y}
+    x y       BOTH n {x} AND {y}
+    x?        MAYBE ONE {x}
+    x*        MAYBE MANY {x}
+    x+        DO AND MAYBE MANY {x}
+    [x]       LOOK TRY {x}
+    x&        LOOK HAS {x}
+    x!        LOOK NOT {x}
+    @a        ACT n
     @         DROP
     #e        MARK n
     10        CHAR 10                     (ascii)
+    'a'       CHAR 'a'                    (ascii)
     128       STRING n "utf-8"
     "a"       STRING n "bytes"
-    'a'       CHAR 'a'                    (ascii)
     "pi"      STRING n "pi"
     'ab'      SET n "ab"
-    "a".."z"  RANGE m "a" n "z"
-    <a>       LT n "a"
+    "a".."z"  LOW m "a" HIGH n "z"
+    <a>       LESS n "a"
     Nd        CAT Nd
     %id       TAG n
 
 By default, only first rule is defined as an entry point (in which case RULE id
-is left out). There is an option to ask for more entry points. The bytecode can
-be scanned to find entry points.
+is left out). There is an option to ask for explicit entry points. The bytecode
+can be scanned to find entry points.
 
-    case EXTEND:
-        arg = *pc++;
-        break;
-    case AND:
-        arg = (arg << 8) | *pc++;
-        pc += arg;
-        ...
-        if (op != EXTEND) arg = 0;
-
-No args: START STOP Or AND MAYBE OPT MAYBE MANY DO THEN LOOK TRY HAS NOT DROP
-Arg: GO, EITHER, BOTH, ACT, MARK, CHAR, STRING, SET, GE, LE, CAT, TAG
-Arg: GO2, EITHER2, BOTH2, ACT2, MARK2, STRING2, SET2, GE2, LE2, CAT2, TAG2
-
-If a length of <x> is greater than 255, the translation is
-
-    EITHER n <x> Or <y>
-    EXTEND n1 EITHER n2 <x> Or <y>
-
-TODO: template-based generation, printf-like:
-<"%d", opcodes>     decimal text
-<"%s, ", opcode>    with ", " separator
-<"%b", opcodes>     binary, one byte
-<"%.2b", opcodes>   binary, two bytes, endianness?
-<"%lb%b\0", opcode>  byte length, utf-8 bytes, null byte terminator
-actions
-entries
-errors
-tags
-bytecodes
-
-Holds the code, plus:
-  the opcodes (may not want to include twice) ?
--  the actions for output
--  the entry points for the rules (and/or rule names) (one output item)?
--  the marker names (or entry points for them)
 // TODO markers: is there a lift optimisation?
 TODO: multiple entry points
-TODO: Standard versions:
-
-EITHER &Or BOTH &AND LE m AND <a/.../m> OR <n/.../z>    (switch)
-
-TODO: switch optimization from
-x = a / b / ... / z
-first sort if allowed (and group?) then
-x = ('a' .. 'm') (a / b / ... / m) / n / ... / z
-could use a semi-range 0..'m'
-
-
-TODO: two versions of each opcode, immediate and remote
-EITHER &Or <x> Or...
-EITHERr &x Or...
-This design allows each opcode to be either, independently. Use remote when
-x is an identifier, to avoid a GO opcode.
 */
 
 class Generator implements Testable {
@@ -108,12 +58,15 @@ class Generator implements Testable {
         else Test.run(new Generator(), Integer.parseInt(args[0]));
     }
 
-    public String test(String g, String s) throws ParseException {
-        return run(g);
+    // Each test has a grammar as input, so this method is not used.
+    public void grammar(String g) { }
+
+    public String test(String g) {
+        return "" + run(g);
     }
 
     // Convert the grammar into bytecode
-    String run(String grammar) throws ParseException {
+    String run(String grammar) {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
         rules = new String[size(root, Rule)];
@@ -246,7 +199,7 @@ class Generator implements Testable {
             add(MANY);
             encode(node.left());
             break;
-        x
+
 
 /*
 [x]       Try x       LOOK TRY <x>

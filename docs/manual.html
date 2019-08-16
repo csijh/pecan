@@ -43,7 +43,7 @@
 </ul>
 <li><a href="#java">Generating code</a>
 <ul>
-<li><a href="#code">Bytecode</a></li>
+<li><a href="#code">The bytecode</a></li>
 </ul>
 </li>
 </li>
@@ -221,7 +221,7 @@ important feature of Pecan.</p>
 <p>Pecan is a tool for developing grammars and generating parsers in a variety
 of programming languages. The Pecan system is written in Java, so the first
 step is to make sure a reasonably up-to-date version of Java is properly
-installed. This can be tested by typing:</p>
+installed. This can be checked by typing:</p>
 
 <pre>javac -version
 java -version
@@ -235,12 +235,22 @@ this jar file is downloaded, it can be run with:</p>
 </pre>
 
 <p>However, it is more convenient to create a batch file or shell script, or use
-an alias or equivalent, so that it can be run just by typing:</p>
+an alias or equivalent, so that the program can be run just by typing:</p>
 
 <pre>pecan ...
 </pre>
 
 <p>The way to do this differs from system to system.</p>
+
+<p>To run tests on a grammar, type a command of the form:</p>
+
+<pre>pecan [-t | -trace] [line] testfile
+</pre>
+
+<p>To generate a bytecode version of a grammar, type a command of the form:</p>
+
+<pre>pecan [-i interpreter] -o output grammar
+</pre>
 
 <h2 id="notation">Notation</h2>
 
@@ -806,7 +816,7 @@ markers.</p>
 execution without having to generate a parser. This is done by typing a command
 of the form:</p>
 
-<pre>pecan [-trace] [line] testfile
+<pre>pecan [-t | -trace] [line] testfile
 </pre>
 
 <p>The test file contains the tests to be carried out. The <code>-trace</code>
@@ -1254,7 +1264,7 @@ grammar.</p>
 <p>The bytecode sequence is printed as text, as a comma-separated list of
 unsigned byte values. Those values which are opcodes, categories, tags, actions
 or error markers are represented symbolically. In addition, if multiple entry
-points are requested, rules names are also represented symbolically. Suppose the
+points are requested, rule names are also represented symbolically. Suppose the
 grammar file contains:</p>
 
 <pre>digit = "0".."9" @number
@@ -1276,14 +1286,14 @@ provided with Pecan, translating it into the desired programming language if
 necessary, and adapting it to a particular application by customising tags,
 actions and error handling as appropriate.</p>
 
-<h3>The bytecode</h3>
+<h3 id="code">The bytecode</h3>
 
 <p>A grammar is converted into an array of unsigned bytes. The notation
 <code>{x}</code> means "the bytecode sequence generated for expression x" and
 <code>nx</code> stands for the number of bytes in <code>{x}</code>. For example,
 the normal translation of a rule is:</p>
 
-<pre>{id = x}   =   START nx {x} STOP
+<pre>{id = x}    =   START nx {x} STOP
 </pre>
 
 <p>In these descriptions, the commas which separate the bytes in the printed
@@ -1294,37 +1304,38 @@ from the byte after <code>nx</code> to the <code>STOP</code>
 instruction. If the number <code>nx</code> exceeds <code>255</code>,
 then the translation becomes:</p>
 
-<pre>{id = x}   =   EXTEND+START nx1 nx2 {x} STOP
+<pre>{id = x}    =   START2 nx1 nx2 {x} STOP
 </pre>
 
-<p>Here <code>EXTEND+START</code> is a single bytecode. The number
-<code>EXTEND</code> can be added to any opcode which normally takes a one-byte
-argument, to indicate that it instead takes a two-byte argument. The two bytes
+<p>The opcode <code>START2</code> is a version of <code>START</code> where
+<code>nx</code> is represented using two bytes instead of one. The bytes
 <code>nx1 = nx/256</code> and <code>nx2 = nx%256</code> represent
-<code>nx</code> in big-endian unsigned format. If multiple entry points are
-requested when generating the bytecode, then the rules which are to be used as
-entry points are labelled by generating them as:</p>
+<code>nx</code> in big-endian unsigned format. Every opcode with a one-byte
+argument has a similar version with a two-byte argument. If <code>id</code> is
+requested as an entry point when generating the bytecode, then the translation
+is:</p>
 
-<pre>{id = x}   =   RULE id START nx {x} STOP
+<pre>{id = x}    =   RULE id START nx {x} STOP
 </pre>
 
-<p>The names of the entry point rules must be distinct from the other symbols
-generated. The entry point rules are generated one after the other from
-the start of the bytecode sequence. That allows the interpreter to scan the
+<p>The names of the rules requested as entry points must be distinct from the
+other symbols generated. The entry point rules are generated one after the other
+from the start of the bytecode sequence. That allows the interpreter to scan the
 bytes, skipping the body <code>{x}</code> of each rule using the number
-<code>nx</code>, to find the entry points. When the name of a rule
-such as <code>id = x</code> is used elsewhere in the grammar, it is translated
-by one of:</p>
+<code>nx</code>, to find the entry points.</p>
 
-<pre>{id}       =   GO n
-{id}       =   BACK n
+<p>When the name <code>id</code> of a rule such as <code>id = x</code> is used
+elsewhere in the grammar, it is translated by one of:</p>
+
+<pre>{id}        =   GO n
+{id}        =   BACK n
 </pre>
 
 <p>The number <code>n</code> is an offset in the code to the body
 <code>{x}</code> of the relevant rule, relative to the next byte after
 <code>n</code>. The <code>GO</code> opcode is used when the offset is positive,
 and <code>BACK</code> is used, with a positive argument, when the offset is
-negative. For simple input:</p>
+negative. For simple character or token input matching:</p>
 
 <pre>{'a'}       =   CHAR 97
 {"a"}       =   CHAR 97
@@ -1346,7 +1357,7 @@ single character which takes up one byte in UTF-8, i.e. is in the range
 {&lt;ab>}      =   LESS 2 97 98
 </pre>
 
-<p>If a single Unicode characters is greater than <code>127</code> or a string
+<p>If a single Unicode character is greater than <code>127</code> or a string
 has more than one character, the <code>STRING</code> opcode is used, followed by
 the number of bytes of text, followed by the text in UTF-8 format. A string
 containing characters of mixed UTF-8 lengths causes no problem, because a UTF-8
@@ -1416,23 +1427,22 @@ to return to <code>TRY</code> or <code>HAS</code> or <code>NOT</code> which
 sorts out the result.</p>
 
 <pre>{@a}        =   ACT a
-{@}         =   ACT 0
+{@}         =   DROP
 {#e}        =   MARK e
 </pre>
 
-<p>An action is translated using the <code>ACT</code> opcode. In enumerating the
-action symbols, the interpreter must reserve zero, which is generated for the
-drop action <code>@</code>. Actions need to be delayed, either because they are
-inside a try construct <code>[x]</code>, or because they are at the start of a
-left hand choice <code>@a x / y</code>. If the grammar is entirely context free,
-then all the actions can be delayed until the end of parsing. In the example
-interpreters provided, actions are delayed by a minimal amount, so that they can
-affect later parsing by adjusting the input to get context sensitive effects.
-Actions are delayed by being recorded symbolically, then either performed or
-discarded at the end of any lookahead construct, or whenever progress is made in
-the input. Error markers, signalled by the <code>MARK</code> opcode, are
-collected as a set, perhaps implemented as a bitmap, and cleared whenever a new
-marker is found further on in the input.</p>
+<p>An action is translated using the <code>ACT</code> opcode. Actions need to be
+delayed, either because they are inside a try construct <code>[x]</code>, or
+because they are at the start of a left hand choice <code>@a x / y</code>. If
+the grammar is entirely context free, then all the actions can be delayed until
+the end of parsing. In the example interpreters provided, actions are delayed by
+a minimal amount, so that they can affect later parsing by adjusting the input
+to get context sensitive effects. Actions are delayed by being recorded
+symbolically, then either performed or discarded at the end of any lookahead
+construct, or whenever progress is made in the input. Error markers, signalled
+by the <code>MARK</code> opcode, are collected as a set, perhaps implemented as
+a bitmap, and cleared whenever a new marker is found further on in the
+input.</p>
 
 <p>Accurate details of what each opcode does can be gleaned from the provided
 interpreters and their comments.</p>

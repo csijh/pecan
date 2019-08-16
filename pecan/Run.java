@@ -10,43 +10,77 @@ import java.nio.charset.*;
 
 /* Read in a file of tests and run them:
 
-    java -jar pecan.jar [-trace] [line] testfile
+    pecan [-trace] [line] testfile
 */
 
 class Run implements Testable {
     private boolean tracing;
+    private String infile, outfile, sourcefile;
+    private int line = 0;
+    private Evaluator evaluator;
 
     public static void main(String[] args) {
-        int line = 0;
-        String filename = null;
         Run program = new Run();
-        if (args != null) for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-trace")) program.tracing = true;
+        program.run(args);
+    }
+
+    private void run(String[] args) {
+        if (args == null) usage();
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-trace")) tracing = true;
+            else if (args[i].equals("-t")) tracing = true;
+            else if (args[i].equals("-i")) {
+                i++;
+                if (i == args.length) usage();
+                infile = args[i];
+            }
+            else if (args[i].equals("-o")) {
+                i++;
+                if (i == args.length) usage();
+                outfile = args[i];
+            }
             else if (Character.isDigit(args[i].charAt(0))) {
                 line = Integer.parseInt(args[i]);
             }
-            else if (filename == null) filename = args[i];
+            else if (sourcefile == null) sourcefile = args[i];
             else usage();
         }
-        if (filename == null) usage();
-        Test.run(filename, program, line);
+        if (sourcefile == null) usage();
+        boolean compiling = outfile != null;
+        if (compiling && tracing) usage();
+        if (!compiling && infile != null) usage();
+        if (compiling) System.out.println("Not yet");
+        else Test.run(sourcefile, this, line);
+    }
+
+    // Check which form of command line is present by detecting -o.
+    private boolean compiling(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-o")) return true;
+        }
+        return false;
     }
 
     // Give a usage message and stop.
     private static void usage() {
         System.err.println(
             "Usage:\n" +
-            "    pecan [-trace] [line] testfile\n" +
+            "    pecan [-t | -trace] [line] tests\n" +
             "Or:\n" +
-            "    java -jar pecan.jar [-trace] [line] testfile\n");
+            "    pecan [-i interpreter] -o output grammar\n");
         System.exit(1);
     }
 
-    // Run a test passed from the Test class.
-    public String test(String grammar, String input) throws ParseException {
-        Evaluator evaluator = new Evaluator();
+    // Set up grammar for subsequent tests.
+    public void grammar(String g) {
+        evaluator = new Evaluator();
         if (tracing) evaluator.trace(true);
-        return evaluator.test(grammar, input);
+        evaluator.grammar(g);
+    }
+
+    // Run a test passed from the Test class.
+    public String test(String input) {
+        return evaluator.test(input);
     }
 
 /*

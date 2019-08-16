@@ -9,7 +9,6 @@ package pecan;
 [ */
 
 public enum Code {
-    EXTEND, // EXTEND n1 OP n2   where OP needs two-byte unsigned arg
     RULE,   // Entry point, argument is rule name
     START,  // Initilize, push address of STOP, jump to <x>
     STOP,   // End parsing

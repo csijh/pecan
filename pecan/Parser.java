@@ -25,7 +25,7 @@ class Parser implements Testable {
         NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, TAG, END_OF_TEXT
     }
 
-    // Each test has a grammar as input.
+    // Each test has a grammar as input, so this method is not used.
     public void grammar(String g) { }
 
     public String test(String g) {
