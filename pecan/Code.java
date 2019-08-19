@@ -10,7 +10,7 @@ package pecan;
 
 public enum Code {
     RULE,   // Entry point, argument is rule name
-    START,  // Initilize, push address of STOP, jump to <x>
+    START,  // Initialize, push address of STOP, jump to <x>
     STOP,   // End parsing
     GO,     // skip forwards
     BACK,   // skip backwards, negates its unsigned arg
@@ -19,8 +19,8 @@ public enum Code {
     OR,
     BOTH,   // x y              BOTH n <x> AND <y>
     AND,
-    MAYBE,  // x? or x*         MAYBE OPT/MANY <x>
-    OPT,
+    MAYBE,  // x? or x*         MAYBE ONE/MANY <x>
+    ONE,
     MANY,
     DO,     // x+               DO THEN MAYBE MANY <x>
     THEN,
@@ -32,8 +32,8 @@ public enum Code {
     CHAR,    // One-byte character
     SET,     // 'ab'   ->  SET 2 'a' 'b' (UTF-8)
     STRING,  // "ab"   ->  STRING 2 'a' 'b' (UTF-8 byte sequence)
-    GE,      // "a".."z" -> GE m ... LE n ...
-    LE,      // on its own if left arg is ""
+    LOW,     // "a".."z" -> LOW m ... HIGH n ...
+    HIGH,
     CAT,     // Nd     ->  CAT Nd
     TAG,     // %t     ->  TAG t
 

@@ -5,6 +5,7 @@ package pecan;
 import java.util.*;
 import java.text.*;
 import static pecan.Op.*;
+import static pecan.Code.*;
 import static pecan.Node.Flag.*;
 
 /* Converts grammar into bytecode. The normal translations are:
@@ -14,8 +15,8 @@ import static pecan.Node.Flag.*;
     id = x    START nx {x} STOP
     id = x    RULE id START nx {x} STOP   (if explicit entry point)
     id        GO n    or    BACK n
-    x / y     EITHER n {x} OR {y}
-    x y       BOTH n {x} AND {y}
+    x / y     EITHER nx {x} OR {y}
+    x y       BOTH nx {x} AND {y}
     x?        MAYBE ONE {x}
     x*        MAYBE MANY {x}
     x+        DO AND MAYBE MANY {x}
@@ -36,18 +37,17 @@ import static pecan.Node.Flag.*;
     Nd        CAT Nd
     %id       TAG n
 
-By default, only first rule is defined as an entry point (in which case RULE id
-is left out). There is an option to ask for explicit entry points. The bytecode
-can be scanned to find entry points.
+By default, there are no explicit entry points, only an implicit entry point at
+the start. There is an option to ask for explicit entry points. The bytecode can
+be scanned to find entry points.
 
-// TODO markers: is there a lift optimisation?
-TODO: multiple entry points
+TODO markers: is there a lift optimisation?
+TODO: explicit entry points
 */
 
 class Generator implements Testable {
-    private byte[] code;
     private StringBuilder output, comment;
-    private String[] rules, tags, actions, markers;
+    private String[] tags, actions, markers;
     private int[] arities;
     private int pc, linePc;
     private boolean changed;
@@ -69,15 +69,13 @@ class Generator implements Testable {
     String run(String grammar) {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
-        rules = new String[size(root, Rule)];
         tags = new String[size(root, Tag)];
         markers = new String[size(root, Mark)];
         actions = new String[size(root, Act)];
         arities = new int[actions.length];
-        output = new StringBuilder();
         comment = new StringBuilder();
         strings(root);
-        code = new byte[1];
+        output = new StringBuilder();
         pc = 0;
         changed = true;
         while (changed) {
@@ -86,8 +84,8 @@ class Generator implements Testable {
             output.setLength(0);
             encode(root);
         }
-        code = Arrays.copyOf(code, pc);
-        return output.toString() + "\n";
+        output.append("\n");
+        return output.toString();
     }
 
     // Measure the number of items of a given node type, according to value.
@@ -100,12 +98,11 @@ class Generator implements Testable {
         return m;
     }
 
-    // Gather strings for rules, tags, actions and markers.
+    // Gather strings for tags, actions and markers.
     private void strings(Node node) {
         if (node.left() != null) strings(node.left());
         if (node.right() != null) strings(node.right());
         switch (node.op()) {
-        case Rule: rules[node.value()] = node.text(); break;
         // TODO: `tag`
         case Tag: tags[node.value()] = node.text().substring(1); break;
         case Mark: markers[node.value()] = node.text().substring(1); break;
@@ -119,30 +116,6 @@ class Generator implements Testable {
     }
 
 /*
-    // Find maximum new call stack needed per rule, not taking calls to other
-    // rules into account.
-    private int frame(Node node) {
-        switch (node.op()) {
-        case Rule:
-            return frame(node.left());
-        case Id:
-            return 0;
-        case Or:
-            return Math.max(2 + frame(node.left()), frame(node.right()));
-        case And:
-            return Math.max(1 + frame(node.left()), frame(node.right()));
-        case Opt: case Many: case Some:
-            return 2 + frame(node.left());
-        case Not: case Try: case Has:
-            return 3 + frame(node.left());
-        case Tag: case Act: case Mark:
-        case String: case Set: case Char: case Range: case Cat: case Drop:
-            return 0;
-        default: throw new Error("Type " + node.op() + " unimplemented");
-        }
-    }
-*/
-/*
     // Find the address of a node. If it is an identifier, use the address of
     // the rule it refers to.
     int address(Node node) {
@@ -150,41 +123,41 @@ class Generator implements Testable {
         return node.PC();
     }
 */
-    // Generate code for a node. Call this twice to get addresses right.
+    // Generate code for a node. Call this repeatedly to get addresses right.
     void encode(Node node) {
-        char[] text;
         int arg;
         if (pc != node.PC()) changed = true;
         node.PC(pc);
-        if (output.length() > 0) output.append("\n");
-        output.append("" + pc + ":");
+        System.out.println("" + pc + ": " + node.op() + output);
         switch (node.op()) {
-        case Rule: // id = x  ->  START STOP <x>
-            add(START);
-            add(STOP);
+        case Rule:
+            add(START, node.left().LEN());
             encode(node.left());
+            add(STOP);
             break;
-        case Id:   // id = x ... id  ->  GO &x
-            arg = node.ref().left().PC();
-            add(GO, arg);
+        case Id:
+            int target = node.ref().left().PC();
+            int offset = target - (pc + node.LEN());
+            if (offset >= 0) add(GO, offset);
+            else add(BACK, -offset);
             break;
-        case Or:  // x / y  ->  EITHER n <x> Or <y>
+        case Or:
             arg = node.left().LEN();
             add(EITHER, arg);
             encode(node.left());
             add(OR);
             encode(node.right());
             break;
-        case And: // x y  ->  BOTH n <x> AND <y>
+        case And:
             arg = node.left().LEN();
             add(BOTH, arg);
             encode(node.left());
             add(AND);
             encode(node.right());
             break;
-        case Opt:  // x?  ->  MAYBE OPT x
+        case Opt:  // x?  ->  MAYBE ONE x
             add(MAYBE);
-            add(OPT);
+            add(ONE);
             encode(node.left());
             break;
         case Many: // x*  ->  MAYBE MANY x
@@ -198,6 +171,24 @@ class Generator implements Testable {
             add(MAYBE);
             add(MANY);
             encode(node.left());
+            break;
+        case Char:
+            int ch = node.value();
+            if (ch <= 255) add(CHAR, ch);
+            else {
+                throw new Error("Not yet");
+            }
+            break;
+        case String:
+            char[] text = text(node);
+            if (text.length == 1) add(CHAR, text[0]);
+            else add(STRING, text(node));
+            break;
+        case Range:
+            add(LOW);
+            add(text(node.left()));
+            add(HIGH);
+            add(text(node.right()));
             break;
 
 
@@ -247,28 +238,11 @@ Nd        Cat Nd      CAT Nd
             add(TAG);
             arg1((byte)node.value());
             break;
-        case Char:  // c  ->  STRING n c
-            text = text(node);
-            add(STRING);
-            string(text);
-            break;
-        case String: // "s"  ->  STRING n s
-            text = text(node);
-            add(STRING);
-            string(text);
-            break;
         case Set:  // 's'  ->  SET n s
             text = text(node);
             add(SET);
             string(text);
             break;
-        case Range:  // RANGE "c1" "c2"
-            add(RANGE);
-            string(text(node.left()));
-            string(text(node.right()));
-            // Don't generate any more code for the child nodes
-            endLine();
-            return;
         case Cat:    // CAT c
             add(CAT); arg1((byte)node.value());
             break;
@@ -277,13 +251,13 @@ Nd        Cat Nd      CAT Nd
             break;
             */
         case Act:   // ACT a
-            arg = node.value();
-            add(ACT, arg);
+            add(node.text().substring(1));
+//            arg = node.value();
+//            add(ACT, arg);
             break;
         }
         if (node.LEN() != pc - node.PC()) changed = true;
         node.LEN(pc - node.PC());
-        System.out.println(node.LEN());
 //        if (node.left() != null) encode(node.left());
 //        if (node.right() != null) encode(node.right());
     }
@@ -303,40 +277,55 @@ Nd        Cat Nd      CAT Nd
         }
     }
 
-    private void add(byte b) {
-        if (pc >= code.length) code = Arrays.copyOf(code, pc*2);
-        code[pc++] = b;
+    private void add(String s) {
+        if (output.length() > 0) output.append(", ");
+        output.append(s);
+        pc++;
     }
 
-    private void add(Op op) {
-        add((byte)op.ordinal());
-        output.append(" " + op.toString());
+    private void add(Code op) {
+        add(op.toString());
     }
 
-    // Encode an op and arg. Add prefixes as necessary.
-    private void add(Op op, int arg) {
-        if (arg > 65535) {
-            add(EXTEND);
-            add((byte) (arg >> 16));
-        }
+    private void add(int n) {
+        add("" + n);
+    }
+
+    private void add(char[] text) {
+        byte[] bytes;
+        try { bytes = new String(text).getBytes("UTF8"); }
+        catch (Exception e) { throw new Error(e); }
+        add(bytes.length);
+        for (byte b : bytes) add(b);
+    }
+
+    private void add(Code op, char[] text) {
+        add(op.toString());
+        add(text);
+    }
+
+    // Encode an op and arg.
+    private void add(Code op, int arg) {
+        if (arg > 65535) throw new Error("code too large");
         if (arg > 255) {
-            add(EXTEND);
-            add((byte) (arg >> 8));
+            add(op.toString() + "2");
+            add(arg/256);
+            add(arg%256);
         }
-        add(op);
-        add((byte) arg);
-        output.append(" " + arg);
+        else {
+            add(op.toString());
+            add(arg);
+        }
     }
 
     void endLine() {
-        if (output.length() > 0) output.append("\n");
         /*
         int n = pc - linePc;
-        int a = output.length();
-        for (int i=0; i<n; i++) output.append(code[linePc+i] + ", ");
-        int b = output.length();
-        for (int i=b-a; i<20; i++) output.append(" ");
-        output.append(comment);
+        int a = .length();
+        for (int i=0; i<n; i++) .append(code[linePc+i] + ", ");
+        int b = .length();
+        for (int i=b-a; i<20; i++) .append(" ");
+        .append(comment);
         comment.setLength(0);
         linePc = pc;
         */
