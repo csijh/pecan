@@ -16,7 +16,7 @@ output describes the external calls that would be made, with one line per call.
 Actions are normally delayed until the next time progress is made, or discarded
 if parsing fails without progressing. During lookahead, actions are delayed
 until the end of the lookahead, or discarded on failure or backtrack. Error
-markers are gathered as a bit set, with a mark variable to record the position
+markers are gathered as a set, with a mark variable to record the position
 in the input at which they were encountered. When a new marker is encountered,
 and the input has progressed beyond the mark position, the old markers are
 discarded and the mark updated. Old markers are also discarded when an error is
@@ -42,8 +42,7 @@ public class Evaluator implements Testable {
     private String input;
     private Node root;
     private int start, in, out, mark, lookahead;
-    private BitSet failures;
-    private String[] markers;
+    private TreeSet<String> failures;
     private Node[] delay;
     private StringBuffer output;
 
@@ -85,9 +84,7 @@ public class Evaluator implements Testable {
         out = 0;
         mark = 0;
         lookahead = 0;
-        markers = new String[markerSize(root)];
-        gatherMarkers(root);
-        failures = new BitSet();
+        failures = new TreeSet<>();
         delay = new Node[100];
         output = new StringBuffer();
     }
@@ -101,13 +98,11 @@ public class Evaluator implements Testable {
         takeActions();
         if (! ok) {
             output.setLength(0);
-            String s;
-            if (failures.isEmpty()) s = "";
-            else s = "expecting ";
-            int i = -1;
-            while ((i = failures.nextSetBit(i+1)) >= 0) {
-                if (! s.equals("expecting ")) s += ", ";
-                s += markers[i];
+            String s = "";
+            for (String mark : failures) {
+                if (s.equals("")) s = "expecting ";
+                else s += ", ";
+                s += mark;
             }
             output.append(Node.err(input, in, in, s));
             output.append("\n");
@@ -306,7 +301,7 @@ public class Evaluator implements Testable {
             ok = true;
             if (lookahead > 0) break;
             if (mark != in) { mark = in; failures.clear(); }
-            failures.set(node.value());
+            failures.add(node.text().substring(1));
             break;
         case Drop:
             ok = true;
@@ -363,24 +358,5 @@ public class Evaluator implements Testable {
         }
         output.append("\n");
         start = in;
-    }
-
-    // Measure the number of markers.
-    private int markerSize(Node node) {
-        int m = 0, n = 0;
-        if (node.left() != null) m = markerSize(node.left());
-        if (node.left() != null && node.right() != null) n = markerSize(node.right());
-        m = Math.max(m, n);
-        if (node.op() == Mark) m = Math.max(m, node.value() + 1);
-        return m;
-    }
-
-    // Gather strings for markers.
-    private void gatherMarkers(Node node) {
-        if (node.left() != null) gatherMarkers(node.left());
-        if (node.left() != null && node.right() != null) gatherMarkers(node.right());
-        if (node.op() == Mark) {
-            markers[node.value()] = node.text().substring(1);
-        }
     }
 }

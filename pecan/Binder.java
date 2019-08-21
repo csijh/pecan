@@ -9,12 +9,14 @@ import static pecan.Node.Flag.*;
 import static java.lang.Character.*;
 
 /* Carry out binding:
-Create cross-references from ids and string synonyms to their definitions.
+Create cross-references from ids to their definitions.
 Recognise unicode category names.
 Check for missing or duplicate definitions.
-For tags/markers/actions, set the value to a unique sequence number.
+For tags and markers, remove the % or # from the name.
+For actions set the value to the arity and remove the @ and arity from the name.
 Check consistency of action arities, and add a node for the name and arity.
-Check that a set consists of distinct ASCII characters.
+Check that a set consists of distinct characters of the same UTF8 length.
+For strings and sets and dividers, remove the quotes from the name.
 For matchers which represent single characters, set the value to the code.
 Check that numerical character codes are in the range 0..1114111.
 Check that both ends of a range are single characters.
@@ -157,8 +159,8 @@ class Binder implements Testable {
         case Id: bindId(node); break;
         case Char: bindChar(node); break;
         case String: bindString(node); break;
+        case Divider: bindDivider(node); break;
         case Set: bindSet(node); break;
-        case Divider: break;
         case Range: bindRange(node); break;
         case Cat: bindCat(node); break;
         case Mark: bindMark(node); break;
@@ -231,7 +233,16 @@ class Binder implements Testable {
 
     // Check whether a string is a character.
     private void bindString(Node node) {
-        node.value(1);
+        node.value(-1);
+        int n = node.text().codePointCount(1, node.text().length() - 1);
+        if (n != 1) return;
+        node.value(node.text().codePointAt(1));
+        node.note("" + node.value());
+    }
+
+    // Check whether a divider is a character.
+    private void bindDivider(Node node) {
+        node.value(-1);
         int n = node.text().codePointCount(1, node.text().length() - 1);
         if (n != 1) return;
         node.value(node.text().codePointAt(1));
@@ -277,10 +288,11 @@ class Binder implements Testable {
         node.note("" + node.value());
     }
 
-    // Bind a marker.
+    // Bind a marker. Remove the # from the name.
     private void bindMark(Node node) throws Exception {
-        node.value(markers.get(node.text().substring(1)));
-        node.note("" + node.value());
+//        node.start(node.start() + 1);
+//        node.value(markers.get(node.text().substring(1)));
+//        node.note("" + node.value());
     }
 
     // Bind a tag.

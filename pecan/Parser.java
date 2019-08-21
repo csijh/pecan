@@ -461,32 +461,29 @@ class Parser implements Testable {
         return true;
     }
 
-    // There is a subtle difficulty with bracketed subexpressions "(x)". To have
-    // one node with text "(x)" would pose a problem when "x" is an id, because
-    // then the node's text is not the name of the id. To have one node with
-    // text "x" would spoil the text range convention, e.g. expression "(x)y"
-    // would end up with text "x)y" So, two nodes are created, one for "(x)" and
-    // one for "x". The outer "(x)" node ensures that ancestor nodes have the
-    // right range. Then the outer node is discarded after parsing is over. To
-    // avoid having an extra temporary Op constant which would pollute later
-    // passes, a temporary "(x)" node has a null Op.
+    // Bracketed subexpressions have explicit nodes to represent them. This is
+    // so that the text extent of a node can always be found by combining the
+    // text extents of its children, e.g. in expressions such as (x)y. Note that
+    // increasing the text extent of x to (x) wouldn't work when x is an
+    // identifier, because then the node's text would not be the name of the id.
+    // Bracket nodes are removed later, after parsing.
 
-    // Convert "(" x ")" into "(x)", with child x.
+    // Create a bracket node for ( x ).
     private boolean doBracket() {
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];
-        Node r = new Node(null, x, source, open.start(), close.end());
+        Node r = new Node(Bracket, x, source, open.start(), close.end());
         output[out++] = r;
         return true;
     }
 
-    // Remove "(x)" nodes, i.e. nodes with a null Op, from a subtree.
+    // Remove bracket nodes from a subtree.
     private Node prune(Node r) {
         if (r == null) return null;
         r.left(prune(r.left()));
         r.right(prune(r.right()));
-        if (r.op() == null) return r.left();
+        if (r.op() == Bracket) return r.left();
         return r;
     }
 }

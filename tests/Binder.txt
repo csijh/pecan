@@ -224,7 +224,7 @@ Rule string
     Set '"' 34
     Many visible*
       Id visible
-    Mark #badstring 0
+    Mark #badstring
     Set '"' 34
 Rule visible
   String "x" 120
@@ -317,7 +317,7 @@ Rule set
         Not "'"!
           String "'" 39
         Id visible
-    Mark #BADSet 0
+    Mark #BADSet
     String "'" 39
     Act @Set 2
     Id skip1
@@ -329,7 +329,7 @@ Rule string
         Not '"'!
           Set '"' 34
         Id visible
-    Mark #BADString 1
+    Mark #BADString
     Set '"' 34
     Act @String 3
     Id skip1
@@ -417,7 +417,7 @@ Rule postfix
       Act @AE 20
 Rule bad
   And #BADSet Uc skip1
-    Mark #BADSet 0
+    Mark #BADSet
     Cat Uc -268435457
     Id skip1
 Rule skip

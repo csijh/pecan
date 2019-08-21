@@ -96,6 +96,19 @@ class Node {
     void start(int s) { start = s; }
     void end(int e) { end = e; }
 
+    // The name is the text without decoration.
+    String name() {
+        switch (op) {
+            case Mark: return source.substring(start+1, end);
+            case Tag: return source.substring(start+1, end);
+            case Act:
+                int i = start + 1;
+                while (Character.isDigit(source.charAt(i))) i++;
+                return source.substring(i, end);
+        }
+        return text();
+    }
+
     // Get/set the children and the cross-reference link.
     Node left() { return left; }
     Node right() { return left == null ? null : right; }

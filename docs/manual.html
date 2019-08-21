@@ -44,6 +44,7 @@
 <li><a href="#java">Generating code</a>
 <ul>
 <li><a href="#code">The bytecode</a></li>
+<li><a href="#semantics">Bytecode semantics</a></li>
 </ul>
 </li>
 </li>
@@ -1263,16 +1264,15 @@ grammar.</p>
 
 <p>The bytecode sequence is printed as text, as a comma-separated list of
 unsigned byte values. Those values which are opcodes, categories, tags, actions
-or error markers are represented symbolically. In addition, if multiple entry
-points are requested, rule names are also represented symbolically. Suppose the
-grammar file contains:</p>
+or error markers are represented symbolically. Suppose the grammar file
+contains:</p>
 
 <pre>digit = "0".."9" @number
 </pre>
 
 <p>Then the bytecode sequence generated might be:</p>
 
-<pre>START, 8, LOW, 1, 48, HIGH, 1, 57, ACT, number, STOP
+<pre>START, 8, LOW, 1, 48, HIGH, 1, 57, number, STOP
 </pre>
 
 <p>The values of the symbols are specified by the surrounding interpreter, eg.
@@ -1288,21 +1288,19 @@ actions and error handling as appropriate.</p>
 
 <h3 id="code">The bytecode</h3>
 
-<p>A grammar is converted into an array of unsigned bytes. The notation
-<code>{x}</code> means "the bytecode sequence generated for expression x" and
-<code>nx</code> stands for the number of bytes in <code>{x}</code>. For example,
-the normal translation of a rule is:</p>
+<p>A grammar is converted into a textual representation of an array of unsigned
+bytes. The notation <code>{x}</code> means "the bytecode sequence generated for
+expression x" and <code>nx</code> stands for the number of bytes in
+<code>{x}</code>. For example, the normal translation of a rule is:</p>
 
 <pre>{id = x}    =   START nx {x} STOP
 </pre>
 
-<p>In these descriptions, the commas which separate the bytes in the printed
-code are omitted. Some opcodes such as <code>STOP</code> take no argument.
-Others, like <code>START</code> are followed by a one-byte argument. The number
-<code>nx</code> can be thought of as a relative offset in the code,
-from the byte after <code>nx</code> to the <code>STOP</code>
-instruction. If the number <code>nx</code> exceeds <code>255</code>,
-then the translation becomes:</p>
+<p>In these descriptions, the commas which separate the bytes in the textual
+output are omitted. Some opcodes such as <code>STOP</code> take no argument.
+Others, like <code>START</code> are followed by a one-byte argument. If the
+number <code>nx</code> exceeds <code>255</code>, then the translation
+becomes:</p>
 
 <pre>{id = x}    =   START2 nx1 nx2 {x} STOP
 </pre>
@@ -1311,29 +1309,18 @@ then the translation becomes:</p>
 <code>nx</code> is represented using two bytes instead of one. The bytes
 <code>nx1 = nx/256</code> and <code>nx2 = nx%256</code> represent
 <code>nx</code> in big-endian unsigned format. Every opcode with a one-byte
-argument has a similar version with a two-byte argument. If <code>id</code> is
-requested as an entry point when generating the bytecode, then the translation
-is:</p>
-
-<pre>{id = x}    =   RULE id START nx {x} STOP
-</pre>
-
-<p>The names of the rules requested as entry points must be distinct from the
-other symbols generated. The entry point rules are generated one after the other
-from the start of the bytecode sequence. That allows the interpreter to scan the
-bytes, skipping the body <code>{x}</code> of each rule using the number
-<code>nx</code>, to find the entry points.</p>
+argument has a similar version with a two-byte argument.</p>
 
 <p>When the name <code>id</code> of a rule such as <code>id = x</code> is used
 elsewhere in the grammar, it is translated by one of:</p>
 
-<pre>{id}        =   GO n
-{id}        =   BACK n
+<pre>{id}        =   GO px
+{id}        =   BACK px
 </pre>
 
-<p>The number <code>n</code> is an offset in the code to the body
+<p>The number <code>px</code> is an offset in the code to the body
 <code>{x}</code> of the relevant rule, relative to the next byte after
-<code>n</code>. The <code>GO</code> opcode is used when the offset is positive,
+<code>px</code>. The <code>GO</code> opcode is used when the offset is positive,
 and <code>BACK</code> is used, with a positive argument, when the offset is
 negative. For simple character or token input matching:</p>
 
@@ -1354,7 +1341,8 @@ single character which takes up one byte in UTF-8, i.e. is in the range
 {"&#960;"}       =   STRING 2 207 128
 {"a&#960;"}      =   STRING 3 97 207 128
 {'&#960;'}       =   STRING 2 207 128
-{&lt;ab>}      =   LESS 2 97 98
+{&lt;a>}       =   BELOW 97
+{&lt;ab>}      =   BELOWS 2 97 98
 </pre>
 
 <p>If a single Unicode character is greater than <code>127</code> or a string
@@ -1362,22 +1350,23 @@ has more than one character, the <code>STRING</code> opcode is used, followed by
 the number of bytes of text, followed by the text in UTF-8 format. A string
 containing characters of mixed UTF-8 lengths causes no problem, because a UTF-8
 string can be matched byte by byte, without taking account of character
-boundaries. A divider is translated using the <code>LESS</code> opcode. The
-comparison between UTF-8 strings which it represents can similarly be done byte
-by byte. For sets:</p>
+boundaries. A divider is translated using the <code>BELOW</code> opcode or the
+string version <code>BELOWS</code>. The comparison between UTF-8 strings which
+<code>BELOWS</code> represents can similarly be done byte by byte. For sets:</p>
 
 <pre>{''}        =   SET 0
 {'ab'}      =   SET 2 97 98
 {'&#945;&#946;'}      =   SET2 4 206 177 206 178
-{'a'..'z'}  =   LOW 1 97 HIGH 1 122
-{'&#945;'..'&#969;'}  =   LOW 2 206 177 HIGH 2 207 137
+{'a'..'z'}  =   LOW 97 HIGH 122
+{'&#945;'..'&#969;'}  =   LOWS 2 206 177 HIGHS 2 207 137
 </pre>
 
 <p>The <code>SET</code> opcode is used for sets of one-byte characters, the
 <code>SET2</code> opcode for sets of two-byte characters and so on. A mixed set
 such as <code>'a&#960;'</code> is treated as <code>'a' / '&#960;'</code> so that
 each set opcode takes UTF-8 characters of a fixed length. A range is translated
-into the two opcodes <code>LOW</code> and <code>HIGH</code>. For categories:</p>
+into the two opcodes <code>LOW</code> and <code>HIGH</code> or the string
+versions <code>LOWS</code> and <code>HIGHS</code>. For categories:</p>
 
 <pre>{Nd}        =   CAT Nd
 </pre>
@@ -1446,6 +1435,25 @@ input.</p>
 
 <p>Accurate details of what each opcode does can be gleaned from the provided
 interpreters and their comments.</p>
+
+<h3 id="semantics">Bytecode semantics</h3>
+
+<p>The <code>START</code> opcode in the sequence:</p>
+
+<pre>START nx {x} STOP
+</pre>
+
+<p>creates a call to <code>{x}</code>, setting up the address of
+<code>STOP</code> as the return address. The <code>STOP</code> instruction ends
+parsing. The number <code>nx</code> can be thought of as a relative offset in
+the code, from the byte after <code>nx</code> to the <code>STOP</code>
+instruction.</p>
+
+<p><code>START</code> and <code>STOP</code> opcodes are generated for every
+rule, even though they are usually only executed for the overall call to the
+first rule. This is so that other rules can be used as entry points, if desired.
+The interpreter can scan the bytes, skipping the body <code>{x}</code> of each
+rule using the number <code>nx</code>, to find the start of the next rule.</p>
 
 <h2 id="interpreters">Example interpreters</h2>
 

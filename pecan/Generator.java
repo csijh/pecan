@@ -8,48 +8,13 @@ import static pecan.Op.*;
 import static pecan.Code.*;
 import static pecan.Node.Flag.*;
 
-/* Converts grammar into bytecode. The normal translations are:
-
-    source    bytecode
-    ------------------------------
-    id = x    START nx {x} STOP
-    id = x    RULE id START nx {x} STOP   (if explicit entry point)
-    id        GO n    or    BACK n
-    x / y     EITHER nx {x} OR {y}
-    x y       BOTH nx {x} AND {y}
-    x?        MAYBE ONE {x}
-    x*        MAYBE MANY {x}
-    x+        DO AND MAYBE MANY {x}
-    [x]       LOOK TRY {x}
-    x&        LOOK HAS {x}
-    x!        LOOK NOT {x}
-    @a        ACT n
-    @         DROP
-    #e        MARK n
-    10        CHAR 10                     (ascii)
-    'a'       CHAR 'a'                    (ascii)
-    128       STRING n "utf-8"
-    "a"       STRING n "bytes"
-    "pi"      STRING n "pi"
-    'ab'      SET n "ab"
-    "a".."z"  LOW m "a" HIGH n "z"
-    <a>       LESS n "a"
-    Nd        CAT Nd
-    %id       TAG n
-
-By default, there are no explicit entry points, only an implicit entry point at
-the start. There is an option to ask for explicit entry points. The bytecode can
-be scanned to find entry points.
-
+/* Convert a grammar into bytecode.
 TODO markers: is there a lift optimisation?
-TODO: explicit entry points
 */
 
 class Generator implements Testable {
-    private StringBuilder output, comment;
-    private String[] tags, actions, markers;
-    private int[] arities;
-    private int pc, linePc;
+    private StringBuilder output;
+    private int pc, line;
     private boolean changed;
 
     public static void main(String[] args) {
@@ -69,207 +34,219 @@ class Generator implements Testable {
     String run(String grammar) {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
-        tags = new String[size(root, Tag)];
-        markers = new String[size(root, Mark)];
-        actions = new String[size(root, Act)];
-        arities = new int[actions.length];
-        comment = new StringBuilder();
-        strings(root);
         output = new StringBuilder();
-        pc = 0;
         changed = true;
         while (changed) {
             changed = false;
-            pc = 0;
+            pc = line = 0;
             output.setLength(0);
             encode(root);
         }
-        output.append("\n");
+        if (line > 0) output.append("\n");
         return output.toString();
     }
 
-    // Measure the number of items of a given node type, according to value.
-    private int size(Node node, Op op) {
-        int m = 0, n = 0;
-        if (node.left() != null) m = size(node.left(), op);
-        if (node.right() != null) n = size(node.right(), op);
-        m = Math.max(m, n);
-        if (node.op() == op) m = Math.max(m, node.value() + 1);
-        return m;
-    }
-
-    // Gather strings for tags, actions and markers.
-    private void strings(Node node) {
-        if (node.left() != null) strings(node.left());
-        if (node.right() != null) strings(node.right());
-        switch (node.op()) {
-        // TODO: `tag`
-        case Tag: tags[node.value()] = node.text().substring(1); break;
-        case Mark: markers[node.value()] = node.text().substring(1); break;
-        case Act:
-            actions[node.value()] = node.ref().text();
-            arities[node.value()] = node.ref().value();
-            break;
-        case String: case Set: case Char: case Range: case Cat: case Not:
-            break;
-        }
-    }
-
-/*
-    // Find the address of a node. If it is an identifier, use the address of
-    // the rule it refers to.
-    int address(Node node) {
-        if (node.op() == Id) node.PC(node.ref().PC());
-        return node.PC();
-    }
-*/
     // Generate code for a node. Call this repeatedly to get addresses right.
     void encode(Node node) {
-        int arg;
+        if (node == null) return;
         if (pc != node.PC()) changed = true;
         node.PC(pc);
-        System.out.println("" + pc + ": " + node.op() + output);
         switch (node.op()) {
-        case Rule:
-            add(START, node.left().LEN());
-            encode(node.left());
-            add(STOP);
-            break;
-        case Id:
-            int target = node.ref().left().PC();
-            int offset = target - (pc + node.LEN());
-            if (offset >= 0) add(GO, offset);
-            else add(BACK, -offset);
-            break;
-        case Or:
-            arg = node.left().LEN();
-            add(EITHER, arg);
-            encode(node.left());
-            add(OR);
-            encode(node.right());
-            break;
-        case And:
-            arg = node.left().LEN();
-            add(BOTH, arg);
-            encode(node.left());
-            add(AND);
-            encode(node.right());
-            break;
-        case Opt:  // x?  ->  MAYBE ONE x
-            add(MAYBE);
-            add(ONE);
-            encode(node.left());
-            break;
-        case Many: // x*  ->  MAYBE MANY x
-            add(MAYBE);
-            add(MANY);
-            encode(node.left());
-            break;
-        case Some: // x+  ->  DO THEN MAYBE MANY <x>
-            add(DO);
-            add(THEN);
-            add(MAYBE);
-            add(MANY);
-            encode(node.left());
-            break;
-        case Char:
-            int ch = node.value();
-            if (ch <= 255) add(CHAR, ch);
-            else {
-                throw new Error("Not yet");
-            }
-            break;
-        case String:
-            char[] text = text(node);
-            if (text.length == 1) add(CHAR, text[0]);
-            else add(STRING, text(node));
-            break;
-        case Range:
-            add(LOW);
-            add(text(node.left()));
-            add(HIGH);
-            add(text(node.right()));
-            break;
-
-
-/*
-[x]       Try x       LOOK TRY <x>
-x&        Has x       LOOK HAS <x>
-x!        Not x       LOOK NOT <x>
-@a        Act a       ACT n                       (one byte index)
-@         Drop        DROP
-#e        Mark e      MARK n
-10        Char 10     CHAR 10                     (ascii)
-128       Char 128    STRING n "utf-8"
-"a"       String "a"  STRING n "bytes"
-'a'       Char 'a'    CHAR 'a'                    (ascii)
-"pi"      Char 'pi'   STRING n "pi"
-'ab'      Set 'ab'    SET n "ab"
-"a".."z"  Range...    GE n "a" LE n "z"
-0.."m"    Range...    LE n "m"
-Nd        Cat Nd      CAT Nd
-%id       Tag id      TAG n
-`+`       Tag +       TAG n
-        case TRY: // [x]  ->  LOOK TRY x
-            if (! node.has(AA)) {
-                add(LOOK);
-                add(TRY);
-            } else {  // [x]  ->  BOTH AND &x LOOK TRY x
-                add(BOTH);
-                add(AND);
-                arg2(pc+2);
-                add(LOOK);
-                add(TRY);
-            }
-            break;
-        case Has: // x&  ->  LOOK HAS x
-            add(LOOK);
-            add(HAS);
-            break;
-        case Not: // x!  ->  LOOK NOT x
-            add(LOOK);
-            add(NOT);
-            break;
-        case Mark:  // #e  ->  MARK #e
-            add(MARK);
-            arg2(node.value());
-            break;
-        case Tag:   // %a  ->  TAG a
-            add(TAG);
-            arg1((byte)node.value());
-            break;
-        case Set:  // 's'  ->  SET n s
-            text = text(node);
-            add(SET);
-            string(text);
-            break;
-        case Cat:    // CAT c
-            add(CAT); arg1((byte)node.value());
-            break;
-        case Drop:  // @ -> DROP
-            add(DROP);
-            break;
-            */
-        case Act:   // ACT a
-            add(node.text().substring(1));
-//            arg = node.value();
-//            add(ACT, arg);
-            break;
+            case Rule:      encodeRule(node);       break;
+            case Id:        encodeId(node);         break;
+            case Or:        encodeOr(node);         break;
+            case And:       encodeAnd(node);        break;
+            case Opt:       encodeOpt(node);        break;
+            case Many:      encodeMany(node);       break;
+            case Some:      encodeSome(node);       break;
+            case Try:       encodeTry(node);        break;
+            case Has:       encodeHas(node);        break;
+            case Not:       encodeNot(node);        break;
+            case Drop:      encodeDrop(node);       break;
+            case Act:       encodeAct(node);        break;
+            case Mark:      encodeMark(node);       break;
+            case Tag:       encodeTag(node);        break;
+            case Char:      encodeChar(node);       break;
+            case Cat:       encodeCat(node);        break;
+            case String:    encodeString(node);     break;
+            case Range:     encodeRange(node);      break;
+            case Divider:   encodeDivider(node);    break;
+            case Set:       encodeSet(node);        break;
         }
         if (node.LEN() != pc - node.PC()) changed = true;
         node.LEN(pc - node.PC());
-//        if (node.left() != null) encode(node.left());
-//        if (node.right() != null) encode(node.right());
+    }
+
+    // {id = x; ...}  =  START nx {x} STOP ...
+    private void encodeRule(Node node) {
+        add(START, node.left().LEN());
+        encode(node.left());
+        add(STOP);
+        encode(node.right());
+    }
+
+    // {id}  =  GO n    or    BACK n
+    private void encodeId(Node node) {
+        int target = node.ref().left().PC();
+        int offset = target - (pc + node.LEN());
+        if (offset >= 0) add(GO, offset);
+        else add(BACK, -offset);
+    }
+
+    // {x / y}  =  EITHER nx {x} OR {y}
+    private void encodeOr(Node node) {
+        int nx = node.left().LEN();
+        add(EITHER, nx);
+        encode(node.left());
+        add(OR);
+        encode(node.right());
+    }
+
+    // {x y}  =  BOTH nx {x} AND {y}
+    private void encodeAnd(Node node) {
+        int nx = node.left().LEN();
+        add(BOTH, nx);
+        encode(node.left());
+        add(AND);
+        encode(node.right());
+    }
+
+    // {x?}  =  MAYBE ONE {x}
+    private void encodeOpt(Node node) {
+        add(MAYBE);
+        add(ONE);
+        encode(node.left());
+    }
+
+    // {x*}  =  MAYBE MANY {x}
+    private void encodeMany(Node node) {
+        add(MAYBE);
+        add(MANY);
+        encode(node.left());
+    }
+
+    // {x+}  =  DO AND MAYBE MANY {x}
+    private void encodeSome(Node node) {
+        add(DO);
+        add(AND);
+        add(MAYBE);
+        add(MANY);
+        encode(node.left());
+    }
+
+    // {[x]}  =  LOOK TRY {x}
+    private void encodeTry(Node node) {
+        add(LOOK);
+        add(TRY);
+        encode(node.left());
+    }
+
+    // {x&}  =  LOOK HAS {x}
+    private void encodeHas(Node node) {
+        add(LOOK);
+        add(HAS);
+        encode(node.left());
+    }
+
+    // {x!}  =  LOOK NOT {x}
+    private void encodeNot(Node node) {
+        add(LOOK);
+        add(NOT);
+        encode(node.left());
+    }
+
+    // {@}  =  DROP
+    private void encodeDrop(Node node) {
+        add(DROP);
+    }
+
+    // {@a}  =  a
+    private void encodeAct(Node node) {
+        add(node.name());
+    }
+
+    // {#e}  =  MARK n
+    private void encodeMark(Node node) {
+        add(MARK);
+        add(node.name());
+    }
+
+    // {%id}  =  TAG n
+    private void encodeTag(Node node) {
+        add(TAG);
+        add(node.text());
+    }
+
+    // {10}  =  CHAR 10
+    // {128}  =  STRING 2 194 128
+    private void encodeChar(Node node) {
+        int ch = node.value();
+        if (ch <= 255) add(CHAR, ch);
+        else add(STRING, Character.toChars(ch));
+    }
+
+    // {Nd}  =  CAT Nd
+    private void encodeCat(Node node) {
+        add(CAT);
+        add(node.text());
+    }
+
+    // {"a"}  =  CHAR 97
+    // {"ab"}  =  STRING 2 97 98
+    // {"π"}  =  STRING 2 207 128
+    // {""}  =  STRING 0
+    private void encodeString(Node node) {
+        int ch = node.value();
+        if (ch >= 0 && ch <= 255) add(CHAR, ch);
+        else add(STRING, text(node));
+    }
+
+    // {<a>}  =  BELOW 97
+    // {<ab>}  =  BELOWS 2 97 98
+    private void encodeDivider(Node node) {
+        int ch = node.value();
+        if (ch >= 0 && ch <= 255) add(BELOW, ch);
+        else add(BELOWS, text(node));
+    }
+
+    // {"a".."z"}  =  LOW 97 HIGH 122
+    // {'α'..'ω'}  =  LOWS 2 206 177 HIGHS 2 207 137
+    private void encodeRange(Node node) {
+        int ch = node.left().value();
+        if (ch >= 0 && ch <= 255) add(LOW, ch);
+        else add(LOWS, text(node));
+        ch = node.right().value();
+        if (ch >= 0 && ch <= 255) add(HIGH, ch);
+        else add(HIGHS, text(node));
+    }
+
+    // {'a'}  =  CHAR 97
+    // {'ab'}  =   SET 2 97 98
+    // {'αβ'}  =   SET2 4 206 177 206 178
+    // {'a'..'z'}  =   LOW 97 HIGH 122
+    // {'α'..'ω'}  =   LOWS 2 206 177 HIGHS 2 207 137
+    // {''}  =   SET 0
+    private void encodeSet(Node node) {
+        // TODO ensure all characters in a set have same UTF8 length
+        /*
+        'ab'      Set 'ab'    SET n "ab"
+                case Set:  // 's'  ->  SET n s
+                    text = text(node);
+                    add(SET);
+                    string(text);
+                    break;
+                    */
+
     }
 
     // Find the character array for a char/string/set node
-    char[] text(Node node) {
+    private char[] text(Node node) {
         switch (node.op()) {
         case Char:
             int base = node.text().startsWith("0") ? 16 : 10;
             int ch = Integer.parseInt(node.text(), base);
             return Character.toChars(ch);
-        case String: case Set:
+        case String: case Set: case Divider:
             String s = node.text();
             s = s.substring(1, s.length() - 1);
             return s.toCharArray();
@@ -277,8 +254,17 @@ Nd        Cat Nd      CAT Nd
         }
     }
 
+    // Add a string to the output, with possible preceding comma and newline.
     private void add(String s) {
-        if (output.length() > 0) output.append(", ");
+        int extra = 2 + s.length();
+        if (line + extra >= 80) {
+            line = extra;
+            output.append(",\n");
+        }
+        else {
+            line += extra;
+            if (output.length() > 0) output.append(", ");
+        }
         output.append(s);
         pc++;
     }
@@ -317,47 +303,4 @@ Nd        Cat Nd      CAT Nd
             add(arg);
         }
     }
-
-    void endLine() {
-        /*
-        int n = pc - linePc;
-        int a = .length();
-        for (int i=0; i<n; i++) .append(code[linePc+i] + ", ");
-        int b = .length();
-        for (int i=b-a; i<20; i++) .append(" ");
-        .append(comment);
-        comment.setLength(0);
-        linePc = pc;
-        */
-    }
-/*
-    void opcode(Op op) {
-        add((byte)op.ordinal());
-        comment.append(" " + op.toString().substring(1));
-    }
-    void arg1(int n) {
-        add((byte) n);
-        comment.append(" " + n);
-    }
-    void arg2(int n) {
-        add((byte)(n >> 8));
-        add((byte)(n & 0xFF));
-        comment.append(" " + n);
-    }
-    void string(char[] s) {
-        add((byte) s.length);
-        for (int i=0; i<s.length; i++) add((byte) s[i]);
-        comment.append(" " + '"');
-        for (int i=0; i<s.length; i++) comment.append(s[i]);
-        comment.append('"');
-    }
-
-    void add(int arg) { add((byte)(arg >> 8)); add((byte)(arg & 0xFF)); }
-    void add(Op op, int arg) { add(op); add(arg); }
-
-    void add(char[] chars) {
-        add((byte) chars.length);
-        for (int i=0; i<chars.length; i++) add((byte) chars[i]);
-    }
-    */
 }
