@@ -107,7 +107,7 @@ public class Test {
         for (Test test : tests) {
             if (line > 0 && test.lineNo != line) continue;
             if (test.isGrammar()) {
-                object.grammar(test.input());
+                object.test("GRAMMAR:\n" + test.input());
             }
             else if (test.isSubfile()) {
                 File f = new File(file);

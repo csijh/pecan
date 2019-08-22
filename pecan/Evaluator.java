@@ -57,17 +57,19 @@ public class Evaluator implements Testable {
         Test.run(program, line);
     }
 
-    // Set up grammar for subsequent tests
-    public void grammar(String g) {
-        grammar = g;
-        Stacker stacker = new Stacker();
-        root = stacker.run(grammar);
-        textInput = root.has(TextInput);
-    }
-
+    // Carry out a test, or set up grammar for subsequent tests
     public String test(String input) {
-        prepare(input);
-        return run();
+        if (input.startsWith("GRAMMAR:\n")) {
+            grammar = input.substring(9);
+            Stacker stacker = new Stacker();
+            root = stacker.run(grammar);
+            textInput = root.has(TextInput);
+            return null;
+        }
+        else {
+            prepare(input);
+            return run();
+        }
     }
 
     // Set the tracing flag.
@@ -269,11 +271,11 @@ public class Evaluator implements Testable {
             break;
         case Cat:
             ok = false;
-            int cats = node.value();
+            Category cat = Category.valueOf(node.name());
             if (in < input.length()) {
                 int ch = input.codePointAt(in);
-                int bit = 1 << Character.getType(ch);
-                ok = ((cats & bit) != 0);
+                Category c = Category.get(ch);
+                ok = c == cat || cat == Category.Uc;
                 if (ok) {
                     if (lookahead == 0 && out > 0) takeActions();
                     int n = Character.charCount(ch);
@@ -352,7 +354,7 @@ public class Evaluator implements Testable {
     private void takeAction(Node node) {
         if (node.op() == Drop) { start = in; return; }
         if (node.op() != Act) throw new Error("Expecting Act");
-        output.append(node.ref().text());
+        output.append(node.name());
         if (textInput && in > start) {
             output.append(" " + input.substring(start,in));
         }

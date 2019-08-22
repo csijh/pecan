@@ -71,16 +71,15 @@ class Run implements Testable {
         System.exit(1);
     }
 
-    // Set up grammar for subsequent tests.
-    public void grammar(String g) {
-        evaluator = new Evaluator();
-        if (tracing) evaluator.trace(true);
-        evaluator.grammar(g);
-    }
-
-    // Run a test passed from the Test class.
+    // Carry out a test, or set up grammar for subsequent tests
     public String test(String input) {
-        return evaluator.test(input);
+        if (input.startsWith("GRAMMAR:\n")) {
+            evaluator = new Evaluator();
+            if (tracing) evaluator.trace(true);
+            evaluator.grammar(g);
+            return null;
+        }
+        else return evaluator.test(input);
     }
 
 /*

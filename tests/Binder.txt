@@ -10,7 +10,7 @@ x = "x" @1act
 Rule x
   And "x" @1act
     String "x" 120
-    Act @1act 0
+    Act @1act
 ==========
 // A divider
 x = <abc> "y" / "z"
@@ -21,6 +21,12 @@ Rule x
       Divider <abc>
       String "y" 121
     String "z" 122
+==========
+// A token parser
+x = %t
+----------
+Rule x
+  Tag %t
 ==========
 // Brackets
 exp = (exp) END
@@ -138,11 +144,11 @@ Rule exp
         And "+" term @2add
           String "+" 43
           Id term
-          Act @2add 1
+          Act @2add
         And "-" term @2sub
           String "-" 45
           Id term
-          Act @2sub 2
+          Act @2sub
     Set ''
 Rule term
   And factor ("*" factor @2mul / "/" factor @2div)*
@@ -152,11 +158,11 @@ Rule term
         And "*" factor @2mul
           String "*" 42
           Id factor
-          Act @2mul 3
+          Act @2mul
         And "/" factor @2div
           String "/" 47
           Id factor
-          Act @2div 4
+          Act @2div
 Rule factor
   And primary ("^" factor @2pow)?
     Id primary
@@ -164,7 +170,7 @@ Rule factor
       And "^" factor @2pow
         String "^" 94
         Id factor
-        Act @2pow 5
+        Act @2pow
 Rule primary
   Or number / "(" exp ")"
     Id number
@@ -176,7 +182,7 @@ Rule number
   And digit+ @number
     Some digit+
       Id digit
-    Act @number 0
+    Act @number
 Rule digit
   Set '0123456789'
 ==========
@@ -208,12 +214,12 @@ Rule sum
       Id number
       String "+" 43
       Id number
-      Act @2add 1
+      Act @2add
 Rule number
   And ('0123456789')+ @read
     Some ('0123456789')+
       Set '0123456789'
-    Act @read 0
+    Act @read
 ==========
 // Error handling
 string = '"' visible* #badstring '"'
@@ -233,7 +239,7 @@ Rule visible
 upper = Lu
 ----------
 Rule upper
-  Cat Lu 2
+  Cat Lu
 ==========
 // Attempt to redefine category
 Lu = 'x'
@@ -296,7 +302,7 @@ Rule token
 Rule id
   And name @Id skip1
     Id name
-    Act @Id 0
+    Act @Id
     Id skip1
 Rule number
   And ('0' hex* / digit+) @Char skip1
@@ -307,7 +313,7 @@ Rule number
           Id hex
       Some digit+
         Id digit
-    Act @Char 1
+    Act @Char
     Id skip1
 Rule set
   And "'" ("'"! visible)* #BADSet "'" @Set skip1
@@ -319,7 +325,7 @@ Rule set
         Id visible
     Mark #BADSet
     String "'" 39
-    Act @Set 2
+    Act @Set
     Id skip1
 Rule string
   And '"' ('"'! visible)* #BADString '"' @String skip1
@@ -331,13 +337,13 @@ Rule string
         Id visible
     Mark #BADString
     Set '"' 34
-    Act @String 3
+    Act @String
     Id skip1
 Rule matcher
   And "%" name @MATCH skip1
     String "%" 37
     Id name
-    Act @MATCH 4
+    Act @MATCH
     Id skip1
 Rule action
   And "@" (digit+ name @Act / name @READ / @Drop) skip1
@@ -347,17 +353,17 @@ Rule action
         Some digit+
           Id digit
         Id name
-        Act @Act 5
+        Act @Act
       And name @READ
         Id name
-        Act @READ 6
-      Act @Drop 7
+        Act @READ
+      Act @Drop
     Id skip1
 Rule handler
   And "#" name @HAndLE skip1
     String "#" 35
     Id name
-    Act @HAndLE 8
+    Act @HAndLE
     Id skip1
 Rule key
   Or prefix skip2 / infix skip2 / postfix skip1
@@ -374,51 +380,51 @@ Rule prefix
   Or "(" @RB / "[" @SB / "<" @AB
     And "(" @RB
       String "(" 40
-      Act @RB 9
+      Act @RB
     And "[" @SB
       String "[" 91
-      Act @SB 10
+      Act @SB
     And "<" @AB
       String "<" 60
-      Act @AB 11
+      Act @AB
 Rule infix
   Or "=" @Id / "/" @SL / ".." @DD
     And "=" @Id
       String "=" 61
-      Act @Id 0
+      Act @Id
     And "/" @SL
       String "/" 47
-      Act @SL 12
+      Act @SL
     And ".." @DD
       String ".."
-      Act @DD 13
+      Act @DD
 Rule postfix
   Or "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
     And "!" @EM
       String "!" 33
-      Act @EM 14
+      Act @EM
     And "?" @QM
       String "?" 63
-      Act @QM 15
+      Act @QM
     And "+" @PL
       String "+" 43
-      Act @PL 16
+      Act @PL
     And "*" @ST
       String "*" 42
-      Act @ST 17
+      Act @ST
     And ")" @RE
       String ")" 41
-      Act @RE 18
+      Act @RE
     And "]" @SE
       String "]" 93
-      Act @SE 19
+      Act @SE
     And ">" @AE
       String ">" 62
-      Act @AE 20
+      Act @AE
 Rule bad
   And #BADSet Uc skip1
     Mark #BADSet
-    Cat Uc -268435457
+    Cat Uc
     Id skip1
 Rule skip
   And (space / comment / newline)* @
@@ -443,7 +449,7 @@ Rule skip1
                 Or letter / newline
                   Id letter
                   Id newline
-            Act @NL 21
+            Act @NL
         Id skip
 Rule skip2
   And space (newline space)? @

@@ -96,15 +96,18 @@ class Node {
     void start(int s) { start = s; }
     void end(int e) { end = e; }
 
-    // The name is the text without decoration.
+    // The name is the text, without decoration, i.e. #x -> x, %x -> x,
+    // @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab
     String name() {
         switch (op) {
-            case Mark: return source.substring(start+1, end);
-            case Tag: return source.substring(start+1, end);
-            case Act:
-                int i = start + 1;
-                while (Character.isDigit(source.charAt(i))) i++;
-                return source.substring(i, end);
+        case Mark: return source.substring(start+1, end);
+        case Tag: return source.substring(start+1, end);
+        case Act:
+            int i = start + 1;
+            while (Character.isDigit(source.charAt(i))) i++;
+            return source.substring(i, end);
+        case String: case Set: case Divider:
+            return source.substring(start+1, end-1);
         }
         return text();
     }

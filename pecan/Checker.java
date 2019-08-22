@@ -51,9 +51,6 @@ class Checker implements Testable {
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
-    // Each test has a grammar as input, so this method is not used.
-    public void grammar(String g) { }
-
     public String test(String g) {
         try { return "" + run(g); }
         catch (Exception e) { return e.getMessage() + "\n"; }

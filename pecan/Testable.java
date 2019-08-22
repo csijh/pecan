@@ -3,12 +3,11 @@
 package pecan;
 
 /* A pecan class implements this interface to allow generic testing using the
-Test class. For many classes, the test input is a grammar, but for some classes
-and for user testing, the input is a grammar and an input string. */
+Test class. */
 
 interface Testable {
-    // Set up a grammar for subsequent tests.
-    void grammar(String g);
     // Run a test on an object, with input and output expressed as strings.
+    // If the input is prefixed with "GRAMMAR:\n" it is a grammar to be used
+    // for subsequent tests.
     String test(String in);
 }

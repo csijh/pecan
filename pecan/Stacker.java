@@ -47,9 +47,6 @@ class Stacker implements Testable {
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
 
-    // Each test has a grammar as input, so this method is not used.
-    public void grammar(String g) { }
-
     public String test(String g) {
         return "" + run(g);
     }
@@ -94,7 +91,7 @@ class Stacker implements Testable {
         case Mark:
             nNet = 0;   break;
         case Act:
-            int arity = node.ref().value();
+            int arity = node.value();
             nNet = 1-arity;
             break;
         case Id:
@@ -154,7 +151,7 @@ class Stacker implements Testable {
         case Cat: case Tag: case Mark:
             break;
         case Act:
-            int arity = node.ref().value();
+            int arity = node.value();
             nLow = -arity;
             break;
         case Id:

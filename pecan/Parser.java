@@ -25,13 +25,11 @@ class Parser implements Testable {
         NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, TAG, END_OF_TEXT
     }
 
-    // Each test has a grammar as input, so this method is not used.
-    public void grammar(String g) { }
-
     public String test(String g) {
         return "" + run(g);
     }
 
+    // Record an error marker for the current input position.
     private boolean mark(Marker m) {
         if (lookahead > 0) return true;
         if (marked > in) throw new Error("marked " + marked + " in " + in);
@@ -43,8 +41,10 @@ class Parser implements Testable {
         return true;
     }
 
+    // Produce an error message from the markers at the current input position.
     private String message() {
         String s = "";
+        if (marked < in) markers.clear();
         for (Marker m : markers) {
             if (s.length() > 0) s = s + ", ";
             s = s + m.toString().toLowerCase();

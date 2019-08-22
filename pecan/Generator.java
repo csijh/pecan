@@ -23,9 +23,6 @@ class Generator implements Testable {
         else Test.run(new Generator(), Integer.parseInt(args[0]));
     }
 
-    // Each test has a grammar as input, so this method is not used.
-    public void grammar(String g) { }
-
     public String test(String g) {
         return "" + run(g);
     }

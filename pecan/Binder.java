@@ -9,14 +9,10 @@ import static pecan.Node.Flag.*;
 import static java.lang.Character.*;
 
 /* Carry out binding:
-Create cross-references from ids to their definitions.
-Recognise unicode category names.
-Check for missing or duplicate definitions.
-For tags and markers, remove the % or # from the name.
-For actions set the value to the arity and remove the @ and arity from the name.
-Check consistency of action arities, and add a node for the name and arity.
+Check for missing or duplicate definitions, or definitions of category names.
+Create cross-references from ids to their definitions, recognise category names.
+For actions, set the value to the arity, and check consistency of the arities.
 Check that a set consists of distinct characters of the same UTF8 length.
-For strings and sets and dividers, remove the quotes from the name.
 For matchers which represent single characters, set the value to the code.
 Check that numerical character codes are in the range 0..1114111.
 Check that both ends of a range are single characters.
@@ -25,18 +21,16 @@ Check whether the grammar has text or tokens as input. */
 
 class Binder implements Testable {
     private String source;
+    private Node root;
     private Set<String> cats;
-    private Map<String,Node> rules;
-    private Map<String,Integer> tags, markers, actions;
+    private HashMap<String,Node> rules;
+    private Map<String,Integer> arities;
 
     public static void main(String[] args) {
         if (args.length == 0) Parser.main(args);
         if (args.length == 0) Test.run(new Binder());
         else Test.run(new Parser(), Integer.parseInt(args[0]));
     }
-
-    // Each test has a grammar as input, so this method is not used.
-    public void grammar(String g) { }
 
     public String test(String g) {
         return "" + run(g);
@@ -46,7 +40,7 @@ class Binder implements Testable {
     Node run(String s) {
         source = s;
         Parser parser = new Parser();
-        Node root = parser.run(source);
+        root = parser.run(source);
         if (root.op() == Error) return root;
         try { return bind(root); }
         catch (Exception e) {
@@ -56,122 +50,137 @@ class Binder implements Testable {
         }
     }
 
-    // Bind a grammar. Gather the names, then allocate, then scan the nodes.
-    Node bind(Node root) throws Exception {
+    // Bind a grammar. Gather the categories, scan the nodes, classify.
+    private Node bind(Node root) throws Exception {
         cats = new HashSet<String>();
         for (Category cat : Category.values()) cats.add(cat.toString());
-        rules = new LinkedHashMap<String,Node>();
-        tags = new LinkedHashMap<String,Integer>();
-        markers = new TreeMap<String,Integer>();
-        actions = new LinkedHashMap<String,Integer>();
-        gather(root);
-        allocate();
+        rules = new HashMap<String,Node>();
+        arities = new HashMap<String,Integer>();
         scan(root);
         classify(root);
         return root;
     }
 
-    // Gather all rule, tag, marker and action names, top down.
-    // Check rule names for unicode ids or duplicates.
-    // For rules, set the value to the sequence number.
-    // Convert ids which are category names into category nodes.
-    // For actions, temporarily record the arity of each name.
-    // For actions, create an Id node representing the name and arity.
-    // Then for a duplicate action, check that the arity matches.
-    private void gather(Node node) throws Exception {
-        String name;
-        boolean defined;
-        switch (node.op()) {
-        case Rule:
-            name = node.text();
-            if (cats.contains(name)) err(node, name + " is a unicode id");
-            defined = rules.get(name) != null;
-            if (defined) err(node, name + " is already defined");
-            node.value(rules.size());
-            rules.put(name, node);
-            break;
-        case Tag:
-            name = node.text().substring(1);
-            defined = tags.get(name) != null;
-            if (! defined) tags.put(name, 0);
-            break;
-        case Id:
-            name = node.text();
-            if (cats.contains(name)) node.op(Cat);
-            break;
-        case Mark:
-            name = node.text().substring(1);
-            defined = markers.get(name) != null;
-            if (! defined) markers.put(name, 0);
-            break;
-        case Act:
-            name = node.text();
-            int p = 1;
-            while (Character.isDigit(name.charAt(p))) p++;
-            int arity = 0;
-            if (p > 1) arity = Integer.parseInt(name.substring(1, p));
-            name = name.substring(p);
-            int s = node.start();
-            node.ref(new Node(Id, source, s+p, s+p + name.length()));
-            node.ref().value(arity);
-            defined = actions.get(name) != null;
-            if (! defined) actions.put(name, arity);
-            else {
-                int old = actions.get(name);
-                if (arity != old) err(node, "clashes with @" + old + name);
-            }
-            break;
-        default:
-            break;
-        }
-        if (node.left() != null) gather(node.left());
-        if (node.left() != null && node.right() != null) gather(node.right());
-    }
-
-    // Allocate sequence numbers to tags, markers and actions.
-    // Sort actions by arity first.
-    private void allocate() {
-        int seq = 0;
-        for (String name : tags.keySet()) tags.put(name, seq++);
-        seq = 0;
-        for (String name : markers.keySet()) markers.put(name, seq++);
-        seq = 0;
-        String[] acts = new String[actions.size()];
-        actions.keySet().toArray(acts);
-        for (int i=1; i<acts.length; i++) {
-            String s = acts[i];
-            int a = actions.get(s);
-            int j=i;
-            for (; j>0 && actions.get(acts[j-1]) > a; j--) acts[j] = acts[j-1];
-            acts[j] = s;
-        }
-        for (String s : acts) actions.put(s, seq++);
-    }
-
     // Traverse the tree, bottom up, and check each node.
-    // For tags, markers and actions, set value to sequence number.
     private void scan(Node node) throws Exception {
         if (node.left() != null) scan(node.left());
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
-        case Rule: case And: case Or: case Opt: case Many:
-        case Some: case Drop: case Has: case Not: case Try: break;
+        case And: case Or: case Opt: case Many: case Some: case Drop:
+        case Has: case Not: case Try: case Mark: case Tag: case Cat:
+            break;
+        case Rule: bindRule(node); break;
         case Id: bindId(node); break;
         case Char: bindChar(node); break;
         case String: bindString(node); break;
         case Divider: bindDivider(node); break;
         case Set: bindSet(node); break;
         case Range: bindRange(node); break;
-        case Cat: bindCat(node); break;
-        case Mark: bindMark(node); break;
         case Act: bindAct(node); break;
-        case Tag: bindTag(node); break;
         default: throw new Error("Type " + node.op() + " not implemented");
         }
     }
 
+    // Check that a rule name is not a unicode id or duplicate.
+    private void bindRule(Node node) throws Exception {
+        String name = node.name();
+        if (cats.contains(name)) err(node, name + " is a unicode id");
+        Node dup = rules.get(name);
+        if (dup != null) err(dup, name + " is already defined");
+        rules.put(name, node);
+    }
+
+    // Convert ids which are category names into category nodes.
+    // Bind an id to its defining rule, creating a cross-reference.
+    private void bindId(Node node) throws Exception {
+        String name = node.text();
+        if (cats.contains(name)) node.op(Cat);
+        else {
+            Node rule;
+            for (rule = root; rule != null; rule = rule.right()) {
+                if (name.equals(rule.name())) break;
+            }
+            if (rule == null) err(node, "unknown name");
+            node.ref(rule);
+        }
+    }
+
+    // Find the character code represented by a number, and check in range.
+    private void bindChar(Node node) throws Exception {
+        int ch;
+        if (node.text().charAt(0) != '0') ch = Integer.parseInt(node.text());
+        else ch = Integer.parseInt(node.text(), 16);
+        if (ch > 1114111) err(node, "number too big");
+        node.value(ch);
+        node.note("" + ch);
+    }
+
+    // Check whether a string is a character.
+    private void bindString(Node node) {
+        node.value(-1);
+        int n = node.text().codePointCount(1, node.text().length() - 1);
+        if (n != 1) return;
+        node.value(node.text().codePointAt(1));
+        node.note("" + node.value());
+    }
+
+    // Check whether a divider is a character.
+    private void bindDivider(Node node) {
+        bindString(node);
+    }
+
+    // Check that a set consists of distinct characters of the same UTF8 length.
+    // Check whether it is a single character.
+    private void bindSet(Node node) throws Exception {
+        String chars = node.text();
+        chars = chars.substring(1, chars.length() - 1);
+        int len = 0;
+        for (int i=0; i<chars.length(); ) {
+            int c1 = chars.codePointAt(i);
+            int c1n = Character.charCount(c1);
+            if (len == 0) len = c1n;
+            else if (c1n != len) err(node, "set not UTF8 balanced");
+            i += c1n;
+            for (int j=i; j<chars.length(); ) {
+                int c2 = chars.codePointAt(j);
+                j += Character.charCount(c2);
+                if (c1 != c2) continue;
+                err(node, "set contains duplicate character");
+            }
+        }
+        node.value(-1);
+        int n = node.text().codePointCount(1, node.text().length() - 1);
+        if (n != 1) return;
+        node.value(node.text().codePointAt(1));
+        node.note("" + node.value());
+    }
+
+    // Check that a range has a single character at each end and is non-empty.
+    private void bindRange(Node node) throws Exception {
+        int from = node.left().value();
+        int to = node.right().value();
+        if (from < 0) err(node.left(), "expecting single character");
+        if (to < 0) err(node.right(), "expecting single character");
+        if (to < from) err(node, "empty range");
+    }
+
+    // Check that actions with the same name have the same arities.
+    // Set the value of an action node to its arity.
+    private void bindAct(Node node) throws Exception {
+        String text = node.text();
+        String name = node.name();
+        int p = 1;
+        while (Character.isDigit(text.charAt(p))) p++;
+        int arity = 0;
+        if (p > 1) arity = Integer.parseInt(text.substring(1, p));
+        node.value(arity);
+        Integer old = arities.get(name);
+        if (old == null) arities.put(name, arity);
+        else if (arity != old) err(node, "clashes with @" + old + name);
+    }
+
     // Calculate the TextInput and TokenInput flags.
-    void classify(Node node)  throws Exception {
+    private void classify(Node node)  throws Exception {
         boolean xTxt = false, yTxt = false, xTok = false, yTok = false;
         Node x = node.left(), y = node.right();
         if (x != null) {
@@ -211,101 +220,6 @@ class Binder implements Testable {
         if (node.op() == Rule && node.value() == 0) {
             if (! node.has(TokenInput)) node.set(TextInput);
         }
-    }
-
-    // Bind an id to its defining rule, creating a cross-reference.
-    private void bindId(Node node) throws Exception {
-        String name = node.text();
-        Node rule = rules.get(name);
-        if (rule == null) err(node, "unknown name");
-        node.ref(rule);
-    }
-
-    // Find the character code represented by a number and check in range.
-    private void bindChar(Node node) throws Exception {
-        int ch;
-        if (node.text().charAt(0) != '0') ch = Integer.parseInt(node.text());
-        else ch = Integer.parseInt(node.text(), 16);
-        if (ch > 1114111) err(node, "number too big");
-        node.value(ch);
-        node.note("" + ch);
-    }
-
-    // Check whether a string is a character.
-    private void bindString(Node node) {
-        node.value(-1);
-        int n = node.text().codePointCount(1, node.text().length() - 1);
-        if (n != 1) return;
-        node.value(node.text().codePointAt(1));
-        node.note("" + node.value());
-    }
-
-    // Check whether a divider is a character.
-    private void bindDivider(Node node) {
-        node.value(-1);
-        int n = node.text().codePointCount(1, node.text().length() - 1);
-        if (n != 1) return;
-        node.value(node.text().codePointAt(1));
-        node.note("" + node.value());
-    }
-
-    // Check that a set has distinct ASCII characters.
-    // Check whether it is a single character.
-    private void bindSet(Node node) throws Exception {
-        String chars = node.text();
-        chars = chars.substring(1, chars.length() - 1);
-        for (int i=0; i<chars.length(); ) {
-            int c1 = chars.codePointAt(i);
-            if (c1 >= 128) err(node, "set contains non-ascii character");
-            i += Character.charCount(c1);
-            for (int j=i; j<chars.length(); ) {
-                int c2 = chars.codePointAt(j);
-                j += Character.charCount(c2);
-                if (c1 != c2) continue;
-                err(node, "set contains duplicate character");
-            }
-        }
-        node.value(-1);
-        int n = node.text().codePointCount(1, node.text().length() - 1);
-        if (n != 1) return;
-        node.value(node.text().codePointAt(1));
-        node.note("" + node.value());
-    }
-
-    // Check that a range has a single character at each end and is non-empty.
-    private void bindRange(Node node) throws Exception {
-        int from = node.left().value();
-        int to = node.right().value();
-        if (from < 0) err(node.left(), "expecting single character");
-        if (to < 0) err(node.right(), "expecting single character");
-        if (to < from) err(node, "empty range");
-    }
-
-    // Bind a category: the value is a bit or bits.
-    private void bindCat(Node node) throws Exception {
-        Category cat = Category.valueOf(node.text());
-        node.value((cat == Category.Uc) ? 0xEFFFFFFF : (1 << cat.ordinal()));
-        node.note("" + node.value());
-    }
-
-    // Bind a marker. Remove the # from the name.
-    private void bindMark(Node node) throws Exception {
-//        node.start(node.start() + 1);
-//        node.value(markers.get(node.text().substring(1)));
-//        node.note("" + node.value());
-    }
-
-    // Bind a tag.
-    private void bindTag(Node node) throws Exception {
-        node.value(tags.get(node.text().substring(1)));
-        node.note("" + node.value());
-    }
-
-    // Bind an action
-    private void bindAct(Node node) throws Exception {
-        String name = node.ref().text();
-        node.value(actions.get(name));
-        node.note("" + node.value());
     }
 
     // Report an error and stop.
