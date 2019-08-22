@@ -2,14 +2,14 @@
 x = "a"
 ----------
 Rule x
-  String "a" 97
+  Char "a" 97
 ==========
 // One call action
 x = "x" @1act
 ----------
 Rule x
   And "x" @1act
-    String "x" 120
+    Char "x" 120
     Act @1act
 ==========
 // A divider
@@ -19,8 +19,8 @@ Rule x
   Or <abc> "y" / "z"
     And <abc> "y"
       Divider <abc>
-      String "y" 121
-    String "z" 122
+      Char "y" 121
+    Char "z" 122
 ==========
 // A token parser
 x = %t
@@ -67,9 +67,9 @@ char = "\195101"
 x = "x"
 ----------
 Rule char
-  String "\195101" 195101
+  Char "\195101" 195101
 Rule x
-  String "x" 120
+  Char "x" 120
 ==========
 // Bad range
 s = 'ab..c'
@@ -142,11 +142,11 @@ Rule exp
     Any ("+" term @2add / "-" term @2sub)*
       Or "+" term @2add / "-" term @2sub
         And "+" term @2add
-          String "+" 43
+          Char "+" 43
           Id term
           Act @2add
         And "-" term @2sub
-          String "-" 45
+          Char "-" 45
           Id term
           Act @2sub
     Set ''
@@ -156,11 +156,11 @@ Rule term
     Any ("*" factor @2mul / "/" factor @2div)*
       Or "*" factor @2mul / "/" factor @2div
         And "*" factor @2mul
-          String "*" 42
+          Char "*" 42
           Id factor
           Act @2mul
         And "/" factor @2div
-          String "/" 47
+          Char "/" 47
           Id factor
           Act @2div
 Rule factor
@@ -168,16 +168,16 @@ Rule factor
     Id primary
     Opt ("^" factor @2pow)?
       And "^" factor @2pow
-        String "^" 94
+        Char "^" 94
         Id factor
         Act @2pow
 Rule primary
   Or number / "(" exp ")"
     Id number
     And "(" exp ")"
-      String "(" 40
+      Char "(" 40
       Id exp
-      String ")" 41
+      Char ")" 41
 Rule number
   And digit+ @number
     Some digit+
@@ -212,7 +212,7 @@ Rule sum
     Id number
     And number "+" number @2add
       Id number
-      String "+" 43
+      Char "+" 43
       Id number
       Act @2add
 Rule number
@@ -227,13 +227,13 @@ visible = "x"
 ----------
 Rule string
   And '"' visible* #badstring '"'
-    Set '"' 34
+    Char '"' 34
     Any visible*
       Id visible
     Mark #badstring
-    Set '"' 34
+    Char '"' 34
 Rule visible
-  String "x" 120
+  Char "x" 120
 ==========
 // Unicode category
 upper = Lu
@@ -308,7 +308,7 @@ Rule number
   And ('0' hex* / digit+) @Char skip1
     Or '0' hex* / digit+
       And '0' hex*
-        Set '0' 48
+        Char '0' 48
         Any hex*
           Id hex
       Some digit+
@@ -317,37 +317,37 @@ Rule number
     Id skip1
 Rule set
   And "'" ("'"! visible)* #BADSet "'" @Set skip1
-    String "'" 39
+    Char "'" 39
     Any ("'"! visible)*
       And "'"! visible
         Not "'"!
-          String "'" 39
+          Char "'" 39
         Id visible
     Mark #BADSet
-    String "'" 39
+    Char "'" 39
     Act @Set
     Id skip1
 Rule string
   And '"' ('"'! visible)* #BADString '"' @String skip1
-    Set '"' 34
+    Char '"' 34
     Any ('"'! visible)*
       And '"'! visible
         Not '"'!
-          Set '"' 34
+          Char '"' 34
         Id visible
     Mark #BADString
-    Set '"' 34
+    Char '"' 34
     Act @String
     Id skip1
 Rule matcher
   And "%" name @MATCH skip1
-    String "%" 37
+    Char "%" 37
     Id name
     Act @MATCH
     Id skip1
 Rule action
   And "@" (digit+ name @Act / name @READ / @Drop) skip1
-    String "@" 64
+    Char "@" 64
     Or digit+ name @Act / name @READ / @Drop
       And digit+ name @Act
         Some digit+
@@ -361,7 +361,7 @@ Rule action
     Id skip1
 Rule handler
   And "#" name @HAndLE skip1
-    String "#" 35
+    Char "#" 35
     Id name
     Act @HAndLE
     Id skip1
@@ -379,21 +379,21 @@ Rule key
 Rule prefix
   Or "(" @RB / "[" @SB / "<" @AB
     And "(" @RB
-      String "(" 40
+      Char "(" 40
       Act @RB
     And "[" @SB
-      String "[" 91
+      Char "[" 91
       Act @SB
     And "<" @AB
-      String "<" 60
+      Char "<" 60
       Act @AB
 Rule infix
   Or "=" @Id / "/" @SL / ".." @DD
     And "=" @Id
-      String "=" 61
+      Char "=" 61
       Act @Id
     And "/" @SL
-      String "/" 47
+      Char "/" 47
       Act @SL
     And ".." @DD
       String ".."
@@ -401,25 +401,25 @@ Rule infix
 Rule postfix
   Or "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
     And "!" @EM
-      String "!" 33
+      Char "!" 33
       Act @EM
     And "?" @QM
-      String "?" 63
+      Char "?" 63
       Act @QM
     And "+" @PL
-      String "+" 43
+      Char "+" 43
       Act @PL
     And "*" @ST
-      String "*" 42
+      Char "*" 42
       Act @ST
     And ")" @RE
-      String ")" 41
+      Char ")" 41
       Act @RE
     And "]" @SE
-      String "]" 93
+      Char "]" 93
       Act @SE
     And ">" @AE
-      String ">" 62
+      Char ">" 62
       Act @AE
 Rule bad
   And #BADSet Uc skip1
@@ -468,23 +468,23 @@ Rule hex
   Or digit / 'A..F' / 'a..f'
     Id digit
     Range 'A..F'
-      Set 'A. 65
-      Set .F' 70
+      Char 'A. 65
+      Char .F' 70
     Range 'a..f'
-      Set 'a. 97
-      Set .f' 102
+      Char 'a. 97
+      Char .f' 102
 Rule digit
   Range '0..9'
-    Set '0. 48
-    Set .9' 57
+    Char '0. 48
+    Char .9' 57
 Rule letter
   Or 'A..Z' / 'a..z'
     Range 'A..Z'
-      Set 'A. 65
-      Set .Z' 90
+      Char 'A. 65
+      Char .Z' 90
     Range 'a..z'
-      Set 'a. 97
-      Set .z' 122
+      Char 'a. 97
+      Char .z' 122
 Rule alpha
   Or letter / digit / '_-'
     Id letter
@@ -504,8 +504,8 @@ Rule newline
     Char 13 13
 Rule visible
   Range ' ..~'
-    Set ' . 32
-    Set .~' 126
+    Char ' . 32
+    Char .~' 126
 Rule comment
   And "//" visible*
     String "//"
@@ -513,4 +513,4 @@ Rule comment
       Id visible
 Rule space
   Any " "*
-    String " " 32
+    Char " " 32

@@ -64,7 +64,8 @@ public class Evaluator implements Testable {
             Stacker stacker = new Stacker();
             root = stacker.run(grammar);
             textInput = root.has(TextInput);
-            return null;
+            if (root.op() == Error) return root.note();
+            else return null;
         }
         else {
             prepare(input);

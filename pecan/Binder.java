@@ -57,7 +57,10 @@ class Binder implements Testable {
         rules = new HashMap<String,Node>();
         arities = new HashMap<String,Integer>();
         scan(root);
-        classify(root);
+        if (root.has(TextInput) && root.has(TokenInput)) {
+            err(root, "there is both text and token input");
+        }
+//        classify(root);
         return root;
     }
 
@@ -67,8 +70,10 @@ class Binder implements Testable {
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
         case And: case Or: case Opt: case Any: case Some: case Drop:
-        case Has: case Not: case Try: case Mark: case Tag: case Cat:
+        case Has: case Not: case Try: case Mark:
             break;
+        case Cat: bindCat(node); break;
+        case Tag: bindTag(node); break;
         case Rule: bindRule(node); break;
         case Id: bindId(node); break;
         case Char: bindChar(node); break;
@@ -79,6 +84,16 @@ class Binder implements Testable {
         case Act: bindAct(node); break;
         default: throw new Error("Type " + node.op() + " not implemented");
         }
+    }
+
+    // Set the TokenInput flag on the root node.
+    private void bindCat(Node node) {
+        root.set(TokenInput);
+    }
+
+    // Set the TokenInput flag on the root node.
+    private void bindTag(Node node) {
+        root.set(TokenInput);
     }
 
     // Check that a rule name is not a unicode id or duplicate.
@@ -94,7 +109,10 @@ class Binder implements Testable {
     // Bind an id to its defining rule, creating a cross-reference.
     private void bindId(Node node) throws Exception {
         String name = node.text();
-        if (cats.contains(name)) node.op(Cat);
+        if (cats.contains(name)) {
+            node.op(Cat);
+            root.set(TextInput);
+        }
         else {
             Node rule;
             for (rule = root; rule != null; rule = rule.right()) {
@@ -106,6 +124,7 @@ class Binder implements Testable {
     }
 
     // Find the character code represented by a number, and check in range.
+    // Set the TextInput flag on the root node.
     private void bindChar(Node node) throws Exception {
         int ch;
         if (node.text().charAt(0) != '0') ch = Integer.parseInt(node.text());
@@ -113,31 +132,44 @@ class Binder implements Testable {
         if (ch > 1114111) err(node, "number too big");
         node.value(ch);
         node.note("" + ch);
+        root.set(TextInput);
     }
 
     // Check whether a string is a character.
+    // Set the TextInput flag on the root node.
     private void bindString(Node node) {
         node.value(-1);
         int n = node.text().codePointCount(1, node.text().length() - 1);
+        if (n != 0) root.set(TextInput);
+        if (n != 1) return;
+        node.op(Char);
+        node.value(node.text().codePointAt(1));
+        node.note("" + node.value());
+    }
+
+    // Check whether a divider has one character.
+    // Set the TextInput flag on the root node.
+    private void bindDivider(Node node) {
+        node.value(-1);
+        int n = node.text().codePointCount(1, node.text().length() - 1);
+        if (n != 0) root.set(TextInput);
         if (n != 1) return;
         node.value(node.text().codePointAt(1));
         node.note("" + node.value());
     }
 
-    // Check whether a divider is a character.
-    private void bindDivider(Node node) {
-        bindString(node);
-    }
-
     // Check whether a set is a single character.
     // Recognize ranges 'a..z' and create character subnodes.
     // Check that a set consists of distinct characters.
+    // Set the TextInput flag on the root node.
     private void bindSet(Node node) throws Exception {
         node.value(-1);
         String text = node.text();
         int n = text.codePointCount(1, text.length() - 1);
+        if (n != 0) root.set(TextInput);
         if (n == 0) return;
         if (n == 1) {
+            node.op(Char);
             node.value(text.codePointAt(1));
             node.note("" + node.value());
             return;
@@ -170,7 +202,9 @@ class Binder implements Testable {
     }
 
     // Check that a range has a single character at each end and is non-empty.
+    // Set the TextInput flag on the root node.
     private void bindRange(Node node) throws Exception {
+        root.set(TextInput);
         int from = node.left().value();
         int to = node.right().value();
         if (from < 0) err(node.left(), "expecting single character");
@@ -191,49 +225,6 @@ class Binder implements Testable {
         Integer old = arities.get(name);
         if (old == null) arities.put(name, arity);
         else if (arity != old) err(node, "clashes with @" + old + name);
-    }
-
-    // Calculate the TextInput and TokenInput flags.
-    private void classify(Node node)  throws Exception {
-        boolean xTxt = false, yTxt = false, xTok = false, yTok = false;
-        Node x = node.left(), y = node.right();
-        if (x != null) {
-            classify(x);
-            xTxt = x.has(TextInput);
-            xTok = x.has(TokenInput);
-        }
-        if (y != null) {
-            classify(y);
-            yTxt = y.has(TextInput);
-            yTok = y.has(TokenInput);
-        }
-        if (xTxt || yTxt) node.set(TextInput);
-        if (xTok || yTok) node.set(TokenInput);
-        switch (node.op()) {
-        case Id:
-            if (node.ref().has(TextInput)) node.set(TextInput);
-            if (node.ref().has(TokenInput)) node.set(TokenInput);
-            break;
-        case Tag:
-            node.set(TokenInput);
-            break;
-        case Char: case Range: case Cat:
-            node.set(TextInput);
-            break;
-        case String: case Divider:
-            if (! node.text().equals("\"\"")) node.set(TextInput);
-            break;
-        case Set:
-            if (! node.text().equals("''")) node.set(TextInput);
-            break;
-        default: break;
-        }
-        if (node.has(TextInput) && node.has(TokenInput)) {
-            err(node, "there is both text and token input");
-        }
-        if (node.op() == Rule && node.value() == 0) {
-            if (! node.has(TokenInput)) node.set(TextInput);
-        }
     }
 
     // Report an error and stop.

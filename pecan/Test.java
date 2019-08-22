@@ -107,7 +107,12 @@ public class Test {
         for (Test test : tests) {
             if (line > 0 && test.lineNo != line) continue;
             if (test.isGrammar()) {
-                object.test("GRAMMAR:\n" + test.input());
+                String out = object.test("GRAMMAR:\n" + test.input());
+                if (out == null) out = "";
+                String message = test.check(out);
+                if (message == null) continue;
+                System.err.println(message);
+                System.exit(1);
             }
             else if (test.isSubfile()) {
                 File f = new File(file);

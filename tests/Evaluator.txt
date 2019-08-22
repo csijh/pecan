@@ -32,15 +32,6 @@ sum16a.txt
 ==========
 sum16b.txt
 ==========
-// Bad grammar
-rule
-==========
-2
-----------
-Error on line 2: expecting equals
-rule
-    ^
-==========
 // Try succeeds
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
