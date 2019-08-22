@@ -4,14 +4,14 @@ expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
 number = digit+ @number gap
-plus = #operator "+" gap
-minus = #operator "-" gap
-times = #operator "*" gap
-over = #operator "/" gap
-open = #bracket "(" gap
-close = #bracket ")" gap
-digit = #digit "0".."9"
-gap = (" ")* @
+plus = #operator '+' gap
+minus = #operator '-' gap
+times = #operator '*' gap
+over = #operator '/' gap
+open = #bracket '(' gap
+close = #bracket ')' gap
+digit = #digit '0..9'
+gap = (' ')* @
 end = #newline 13? 10 @
 ==========
 2

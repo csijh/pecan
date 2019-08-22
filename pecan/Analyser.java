@@ -149,7 +149,7 @@ class Analyser implements Test.Callable {
             if (ch < 128) add(node.FIRST(), ch);
             else add(node.START(), 128 + Character.getType(ch));
             break;
-        case Some: case Many: case Opt:
+        case Some: case Any: case Opt:
             add(node.FIRST(), x.FIRST());
             add(node.START(), x.START());
             add(x.FOLLOW(), node.FOLLOW());

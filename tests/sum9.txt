@@ -1,6 +1,6 @@
 // Tutorial step 9 (multiple additions)
-sum = number ("+" @ number @2add)* end
-number = ("0".."9")+ @number
+sum = number ('+' @ number @2add)* end
+number = ('0..9')+ @number
 end = 13? 10 @
 ==========
 2

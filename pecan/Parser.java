@@ -110,14 +110,15 @@ class Parser implements Testable {
     private boolean postop() {
         return (
             postfix('?', Opt) ||
-            postfix('*', Many) ||
+            postfix('*', Any) ||
             postfix('+', Some) ||
             postfix('&', Has) ||
             postfix('!', Not)
         );
     }
 
-    // atom = id / action / marker / tag / range / divider / try / bracket
+    // atom = id / action / marker / tag /
+    //     string / set / range / divider / try / bracket
     private boolean atom() {
         int in0 = in;
         return (
@@ -125,6 +126,8 @@ class Parser implements Testable {
             in == in0 && action() ||
             in == in0 && marker() ||
             in == in0 && tag() ||
+            in == in0 && string() ||
+            in == in0 && set() ||
             in == in0 && range() ||
             in == in0 && divider() ||
             in == in0 && try_() ||
@@ -132,21 +135,11 @@ class Parser implements Testable {
         );
     }
 
-    // range = text (dots text @2range)?
+    // range = number (dots number @2range)?
     private boolean range() {
-        if (! text()) return false;
+        if (! number()) return false;
         int in0 = in;
-        return dots() && text() && doInfix(Range) || in == in0;
-    }
-
-    // text = number / string / set
-    private boolean text() {
-        int in0 = in;
-        return (
-            number() ||
-            in == in0 && string() ||
-            in == in0 && set()
-        );
+        return dots() && number() && doInfix(Range) || in == in0;
     }
 
     // try = sb expression se @3try
@@ -208,6 +201,7 @@ class Parser implements Testable {
     }
 
     // set = "'" ("'"! visible)* #quote "'" @set gap
+    // (includes ranges 'a..z')
     private boolean set() {
         if (! accept('\'')) return false;
         while (! look('\'') && visible()) { }

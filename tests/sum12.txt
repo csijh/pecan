@@ -1,9 +1,9 @@
 // Tutorial step 12 (full error reporting)
 sum = number (plus number @2add / minus number @2subtract)* end
 number = digit+ @number
-plus = #operator "+" @
-minus = #operator "-" @
-digit = #digit "0".."9"
+plus = #operator '+' @
+minus = #operator '-' @
+digit = #digit '0..9'
 end = #newline 13? 10 @
 ==========
 2

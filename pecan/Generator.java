@@ -54,7 +54,7 @@ class Generator implements Testable {
             case Or:        encodeOr(node);         break;
             case And:       encodeAnd(node);        break;
             case Opt:       encodeOpt(node);        break;
-            case Many:      encodeMany(node);       break;
+            case Any:       encodeAny(node);       break;
             case Some:      encodeSome(node);       break;
             case Try:       encodeTry(node);        break;
             case Has:       encodeHas(node);        break;
@@ -116,7 +116,7 @@ class Generator implements Testable {
     }
 
     // {x*}  =  MAYBE MANY {x}
-    private void encodeMany(Node node) {
+    private void encodeAny(Node node) {
         add(MAYBE);
         add(MANY);
         encode(node.left());

@@ -11,12 +11,12 @@ import static java.lang.Character.*;
 /* Carry out binding:
 Check for missing or duplicate definitions, or definitions of category names.
 Create cross-references from ids to their definitions, recognise category names.
-For actions, set the value to the arity, and check consistency of the arities.
-Check that a set consists of distinct characters of the same UTF8 length.
-For matchers which represent single characters, set the value to the code.
+Set the value of actions to their arities, and check consistency of arities.
+Check that a set consists of distinct characters.
+Recognize ranges 'a..z' and create character subnodes.
+Check that both ends of ranges are single characters, and ranges are non-empty.
+For nodes which represent single characters, set the value to the code.
 Check that numerical character codes are in the range 0..1114111.
-Check that both ends of a range are single characters.
-Check that a range is non-empty.
 Check whether the grammar has text or tokens as input. */
 
 class Binder implements Testable {
@@ -66,7 +66,7 @@ class Binder implements Testable {
         if (node.left() != null) scan(node.left());
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
-        case And: case Or: case Opt: case Many: case Some: case Drop:
+        case And: case Or: case Opt: case Any: case Some: case Drop:
         case Has: case Not: case Try: case Mark: case Tag: case Cat:
             break;
         case Rule: bindRule(node); break;
@@ -129,30 +129,44 @@ class Binder implements Testable {
         bindString(node);
     }
 
-    // Check that a set consists of distinct characters of the same UTF8 length.
-    // Check whether it is a single character.
+    // Check whether a set is a single character.
+    // Recognize ranges 'a..z' and create character subnodes.
+    // Check that a set consists of distinct characters.
     private void bindSet(Node node) throws Exception {
-        String chars = node.text();
-        chars = chars.substring(1, chars.length() - 1);
-        int len = 0;
-        for (int i=0; i<chars.length(); ) {
-            int c1 = chars.codePointAt(i);
-            int c1n = Character.charCount(c1);
-            if (len == 0) len = c1n;
-            else if (c1n != len) err(node, "set not UTF8 balanced");
-            i += c1n;
-            for (int j=i; j<chars.length(); ) {
-                int c2 = chars.codePointAt(j);
+        node.value(-1);
+        String text = node.text();
+        int n = text.codePointCount(1, text.length() - 1);
+        if (n == 0) return;
+        if (n == 1) {
+            node.value(text.codePointAt(1));
+            node.note("" + node.value());
+            return;
+        }
+        int dots = text.indexOf("..");
+        if (dots >= 0) {
+            if (n != 4 || dots == 0 || dots == text.length() - 2) {
+                err(node, "range must have one character at each end");
+            }
+            node.op(Range);
+            int s = node.start();
+            int e = node.end();
+            node.left(new Node(Set, source, s, s + dots + 1));
+            node.right(new Node(Set, source, s + dots + 1, e));
+            bindSet(node.left());
+            bindSet(node.right());
+            bindRange(node);
+            return;
+        }
+        for (int i = 1; i<text.length() - 1; ) {
+            int c1 = text.codePointAt(i);
+            i += Character.charCount(c1);
+            for (int j=i; j<text.length() - 1; ) {
+                int c2 = text.codePointAt(j);
                 j += Character.charCount(c2);
                 if (c1 != c2) continue;
                 err(node, "set contains duplicate character");
             }
         }
-        node.value(-1);
-        int n = node.text().codePointCount(1, node.text().length() - 1);
-        if (n != 1) return;
-        node.value(node.text().codePointAt(1));
-        node.note("" + node.value());
     }
 
     // Check that a range has a single character at each end and is non-empty.

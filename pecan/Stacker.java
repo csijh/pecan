@@ -87,7 +87,7 @@ class Stacker implements Testable {
         if (y != null) { net(y); yNet = y.NET(); }
         switch(node.op()) {
         case Drop: case String: case Set: case Divider: case Range: case Cat:
-        case Tag: case Some: case Many: case Opt: case Has: case Not: case Char:
+        case Tag: case Some: case Any: case Opt: case Has: case Not: case Char:
         case Mark:
             nNet = 0;   break;
         case Act:
@@ -129,7 +129,7 @@ class Stacker implements Testable {
                 return err(node, "choices produce unequal numbers of outputs");
             }
             break;
-        case Some: case Many: case Opt:
+        case Some: case Any: case Opt:
             if (xNet != UNKNOWN && xNet != 0) {
                 return err(node, "subrule produces or consumes output items");
             }
@@ -166,7 +166,7 @@ class Stacker implements Testable {
         case Or:
             nLow = Math.min(xLow, yLow);
             break;
-        case Some: case Many: case Opt:
+        case Some: case Any: case Opt:
         case Try: case Has: case Not:
             nLow = xLow;
             break;

@@ -52,40 +52,45 @@ illustrates the style by developing a calculator.</p>
 
 <p>To make a start, create a file <code>sum.txt</code> containing:</p>
 
-<pre>digit = "0".."9" @number
+<pre>digit = '0..9' @number
 </pre>
 
 <p>This can be thought of as a prototype parser. It specifies a parsing function
 called <code>digit</code> which recognises a single digit and then uses an
-action called <code>@number</code> to evaluate it. A rule such as
-<code>"0"</code> in a definition matches a string in the input, in this case a
-single digit, and the infix <code>..</code> operator represents a range of
-characters. An action such as <code>@number</code> represents an operation to be
-applied to the text matched so far.</p>
+action <code>@number</code> to evaluate it. An expression such as
+<code>'0'</code> in a definition matches a specific character in the input, and
+<code>'0..9'</code> represents any character in the given range. An action such
+as <code>@number</code> represents an operation to be applied to the text
+matched so far.</p>
 
 <p>An action such as <code>@number</code> can be thought of as representing an
 external function call in the final parser which will be written or generated
 when the prototype is complete. The function will generate an output item of
-some kind. In this case, we are thinking of it as a number, but in some other
-application such as a compiler, it could be a syntax tree.</p>
+some kind. In this case, we are thinking of output items as numerical, but in
+some other application such as a compiler, output items could be syntax
+trees.</p>
 
 <p>The prototype parser doesn't make external calls, but it can be tested
 symbolically as it stands. We can add a test to the end of the file
 <code>sum.txt</code>, like this:</p>
 
-<pre>digit = "0".."9" @number
-----------
+<pre>digit = '0..9' @number
+==========
 2
-..........
+----------
 number 2
 </pre>
 
-<p>The file now represents a single test, divided into three sections by a line
-of minus signs, and a line of dots. The first section is the parser, the second
-is the sample input, and the third is the expected output. The output produced
-represents the external calls which would be made by the final parser, in this
-case a call to a function <code>number</code> with an argument which represents
-the substring <code>"2"</code> of the input text.</p>
+<p>The test file is divided into two parts by a line of equal signs. The first
+part is a grammar to be used for subsequent tests. The second part is a test,
+divided by a line of minus signs into the input and the expected output.  The
+output produced represents the external calls which would be made by the final
+parser, in this case a call to a function <code>number</code> with an argument
+which represents the substring <code>"2"</code> of the input text.</p>
+
+<p>In this case, the grammar is directly embedded in the test file. An
+alternative is to have a separate grammar file, and to use the path to the
+grammar file in place of the grammar in the test file.</p>
 
 <p>If we don't know exactly what output we are expecting, we can put in a guess
 and correct it later. Then we can run the test like this:</p>
@@ -108,33 +113,30 @@ Pass 1 test.
 <p>To extend the parser to handle multi-digit numbers, edit the parser at the
 top of <code>sum.txt</code> to read:</p>
 
-<pre>number = ("0".."9")+ @number
+<pre>number = ('0..9')+ @number
 </pre>
 
-<p>The parsing function and the action function now have the same name, but
+<p>The parsing rule and the action function now have the same name, but
 there is no harm in that. The postfix operator <code>+</code> means that the
 parser should try to match something one or more times. In this case, a number
 consists of one or more digits. To see if this works, add another test to the
 file <code>sum.txt</code> so that it now contains:</p>
 
-<pre>number = ("0".."9")+ @number
-----------
+<pre>number = ('0..9')+ @number
+==========
 2
-..........
+----------
 number 2
 ==========
 42
-..........
+----------
 number 42
 </pre>
 
-<p>Tests are separated by lines consisting of equal signs. The file now consists
-of two tests. The second test has no parser or its line of minus signs. In that
-case, Pecan uses the same parser as the previous test. Over time, the test file
-can contain various parser fragments or parser versions and their tests,
-representing the entire history of development. For the calculator, we are
-discarding previous versions of the parser, but keeping all the tests to make
-sure they still work:</p>
+<p>Over time, the test file can contain various parser fragments or parser
+versions and their tests, representing the entire history of development. For
+the calculator, we are discarding previous versions of the parser, but keeping
+all the tests to make sure they still work:</p>
 
 <pre>pecan sum.txt
 Pass 2 tests.
@@ -148,8 +150,8 @@ Pass 2 tests.
 <code>2+40</code>, edit the parser at the top of <code>sum.txt</code> to
 read:</p>
 
-<pre>sum = number / number "+" number @2add
-number = ("0".."9")+ @number
+<pre>sum = number / number '+' number @2add
+number = ('0..9')+ @number
 </pre>
 
 <p>The <code>/</code> operator means "or", so the parser should recognise
@@ -159,19 +161,19 @@ case a function <code>add</code> is to be called to evaluate the sum. The
 function is to be applied to the two previously created output items, rather
 than to text from the input. Add a third test to the file:</p>
 
-<pre>sum = number / number "+" number @2add
-number = ("0".."9")+ @number
-----------
+<pre>sum = number / number '+' number @2add
+number = ('0..9')+ @number
+==========
 2
-..........
+----------
 number 2
 ==========
 42
-..........
+----------
 number 42
 ==========
 2+40
-..........
+----------
 number 2
 number 40
 add
@@ -179,16 +181,16 @@ add
 
 <p>The final three lines describe the calls which we would expect to be made by
 the generated code, i.e. two calls to <code>number</code> followed by a call
-to <code>add</code>, passing the results of the previous calls as arguments.
+to <code>add</code>, using the results of the previous calls as arguments.
 Running the tests gives:</p>
 
 <pre>pecan sum.txt
 Fail test on line 12 of sum.txt:
----------- Expected ----------
+========== Expected ==========
 number 2
 number 40
 add
----------- Actual ----------
+========== Actual ==========
 number 2
 </pre>
 
@@ -196,27 +198,27 @@ number 2
 
 <pre>pecan -trace sum.txt 12
 I1: |2+40
-P1: number / number "+" number @2add
+P1: number / number '+' number @2add
 P1: number
-P2: ("0".."9")+ @number
-P2: ("0".."9")+
-P2: "0".."9"
+P2: ('0..9')+ @number
+P2: ('0..9')+
+P2: '0..9'
 I1: 2|+40
-P2: "0".."9"
+P2: '0..9'
 P2: @number
 O: number
 Fail test on line 12 of sum.txt:
----------- Expected ----------
+========== Expected ==========
 number 2
 number 40
 add
----------- Actual ----------
+========== Actual ==========
 number 2
 </pre>
 
-<p>A second argument to the <code>pecan</code> program after the file name
-represents the line number of a single test in the test file. This makes sure
-only one test is run. The <code>-trace</code> option switches on trace output.
+<p>A numerical argument to the <code>pecan</code> program represents the line
+number of a single test in the test file. This makes sure only one test is run.
+The <code>-trace</code> (or <code>-t</code>) option switches on trace output.
 Although verbose, this can sometimes be used to resolve difficult issues. Each
 line in the trace starts with <code>I</code>, <code>P</code> or <code>O</code>.
 A line starting with <code>I</code> reports a change in the input position,
@@ -225,7 +227,7 @@ vertical bar. A line starting with <code>P</code> reports a change in the
 current parse expression being executed, displaying a parser line number and the
 expression. A line starting with <code>O</code> reports an output action.</p>
 
-<p>The trace shows that the parser has a choice <code>number / number "+"
+<p>The trace shows that the parser has a choice <code>number / number '+'
 ...</code>, and the first alternative succeeds, so the second alternative isn't
 tried. The choice operator <code>/</code> is sequential, as in PEG grammars, not
 symmetrical like the <code>|</code> operator in CFG grammars. Also, our parser
@@ -237,17 +239,17 @@ just the first number from the input gives a successful result.</p>
 <p>Maybe we can fix things by changing the order of choice. Change the rules
 at the top of <kbd>sum.txt</kbd> to:</p>
 
-<pre>sum = number "+" number @2add / number
-number = ("0".."9")+ @number
+<pre>sum = number '+' number @2add / number
+number = ('0..9')+ @number
 </pre>
 
 <p>Now running the tests gives:</p>
 
 <pre>pecan sum.txt
 Fail test on line 1 of sum.txt:
----------- Expected ----------
+========== Expected ==========
 number 2
----------- Actual ----------
+========== Actual ==========
 Error on line 1:
 2
  ^
@@ -258,7 +260,7 @@ old tests, which is why we are keeping all the tests and re-running them in
 every development step.</p>
 
 <p>The reason the first test now fails is that the parser has made a start on
-the first alternative <code>number "+" number @2add</code>, and the initial
+the first alternative <code>number '+' number @2add</code>, and the initial
 part, <code>number</code>, has succeeded. The parser is now committed to this
 first alternative, which then fails because there is no plus sign. By default,
 a parser is committed to an alternative as soon as any progress is made.</p>
@@ -268,8 +270,8 @@ a parser is committed to an alternative as soon as any progress is made.</p>
 <p>It is possible to specify the point at which the parser is committed to the
 first alternative:</p>
 
-<pre>sum = [number "+"] number @2add / number
-number = ("0".."9")+ @number
+<pre>sum = [number '+'] number @2add / number
+number = ('0..9')+ @number
 </pre>
 
 <p>The square brackets indicate that the parser should commit to the first
@@ -285,8 +287,8 @@ something else.</p>
 <p>A better approach for our calculator is to recognise the first number, and
 then look to see whether or not there is a following plus sign:</p>
 
-<pre>sum = number ("+" number @2add)?
-number = ("0".."9")+ @number
+<pre>sum = number ('+' number @2add)?
+number = ('0..9')+ @number
 </pre>
 
 <p>The postfix operator <code>?</code> means that something is
@@ -295,11 +297,11 @@ nothing. Running our tests now gives:</p>
 
 <pre>pecan sum.txt
 The test on line 12 fails:
----------- Expected ----------
+========== Expected ==========
 number 2
 number 40
 add
----------- Actual ----------
+========== Actual ==========
 number 2
 number +40
 add
@@ -316,8 +318,8 @@ previous action.</p>
 <p>Since we don't need the plus sign once it has been matched,
 we can add an action which discards it:</p>
 
-<pre>sum = number ("+" @ number @2add)?
-number = ("0".."9")+ @number
+<pre>sum = number ('+' @ number @2add)?
+number = ('0..9')+ @number
 </pre>
 
 <p>An <code>@</code> sign on its own is an action which discards all characters
@@ -334,8 +336,8 @@ Pass 3 tests.
 <p>At this point, it might be just as well to solve the problem of making sure
 that all the input is used:</p>
 
-<pre>sum = number ("+" @ number @2add)? end
-number = ("0".."9")+ @number
+<pre>sum = number ('+' @ number @2add)? end
+number = ('0..9')+ @number
 end = 13? 10 @
 </pre>
 
@@ -349,7 +351,7 @@ known as <code>\n</code> or <code>CTRL+J</code> or <code>0A</code>
 <p>Pecan normalizes the line endings of the test file when it is read in, so
 they are all <code>10</code>, but the <code>end</code> definition covers the two
 most common line ending conventions, which would make the final parser work on
-most common platforms.</p>
+most common platforms, without normalizing the input.</p>
 
 <p>The <code>@</code> action discards the end-of-line character or characters
 after matching them. Another test can be added to our file to make sure that the
@@ -358,7 +360,7 @@ parser reports an error if the end of the input isn't reached.</p>
 <pre>...
 ==========
 2+40%
-..........
+----------
 Error on line 1:
 2+40%
     ^
@@ -378,10 +380,10 @@ failure occurs.</p>
 
 <h3>Step 9</h3>
 
-<p>Now let's deal with any number of numbers added together.</p>
+<p>Now let's deal with any sequence of numbers added together.</p>
 
-<pre>sum = number ("+" @ number @2add)* end
-number = ("0".."9")+ @number
+<pre>sum = number ('+' @ number @2add)* end
+number = ('0..9')+ @number
 end = 13? 10 @
 </pre>
 
@@ -393,7 +395,7 @@ rather than one or more times. We can add a test:</p>
 <pre>...
 ==========
 2+10+12+18
-..........
+----------
 number 2
 number 10
 add
@@ -415,8 +417,8 @@ Pass 5 tests.
 
 <p>The next step is to allow subtraction as well as addition:</p>
 
-<pre>sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
-number = ("0".."9")+ @number
+<pre>sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
+number = ('0..9')+ @number
 end = 13? 10 @
 </pre>
 
@@ -427,7 +429,7 @@ subtraction:</p>
 <pre>...
 ==========
 2-10+53-3
-..........
+----------
 number 2
 number 10
 subtract
@@ -451,7 +453,7 @@ Pass 6 tests.
 Here is the one in our current test file:</p>
 
 <pre>2+40%
-..........
+----------
 Error on line 1:
 2+40%
     ^
@@ -463,7 +465,7 @@ things which would allow further parsing. If the list were generated
 automatically by Pecan, it might read:</p>
 
 <pre>2+40%
-..........
+----------
 Error on line 1: expecting '0','1','2','3','4','5','6','7','8','9','+','-',13,10
 2+40%
     ^
@@ -472,8 +474,8 @@ Error on line 1: expecting '0','1','2','3','4','5','6','7','8','9','+','-',13,10
 <p>Messages like this are too long and detailed to be very useful. We need to
 form a summary. To do that, we can add error handlers to the parser:</p>
 
-<pre>sum = number ("+" @ number @2add / "-" @ number @2subtract)* end
-number = (#digit "0".."9")+ @number
+<pre>sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
+number = (#digit '0..9')+ @number
 end = #newline 13? 10 @
 </pre>
 
@@ -481,11 +483,11 @@ end = #newline 13? 10 @
 
 <pre>java pecan.Run tests/sum11.txt
 Fail test on line 19 of tests/sum11.txt:
----------- Expected ----------
+========== Expected ==========
 Error on line 1:
 2+40%
     ^
----------- Actual ----------
+========== Actual ==========
 Error on line 1: expecting digit, newline
 2+40%
     ^
@@ -505,7 +507,7 @@ where there is no number after an operator:</p>
 <pre>...
 ==========
 2+
-..........
+----------
 Error on line 1: expecting digit
 2+
   ^
@@ -531,9 +533,9 @@ rewrite the parser as:</p>
 
 <pre>sum = number (plus number @2add / minus number @2subtract)* end
 number = digit+ @number
-plus = #operator "+" @
-minus = #operator "-" @
-digit = #digit "0".."9"
+plus = #operator '+' @
+minus = #operator '-' @
+digit = #digit '0..9'
 end = #newline 13? 10 @
 </pre>
 
@@ -542,14 +544,14 @@ own definition, with an error handler included. This is a rather minor example
 of the transformation approach to parser development. We started with a
 parser:</p>
 
-<pre>sum = ... "+" @ ...
+<pre>sum = ... '+' @ ...
 </pre>
 
 <p>Then we transformed it by pulling a subexpression out into its own
 rule before developing further:</p>
 
 <pre>sum = ... plus ...
-plus = "+" @
+plus = '+' @
 </pre>
 
 <p>There are many transformations like this which can be performed on a Pecan
@@ -559,11 +561,11 @@ actions performed or the error report produced are not changed.</p>
 <p>Running the tests produces:</p>
 
 <pre>Fail test on line 22 of tests/sum12.txt:
----------- Expected ----------
+========== Expected ==========
 Error on line 1: expecting digit, newline
 2+40%
     ^
----------- Actual ----------
+========== Actual ==========
 Error on line 1: expecting digit, newline, operator
 2+40%
     ^
@@ -581,11 +583,11 @@ operator, but is only reported once.</p>
 <pre>sum = term (plus term @2add / minus term @2subtract)* end
 term = number (times number @2multiply / over number @2divide)*
 number = digit+ @number
-plus = #operator "+" @
-minus = #operator "-" @
-times = #operator "*" @
-over = #operator "/" @
-digit = #digit "0".."9"
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+digit = #digit '0..9'
 end = #newline 13? 10 @
 </pre>
 
@@ -597,7 +599,7 @@ this is working:</p>
 <pre>...
 ==========
 5*8+12/6
-..........
+----------
 number 5
 number 8
 multiply
@@ -624,24 +626,24 @@ subexpression:</p>
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open sum close
 number = digit+ @number
-plus = #operator "+" @
-minus = #operator "-" @
-times = #operator "*" @
-over = #operator "/" @
-open = #bracket "(" @
-close = #bracket ")" @
-digit = #digit "0".."9"
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+open = #bracket '(' @
+close = #bracket ')' @
+digit = #digit '0..9'
 end = #newline 13? 10 @
 </pre>
 
 <p>Running the existing tests shows up a slight problem:</p>
 
 <pre>Fail test on line 54 of tests/sum14.txt:
----------- Expected ----------
+========== Expected ==========
 Error on line 1: expecting digit
 2+
   ^
----------- Actual ----------
+========== Actual ==========
 Error on line 1: expecting bracket, digit
 2+
   ^
@@ -653,7 +655,7 @@ can add a simple test for brackets:</p>
 <pre>...
 ==========
 2*(20+1)
-..........
+----------
 number 2
 number 20
 number 1
@@ -665,13 +667,13 @@ multiply
 
 <pre>pecan sum.txt
 Fail test on line 70 of tests/sum14.txt:
----------- Expected ----------
+========== Expected ==========
 number 2
 number 20
 number 1
 add
 multiply
----------- Actual ----------
+========== Actual ==========
 Error on line 1: expecting digit, newline, operator
 2*(20+1)
        ^
@@ -693,13 +695,13 @@ expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
 number = digit+ @number
-plus = #operator "+" @
-minus = #operator "-" @
-times = #operator "*" @
-over = #operator "/" @
-open = #bracket "(" @
-close = #bracket ")" @
-digit = #digit "0".."9"
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+open = #bracket '(' @
+close = #bracket ')' @
+digit = #digit '0..9'
 end = #newline 13? 10 @
 </pre>
 
@@ -723,14 +725,14 @@ expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
 number = digit+ @number gap
-plus = #operator "+" gap
-minus = #operator "-" gap
-times = #operator "*" gap
-over = #operator "/" gap
-open = #bracket "(" gap
-close = #bracket ")" gap
-digit = #digit "0".."9"
-gap = (#space " ")* @
+plus = #operator '+' gap
+minus = #operator '-' gap
+times = #operator '*' gap
+over = #operator '/' gap
+open = #bracket '(' gap
+close = #bracket ')' gap
+digit = #digit '0..9'
+gap = (#space ' ')* @
 end = #newline 13? 10 @
 </pre>
 
@@ -739,7 +741,7 @@ end = #newline 13? 10 @
 <pre>...
 ==========
  2 * ( 20 + 1 )
-..........
+----------
 number 2
 number 20
 number 1
@@ -750,11 +752,11 @@ multiply
 <p>Running the tests gives:</p>
 
 <pre>Fail test on line 30 of tests/sum16.txt:
----------- Expected ----------
+========== Expected ==========
 Error on line 1: expecting digit, newline, operator
 2+40%
     ^
----------- Actual ----------
+========== Actual ==========
 Error on line 1: expecting digit, newline, operator, space
 2+40%
     ^
@@ -769,14 +771,14 @@ expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
 number = digit+ @number gap
-plus = #operator "+" gap
-minus = #operator "-" gap
-times = #operator "*" gap
-over = #operator "/" gap
-open = #bracket "(" gap
-close = #bracket ")" gap
-digit = #digit "0".."9"
-gap = (" ")* @
+plus = #operator '+' gap
+minus = #operator '-' gap
+times = #operator '*' gap
+over = #operator '/' gap
+open = #bracket '(' gap
+close = #bracket ')' gap
+digit = #digit '0..9'
+gap = (' ')* @
 end = #newline 13? 10 @
 </pre>
 

@@ -13,7 +13,7 @@ public enum Op {
     Or,      // Choice, x / y, right associative
     And,     // Sequence, x y, right associative
     Opt,     // Optional, x?
-    Many,    // Zero or more, x*
+    Any,     // Zero or more, x*
     Some,    // One or more, x+
     Try,     // Lookahead, [e]
     Has,     // Positive lookahead, e&

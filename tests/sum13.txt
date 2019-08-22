@@ -2,11 +2,11 @@
 sum = term (plus term @2add / minus term @2subtract)* end
 term = number (times number @2multiply / over number @2divide)*
 number = digit+ @number
-plus = #operator "+" @
-minus = #operator "-" @
-times = #operator "*" @
-over = #operator "/" @
-digit = #digit "0".."9"
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+digit = #digit '0..9'
 end = #newline 13? 10 @
 ==========
 2

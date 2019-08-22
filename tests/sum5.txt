@@ -1,6 +1,6 @@
-// Tutorial step 5 (3rd test doesn't discard "+")
-sum = [number "+"] number @2add / number
-number = ("0".."9")+ @number
+// Tutorial step 5 (3rd test doesn't discard '+')
+sum = [number '+'] number @2add / number
+number = ('0..9')+ @number
 ==========
 2
 ----------

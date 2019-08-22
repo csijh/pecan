@@ -140,7 +140,7 @@ class Checker implements Testable {
             nSP = xSP;
             nFP = xFP;
             break;
-        case Many:
+        case Any:
             nSN = xFN;
             nSP = xSP && xFN;
             nFP = xFP;
@@ -198,7 +198,7 @@ class Checker implements Testable {
         case Tag:   nWF = true;                         break;
         case And:   nWF = xWF && (yWF || ! x.has(SN));  break;
         case Or:    nWF = xWF && yWF;                   break;
-        case Many:
+        case Any:
         case Some:  nWF = xWF && ! x.has(SN);           break;
         case Error:                                     break;
         default:
@@ -253,7 +253,7 @@ class Checker implements Testable {
             nAA = xAA || yAA;
             nAB = yAB;
             break;
-        case Opt: case Many: case Some:
+        case Opt: case Any: case Some:
             nAA = xAA;
             break;
         default:

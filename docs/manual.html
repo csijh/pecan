@@ -366,13 +366,13 @@ one after the other. For example:</p>
 expression succeeds. Otherwise, if no progress was made, the next alternative is
 tried.</p>
 
-<p>The choice operator does not directly involve backtracking. If any progress
-is made while trying an alternative, then the parser is committed to that
-alternative, and further alternatives are not tried. Progress is made on an
-alternative if at least one input character or token is matched.</p>
+<p>The choice operator involves a single item lookahead. If progress is made on
+an alternative, i.e. at least one input character or token is matched, then the
+parser is committed to that alternative, and further alternatives are not
+tried.</p>
 
 <p>There are separate lookahead operators which allow speculative parsing of an
-alternative.</p>
+alternative with backtracking.</p>
 
 <h3 id="sequences">Sequences</h3>
 
@@ -389,11 +389,12 @@ than the choice operator.</p>
 
 <h3 id="repetition">Repetition</h3>
 
-<p>The three postfix repetition operators are <code>*</code> to indicate that
-an item is to be repeated any number of times, i.e. zero or more
-times, <code>+</code> to indicate that an item is to be repeated one or more
-times, and <code>?</code>  to indicate that an item is optional (i.e. repeated
-zero times or once). For example:</p>
+<p>There are three postfix repetition operators. The <code>*</code> operator
+indicates that an item is to be repeated any number of times, i.e. zero or more
+times. The <code>+</code> operator indicates that an item is to be repeated one
+or more times. The <code>?</code> operator indicates that an item is optional,
+i.e. repeated zero times or once. Postfix operators bind tighter than
+sequencing, so <code>x y*</code> means <code>x (y*)</code>. Examples are:</p>
 
 <pre>string = '"' stringchar* '"'
 number = digit+
@@ -420,7 +421,7 @@ xq = x / ""
 many <code>x</code>'s as are present in the input. In all three cases, in line
 with the fact that the choice operator does no backtracking by default, if
 progress is made on a final <code>x</code> without success, the whole
-expression fails. Postfix operators bind tighter than sequencing.</p>
+expression fails.</p>
 
 <h3 id="lookahead">Lookahead</h3>
 
@@ -447,7 +448,9 @@ alternative is tried.</p>
 positive and negative lookahead. In the PEG notation, <code>&amp;</code> and
 <code>!</code> are prefix operators, but in Pecan, they are postfix, to make the
 syntax of rules simpler and more uniform and, in particular, to avoid precedence
-issues which would arise if there were both prefix and postfix operators.</p>
+issues which would arise if there were both prefix and postfix operators. The
+<code>&amp;</code> and <code>!</code> operators bind more tightly than
+sequencing.</p>
 
 <p>With <code>x&amp;</code> or <code>x!</code>, the expression <code>x</code> is
 parsed speculatively to check whether it appears next in the input or not.
@@ -468,11 +471,8 @@ fails, an assignment is parsed. A negative example is:</p>
 </pre>
 
 <p>This says that a string contains any visible character other than a double
-quote. The bracketed expression only tries to match a visible character if a
-double quote does not appear next in the input.</p>
-
-<p>The postfix <code>x&amp;</code> and <code>x!</code> operators bind more
-tightly than sequencing.</p>
+quote. The bracketed expression only matches a visible character if a double
+quote does not appear next in the input.</p>
 
 <p>During a try operation <code>[x]</code>, actions are delayed by storing them
 symbolically. If <code>x</code> succeeds, the delayed actions are performed. If
@@ -489,16 +489,19 @@ deciding which alternative to take.</p>
 
 <p>Text notations are used to match input characters. Single quotes indicate
 individual characters, e.g. <code>'x'</code> matches the letter <code>x</code>.
-Several characters in single quotes indicate a set of alternatives, any one of
-which can be matched. For example:</p>
+Several characters in single quotes indicate a set of
+alternatives, any one of which can be matched.  For example:</p>
 
 <pre>op = '+-*/'
 digit = '0123456789'
+letter = 'a..z'
 </pre>
 
 <p>The expression <code>'+-*/'</code> matches any one of the four arithmetic
 operator characters, and is equivalent to <code>'+' / '-' / '*' / '/'</code>.
-The expression <code>'0123456789'</code> matches any digit.</p>
+The expression <code>'0123456789'</code> matches any digit. An expression such
+as <code>'a..z'</code> is an abbreviation for any one of a range of
+characters.</p>
 
 <p>Double quotes indicate a string of characters, which are matched in sequence.
 For example:</p>
@@ -511,8 +514,7 @@ pi = "&#960;"
 the input in sequence, i.e. it is equivalent to <code>['i' 'n' 't']</code>. The
 square brackets indicate that if a string matches only partially, the input
 position returns to the beginning of the string, and other alternatives can be
-tried. Any Unicode characters can be used in a string, using the UTF-8 encoding
-in the grammar file.</p>
+tried.</p>
 
 <p>Single characters can be represented using either single or double
 quotes. For example:</p>
@@ -521,12 +523,14 @@ quotes. For example:</p>
 single_quote = "'"
 </pre>
 
-<p>Although Unicode characters may be used, each code point is treated as a
-separate character. Where graphemes might be involved, care needs to be taken.
-For example, <code>'é'</code> is visually ambiguous because it could contain one
-or two code points, depending on whether a combiner is used. Writing it instead
-as <code>"é"</code> reduces the potential ambiguity. Similarly,
-<code>'éè'</code> is better written as:</p>
+<p>Grammar files are assumed to use the UTF-8 encoding, and any Unicode
+characters can be used in set or string quotes. However, in sets, each code
+point is treated as a separate character. Where graphemes might be involved,
+care needs to be taken. For example, <code>'é'</code> is visually ambiguous
+because it could contain one or two code points, depending on whether a combiner
+is used. If it contains two code points, writing it as <code>"é"</code> is more
+likely to convey the intended meaning. Similarly, <code>'éè'</code> is probably
+better written as:</p>
 
 <pre>"é" / "è"
 </pre>
@@ -546,6 +550,11 @@ code is in hexadecimal, using <code>a</code> to <code>f</code> or
 
 <pre>pi = 03C0
 newline = 0d? 0a
+</pre>
+
+<p>There is a range notation for characters represented as integers:</p>
+
+<pre>ascii = 0..127
 </pre>
 
 <p>Common sets of characters can be specified using Unicode general categories.
@@ -571,18 +580,6 @@ character. The rule for <code>visible</code> excludes character code points
 which are unassigned, private, surrogate, controls, or line or paragraph
 separators.</p>
 
-<p>A set of characters can be specified using a range. For
-example:</p>
-
-<pre>digit = '0'..'9'
-letter = 'a'..'z' / 'A'..'Z'
-visible = ' '..'~'
-ascii = 0..127
-</pre>
-
-<p>Each argument to the range operator must be a single character (code point),
-specified using an integer or single quotes or double quotes.</p>
-
 <p>A divider is a string in angle brackets instead of double quotes
 <code>&lt;...></code> which represents a two-way check. An expression such as
 <code>&lt;abc></code> does not match any input characters, but is a lookahead
@@ -596,9 +593,9 @@ keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 
 <p>Here, some keywords are listed in alphabetical order, and a divider is used
 to speed up their recognition by separating the keywords before
-<code>"do"</code> from the keywords from <code>"do"</code> onwards. The less and
-greater than signs used as angle brackets are also mnemonics for the two-way
-decision which a divider represents.</p>
+<code>"do"</code> from the keywords from <code>"do"</code> onwards. The initial
+less than sign can be thought of as a mnemonic for the meaning of the
+divider.</p>
 
 <p>The empty string <code>""</code> always succeeds, and the empty set
 <code>''</code> always fails:</p>
@@ -1537,12 +1534,14 @@ same output effect and error handling properties as the original.</p>
 
 <h2 id="pecan">The Pecan grammar</h2>
 
-<p>Here is a Pecan parser for the Pecan language itself. It includes scanning,
-actions, and error markers. The <code>gap</code> rule deals with the
-continuation line convention. It follows a token which can end a rule, and looks
-ahead for a possible continuation to see if the next newline should be skipped.
-Brackets are treated as tokens so that the extent in the source text of
-bracketed expressions can be calculated accurately.</p>
+<p>Here is a Pecan parser for the Pecan language itself. It includes scanning
+and layout. The <code>skip</code> rule is used to handle white space between
+tokens. The <code>gap</code> rule deals with the continuation line convention.
+It follows a token which can end a rule, and looks ahead for a possible
+continuation to see if the next newline should be skipped. Brackets are treated
+as tokens so that the extent in the source text of an expression is just the
+maximum extent of its subexpressions. Ranges such as <code>'a..z'</code> are not
+distinguished from other sets during parsing.</p>
 
 <pre>pecan = skip rules end
 rules = rule (rules @2add)?
@@ -1552,20 +1551,21 @@ expression = term (slash expression @2or)?
 term = factor (term @2and)?
 factor = atom postop*
 postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-atom = id / action / marker / tag / range / divider / try / bracket
-range = text (dots text @2range)?
-text = number / string / set
+atom = id / action / marker / tag / string / set / range /
+    divider / try / bracket
+
+range = number (dots number @2range)?
 try = sb expression se @3back
 bracket = rb expression re @3bracket
 
 id = #atom letter alpha* @id gap
 action = '@' (digit* #letter letter alpha* @act / @drop) gap
-tag = "%" (letter alpha*)? @tag gap
 marker = "#" #letter letter alpha* @mark gap
-number = (("1".."9") digit* / "0" hex*) @number gap
+tag = "%" (letter alpha*)? @tag gap
+divider = '&lt;' ('>'! visible)* '>' @divider gap
 set = "'" ("'"! visible)* #quote "'" @set gap
 string = '"' ('"'! visible)* #quote '"' @string gap
-divider = '&lt;' ('>'! visible)* '>' @divider gap
+number = (("1".."9") digit* / "0" hex*) @number gap
 
 dots = '.' #dot '.' skip @
 equals = #equals "=" skip @
@@ -1575,7 +1575,7 @@ sb = "[" @token skip @
 has = #look "&amp;" @token gap @
 not = #look "!" @token gap @
 opt = #query "?" @token gap @
-any = #many "*" @token gap @
+any = #any "*" @token gap @
 some = #some "+" @token gap @
 re = #bracket ")" @token gap @
 se = #bracket "]" @token gap @

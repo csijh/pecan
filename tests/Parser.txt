@@ -186,11 +186,11 @@ x = .
     ^
 ==========
 // Incomplete dot dot
-x = 'x'.
+x = 0.
 ----------
 Error on line 2: expecting dot
-x = 'x'.
-        ^
+x = 0.
+      ^
 ==========
 // Incomplete action
 x = @3
@@ -267,7 +267,7 @@ exp = exp* exp+ exp? end
 ----------
 Rule exp
   And exp* exp+ exp? end
-    Many exp*
+    Any exp*
       Id exp
     Some exp+
       Id exp
@@ -286,7 +286,7 @@ digit = '0123456789'
 Rule exp
   And term ("+" term @2add / "-" term @2sub)* ''
     Id term
-    Many ("+" term @2add / "-" term @2sub)*
+    Any ("+" term @2add / "-" term @2sub)*
       Or "+" term @2add / "-" term @2sub
         And "+" term @2add
           String "+"
@@ -300,7 +300,7 @@ Rule exp
 Rule term
   And factor ("*" factor @2mul / "/" factor @2div)*
     Id factor
-    Many ("*" factor @2mul / "/" factor @2div)*
+    Any ("*" factor @2mul / "/" factor @2div)*
       Or "*" factor @2mul / "/" factor @2div
         And "*" factor @2mul
           String "*"
@@ -357,7 +357,7 @@ tokens = skip token*
 Rule tokens
   And skip token*
     Id skip
-    Many token*
+    Any token*
       Id token
 ==========
 // Next line of pecan scanner
@@ -382,7 +382,7 @@ Rule number
     Or '0' hex* / digit+
       And '0' hex*
         Set '0'
-        Many hex*
+        Any hex*
           Id hex
       Some digit+
         Id digit
@@ -404,7 +404,7 @@ string = '"' ('"'! visible)* #BADString '"' @String skip1
 Rule string
   And '"' ('"'! visible)* #BADString '"' @String skip1
     Set '"'
-    Many ('"'! visible)*
+    Any ('"'! visible)*
       And '"'! visible
         Not '"'!
           Set '"'
@@ -420,7 +420,7 @@ set = "'" ("'"! visible)* #BADSet "'" @Set skip1
 Rule set
   And "'" ("'"! visible)* #BADSet "'" @Set skip1
     String "'"
-    Many ("'"! visible)*
+    Any ("'"! visible)*
       And "'"! visible
         Not "'"!
           String "'"
@@ -530,7 +530,7 @@ skip = (space / comment / newline)* @
 ----------
 Rule skip
   And (space / comment / newline)* @
-    Many (space / comment / newline)*
+    Any (space / comment / newline)*
       Or space / comment / newline
         Id space
         Id comment
@@ -577,21 +577,17 @@ name = letter alpha*
 Rule name
   And letter alpha*
     Id letter
-    Many alpha*
+    Any alpha*
       Id alpha
 ==========
-// Next line of pecan scanner
-hex = digit / 'A'..'F' / 'a'..'f'
+// Next line of pecan scanner (ranges to be handled in binder)
+hex = digit / 'A..F' / 'a..f'
 ----------
 Rule hex
-  Or digit / 'A'..'F' / 'a'..'f'
+  Or digit / 'A..F' / 'a..f'
     Id digit
-    Range 'A'..'F'
-      Set 'A'
-      Set 'F'
-    Range 'a'..'f'
-      Set 'a'
-      Set 'f'
+    Set 'A..F'
+    Set 'a..f'
 ==========
 // Unicode letters and digits and numbers
 x = abc\960
@@ -674,7 +670,7 @@ Rule x
       Or y/z
         Id y
         Id z
-    Many y*
+    Any y*
       Id y
 Rule x
   Or y z w ! / y
@@ -691,14 +687,6 @@ Rule x
         Id y
         Id z
     Id w
-==========
-// Full dot-dot
-x = 'a'..'z'
-----------
-Rule x
-  Range 'a'..'z'
-    Set 'a'
-    Set 'z'
 ==========
 // Comments before and after continuation lines
 x =

@@ -44,14 +44,14 @@ term = factor ("*" factor @2mul / "/" factor @2div)*
 factor = primary ("^" factor @2pow)?
 primary = number / "(" exp ")"
 number = digit+ @number
-digit = "0" .. "9"
+digit = '0..9'
 ----------
 Rule sum 1,0
   Id exp 1,0
 Rule exp 1,0
   And term ("+" term @2add / "-" term @2sub)* 1,0
     Id term 1,0
-    Many ("+" term @2add / "-" term @2sub)* 0,-1
+    Any ("+" term @2add / "-" term @2sub)* 0,-1
       Or "+" term @2add / "-" term @2sub 0,-1
         And "+" term @2add 0,-1
           String "+" 0,0
@@ -64,7 +64,7 @@ Rule exp 1,0
 Rule term 1,0
   And factor ("*" factor @2mul / "/" factor @2div)* 1,0
     Id factor 1,0
-    Many ("*" factor @2mul / "/" factor @2div)* 0,-1
+    Any ("*" factor @2mul / "/" factor @2div)* 0,-1
       Or "*" factor @2mul / "/" factor @2div 0,-1
         And "*" factor @2mul 0,-1
           String "*" 0,0
@@ -95,6 +95,6 @@ Rule number 1,0
       Id digit 0,0
     Act @number 1,0
 Rule digit 0,0
-  Range "0" .. "9" 0,0
-    String "0" 0,0
-    String "9" 0,0
+  Range '0..9' 0,0
+    Set '0. 0,0
+    Set .9' 0,0

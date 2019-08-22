@@ -152,7 +152,7 @@ calculator = sum end
 sum = term ("+" @ term @2add / "-" @ term @2subtract)*
 term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
 atom = number / "(" @ sum ")" @
-number = ("0".."9")+ @number
+number = ('0..9')+ @number
 end = 13? 10 @
 ==========
 2+2

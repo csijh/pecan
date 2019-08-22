@@ -1,6 +1,6 @@
 // Tutorial step 4 (1st test fails: expecting plus or digit)
-sum = number "+" number @2add / number
-number = ("0".."9")+ @number
+sum = number '+' number @2add / number
+number = ('0..9')+ @number
 ==========
 2
 ----------

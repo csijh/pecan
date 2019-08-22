@@ -139,7 +139,7 @@ primary = 'number' @number / '(' exp ')'
 Rule exp 0111
   And term ('+' term @2add / '-' term @2sub)* 'eof' 0111
     Id term 0111
-    Many ('+' term @2add / '-' term @2sub)* 1101
+    Any ('+' term @2add / '-' term @2sub)* 1101
       Or '+' term @2add / '-' term @2sub 0111
         And '+' term @2add 0111
           Set '+' 0110
@@ -153,7 +153,7 @@ Rule exp 0111
 Rule term 0111
   And factor ('*' factor @2mul / '/' factor @2div)* 0111
     Id factor 0111
-    Many ('*' factor @2mul / '/' factor @2div)* 1101
+    Any ('*' factor @2mul / '/' factor @2div)* 1101
       Or '*' factor @2mul / '/' factor @2div 0111
         And '*' factor @2mul 0111
           Set '*' 0110

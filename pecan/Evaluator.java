@@ -148,7 +148,7 @@ public class Evaluator implements Testable {
                 ok = true;
             }
             break;
-        case Many:
+        case Any:
             saveIn = in;
             saveOut = out;
             while (ok) {
