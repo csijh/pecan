@@ -19,7 +19,7 @@ public enum Op {
     Has,     // Positive lookahead, e&
     Not,     // Negative lookahead, e!
     Mark,    // Error annotation, x #e
-    Char,    // Single unicode character as a number, e.g. 13 or 0D
+    Char,    // Single character, as a number or (after binding) 'x' or "x"
     String,  // Character sequence, "..."
     Set,     // Choice of characters, '...'
     Divider, // Lookahead for text less than string, <...>

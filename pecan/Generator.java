@@ -175,11 +175,13 @@ class Generator implements Testable {
     }
 
     // {10}  =  CHAR 10
-    // {128}  =  STRING 2 194 128
+    // {"a"}  =  CHAR 97
+    // {'a'}  =  CHAR 97
+    // {128}  =  CHARS 2 194 128
     private void encodeChar(Node node) {
         int ch = node.value();
         if (ch <= 255) add(CHAR, ch);
-        else add(STRING, Character.toChars(ch));
+        else add(CHARS, bytes(new String(Character.toChars(ch))));
     }
 
     // {Nd}  =  CAT Nd
@@ -188,14 +190,11 @@ class Generator implements Testable {
         add(node.text());
     }
 
-    // {"a"}  =  CHAR 97
-    // {"ab"}  =  STRING 2 97 98
-    // {"π"}  =  STRING 2 207 128
-    // {""}  =  STRING 0
+    // {"ab"}  =  CHARS 2 97 98
+    // {"π"}  =  CHARS 2 207 128
+    // {""}  =  CHARS 0
     private void encodeString(Node node) {
-        int ch = node.value();
-        if (ch >= 0 && ch <= 255) add(CHAR, ch);
-        else add(STRING, text(node));
+        add(CHARS, bytes(node.name()));
     }
 
     // {<a>}  =  BELOW 97
@@ -203,7 +202,7 @@ class Generator implements Testable {
     private void encodeDivider(Node node) {
         int ch = node.value();
         if (ch >= 0 && ch <= 255) add(BELOW, ch);
-        else add(BELOWS, text(node));
+        else add(BELOWS, bytes(node.name()));
     }
 
     // {"a".."z"}  =  LOW 97 HIGH 122
@@ -211,10 +210,10 @@ class Generator implements Testable {
     private void encodeRange(Node node) {
         int ch = node.left().value();
         if (ch >= 0 && ch <= 255) add(LOW, ch);
-        else add(LOWS, text(node));
+        else add(LOWS, bytes(new String(Character.toChars(ch))));
         ch = node.right().value();
         if (ch >= 0 && ch <= 255) add(HIGH, ch);
-        else add(HIGHS, text(node));
+        else add(HIGHS, bytes(new String(Character.toChars(ch))));
     }
 
     // {'a'}  =  CHAR 97
@@ -224,18 +223,14 @@ class Generator implements Testable {
     // {'α'..'ω'}  =   LOWS 2 206 177 HIGHS 2 207 137
     // {''}  =   SET 0
     private void encodeSet(Node node) {
-        // TODO ensure all characters in a set have same UTF8 length
-        /*
-        'ab'      Set 'ab'    SET n "ab"
-                case Set:  // 's'  ->  SET n s
-                    text = text(node);
-                    add(SET);
-                    string(text);
-                    break;
-                    */
-
+        add(SET, bytes(node.name()));
     }
 
+    private byte[] bytes(String s) {
+        try { return s.getBytes("UTF8"); }
+        catch (Exception e) { throw new Error(e); }
+    }
+/*
     // Find the character array for a char/string/set node
     private char[] text(Node node) {
         switch (node.op()) {
@@ -250,7 +245,7 @@ class Generator implements Testable {
         default: throw new Error("Not implemented");
         }
     }
-
+*/
     // Add a string to the output, with possible preceding comma and newline.
     private void add(String s) {
         int extra = 2 + s.length();
@@ -274,12 +269,22 @@ class Generator implements Testable {
         add("" + n);
     }
 
+    private void add(byte[] bytes) {
+        add(bytes.length);
+        for (byte b : bytes) add(b);
+    }
+
     private void add(char[] text) {
         byte[] bytes;
         try { bytes = new String(text).getBytes("UTF8"); }
         catch (Exception e) { throw new Error(e); }
         add(bytes.length);
         for (byte b : bytes) add(b);
+    }
+
+    private void add(Code op, byte[] bytes) {
+        add(op.toString());
+        add(bytes);
     }
 
     private void add(Code op, char[] text) {

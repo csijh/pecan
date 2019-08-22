@@ -1332,18 +1332,18 @@ single character which takes up one byte in UTF-8, i.e. is in the range
 <code>0</code> to <code>127</code>. A tag is translated using the
 <code>TAG</code> opcode. For strings:</p>
 
-<pre>{128}       =   STRING 2 194 128
-{"ab"}      =   STRING 2 97 98
-{""}        =   STRING 0
-{"&#960;"}       =   STRING 2 207 128
-{"a&#960;"}      =   STRING 3 97 207 128
-{'&#960;'}       =   STRING 2 207 128
+<pre>{128}       =   CHARS 2 194 128
+{"ab"}      =   CHARS 2 97 98
+{""}        =   CHARS 0
+{"&#960;"}       =   CHARS 2 207 128
+{"a&#960;"}      =   CHARS 3 97 207 128
+{'&#960;'}       =   CHARS 2 207 128
 {&lt;a>}       =   BELOW 97
 {&lt;ab>}      =   BELOWS 2 97 98
 </pre>
 
 <p>If a single Unicode character is greater than <code>127</code> or a string
-has more than one character, the <code>STRING</code> opcode is used, followed by
+has more than one character, the <code>CHARS</code> opcode is used, followed by
 the number of bytes of text, followed by the text in UTF-8 format. A string
 containing characters of mixed UTF-8 lengths causes no problem, because a UTF-8
 string can be matched byte by byte, without taking account of character
@@ -1353,17 +1353,14 @@ string version <code>BELOWS</code>. The comparison between UTF-8 strings which
 
 <pre>{''}        =   SET 0
 {'ab'}      =   SET 2 97 98
-{'&#945;&#946;'}      =   SET2 4 206 177 206 178
+{'&#945;&#946;'}      =   SET 4 206 177 206 178
 {'a'..'z'}  =   LOW 97 HIGH 122
 {'&#945;'..'&#969;'}  =   LOWS 2 206 177 HIGHS 2 207 137
 </pre>
 
-<p>The <code>SET</code> opcode is used for sets of one-byte characters, the
-<code>SET2</code> opcode for sets of two-byte characters and so on. A mixed set
-such as <code>'a&#960;'</code> is treated as <code>'a' / '&#960;'</code> so that
-each set opcode takes UTF-8 characters of a fixed length. A range is translated
-into the two opcodes <code>LOW</code> and <code>HIGH</code> or the string
-versions <code>LOWS</code> and <code>HIGHS</code>. For categories:</p>
+<p>The <code>SET</code> opcode is used for sets of characters. A range is
+translated into the two opcodes <code>LOW</code> and <code>HIGH</code> or the
+string versions <code>LOWS</code> and <code>HIGHS</code>. For categories:</p>
 
 <pre>{Nd}        =   CAT Nd
 </pre>
@@ -1371,8 +1368,8 @@ versions <code>LOWS</code> and <code>HIGHS</code>. For categories:</p>
 <p>A category is translated using the <code>CAT</code> opcode. This may be the
 most difficult opcode to implement, if the chosen programming language doesn't
 have a facility for finding the category of a character. In that case, a
-two-stage lookup table is needed. A two-stage table is included among the
-example interpreters provided.</p>
+two-stage lookup table is needed. A suitable two-stage table is included with
+the example interpreters provided.</p>
 
 <pre>{x/y}       =   EITHER nx {x} OR {y}
 {x y}       =   BOTH nx {x} AND {y}
@@ -1388,7 +1385,7 @@ to <code>{y}</code>. If the interpreter uses functions, then a single function
 can deal with the two calls, but the call to <code>{y}</code> can't be a tail
 call unless the interpreter's language supports it.</p>
 
-<pre>{x?}        =   MAYBE OPT {x}
+<pre>{x?}        =   MAYBE ONE {x}
 {x*}        =   MAYBE MANY {x}
 {x+}        =   DO AND MAYBE MANY {x}
 {[x]}       =   LOOK TRY {x}
@@ -1397,20 +1394,20 @@ call unless the interpreter's language supports it.</p>
 </pre>
 
 <p>The <code>MAYBE</code> opcode initializes, then causes a call to
-<code>{x}</code>, returning to <code>OPT</code>. The <code>OPT</code> which
+<code>{x}</code>, returning to <code>ONE</code>. The <code>ONE</code> opcode
 converts the result of <code>{x}</code> into the result of <code>x?</code>. The
 <code>MANY</code> opcode is similarly executed after <code>{x}</code>. It checks
 the result of <code>{x}</code> to decide whether or not to call it again. The
-code <code>MAYBE OPT {x}</code> might be a little more readable if written as
-<code>MAYBE nx {x} OPT</code>, but the format shown above avoids the need for
+code <code>MAYBE ONE {x}</code> might be a little more readable if written as
+<code>MAYBE nx {x} ONE</code>, but the format shown above avoids the need for
 the argument <code>nx</code>. In the case of <code>MANY</code>, there is the
 added advantage that <code>{x}</code> is easily called again. The code for
 <code>x+</code> is equivalent to the code for <code>x x*</code>, except that the
 <code>DO</code> opcode avoids the need for a second copy of <code>{x}</code> by
-jumping forwards, and arranging for the call to return to <code>AND</code>. The
-<code>LOOK</code> opcode initializes any of the lookahead constructs, arranging
-to return to <code>TRY</code> or <code>HAS</code> or <code>NOT</code> which
-sorts out the result.</p>
+jumping forwards to <code>{x}</code>, and arranging for the call to return to
+<code>AND</code>. The <code>LOOK</code> opcode initializes any of the lookahead
+constructs, arranging to return to <code>TRY</code> or <code>HAS</code> or
+<code>NOT</code> which sorts out the result.</p>
 
 <pre>{@a}        =   ACT a
 {@}         =   DROP

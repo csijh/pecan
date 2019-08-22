@@ -17,6 +17,7 @@ Recognize ranges 'a..z' and create character subnodes.
 Check that both ends of ranges are single characters, and ranges are non-empty.
 For nodes which represent single characters, set the value to the code.
 Check that numerical character codes are in the range 0..1114111.
+Check that strings/sets/dividers have at most 255 bytes in UTF8.
 Check whether the grammar has text or tokens as input. */
 
 class Binder implements Testable {
@@ -60,7 +61,6 @@ class Binder implements Testable {
         if (root.has(TextInput) && root.has(TokenInput)) {
             err(root, "there is both text and token input");
         }
-//        classify(root);
         return root;
     }
 
@@ -137,11 +137,13 @@ class Binder implements Testable {
 
     // Check whether a string is a character.
     // Set the TextInput flag on the root node.
-    private void bindString(Node node) {
+    private void bindString(Node node) throws Exception {
         node.value(-1);
         int n = node.text().codePointCount(1, node.text().length() - 1);
         if (n != 0) root.set(TextInput);
         if (n != 1) return;
+        int nb = bytes(node.name()).length;
+        if (nb > 255) err(node, "too many characters");
         node.op(Char);
         node.value(node.text().codePointAt(1));
         node.note("" + node.value());
@@ -149,11 +151,13 @@ class Binder implements Testable {
 
     // Check whether a divider has one character.
     // Set the TextInput flag on the root node.
-    private void bindDivider(Node node) {
+    private void bindDivider(Node node) throws Exception {
         node.value(-1);
         int n = node.text().codePointCount(1, node.text().length() - 1);
         if (n != 0) root.set(TextInput);
         if (n != 1) return;
+        int nb = bytes(node.name()).length;
+        if (nb > 255) err(node, "too many characters");
         node.value(node.text().codePointAt(1));
         node.note("" + node.value());
     }
@@ -189,6 +193,8 @@ class Binder implements Testable {
             bindRange(node);
             return;
         }
+        int nb = bytes(node.name()).length;
+        if (nb > 255) err(node, "too many characters");
         for (int i = 1; i<text.length() - 1; ) {
             int c1 = text.codePointAt(i);
             i += Character.charCount(c1);
@@ -225,6 +231,12 @@ class Binder implements Testable {
         Integer old = arities.get(name);
         if (old == null) arities.put(name, arity);
         else if (arity != old) err(node, "clashes with @" + old + name);
+    }
+
+    // Convert string to UTF8 byte array
+    private byte[] bytes(String s) {
+        try { return s.getBytes("UTF8"); }
+        catch (Exception e) { throw new Error(e); }
     }
 
     // Report an error and stop.
