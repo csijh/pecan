@@ -1,30 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <assert.h>
+#include "interpreter.h"
 
-typedef unsigned char byte;
-
-// Opcodes before RULE have no argument. Other opcodes have a one-byte argument.
-// An extended opcode EXTEND+OP has a two-byte, big-endian, unsigned argument.
-enum op {
-    STOP, OR, AND, MAYBE, OPT, MANY, DO, LOOK, TRY, HAS, NOT,
-    RULE, START, GO, BACK, EITHER, BOTH, CHAR, SET, SET2, SET3, SET4, STRING,
-    LOW, HIGH, LESS, CAT, TAG, MARK, ACT,
-    EXTEND
-};
-
-// Action constants. Reserve 0 for @ which drops characters.
-enum action { number = 1 };
+// Action constants.
+enum action { number = 0 };
 
 static byte code[] = {
-    START, 8, LOW, 1, 48, HIGH, 1, 57, ACT, number, STOP
+    START, 8, LOW, 48, HIGH, 57, ACT, number, STOP
 };
 
 // Carry out a (delayed) action, returning the updated value of 'val'.
 static inline
-int doAction(int op, byte input[], int start, int end, int values[], int val) {
-    if (op == number) {
+int doAction(int act, byte input[], int start, int end, int values[], int val) {
+    if (act == number) {
         int n = 0;
         for (int i = start; i < end; i++) n = n * 10 + (input[i] - '0');
         values[val++] = n;
@@ -32,17 +21,12 @@ int doAction(int op, byte input[], int start, int end, int values[], int val) {
     return val;
 }
 
-// Find the length of a UTF-8 character.
-static inline int length(byte first) {
-    if ((first & 0x80) == 0) return 1;
-    if ((first & 0xE0) == 0xC0) return 2;
-    if ((first & 0xF0) == 0xE0) return 3;
-    return 4;
-}
+// ---- Interpreter ------------------------------------------------------------
+// The remainder of this program is a generic interpreter for Pecan bytecode.
 
 // Parse an input string, producing an integer. Each time round the main loop,
 // carry out any delayed actions then execute an opcode.
-int parse(byte input[]) {
+int parse(byte input[], act) {
 
     // The parsing state.
     int output[1000], stack[1000], values[1000];
@@ -50,33 +34,6 @@ int parse(byte input[]) {
     bool ok, act, end;
 
     while(! end) {
-
-        // Carry out any delayed actions. An opcode requests this by setting the
-        // act flag, rather than doing it directly, so that this code appears
-        // only once. For each delayed action, the input position at the time of
-        // recording is stored.
-        if (act) {
-            act = false;
-            for (int i = 0; i < out; i++) {
-                int op = output[i++];
-                int oldIn = output[i];
-                val = doAction(op, input, start, oldIn, values, val);
-                start = oldIn;
-            }
-            out = 0;
-        }
-
-        // At the end of parsing, check success or failure and return. The STOP
-        // action requests this by setting the end flag, rather than doing it
-        // directly, in case there are outstanding actions to perform using the
-        // above code.
-        // TODO report error markers better.
-        if (end) {
-            if (ok) return values[0];
-            if (in > mark) markers = 0;
-            printf("Parsing failed %x\n", markers);
-            exit(1);
-        }
 
         // Carry out one instruction. Read in a one or two byte argument as
         // appropriate, and then dispatch the opcode.
@@ -89,144 +46,6 @@ int parse(byte input[]) {
         }
         switch(op) {
 
-            // id = x  label an entry point. continue with START.
-            case RULE: break;
-
-            // id = x  Entry point. Prepare, continue with x, returning to STOP.
-            case START:
-                pc = start = in = val = saveIn = saveOut = 0;
-                top = look = mark = markers = 0;
-                ok = act = end = false;
-                stack[top++] = pc + arg;
-                break;
-
-            // id = x  After x, tidy up and arrange to return.
-            case STOP:
-                if (ok && out > 0) act = true;
-                end = true;
-                break;
-
-            // id  Skip forwards in the code. (Tail-call a remote rule.)
-            case GO:
-                pc = pc + arg;
-                break;
-
-            // id  Skip backwards in the code. (Tail-call a remote rule.)
-            case BACK:
-                pc = pc - arg;
-                break;
-
-            // x / y  Save current state, call x, returning to OR.
-            case EITHER:
-                stack[top++] = in;
-                stack[top++] = out;
-                stack[top++] = pc + arg;
-                break;
-
-            // x / y  After x, return or continue with y.
-            case OR:
-                saveOut = stack[--top];
-                saveIn = stack[--top];
-                if (ok || in > saveIn) pc = stack[--top];
-                else out = saveOut;
-                break;
-
-            // x y  Continue with x, returning to AND.
-            case BOTH:
-                stack[top++] = pc + arg;
-                break;
-
-            // x y  After x, if it failed, return, else continue with y.
-            case AND:
-                if (! ok) pc = stack[--top];
-                break;
-
-            // x?, x*  Save state and jump to x, returning to OPT or MANY.
-            case MAYBE:
-                stack[top++] = in;
-                stack[top++] = out;
-                stack[top++] = pc + arg;
-                pc++;
-                break;
-
-            // x?  After x, check success and return.
-            case OPT:
-                saveOut = stack[--top];
-                saveIn = stack[--top];
-                if (! ok && in == saveIn) {
-                    out = saveOut;
-                    ok = true;
-                }
-                pc = stack[--top];
-                break;
-
-            // x*: after x, check success and re-try x or return.
-            case MANY:
-                saveOut = stack[--top];
-                saveIn = stack[--top];
-                if (ok) {
-                    stack[top++] = in;
-                    stack[top++] = out;
-                }
-                else {
-                    if (! ok && in == saveIn) {
-                        out = saveOut;
-                        ok = true;
-                    }
-                    pc = stack[--top];
-                }
-                break;
-
-            // x+: jump to x, returning to AND.  (DO AND MAYBE MANY <x>)
-            case DO:
-                stack[top++] = pc;
-                pc = pc + 3;
-                break;
-
-            // [x], x&, x!: start a lookahead.
-            case LOOK:
-                stack[top++] = in;
-                stack[top++] = out;
-                look++;
-                stack[top++] = pc;
-                pc = pc + 1;
-                break;
-
-            // x&: after x, backtrack and return.
-            case HAS:
-                out = stack[--top];
-                in = stack[--top];
-                look--;
-                pc = stack[--top];
-                break;
-
-            // x!: after x, backtrack, inverted the result, and return.
-            case NOT:
-                out = stack[--top];
-                in = stack[--top];
-                look--;
-                ok = ! ok;
-                pc = stack[--top];
-                break;
-
-            // [x]: succeed and perform actions, or fail and discard them.
-            case TRY:
-                saveOut = stack[--top];
-                in = stack[--top];
-                look--;
-                if (ok && look == 0) act = true;
-                else out = saveOut;
-                break;
-
-            // 'a': recognise an ascii character.
-            case CHAR:
-                ok = (input[in] == arg);
-                if (ok) {
-                    if (look == 0 && out > saveOut) act = true;
-                    in++;
-                }
-                pc = stack[--top];
-                break;
 
             // 'abc': check for each character in a set.
             case SET: case SET2: case SET3: case SET4:

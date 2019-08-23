@@ -10,18 +10,16 @@ import static pecan.Node.Flag.*;
 from the tree nodes, and can be used for testing, and for tracing. It also
 effectively defines the operational semantics of the grammar language.
 
-The input may be text, or tag names with possible white space in between. The
-output describes the external calls that would be made, with one line per call.
+The input is text, or tag names representing tokens, separated by white space.
+The output describes the external calls generated, with one line per call.
 
 Actions are normally delayed until the next time progress is made, or discarded
 if parsing fails without progressing. During lookahead, actions are delayed
 until the end of the lookahead, or discarded on failure or backtrack. Error
-markers are gathered as a set, with a mark variable to record the position
-in the input at which they were encountered. When a new marker is encountered,
-and the input has progressed beyond the mark position, the old markers are
-discarded and the mark updated. Old markers are also discarded when an error is
-reported, if the input position has progressed beyond the mark. Markers are
-ignored during lookahead.
+markers are gathered as a set, with a marked variable to record the position in
+the input at which they were encountered. When a new marker is encountered, and
+the input has progressed beyond the marked position, the old markers are
+discarded and the marked position updated. Markers are ignored during lookahead.
 
 TODO: work out which actions need to be delayed (or max no).
 Look for x / y or x? or x* or x+ where x has a problem action.
@@ -41,7 +39,7 @@ public class Evaluator implements Testable {
     private boolean textInput, ok;
     private String input;
     private Node root;
-    private int start, in, out, mark, lookahead;
+    private int start, in, out, marked, lookahead;
     private TreeSet<String> failures;
     private Node[] delay;
     private StringBuffer output;
@@ -51,13 +49,14 @@ public class Evaluator implements Testable {
         Evaluator program = new Evaluator();
         if (args != null) for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-trace")) program.tracing = true;
+            else if (args[i].equals("-t")) program.tracing = true;
             else line = Integer.parseInt(args[i]);
         }
         if (args.length == 0) Stacker.main(args);
         Test.run(program, line);
     }
 
-    // Carry out a test, or set up grammar for subsequent tests
+    // Carry out a test, or set up a grammar for subsequent tests
     public String test(String input) {
         if (input.startsWith("GRAMMAR:\n")) {
             grammar = input.substring(9);
@@ -73,19 +72,14 @@ public class Evaluator implements Testable {
         }
     }
 
-    // Set the tracing flag.
-    void trace(boolean b) {
-        tracing = b;
-    }
-
     // Get the Evaluator ready to run, with the given input.
-    void prepare(String text) {
+    private void prepare(String text) {
         input = text;
         ok = true;
         start = 0;
         in = 0;
         out = 0;
-        mark = 0;
+        marked = 0;
         lookahead = 0;
         failures = new TreeSet<>();
         delay = new Node[100];
@@ -93,11 +87,11 @@ public class Evaluator implements Testable {
     }
 
     // Run the parser
-    String run() {
+    private String run() {
         if (tracing) traceInput();
         if (root.op() == Error) return root.note() + "\n";
         parse(root.left());
-        if (in > mark) failures.clear();
+        if (in > marked) failures.clear();
         takeActions();
         if (! ok) {
             output.setLength(0);
@@ -114,7 +108,7 @@ public class Evaluator implements Testable {
     }
 
     // Parse according to the given node.
-    void parse(Node node) {
+    private void parse(Node node) {
         int saveIn, saveOut, length;
         String text;
         if (tracing && ! skipTrace) System.out.println(node.trace());
@@ -303,7 +297,7 @@ public class Evaluator implements Testable {
         case Mark:
             ok = true;
             if (lookahead > 0) break;
-            if (mark != in) { mark = in; failures.clear(); }
+            if (marked != in) { marked = in; failures.clear(); }
             failures.add(node.text().substring(1));
             break;
         case Drop:
