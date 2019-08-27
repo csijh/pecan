@@ -2,36 +2,33 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// Change the TEXT flag here, or by setting it before including this header, to
-// indicate that the parser handles text as well as tokens. Similarly, change
-// the CATEGORIES flag to indicate that, if TEXT is true, the parser handles
-// Unicode categories via the two-stage table in table1.bin and table2.bin.
-#ifndef TEXT
-#define TEXT true
-#endif
-#ifndef CATEGORIES
-#define CATEGORIES true
-#endif
-
 // The type of code bytes and UTF8 input bytes, and of error bitmaps.
 typedef unsigned char byte;
-typedef uint64_t uint64;
+typedef uint64_t bits;
 
-// The opcodes.
+// The opcodes: first those that take no argument, then those that take an
+// implicit argument of 1, then variations that take a one-byte arument 0..255
+// and then variations that take a two-byte big-endian argument 0..65535.
 enum op {
-    START, START2, STOP, GO, GO2, BACK, BACK2,
-    EITHER, EITHER2, OR, BOTH, BOTH2, AND,
-    MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP, ACT, MARK,
-    CHAR, CHARS, LOW, LOWS, HIGH, HIGHS, BELOW, BELOWS, SET,
-    CAT, TAG
+    STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP, MARK,
+    START, GO, BACK, EITHER, BOTH, ACT, STRING, LOW, HIGH, LESS, SET, CAT, TAG,
+    START1,GO1,BACK1,EITHER1,BOTH1,ACT1,STRING1,LOW1,HIGH1,LESS1,SET1,CAT1,TAG1,
+    START2,GO2,BACK2,EITHER2,BOTH2,ACT2,STRING2,LOW2,HIGH2,LESS2,SET2,CAT2,TAG2,
 };
 
-// The type of a function to perform output actions.
+// The type of a function to perform an output action, and of a function to get
+// the tag of the next token.
 typedef void doAction(int a, int start, int in, void *state);
+typedef int doNext(void *state);
 
-#ifdef TEXT
-// The generic text parser.
-uint64 parseText(byte code[], byte input[], doAction *act, void *state);
-#endif
+// Use the n'th entry point in the code to parse the input bytes, calling
+// act(state) to perform each action. The result is 0L for success, or a bitmap
+// of expected item markers for a failure. There is no automatic recovery.
+bits parseText(int n, byte code[], byte input[], doAction *act, void *state);
 
-uint64 parseTokens(byte code[], byte input[], doAction *act, void *state);
+
+// Use the n'th entry point in the code to parse tokens, obtaining the tag of
+// the next token using next(state) and calling act(state) to perform actions.
+bits parseTokens(int n, byte code[], doNext *next, doAction *act, void *state);
+
+// Report a parse error.

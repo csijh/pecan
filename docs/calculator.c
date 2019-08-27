@@ -7,34 +7,39 @@
 enum action { number = 0 };
 
 static byte code[] = {
-    START, 8, LOW, 48, HIGH, 57, ACT, number, STOP
+    // <pecan>
+    START1, 6, LOW, 48, HIGH, 57, ACT1, number, STOP
+    // </pecan>
 };
 
-// Carry out a (delayed) action, returning the updated value of 'val'.
-static inline
-int doAction(int act, byte input[], int start, int end, int values[], int val) {
-    if (act == number) {
+// The state consists of the input and a stack of integers.
+struct state { char *input; int top; int stack[1000]; };
+typedef struct state state;
+
+// Carry out an action.
+static inline void act(int a, int start, int end, void *vs) {
+    printf("act a = %d, start = %d, end = %d\n", a, start, end);
+    state *s = vs;
+    if (a == number) {
         int n = 0;
-        for (int i = start; i < end; i++) n = n * 10 + (input[i] - '0');
-        values[val++] = n;
+        for (int i = start; i < end; i++) n = n * 10 + (s->input[i] - '0');
+        s->stack[s->top++] = n;
     }
-    return val;
 }
 
-// ---- Interpreter ------------------------------------------------------------
-// The remainder of this program is a generic interpreter for Pecan bytecode.
+// Call with one argument.
+int main(int n, char *args[n]) {
+    setbuf(stdout, NULL);
+    assert(n == 2);
+    state sData;
+    state *s = &sData;
+    s->input = args[1];
+    bits result = parseText(0, code, args[1], act, s);
+    if (result == 0L) printf("%d\n", s->stack[0]);
+    else printf("Error\n");
+}
 
-// Parse an input string, producing an integer. Each time round the main loop,
-// carry out any delayed actions then execute an opcode.
-int parse(byte input[], act) {
-
-    // The parsing state.
-    int output[1000], stack[1000], values[1000];
-    int pc, top, start, in, val, out, look, mark, markers, saveIn, saveOut;
-    bool ok, act, end;
-
-    while(! end) {
-
+/*
         // Carry out one instruction. Read in a one or two byte argument as
         // appropriate, and then dispatch the opcode.
         byte op = code[pc++];
@@ -44,16 +49,4 @@ int parse(byte input[], act) {
             arg = (arg << 8) | code[pc++];
             op = op - EXTEND;
         }
-        switch(op) {
-
-
-            // Categories and tags are not implemented.
-            case CAT: case TAG:
-                printf("Opcode %d not implemented\n", op);
-                exit(1);
-                break;
-
-
-        }
-    }
-}
+*/

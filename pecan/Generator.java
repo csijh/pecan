@@ -74,7 +74,7 @@ class Generator implements Testable {
         node.LEN(pc - node.PC());
     }
 
-    // {id = x; ...}  =  START nx {x} STOP ...
+    // {id = x; ...}  =  START(nx), {x}, STOP ...
     private void encodeRule(Node node) {
         add(START, node.left().LEN());
         encode(node.left());
@@ -82,7 +82,7 @@ class Generator implements Testable {
         encode(node.right());
     }
 
-    // {id}  =  GO n    or    BACK n
+    // {id}  =  GO(n)    or    BACK(n)
     private void encodeId(Node node) {
         int target = node.ref().left().PC();
         int offset = target - (pc + node.LEN());
@@ -90,7 +90,7 @@ class Generator implements Testable {
         else add(BACK, -offset);
     }
 
-    // {x / y}  =  EITHER nx {x} OR {y}
+    // {x / y}  =  EITHER(nx), {x}, OR, {y}
     private void encodeOr(Node node) {
         int nx = node.left().LEN();
         add(EITHER, nx);
@@ -99,7 +99,7 @@ class Generator implements Testable {
         encode(node.right());
     }
 
-    // {x y}  =  BOTH nx {x} AND {y}
+    // {x y}  =  BOTH(nx), {x}, AND, {y}
     private void encodeAnd(Node node) {
         int nx = node.left().LEN();
         add(BOTH, nx);
@@ -157,70 +157,62 @@ class Generator implements Testable {
         add(DROP);
     }
 
-    // {@a}  =  a
+    // {@a}  =  ACT(a)
     private void encodeAct(Node node) {
+        add(ACT.toString() + "1");
         add(node.name());
     }
 
-    // {#e}  =  MARK n
+    // {#e}  =  MARK(n)
     private void encodeMark(Node node) {
-        add(MARK);
+        add(MARK.toString() + "1");
         add(node.name());
     }
 
-    // {%id}  =  TAG n
+    // {%id}  =  TAG(n)
     private void encodeTag(Node node) {
-        add(TAG);
+        add(TAG.toString() + "1");
         add(node.text());
     }
 
-    // {10}  =  CHAR 10
-    // {"a"}  =  CHAR 97
-    // {'a'}  =  CHAR 97
-    // {128}  =  CHARS 2 194 128
+    // {10}  =  STRING(1), 10
+    // {"a"}  =  STRING(1), 97
+    // {'a'}  =  STRING(1), 97
+    // {128}  =  STRING(2), 194, 128
     private void encodeChar(Node node) {
         int ch = node.value();
-        if (ch <= 255) add(CHAR, ch);
-        else add(CHARS, bytes(new String(Character.toChars(ch))));
+        add(STRING, bytes(new String(Character.toChars(ch))));
     }
 
-    // {Nd}  =  CAT Nd
+    // {Nd}  =  CAT(Nd)
     private void encodeCat(Node node) {
-        add(CAT);
+        add(CAT.toString() + "1");
         add(node.text());
     }
 
-    // {"ab"}  =  CHARS 2 97 98
-    // {"π"}  =  CHARS 2 207 128
-    // {""}  =  CHARS 0
+    // {"ab"}  =  STRING(2), 97, 98
+    // {"π"}  =  STRING(2), 207, 128
+    // {""}  =  STRING(0)
     private void encodeString(Node node) {
-        add(CHARS, bytes(node.name()));
+        add(STRING, bytes(node.name()));
     }
 
-    // {<a>}  =  BELOW 97
-    // {<ab>}  =  BELOWS 2 97 98
+    // {<a>}  =  LESS(1), 97
+    // {<ab>}  =  LESS(2), 97, 98
     private void encodeDivider(Node node) {
-        int ch = node.value();
-        if (ch >= 0 && ch <= 255) add(BELOW, ch);
-        else add(BELOWS, bytes(node.name()));
+        add(LESS, bytes(node.name()));
     }
 
-    // {"a".."z"}  =  LOW 97 HIGH 122
-    // {'α'..'ω'}  =  LOWS 2 206 177 HIGHS 2 207 137
+    // {'a..z'}  =  LOW(1), 97, HIGH(1), 122
+    // {'α..ω'}  =  LOW(2), 206, 177, HIGH(2), 207, 137
     private void encodeRange(Node node) {
-        int ch = node.left().value();
-        if (ch >= 0 && ch <= 255) add(LOW, ch);
-        else add(LOWS, bytes(new String(Character.toChars(ch))));
-        ch = node.right().value();
-        if (ch >= 0 && ch <= 255) add(HIGH, ch);
-        else add(HIGHS, bytes(new String(Character.toChars(ch))));
+        add(LOW, bytes(node.left().name()));
+        add(HIGH, bytes(node.right().name()));
     }
 
-    // {'a'}  =  CHAR 97
-    // {'ab'}  =   SET 2 97 98
-    // {'αβ'}  =   SET2 4 206 177 206 178
-    // {'a'..'z'}  =   LOW 97 HIGH 122
-    // {'α'..'ω'}  =   LOWS 2 206 177 HIGHS 2 207 137
+    // {'a'}  =  STRING(1), 97
+    // {'ab'}  =   SET(2), 97, 98
+    // {'αβ'}  =   SET(4), 206, 177, 206, 178
     // {''}  =   SET 0
     private void encodeSet(Node node) {
         add(SET, bytes(node.name()));
@@ -230,22 +222,7 @@ class Generator implements Testable {
         try { return s.getBytes("UTF8"); }
         catch (Exception e) { throw new Error(e); }
     }
-/*
-    // Find the character array for a char/string/set node
-    private char[] text(Node node) {
-        switch (node.op()) {
-        case Char:
-            int base = node.text().startsWith("0") ? 16 : 10;
-            int ch = Integer.parseInt(node.text(), base);
-            return Character.toChars(ch);
-        case String: case Set: case Divider:
-            String s = node.text();
-            s = s.substring(1, s.length() - 1);
-            return s.toCharArray();
-        default: throw new Error("Not implemented");
-        }
-    }
-*/
+
     // Add a string to the output, with possible preceding comma and newline.
     private void add(String s) {
         int extra = 2 + s.length();
@@ -269,8 +246,25 @@ class Generator implements Testable {
         add("" + n);
     }
 
+    // Encode an op and arg.
+    private void add(Code op, int arg) {
+        if (arg == 1) {
+            add(op.toString());
+        }
+        else if (arg < 256) {
+            add(op.toString() + "1");
+            add(arg);
+        }
+        else if (arg < 65536) {
+            add(op.toString() + "2");
+            add(arg/256);
+            add(arg%256);
+        }
+        else throw new Error("code too large");
+    }
+
     private void add(byte[] bytes) {
-        add(bytes.length);
+//        add(bytes.length);
         for (byte b : bytes) add(b);
     }
 
@@ -283,26 +277,12 @@ class Generator implements Testable {
     }
 
     private void add(Code op, byte[] bytes) {
-        add(op.toString());
+        add(op, bytes.length);
         add(bytes);
     }
 
     private void add(Code op, char[] text) {
         add(op.toString());
         add(text);
-    }
-
-    // Encode an op and arg.
-    private void add(Code op, int arg) {
-        if (arg > 65535) throw new Error("code too large");
-        if (arg > 255) {
-            add(op.toString() + "2");
-            add(arg/256);
-            add(arg%256);
-        }
-        else {
-            add(op.toString());
-            add(arg);
-        }
     }
 }

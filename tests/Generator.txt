@@ -1,106 +1,109 @@
 x = @x
 ----------
-START, 1, x, STOP
+START1, 2, ACT1, x, STOP
 ==========
 x = @x ("x" / "y")
 ----------
-START, 11, BOTH, 1, x, AND, EITHER, 2, CHAR, 120, OR, CHAR, 121, STOP
+START1, 12, BOTH1, 2, ACT1, x, AND, EITHER1, 2, STRING, 120, OR, STRING, 121,
+STOP
 ==========
 // Calculator tutorial step 1
 digit = '0..9' @number
 ----------
-START, 8, BOTH, 4, LOW, 48, HIGH, 57, AND, number, STOP
+START1, 9, BOTH1, 4, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 ==========
 // Step 2
 number = ('0..9')+ @number
 ----------
-START, 12, BOTH, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, number,
-STOP
+START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1,
+number, STOP
 ==========
 // Step 3
 sum = number / number '+' number @2add
 number = ('0..9')+ @number
 ----------
-START, 21, EITHER, 2, GO, 20, OR, BOTH, 2, GO, 15, AND, BOTH, 2, CHAR, 43,
-AND, BOTH, 2, GO, 5, AND, add, STOP, START, 12, BOTH, 8, DO, AND, MAYBE, MANY,
-LOW, 48, HIGH, 57, AND, number, STOP
+START1, 22, EITHER1, 2, GO1, 21, OR, BOTH1, 2, GO1, 16, AND, BOTH1, 2, STRING,
+43, AND, BOTH1, 2, GO1, 6, AND, ACT1, add, STOP, START1, 13, BOTH1, 8, DO,
+AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 ==========
 // Step 4
 sum = number '+' number @2add / number
 number = ('0..9')+ @number
 ----------
-START, 21, EITHER, 16, BOTH, 2, GO, 18, AND, BOTH, 2, CHAR, 43, AND, BOTH, 2,
-GO, 8, AND, add, OR, GO, 3, STOP, START, 12, BOTH, 8, DO, AND, MAYBE, MANY,
-LOW, 48, HIGH, 57, AND, number, STOP
+START1, 22, EITHER1, 17, BOTH1, 2, GO1, 19, AND, BOTH1, 2, STRING, 43, AND,
+BOTH1, 2, GO1, 9, AND, ACT1, add, OR, GO1, 3, STOP, START1, 13, BOTH1, 8, DO,
+AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 ==========
 // Step 5
 sum = [number '+'] number @2add / number
 number = ('0..9')+ @number
 ----------
-START, 23, EITHER, 18, BOTH, 9, LOOK, TRY, BOTH, 2, GO, 16, AND, CHAR, 43,
-AND, BOTH, 2, GO, 8, AND, add, OR, GO, 3, STOP, START, 12, BOTH, 8, DO, AND,
-MAYBE, MANY, LOW, 48, HIGH, 57, AND, number, STOP
+START1, 24, EITHER1, 19, BOTH1, 9, LOOK, TRY, BOTH1, 2, GO1, 17, AND, STRING,
+43, AND, BOTH1, 2, GO1, 9, AND, ACT1, add, OR, GO1, 3, STOP, START1, 13,
+BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 ==========
 // Step 6
 sum = number ('+' number @2add)?
 number = ('0..9')+ @number
 ----------
-START, 18, BOTH, 2, GO, 17, AND, MAYBE, ONE, BOTH, 2, CHAR, 43, AND, BOTH, 2,
-GO, 5, AND, add, STOP, START, 12, BOTH, 8, DO, AND, MAYBE, MANY, LOW, 48,
-HIGH, 57, AND, number, STOP
+START1, 19, BOTH1, 2, GO1, 18, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
+BOTH1, 2, GO1, 6, AND, ACT1, add, STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE,
+MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 ==========
 // Step 7
 sum = number ('+' @ number @2add)?
 number = ('0..9')+ @number
 ----------
-START, 22, BOTH, 2, GO, 21, AND, MAYBE, ONE, BOTH, 2, CHAR, 43, AND, BOTH, 1,
-DROP, AND, BOTH, 2, GO, 5, AND, add, STOP, START, 12, BOTH, 8, DO, AND, MAYBE,
-MANY, LOW, 48, HIGH, 57, AND, number, STOP
+START1, 22, BOTH1, 2, GO1, 21, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
+BOTH, DROP, AND, BOTH1, 2, GO1, 6, AND, ACT1, add, STOP, START1, 13, BOTH1, 8,
+DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 ==========
 // Step 8
 sum = number ('+' @ number @2add)? end
 number = ('0..9')+ @number
 end = 13? 10 @
 ----------
-START, 27, BOTH, 2, GO, 26, AND, BOTH, 17, MAYBE, ONE, BOTH, 2, CHAR, 43, AND,
-BOTH, 1, DROP, AND, BOTH, 2, GO, 8, AND, add, AND, GO, 18, STOP, START, 12,
-BOTH, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, number, STOP, START,
-13, BOTH, 4, MAYBE, ONE, CHAR, 13, AND, BOTH, 2, CHAR, 10, AND, DROP, STOP
+START1, 27, BOTH1, 2, GO1, 26, AND, BOTH1, 17, MAYBE, ONE, BOTH1, 2, STRING,
+43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT1, add, AND, GO1, 19,
+STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND,
+ACT1, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE, STRING, 13, AND, BOTH1,
+2, STRING, 10, AND, DROP, STOP
 ==========
 // Step 9
 sum = number ('+' @ number @2add)* end
 number = ('0..9')+ @number
 end = 13? 10 @
 ----------
-START, 27, BOTH, 2, GO, 26, AND, BOTH, 17, MAYBE, MANY, BOTH, 2, CHAR, 43,
-AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 8, AND, add, AND, GO, 18, STOP, START,
-12, BOTH, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, number, STOP,
-START, 13, BOTH, 4, MAYBE, ONE, CHAR, 13, AND, BOTH, 2, CHAR, 10, AND, DROP,
-STOP
+START1, 27, BOTH1, 2, GO1, 26, AND, BOTH1, 17, MAYBE, MANY, BOTH1, 2, STRING,
+43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT1, add, AND, GO1, 19,
+STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND,
+ACT1, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE, STRING, 13, AND, BOTH1,
+2, STRING, 10, AND, DROP, STOP
 ==========
 // Step 10
 sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = ('0..9')+ @number
 end = 13? 10 @
 ----------
-START, 45, BOTH, 2, GO, 44, AND, BOTH, 35, MAYBE, MANY, EITHER, 15, BOTH, 2,
-CHAR, 43, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 24, AND, add, OR, BOTH, 2,
-CHAR, 45, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 8, AND, subtract, AND, GO, 18,
-STOP, START, 12, BOTH, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND,
-number, STOP, START, 13, BOTH, 4, MAYBE, ONE, CHAR, 13, AND, BOTH, 2, CHAR,
-10, AND, DROP, STOP
+START1, 45, BOTH1, 2, GO1, 44, AND, BOTH1, 35, MAYBE, MANY, EITHER1, 15,
+BOTH1, 2, STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 25, AND, ACT1, add,
+OR, BOTH1, 2, STRING, 45, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT1,
+subtract, AND, GO1, 19, STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW,
+48, HIGH, 57, AND, ACT1, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE,
+STRING, 13, AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
 ==========
 // Step 11
 sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = (#digit '0..9')+ @number
 end = #newline 13? 10 @
 ----------
-START, 45, BOTH, 2, GO, 44, AND, BOTH, 35, MAYBE, MANY, EITHER, 15, BOTH, 2,
-CHAR, 43, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 24, AND, add, OR, BOTH, 2,
-CHAR, 45, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 8, AND, subtract, AND, GO, 23,
-STOP, START, 17, BOTH, 13, DO, AND, MAYBE, MANY, BOTH, 2, MARK, digit, AND,
-LOW, 48, HIGH, 57, AND, number, STOP, START, 18, BOTH, 2, MARK, newline, AND,
-BOTH, 4, MAYBE, ONE, CHAR, 13, AND, BOTH, 2, CHAR, 10, AND, DROP, STOP
+START1, 45, BOTH1, 2, GO1, 44, AND, BOTH1, 35, MAYBE, MANY, EITHER1, 15,
+BOTH1, 2, STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 25, AND, ACT1, add,
+OR, BOTH1, 2, STRING, 45, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT1,
+subtract, AND, GO1, 24, STOP, START1, 18, BOTH1, 13, DO, AND, MAYBE, MANY,
+BOTH1, 2, MARK1, digit, AND, LOW, 48, HIGH, 57, AND, ACT1, number, STOP,
+START1, 18, BOTH1, 2, MARK1, newline, AND, BOTH1, 4, MAYBE, ONE, STRING, 13,
+AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
 ==========
 // Step 12
 sum = number (plus number @2add / minus number @2subtract)* end
@@ -110,11 +113,12 @@ minus = #operator '-' @
 digit = #digit '0..9'
 end = #newline 13? 10 @
 ----------
-START, 37, BOTH, 2, GO, 36, AND, BOTH, 27, MAYBE, MANY, EITHER, 11, BOTH, 2,
-GO, 38, AND, BOTH, 2, GO, 20, AND, add, OR, BOTH, 2, GO, 40, AND, BOTH, 2, GO,
-8, AND, subtract, AND, GO, 56, STOP, START, 10, BOTH, 6, DO, AND, MAYBE, MANY,
-GO, 33, AND, number, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2,
-CHAR, 43, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2,
-CHAR, 45, AND, DROP, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW, 48, HIGH,
-57, STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, CHAR,
-13, AND, BOTH, 2, CHAR, 10, AND, DROP, STOP
+START1, 39, BOTH1, 2, GO1, 38, AND, BOTH1, 29, MAYBE, MANY, EITHER1, 12,
+BOTH1, 2, GO1, 41, AND, BOTH1, 2, GO1, 22, AND, ACT1, add, OR, BOTH1, 2, GO1,
+42, AND, BOTH1, 2, GO1, 9, AND, ACT1, subtract, AND, GO1, 57, STOP, START1,
+11, BOTH1, 6, DO, AND, MAYBE, MANY, GO1, 34, AND, ACT1, number, STOP, START1,
+11, BOTH1, 2, MARK1, operator, AND, BOTH1, 2, STRING, 43, AND, DROP, STOP,
+START1, 11, BOTH1, 2, MARK1, operator, AND, BOTH1, 2, STRING, 45, AND, DROP,
+STOP, START1, 9, BOTH1, 2, MARK1, digit, AND, LOW, 48, HIGH, 57, STOP, START1,
+18, BOTH1, 2, MARK1, newline, AND, BOTH1, 4, MAYBE, ONE, STRING, 13, AND,
+BOTH1, 2, STRING, 10, AND, DROP, STOP

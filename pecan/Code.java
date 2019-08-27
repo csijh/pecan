@@ -9,7 +9,7 @@ public enum Code {
     START, STOP, GO, BACK,
     EITHER, OR, BOTH, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT,
     DROP, ACT, MARK, TAG,
-    CHAR, CAT, CHARS, BELOW, BELOWS, LOW, HIGH, LOWS, HIGHS, SET;
+    CAT, STRING, LESS, LOW, HIGH, SET;
 
     public static void main(String[] args) { }
 }

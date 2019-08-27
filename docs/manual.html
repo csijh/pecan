@@ -44,7 +44,6 @@
 <li><a href="#java">Generating code</a>
 <ul>
 <li><a href="#code">The bytecode</a></li>
-<li><a href="#semantics">Bytecode semantics</a></li>
 </ul>
 </li>
 </li>
@@ -1245,31 +1244,35 @@ and efficient way using a custom stack</li>
 
 <p>A bytecode sequence is generated using a command of the form:</p>
 
-<pre>pecan [-i interpreter] -o output grammar
+<pre>pecan -o output grammar
 </pre>
 
-<p>The option <code>-i interpreter</code> specifies an interpreter source file,
-written in any desired programming language, containing a placeholder:</p>
+<p>The option <code>-o output</code> specifies an output file. The file must
+already exist, as a source file template, written in any desired programming
+language. It must contain a placeholder such as:</p>
 
-<pre>&lt;pecan>
+<pre>// &lt;pecan>
+    ...
+// &lt;/pecan>
 </pre>
 
-<p>This must be on a line on its own, possibly preceded by spaces to specify an
-indent. The command inserts the bytecode into the interpreter, in place of the
-placeholder, to form the output file. The result is a parser which matches the
-grammar.</p>
+<p>The first line contain <code>&lt;pecan></code> in a target-language comment.
+Similarly, the last line must contain <code>&lt;/pecan></code>. Lines in between
+are removed and replaced by the bytecode. Thus bytecode generation may be
+carried out repeatedly on the same source file. The resulting source file is a
+parser which matches the grammar.</p>
 
 <p>The bytecode sequence is printed as text, as a comma-separated list of
 unsigned byte values. Those values which are opcodes, categories, tags, actions
 or error markers are represented symbolically. Suppose the grammar file
 contains:</p>
 
-<pre>digit = "0".."9" @number
+<pre>digit = '0..9' @number
 </pre>
 
 <p>Then the bytecode sequence generated might be:</p>
 
-<pre>START, 8, LOW, 1, 48, HIGH, 1, 57, number, STOP
+<pre>START1, 6, LOW, 48, HIGH, 57, ACT1, number, STOP
 </pre>
 
 <p>The values of the symbols are specified by the surrounding interpreter, eg.
@@ -1285,169 +1288,152 @@ actions and error handling as appropriate.</p>
 
 <h3 id="code">The bytecode</h3>
 
-<p>A grammar is converted into a textual representation of an array of unsigned
-bytes. The notation <code>{x}</code> means "the bytecode sequence generated for
-expression x" and <code>nx</code> stands for the number of bytes in
-<code>{x}</code>. For example, the normal translation of a rule is:</p>
+<p>Examples are given in this section of how every construct is translated into
+bytecode:</p>
 
-<pre>{id = x}    =   START nx {x} STOP
+<pre>{id = x}    =   START(nx), {x}, STOP
 </pre>
 
-<p>In these descriptions, the commas which separate the bytes in the textual
-output are omitted. Some opcodes such as <code>STOP</code> take no argument.
-Others, like <code>START</code> are followed by a one-byte argument. If the
-number <code>nx</code> exceeds <code>255</code>, then the translation
-becomes:</p>
+<p>A rule is translated using the <code>START</code> and <code>STOP</code>
+opcodes. The notation <code>{x}</code> means "the bytecode sequence generated
+for expression x" and <code>nx</code> stands for the number of bytes in
+<code>{x}</code>. The notation <code>START(nx)</code> means the opcode
+<code>START</code> with <code>nx</code> as an operand in the following 0 or 1 or
+2 bytes. An opcode which takes an operand comes in three variations. The form
+<code>START</code> with no suffix has the number <code>1</code> as an implicit
+operand. The form <code>START1</code> with suffix <code>1</code> has the operand
+in the following byte, in the range <code>0</code> to <code>255</code>. The form
+<code>START2</code> with suffix <code>2</code> has the operand in the followed
+two bytes, in big-endian format, in the range <code>0</code> to
+<code>65535</code>. By contrast, <code>STOP</code> is an opcode which needs no
+operand.</p>
 
-<pre>{id = x}    =   START2 nx1 nx2 {x} STOP
+<p>The <code>START</code> opcode creates a call to <code>{x}</code>, setting up
+the address of <code>STOP</code> as the return address. The <code>STOP</code>
+instruction ends parsing. The operand <code>nx</code> can be thought of as a
+relative offset in the code, from the position after the <code>START</code>
+instruction to the <code>STOP</code> instruction.</p>
+
+<p><code>START</code> and <code>STOP</code> opcodes are generated for every
+rule, even though they are only executed once for the overall call to the
+parser. This is so that any rule can be used as an entry point, if desired. The
+bytecode interpreter scans the bytecode, skipping the body <code>{x}</code> of
+each rule using the number <code>nx</code>, to find the start of the next
+rule.</p>
+
+<pre>{id}        =   GO(px)
+{id}        =   BACK(px)
 </pre>
-
-<p>The opcode <code>START2</code> is a version of <code>START</code> where
-<code>nx</code> is represented using two bytes instead of one. The bytes
-<code>nx1 = nx/256</code> and <code>nx2 = nx%256</code> represent
-<code>nx</code> in big-endian unsigned format. Every opcode with a one-byte
-argument has a similar version with a two-byte argument.</p>
 
 <p>When the name <code>id</code> of a rule such as <code>id = x</code> is used
-elsewhere in the grammar, it is translated by one of:</p>
+elsewhere in the grammar, it is translated using <code>GO</code> or
+<code>BACK</code>. The number <code>px</code> is an offset in the code to the
+body <code>{x}</code> of the relevant rule, relative to the end of the
+instruction. The <code>GO</code> opcode is used when the offset is positive, and
+<code>BACK</code> is used, with a positive operand, when the offset is
+negative.</p>
 
-<pre>{id}        =   GO px
-{id}        =   BACK px
+<pre>{"a"}       =   STRING(1), 97
+{97}        =   STRING(1), 97
+{128}       =   STRING(2), 194, 128
+{"ab"}      =   STRING(2), 97, 98
+{""}        =   STRING(0)
+{"&#960;"}       =   STRING(2), 207, 128
+{"a&#960;"}      =   STRING(3), 97, 207, 128
+{'&#960;'}       =   STRING(2), 207, 128
+{&lt;a>}       =   LESS(1), 97
+{&lt;ab>}      =   LESS(2), 97, 98
+{%id}       =   TAG(id)
 </pre>
 
-<p>The number <code>px</code> is an offset in the code to the body
-<code>{x}</code> of the relevant rule, relative to the next byte after
-<code>px</code>. The <code>GO</code> opcode is used when the offset is positive,
-and <code>BACK</code> is used, with a positive argument, when the offset is
-negative. For simple character or token input matching:</p>
+<p>The <code>STRING</code> opcode has the total number of bytes as its operand,
+and is followed by the bytes themselves in UTF-8 format. A divider is translated
+using the <code>LESS</code> opcode, and a tag is translated using the
+<code>TAG</code> opcode. A string or divider containing characters of mixed
+UTF-8 lengths causes no problem, because UTF-8 text can be compared byte by
+byte, without taking account of character boundaries.</p>
 
-<pre>{'a'}       =   CHAR 97
-{"a"}       =   CHAR 97
-{97}        =   CHAR 97
-{%id}       =   TAG id
+<pre>{''}        =   SET(0)
+{'a'}       =   SET(1), 97
+{'ab'}      =   SET(2), 97, 98
+{'&#945;&#946;'}      =   SET(4), 206, 177, 206, 178
+{'a..z'}    =   LOW(1), 97, HIGH(1), 122
+{'&#945;..&#969;'}    =   LOW(2), 206, 177, HIGH(2), 207, 137
+{Nd}        =   CAT(Nd)
 </pre>
 
-<p>The <code>CHAR</code> opcode is used for any notation which represents a
-single character which takes up one byte in UTF-8, i.e. is in the range
-<code>0</code> to <code>127</code>. A tag is translated using the
-<code>TAG</code> opcode. For strings:</p>
+<p>The <code>SET</code> opcode is used for sets of characters. Its operand is
+the total number of bytes. The opcode checks whether any one of the characters
+in the set matches. A sequence with mixed UTF-8 byte lengths cannot be handled
+byte by byte, but the first byte of each character can be used to find the
+character's length. A range is translated into the two opcodes
+<code>LOW</code> and <code>HIGH</code>.</p>
 
-<pre>{128}       =   CHARS 2 194 128
-{"ab"}      =   CHARS 2 97 98
-{""}        =   CHARS 0
-{"&#960;"}       =   CHARS 2 207 128
-{"a&#960;"}      =   CHARS 3 97 207 128
-{'&#960;'}       =   CHARS 2 207 128
-{&lt;a>}       =   BELOW 97
-{&lt;ab>}      =   BELOWS 2 97 98
+<p>A category is translated using the <code>CAT</code> opcode. The target
+programming language may not have a facility for finding the category of a
+character. Even if it does, the category information may vary according to the
+version of the language. For stable category information, Pecan provides a
+two-stage lookup table in the two files <code>table1.bin</code> and
+<code>table2.bin</code> which may be read into memory by the target
+language.</p>
+
+<pre>{x/y}       =   EITHER(nx), {x}, OR, {y}
+{x y}       =   BOTH(nx), {x}, AND, {y}
 </pre>
 
-<p>If a single Unicode character is greater than <code>127</code> or a string
-has more than one character, the <code>CHARS</code> opcode is used, followed by
-the number of bytes of text, followed by the text in UTF-8 format. A string
-containing characters of mixed UTF-8 lengths causes no problem, because a UTF-8
-string can be matched byte by byte, without taking account of character
-boundaries. A divider is translated using the <code>BELOW</code> opcode or the
-string version <code>BELOWS</code>. The comparison between UTF-8 strings which
-<code>BELOWS</code> represents can similarly be done byte by byte. For sets:</p>
+<p>The <code>EITHER</code> opcode initializes a choice, and <code>OR</code>
+checks what happens after <code>{x}</code> to decide whether or not to continue
+with <code>{y}</code>. Similarly, the <code>BOTH</code> and <code>AND</code>
+opcodes handle a sequence.</p>
 
-<pre>{''}        =   SET 0
-{'ab'}      =   SET 2 97 98
-{'&#945;&#946;'}      =   SET 4 206 177 206 178
-{'a'..'z'}  =   LOW 97 HIGH 122
-{'&#945;'..'&#969;'}  =   LOWS 2 206 177 HIGHS 2 207 137
+<p>If the bytecode interpreter implements each opcode separately using a switch,
+then <code>EITHER</code> or <code>BOTH</code> can be thought of as causing a
+call to <code>{x}</code> returning to <code>OR</code> or <code>AND</code>, which
+can be thought of as causing a tail-call to <code>{y}</code>.</p>
+
+<pre>{x?}        =   MAYBE, ONE, {x}
+{x*}        =   MAYBE, MANY, {x}
+{x+}        =   DO, AND, MAYBE, MANY, {x}
+{[x]}       =   LOOK, TRY, {x}
+{x&amp;}        =   LOOK, HAS, {x}
+{x!}        =   LOOK, NOT, {x}
 </pre>
 
-<p>The <code>SET</code> opcode is used for sets of characters. A range is
-translated into the two opcodes <code>LOW</code> and <code>HIGH</code> or the
-string versions <code>LOWS</code> and <code>HIGHS</code>. For categories:</p>
+<p>The <code>MAYBE</code> opcode initializes a repetition, then causes a call to
+<code>{x}</code>, returning to <code>ONE</code> or <code>MANY</code>. The
+<code>ONE</code> opcode converts the result of <code>{x}</code> into the result
+of <code>x?</code>. The <code>MANY</code> opcode is similarly executed after
+<code>{x}</code> and checks the result of <code>{x}</code> to decide whether or
+not to call it again. The opcode sequence used here, with the termination check
+before the code for <code>{x}</code>, avoids the need for an <code>nx</code>
+operand. The code for <code>x+</code> is equivalent to the code for <code>x
+x*</code>, except that the <code>DO</code> opcode avoids the need for a second
+copy of <code>{x}</code> by jumping forwards to <code>{x}</code>, and arranging
+for the call to return to <code>AND</code>. The <code>LOOK</code> opcode
+initializes any of the lookahead constructs, arranging to return to
+<code>TRY</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
+result.</p>
 
-<pre>{Nd}        =   CAT Nd
-</pre>
-
-<p>A category is translated using the <code>CAT</code> opcode. This may be the
-most difficult opcode to implement, if the chosen programming language doesn't
-have a facility for finding the category of a character. In that case, a
-two-stage lookup table is needed. A suitable two-stage table is included with
-the example interpreters provided.</p>
-
-<pre>{x/y}       =   EITHER nx {x} OR {y}
-{x y}       =   BOTH nx {x} AND {y}
-</pre>
-
-<p>The <code>EITHER</code> or <code>BOTH</code> opcode initializes a choice or
-sequence, and <code>OR</code> or <code>AND</code> checks what happens after
-<code>{x}</code> to decide whether or not to continue with <code>{y}</code>. If
-the interpreter implements each opcode separately using a switch, then
-<code>EITHER</code> or <code>BOTH</code> can be thought of as causing a call to
-<code>{x}</code>, and <code>OR</code> or <code>AND</code> as causing a tail-call
-to <code>{y}</code>. If the interpreter uses functions, then a single function
-can deal with the two calls, but the call to <code>{y}</code> can't be a tail
-call unless the interpreter's language supports it.</p>
-
-<pre>{x?}        =   MAYBE ONE {x}
-{x*}        =   MAYBE MANY {x}
-{x+}        =   DO AND MAYBE MANY {x}
-{[x]}       =   LOOK TRY {x}
-{x&amp;}        =   LOOK HAS {x}
-{x!}        =   LOOK NOT {x}
-</pre>
-
-<p>The <code>MAYBE</code> opcode initializes, then causes a call to
-<code>{x}</code>, returning to <code>ONE</code>. The <code>ONE</code> opcode
-converts the result of <code>{x}</code> into the result of <code>x?</code>. The
-<code>MANY</code> opcode is similarly executed after <code>{x}</code>. It checks
-the result of <code>{x}</code> to decide whether or not to call it again. The
-code <code>MAYBE ONE {x}</code> might be a little more readable if written as
-<code>MAYBE nx {x} ONE</code>, but the format shown above avoids the need for
-the argument <code>nx</code>. In the case of <code>MANY</code>, there is the
-added advantage that <code>{x}</code> is easily called again. The code for
-<code>x+</code> is equivalent to the code for <code>x x*</code>, except that the
-<code>DO</code> opcode avoids the need for a second copy of <code>{x}</code> by
-jumping forwards to <code>{x}</code>, and arranging for the call to return to
-<code>AND</code>. The <code>LOOK</code> opcode initializes any of the lookahead
-constructs, arranging to return to <code>TRY</code> or <code>HAS</code> or
-<code>NOT</code> which sorts out the result.</p>
-
-<pre>{@a}        =   ACT a
+<pre>{@a}        =   ACT(a)
 {@}         =   DROP
-{#e}        =   MARK e
+{#e}        =   MARK(e)
 </pre>
 
 <p>An action is translated using the <code>ACT</code> opcode. Actions need to be
 delayed, either because they are inside a try construct <code>[x]</code>, or
-because they are at the start of a left hand choice <code>@a x / y</code>. If
-the grammar is entirely context free, then all the actions can be delayed until
-the end of parsing. In the example interpreters provided, actions are delayed by
-a minimal amount, so that they can affect later parsing by adjusting the input
-to get context sensitive effects. Actions are delayed by being recorded
-symbolically, then either performed or discarded at the end of any lookahead
-construct, or whenever progress is made in the input. Error markers, signalled
-by the <code>MARK</code> opcode, are collected as a set, perhaps implemented as
-a bitmap, and cleared whenever a new marker is found further on in the
-input.</p>
+because they are at the start of a left hand of a choice, e.g. <code>@a x /
+y</code>. On the other hand, in the case of a context sensitive grammar, actions
+need to be carried out as early as possible, so that they have the right effect
+on subsequent parsing. In the sample bytecode interpreters provided, actions are
+delayed by being recorded symbolically, performed whenever progress is made in
+the input outside of lookahead constructs, and performed or discarded at the end
+of any outermost lookahead construct.</p>
 
-<p>Accurate details of what each opcode does can be gleaned from the provided
+<p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
+set, and cleared whenever a new marker is found further on in the input.</p>
+
+<p>Further details of what each opcode does can be gleaned from the provided
 interpreters and their comments.</p>
-
-<h3 id="semantics">Bytecode semantics</h3>
-
-<p>The <code>START</code> opcode in the sequence:</p>
-
-<pre>START nx {x} STOP
-</pre>
-
-<p>creates a call to <code>{x}</code>, setting up the address of
-<code>STOP</code> as the return address. The <code>STOP</code> instruction ends
-parsing. The number <code>nx</code> can be thought of as a relative offset in
-the code, from the byte after <code>nx</code> to the <code>STOP</code>
-instruction.</p>
-
-<p><code>START</code> and <code>STOP</code> opcodes are generated for every
-rule, even though they are usually only executed for the overall call to the
-first rule. This is so that other rules can be used as entry points, if desired.
-The interpreter can scan the bytes, skipping the body <code>{x}</code> of each
-rule using the number <code>nx</code>, to find the start of the next rule.</p>
 
 <h2 id="interpreters">Example interpreters</h2>
 

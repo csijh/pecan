@@ -13,11 +13,10 @@ Check for missing or duplicate definitions, or definitions of category names.
 Create cross-references from ids to their definitions, recognise category names.
 Set the value of actions to their arities, and check consistency of arities.
 Check that a set consists of distinct characters.
-Recognize ranges 'a..z' and create character subnodes.
+Recognize ranges 'a..z' and create string subnodes.
 Check that both ends of ranges are single characters, and ranges are non-empty.
-For nodes which represent single characters, set the value to the code.
+For nodes which represent characters numerically, set the value to the code.
 Check that numerical character codes are in the range 0..1114111.
-Check that strings/sets/dividers have at most 255 bytes in UTF8.
 Check whether the grammar has text or tokens as input. */
 
 class Binder implements Testable {
@@ -135,34 +134,22 @@ class Binder implements Testable {
         root.set(TextInput);
     }
 
-    // Check whether a string is a character.
     // Set the TextInput flag on the root node.
+    // For a single character, set the value to the character code (for ranges).
     private void bindString(Node node) throws Exception {
         node.value(-1);
         int n = node.text().codePointCount(1, node.text().length() - 1);
         if (n != 0) root.set(TextInput);
-        if (n != 1) return;
-        int nb = bytes(node.name()).length;
-        if (nb > 255) err(node, "too many characters");
-        node.op(Char);
-        node.value(node.text().codePointAt(1));
-        node.note("" + node.value());
+        if (n == 1) node.value(node.text().codePointAt(1));
     }
 
-    // Check whether a divider has one character.
     // Set the TextInput flag on the root node.
     private void bindDivider(Node node) throws Exception {
-        node.value(-1);
-        int n = node.text().codePointCount(1, node.text().length() - 1);
+        int n = node.name().length();
         if (n != 0) root.set(TextInput);
-        if (n != 1) return;
-        int nb = bytes(node.name()).length;
-        if (nb > 255) err(node, "too many characters");
-        node.value(node.text().codePointAt(1));
-        node.note("" + node.value());
     }
 
-    // Check whether a set is a single character.
+    // Check whether a set is a single character, and convert to string.
     // Recognize ranges 'a..z' and create character subnodes.
     // Check that a set consists of distinct characters.
     // Set the TextInput flag on the root node.
@@ -173,9 +160,7 @@ class Binder implements Testable {
         if (n != 0) root.set(TextInput);
         if (n == 0) return;
         if (n == 1) {
-            node.op(Char);
-            node.value(text.codePointAt(1));
-            node.note("" + node.value());
+            node.op(String);
             return;
         }
         int dots = text.indexOf("..");
@@ -186,15 +171,16 @@ class Binder implements Testable {
             node.op(Range);
             int s = node.start();
             int e = node.end();
-            node.left(new Node(Set, source, s, s + dots + 1));
-            node.right(new Node(Set, source, s + dots + 1, e));
-            bindSet(node.left());
-            bindSet(node.right());
-            bindRange(node);
+            node.left(new Node(String, source, s, s + dots + 1));
+            node.right(new Node(String, source, s + dots + 1, e));
+            bindString(node.left());
+            bindString(node.right());
+            int from = text.codePointAt(1);
+            int to = text.codePointAt(dots + 2);
+            if (to < from) err(node, "empty range");
             return;
         }
         int nb = bytes(node.name()).length;
-        if (nb > 255) err(node, "too many characters");
         for (int i = 1; i<text.length() - 1; ) {
             int c1 = text.codePointAt(i);
             i += Character.charCount(c1);
@@ -207,14 +193,12 @@ class Binder implements Testable {
         }
     }
 
-    // Check that a range has a single character at each end and is non-empty.
+    // Check that a range is non-empty.
     // Set the TextInput flag on the root node.
     private void bindRange(Node node) throws Exception {
         root.set(TextInput);
         int from = node.left().value();
         int to = node.right().value();
-        if (from < 0) err(node.left(), "expecting single character");
-        if (to < 0) err(node.right(), "expecting single character");
         if (to < from) err(node, "empty range");
     }
 

@@ -27,13 +27,13 @@ exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP
 Rule exp 1,0
   Or 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP 1,0
     And 'a' @NUM 1,0
-      Char 'a' 0,0
+      String 'a' 0,0
       Act @NUM 1,0
     And "(" @OPEN exp ")" @CLOSE @3EXP 1,0
-      Char "(" 0,0
+      String "(" 0,0
       Act @OPEN 1,0
       Id exp 1,0
-      Char ")" 0,0
+      String ")" 0,0
       Act @CLOSE 1,0
       Act @3EXP -2,-3
 ==========
@@ -54,11 +54,11 @@ Rule exp 1,0
     Any ("+" term @2add / "-" term @2sub)* 0,-1
       Or "+" term @2add / "-" term @2sub 0,-1
         And "+" term @2add 0,-1
-          Char "+" 0,0
+          String "+" 0,0
           Id term 1,0
           Act @2add -1,-2
         And "-" term @2sub 0,-1
-          Char "-" 0,0
+          String "-" 0,0
           Id term 1,0
           Act @2sub -1,-2
 Rule term 1,0
@@ -67,11 +67,11 @@ Rule term 1,0
     Any ("*" factor @2mul / "/" factor @2div)* 0,-1
       Or "*" factor @2mul / "/" factor @2div 0,-1
         And "*" factor @2mul 0,-1
-          Char "*" 0,0
+          String "*" 0,0
           Id factor 1,0
           Act @2mul -1,-2
         And "/" factor @2div 0,-1
-          Char "/" 0,0
+          String "/" 0,0
           Id factor 1,0
           Act @2div -1,-2
 Rule factor 1,0
@@ -79,16 +79,16 @@ Rule factor 1,0
     Id primary 1,0
     Opt ("^" factor @2pow)? 0,-1
       And "^" factor @2pow 0,-1
-        Char "^" 0,0
+        String "^" 0,0
         Id factor 1,0
         Act @2pow -1,-2
 Rule primary 1,0
   Or number / "(" exp ")" 1,0
     Id number 1,0
     And "(" exp ")" 1,0
-      Char "(" 0,0
+      String "(" 0,0
       Id exp 1,0
-      Char ")" 0,0
+      String ")" 0,0
 Rule number 1,0
   And digit+ @number 1,0
     Some digit+ 0,0
@@ -96,5 +96,5 @@ Rule number 1,0
     Act @number 1,0
 Rule digit 0,0
   Range '0..9' 0,0
-    Char '0. 0,0
-    Char .9' 0,0
+    String '0. 0,0
+    String .9' 0,0
