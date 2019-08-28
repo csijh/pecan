@@ -115,93 +115,15 @@ public class Evaluator implements Testable {
         skipTrace = false;
         switch(node.op()) {
         case Rule: parseRule(node); break;
-        case Id:
-            skipTrace = true;
-            parse(node.ref());
-            break;
-        case Or:
-            saveIn = in;
-            saveOut = out;
-            parse(node.left());
-            if (ok || in > saveIn) return;
-            out = saveOut;
-            parse(node.right());
-            break;
-        case And:
-            parse(node.left());
-            if (!ok) return;
-            parse(node.right());
-            break;
-        case Opt:
-            saveIn = in;
-            saveOut = out;
-            parse(node.left());
-            if (!ok && in == saveIn) {
-                out = saveOut;
-                ok = true;
-            }
-            break;
-        case Any:
-            saveIn = in;
-            saveOut = out;
-            while (ok) {
-                saveIn = in;
-                saveOut = out;
-                parse(node.left());
-            }
-            if (!ok && in == saveIn) {
-                out = saveOut;
-                ok = true;
-            }
-            break;
-        case Some:
-            saveIn = in;
-            saveOut = out;
-            parse(node.left());
-            if (!ok && in == saveIn) out = saveOut;
-            if (!ok) return;
-            saveIn = in;
-            saveOut = out;
-            while (ok) {
-                saveIn = in;
-                saveOut = out;
-                parse(node.left());
-            }
-            if (!ok && in == saveIn) {
-                out = saveOut;
-                ok = true;
-            }
-            break;
-        case Try:
-            saveIn = in;
-            saveOut = out;
-            lookahead++;
-            parse(node.left());
-            lookahead--;
-            in = saveIn;
-            if (ok && lookahead == 0) takeActions();
-            if (ok) parse(node.left());
-            else out = saveOut;
-            break;
-        case Has:
-            saveIn = in;
-            saveOut = out;
-            lookahead++;
-            parse(node.left());
-            lookahead--;
-            out = saveOut;
-            in = saveIn;
-            break;
-        case Not:
-            saveIn = in;
-            saveOut = out;
-            lookahead++;
-            parse(node.left());
-            lookahead--;
-            out = saveOut;
-            in = saveIn;
-            ok = !ok;
-            break;
+        case Id: parseId(node); break;
+        case Or: parseOr(node); break;
+        case And: parseAnd(node); break;
+        case Opt: parseOpt(node); break;
+        case Any: parseAny(node); break;
+        case Some: parseSome(node); break;
+        case Try: parseTry(node); break;
+        case Has: parseHas(node); break;
+        case Not: parseNot(node); break;
         case Char:
             if (in >= input.length()) ok = false;
             else {
@@ -315,6 +237,122 @@ public class Evaluator implements Testable {
     // Parse according to a rule node: parse the right hand side.
     private void parseRule(Node node) {
         parse(node.left());
+    }
+
+    // Parse the rule refered to by an id (without tracing).
+    private void parseId(Node node) {
+        skipTrace = true;
+        parse(node.ref());
+    }
+
+    // Parse x / y. Try x, and it fails without progress, try y instead.
+    private void parseOr(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        parse(node.left());
+        if (ok || in > saveIn) return;
+        out = saveOut;
+        parse(node.right());
+    }
+
+    // Parse x y. If x succeeds, continue with y.
+    private void parseAnd(Node node) {
+        parse(node.left());
+        if (!ok) return;
+        parse(node.right());
+    }
+
+    // Parse x?
+    private void parseOpt(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        parse(node.left());
+        if (!ok && in == saveIn) {
+            out = saveOut;
+            ok = true;
+        }
+    }
+
+    // Parse x*
+    private void parseAny(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        while (ok) {
+            saveIn = in;
+            saveOut = out;
+            parse(node.left());
+        }
+        if (!ok && in == saveIn) {
+            out = saveOut;
+            ok = true;
+        }
+    }
+
+    // Parse x+  =  x x*
+    private void parseSome(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        parse(node.left());
+        if (!ok && in == saveIn) out = saveOut;
+        if (!ok) return;
+        saveIn = in;
+        saveOut = out;
+        while (ok) {
+            saveIn = in;
+            saveOut = out;
+            parse(node.left());
+        }
+        if (!ok && in == saveIn) {
+            out = saveOut;
+            ok = true;
+        }
+    }
+
+    // TODO check if need to take out redo x
+    // Parse [x]
+    private void parseTry(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        lookahead++;
+        parse(node.left());
+        lookahead--;
+        in = saveIn;
+        if (ok && lookahead == 0) takeActions();
+        if (ok) parse(node.left());
+        else out = saveOut;
+        /*
+        if (ok && lookahead == 0) takeActions();
+        if (!ok) {
+            in = saveIn;
+            out = saveOut;
+        }
+        */
+    }
+
+    // Parse x&
+    private void parseHas(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        lookahead++;
+        parse(node.left());
+        lookahead--;
+        out = saveOut;
+        in = saveIn;
+    }
+
+    // Parse x!
+    private void parseNot(Node node) {
+        int saveIn = in;
+        int saveOut = out;
+        lookahead++;
+        parse(node.left());
+        lookahead--;
+        out = saveOut;
+        in = saveIn;
+        ok = !ok;
+    }
+
+    private void parseChar(Node node) {
     }
 
     // Print out the input position.

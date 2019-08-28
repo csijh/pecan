@@ -1,6 +1,7 @@
 // Generic Pecan bytecode interpreter.
 #include "parser.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 // TODO report error markers better.
 
@@ -23,7 +24,8 @@ static char *opNames[] = {
 // markers: a bitmap of expected items for reporting errors.
 // ok:      boolean to say whether the most recent parsing expression succeeded.
 // act:     an external function to call to carry out an action.
-// arg:     an argument to pass to the act function.
+// next:    an external function to call to get the tag of the next token.
+// arg:     an argument to pass to the act or next function.
 // look:    the nesting depth inside lookahead constructs.
 // top:     the number of items on the call stack.
 // out:     the number of delayed actions stored in the actions array.
@@ -35,6 +37,7 @@ struct state {
     bits markers;
     bool ok;
     doAction *act;
+    doNext *next;
     void *arg;
     int look, top, out;
     int stack[1000], actions[1000];
@@ -42,7 +45,9 @@ struct state {
 typedef struct state state;
 
 // Initialize the parsing state.
-static void new(state *s, byte c[], byte i[], doAction *act, void *arg) {
+static void new(
+    state *s, byte c[], byte i[], doAction *act, void *arg, doNext *next)
+{
     s->code = c;
     s->input = i;
     s->pc = s->start = s->in = s->marked = 0;
@@ -50,6 +55,7 @@ static void new(state *s, byte c[], byte i[], doAction *act, void *arg) {
     s->ok = false;
     s->act = act;
     s->arg = arg;
+    s->next = next;
     s->look = s->top = s->out = 0;
 }
 
@@ -70,7 +76,7 @@ static void entry(state *s, int n) {
 }
 
 // Carry out any delayed actions. For each delayed action, the input position at
-// the time of recording is stored.
+// the time is stored.
 static inline void doActions(state *s) {
     for (int i = 0; i < s->out; i = i + 2) {
         int a = s->actions[i];
@@ -81,25 +87,15 @@ static inline void doActions(state *s) {
     }
     s->out = 0;
 }
-/*
-// Extract a one-byte argument from the bytecode.
-static inline int arg1(state *s) {
-    return s->code[s->pc++];
-}
 
-// Extract a two-byte argument from the bytecode.
-static inline int arg2(state *s) {
-    return (s->code[s->pc++] << 8) | s->code[s->pc++];
-}
-*/
-// {id = x}  =  START nx {x} STOP
+// {id = x}  =  START(nx), {x}, STOP
 // Initialise state state, call {x} returning to STOP.
 static inline void doSTART(state *s, int arg) {
     printf("START ret = %d\n", s->pc + arg);
     s->stack[s->top++] = s->pc + arg;
 }
 
-// {id = x}  =  START nx {x} STOP
+// {id = x}  =  START(nx), {x}, STOP
 // At the end of parsing, carry out any outstanding delayed actions. Return zero
 // for success, or a bitmap of markers for failure, with the top bit set in case
 // there are no markers.
@@ -113,13 +109,13 @@ static inline bits doSTOP(state *s) {
     return s->markers;
 }
 
-// {id}  =  GO n   or BACK n
+// {id}  =  GO(n)   or   BACK(n)
 // Skip forwards or backwards in the code, to tail-call a remote rule.
 static inline void doGO(state *s, int arg) {
     s->pc = s->pc + arg;
 }
 
-// {x / y}  =  EITHER nx {x} OR {y}
+// {x / y}  =  EITHER(nx), {x}, OR, {y}
 // Save in/out, call x, returning to OR.
 static inline void doEITHER(state *s, int arg) {
     s->stack[s->top++] = s->in;
@@ -127,7 +123,7 @@ static inline void doEITHER(state *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
 }
 
-// {x / y}  =  EITHER nx {x} OR {y}
+// {x / y}  =  EITHER(nx), {x}, OR, {y}
 // After x, check success and progress, return or continue with y.
 static inline void doOR(state *s) {
     int saveOut = s->stack[--s->top];
@@ -136,19 +132,19 @@ static inline void doOR(state *s) {
     else s->out = saveOut;
 }
 
-// {x y}  =  BOTH nx {x} AND {y}
+// {x y}  =  BOTH(nx), {x}, AND, {y}
 // Call x, returning to AND.
 static inline void doBOTH(state *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
 }
 
-// {x y}  =  BOTH nx {x} AND {y}
+// {x y}  =  BOTH(nx), {x}, AND, {y}
 // After x, check success, continue with y or return.
 static inline void doAND(state *s) {
     if (! s->ok) s->pc = s->stack[--s->top];
 }
 
-// {x?}  =  MAYBE ONE {x},   and similarly for x*, x+
+// {x?}  =  MAYBE, ONE, {x},   and similarly for x*, x+
 // Save in/out and call x, returning to ONE or MANY.
 static inline void doMAYBE(state *s) {
     s->stack[s->top++] = s->in;
@@ -157,7 +153,7 @@ static inline void doMAYBE(state *s) {
     s->pc++;
 }
 
-// {x?}  =  MAYBE ONE {x}
+// {x?}  =  MAYBE, ONE, {x}
 // After x, check success or no progress and return.
 static inline void doONE(state *s) {
     int saveOut = s->stack[--s->top];
@@ -169,7 +165,7 @@ static inline void doONE(state *s) {
     s->pc = s->stack[--s->top];
 }
 
-// {x*}  =  MAYBE MANY {x}
+// {x*}  =  MAYBE, MANY, {x}
 // After x, check success and re-try x or return.
 static inline void doMANY(state *s) {
     int saveOut = s->stack[--s->top];
@@ -188,14 +184,14 @@ static inline void doMANY(state *s) {
     }
 }
 
-// {x+}  =  DO AND MAYBE MANY {x}
+// {x+}  =  DO, AND, MAYBE, MANY, {x}
 // Call x, returning to AND.
 static inline void doDO(state *s) {
     s->stack[s->top++] = s->pc;
     s->pc = s->pc + 3;
 }
 
-// {[x]}  =  LOOK TRY x,   and similarly for x& and x!
+// {[x]}  =  LOOK, TRY, x,   and similarly for x& and x!
 // Save in/out and call x as a lookahead, returning to TRY or HAS or NOT.
 static inline void doLOOK(state *s) {
     s->stack[s->top++] = s->in;
@@ -205,7 +201,7 @@ static inline void doLOOK(state *s) {
     s->pc++;
 }
 
-// {[x]}  =  LOOK TRY x
+// {[x]}  =  LOOK, TRY, x
 // Succeed and perform actions, or fail and discard them and backtrack.
 static inline void doTRY(state *s) {
     int saveOut = s->stack[--s->top];
@@ -215,7 +211,7 @@ static inline void doTRY(state *s) {
     else s->out = saveOut;
 }
 
-// {x&}  =  LOOK HAS x
+// {x&}  =  LOOK, HAS, x
 // After x, backtrack and return.
 static inline void doHAS(state *s) {
     s->out = s->stack[--s->top];
@@ -224,7 +220,7 @@ static inline void doHAS(state *s) {
     s->pc = s->stack[--s->top];
 }
 
-// {x!}  =  LOOK NOT x
+// {x!}  =  LOOK, NOT, x
 // After x, backtrack, invert the result, and return.
 static inline void doNOT(state *s) {
     s->out = s->stack[--s->top];
@@ -241,7 +237,7 @@ static inline void doDROP(state *s) {
     s->pc = s->stack[--s->top];
 }
 
-// {@2add}  =  ACT add
+// {@2add}  =  ACT1, add
 // Delay the action and return success.
 static inline void doACT(state *s, int arg) {
     printf("ACT in = %d, arg = %d\n", s->in, arg);
@@ -253,8 +249,8 @@ static inline void doACT(state *s, int arg) {
     printf("ACT pc = %d\n", s->pc);
 }
 
-// {#item}  =  MARK item
-// Record an error marker. Assume arg < 63.
+// {#item}  =  MARK1, item
+// Record an error marker. Assume 0 <= arg <= 62.
 static inline void doMARK(state *s, int arg) {
     if (s->look = 0) {
         if (s->in > s->marked) {
@@ -267,7 +263,7 @@ static inline void doMARK(state *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {"abc"}  =  CHARS 3 'a' 'b' 'c'
+// {"abc"}  =  STRING(3), 'a', 'b', 'c'
 // Match string and return success or failure.
 static inline void doSTRING(state *s, int arg) {
     s->ok = true;
@@ -282,7 +278,7 @@ static inline void doSTRING(state *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {'a..z'}  =  LOW n 'a' HIGH n 'z'
+// {'a..z'}  =  LOW(n), 'a', HIGH(n), 'z'
 // Check >= 'a', continue with HIGH or return failure
 static inline void doLOW(state *s, int arg) {
     printf("LOW\n");
@@ -299,7 +295,7 @@ static inline void doLOW(state *s, int arg) {
     }
 }
 
-// {'a..z'}  =  LOW n 'a' HIGH n 'z'
+// {'a..z'}  =  LOW(n), 'a', HIGH(n), 'z'
 // Check <= 'z', return success or failure
 static inline void doHIGH(state *s, int arg) {
     printf("HIGH\n");
@@ -317,7 +313,7 @@ static inline void doHIGH(state *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {<abc>}  =  LESS 3 'a' 'b' 'c'
+// {<abc>}  =  LESS(3), 'a', 'b', 'c'
 // Check if input < "abc", return.
 static inline void doLESS(state *s, int arg) {
     s->ok = true;
@@ -336,7 +332,7 @@ static inline int length(byte first) {
     return 4;
 }
 
-// {'abc'}  =  SET 3 'a' 'b' 'c'
+// {'abc'}  =  SET(3), 'a', 'b', 'c'
 // Check for one of the characters in a set, and return.
 static inline void doSET(state *s, int arg) {
     s->ok = false;
@@ -357,24 +353,34 @@ static inline void doSET(state *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
+// {%t} == TAG1, t
+// Check if tag of next token is t and return.
+static inline void doTAG(state *s, int arg) {
+}
+
+static inline void getOpArg(state *s, int *op, int *arg) {
+    *op = s->code[s->pc++];
+    *arg = 1;
+    if (*op >= START2) {
+        *arg = s->code[s->pc++];
+        *arg = (*arg << 8) | s->code[s->pc++];
+        *op = *op + (START - START2);
+    }
+    else if (*op >= START1) {
+        *arg = s->code[s->pc++];
+        *op = *op + (START - START1);
+    }
+}
+
 bits parseText(int n, byte code[], byte input[], doAction *act, void *arg) {
     state pData;
     state *s = &pData;
-    new(s, code, input, act, arg);
+    new(s, code, input, act, arg, NULL);
     entry(s, n);
     while (true) {
         printf("%d: ", s->pc);
-        byte op = s->code[s->pc++];
-        int arg = 1;
-        if (op >= START2) {
-            arg = s->code[s->pc++];
-            arg = (arg << 8) | s->code[s->pc++];
-            op = op + (START - START2);
-        }
-        else if (op >= START1) {
-            arg = s->code[s->pc++];
-            op = op + (START - START1);
-        }
+        int op, arg;
+        getOpArg(s, &op, &arg);
         if (op >= START) printf("%s %d\n", opNames[op], arg);
         else printf("%s\n", opNames[op]);
         switch (op) {
@@ -402,11 +408,45 @@ bits parseText(int n, byte code[], byte input[], doAction *act, void *arg) {
         case HIGH: doHIGH(s, arg); break;
         case LESS: doLESS(s, arg); break;
         case SET: doSET(s, arg); break;
+        default: printf("Bad op\n"); exit(1);
         }
 // TAG, CAT,
     }
 }
 
-bits parseTokens(int n, byte code[], doNext *next, doAction *act, void *state) {
-    
+bits parseTokens(int n, byte code[], doNext *next, doAction *act, void *arg) {
+    state pData;
+    state *s = &pData;
+    new(s, code, NULL, act, arg, next);
+    entry(s, n);
+    while (true) {
+        printf("%d: ", s->pc);
+        int op, arg;
+        getOpArg(s, &op, &arg);
+        if (op >= START) printf("%s %d\n", opNames[op], arg);
+        else printf("%s\n", opNames[op]);
+        switch (op) {
+        case START: doSTART(s, arg); break;
+        case STOP: return doSTOP(s); break;
+        case GO: doGO(s, arg); break;
+        case BACK: doGO(s, -arg); break;
+        case EITHER: doEITHER(s, arg); break;
+        case OR: doOR(s); break;
+        case BOTH: doBOTH(s, arg); break;
+        case AND: doAND(s); break;
+        case MAYBE: doMAYBE(s); break;
+        case ONE: doONE(s); break;
+        case MANY: doMANY(s); break;
+        case DO: doDO(s); break;
+        case LOOK: doLOOK(s); break;
+        case TRY: doTRY(s); break;
+        case HAS: doHAS(s); break;
+        case NOT: doNOT(s); break;
+        case DROP: doDROP(s); break;
+        case ACT: doACT(s, arg); break;
+        case MARK: doMARK(s, arg); break;
+        case TAG: doTAG(s, arg); break;
+        default: printf("Bad op\n"); exit(1);
+        }
+    }
 }
