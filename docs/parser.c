@@ -4,6 +4,15 @@
 #include <assert.h>
 // TODO report error markers better.
 
+static char *opNames[] = {
+    [STOP]="STOP", [OR]="OR", [AND]="AND", [MAYBE]="MAYBE", [ONE]="ONE",
+    [MANY]="MANY", [DO]="DO", [LOOK]="LOOK", [TRY]="TRY", [HAS]="HAS",
+    [NOT]="NOT", [DROP]="DROP", [MARK]="MARK", [START]="START", [GO]="GO",
+    [BACK]="BACK", [EITHER]="EITHER", [BOTH]="BOTH", [ACT]="ACT",
+    [STRING]="STRING", [LOW]="LOW", [HIGH]="HIGH", [LESS]="LESS", [SET]="SET",
+    [CAT]="CAT", [TAG]="TAG"
+};
+
 // The parsing state.
 // code:    the bytecode.
 // input:   the text to be parsed.
@@ -168,6 +177,7 @@ static inline void doMANY(state *s) {
     if (s->ok) {
         s->stack[s->top++] = s->in;
         s->stack[s->top++] = s->out;
+        s->stack[s->top++] = s->pc - 1;
     }
     else {
         if (! s->ok && s->in == saveIn) {
@@ -283,7 +293,10 @@ static inline void doLOW(state *s, int arg) {
         if (b == '\0' || b < s->code[s->pc + i]) s->ok = false;
     }
     if (s->ok) s->pc = s->pc + arg;
-    else s->pc = s->stack[--s->top];
+    else {
+        printf("About to return, top=%d, ret=%d\n", s->top, s->stack[s->top-1]);
+        s->pc = s->stack[--s->top];
+    }
 }
 
 // {'a..z'}  =  LOW n 'a' HIGH n 'z'
@@ -293,7 +306,7 @@ static inline void doHIGH(state *s, int arg) {
     s->ok = true;
     for (int i = 0; i < arg; i++) {
         byte b = s->input[s->in + i];
-        printf("b = %d, low = %d\n", b, s->code[s->pc + i]);
+        printf("b = %d, high = %d\n", b, s->code[s->pc + i]);
         if (b == '\0' || b > s->code[s->pc + i]) s->ok = false;
     }
     if (s->ok) {
@@ -301,7 +314,7 @@ static inline void doHIGH(state *s, int arg) {
         s->in = s->in + arg;
         if (s->look == 0 && s->out > 0) doActions(s);
     }
-    else s->pc = s->stack[--s->top];
+    s->pc = s->stack[--s->top];
 }
 
 // {<abc>}  =  LESS 3 'a' 'b' 'c'
@@ -350,9 +363,8 @@ bits parseText(int n, byte code[], byte input[], doAction *act, void *arg) {
     new(s, code, input, act, arg);
     entry(s, n);
     while (true) {
-        printf("pc = %d\n", s->pc);
+        printf("%d: ", s->pc);
         byte op = s->code[s->pc++];
-        printf("op %d\n", op);
         int arg = 1;
         if (op >= START2) {
             arg = s->code[s->pc++];
@@ -363,7 +375,8 @@ bits parseText(int n, byte code[], byte input[], doAction *act, void *arg) {
             arg = s->code[s->pc++];
             op = op + (START - START1);
         }
-        printf("op %d arg %d\n", op, arg);
+        if (op >= START) printf("%s %d\n", opNames[op], arg);
+        else printf("%s\n", opNames[op]);
         switch (op) {
         case START: doSTART(s, arg); break;
         case STOP: return doSTOP(s); break;
@@ -392,4 +405,8 @@ bits parseText(int n, byte code[], byte input[], doAction *act, void *arg) {
         }
 // TAG, CAT,
     }
+}
+
+bits parseTokens(int n, byte code[], doNext *next, doAction *act, void *state) {
+    
 }

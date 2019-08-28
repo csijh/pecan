@@ -1,11 +1,8 @@
 Improvements to syntax
 ----------------------
 
-With tokens, %x or `x` not immediately followed by action is implicitly %x @
+With tokens, %x not immediately followed by action is implicitly %x @
 (actually works already, but needs stressing).
-
-If a grammar contains %id, then you can use "x" instead of `x` (in fact maybe it
-is a good idea to get rid of ``)
 
 Replace:   @startlist (x @2add)* @1endlist
 by:        { (x ^)* } @*list

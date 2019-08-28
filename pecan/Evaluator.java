@@ -114,9 +114,7 @@ public class Evaluator implements Testable {
         if (tracing && ! skipTrace) System.out.println(node.trace());
         skipTrace = false;
         switch(node.op()) {
-        case Rule:
-            parse(node.left());
-            break;
+        case Rule: parseRule(node); break;
         case Id:
             skipTrace = true;
             parse(node.ref());
@@ -312,6 +310,11 @@ public class Evaluator implements Testable {
         default:
             throw new Error("Not implemented " + node.op());
         }
+    }
+
+    // Parse according to a rule node: parse the right hand side.
+    private void parseRule(Node node) {
+        parse(node.left());
     }
 
     // Print out the input position.
