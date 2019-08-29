@@ -25,9 +25,14 @@ static byte code[] = {
 //AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
 //5) sum = [number '+'] number @2add / number
 //number = ('0..9')+ @number
-START1, 24, EITHER1, 19, BOTH1, 9, LOOK, TRY, BOTH1, 2, GO1, 17, AND, STRING,
-43, AND, BOTH1, 2, GO1, 9, AND, ACT1, add, OR, GO1, 3, STOP, START1, 13,
-BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
+//START1, 24, EITHER1, 19, BOTH1, 9, LOOK, TRY, BOTH1, 2, GO1, 17, AND, STRING,
+//43, AND, BOTH1, 2, GO1, 9, AND, ACT1, add, OR, GO1, 3, STOP, START1, 13,
+//BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
+//7) sum = number ('+' @ number @2add)?
+//   number = ('0..9')+ @number
+START1, 22, BOTH1, 2, GO1, 21, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
+BOTH, DROP, AND, BOTH1, 2, GO1, 6, AND, ACT1, add, STOP, START1, 13, BOTH1, 8,
+DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT1, number, STOP
     // </pecan>
 };
 

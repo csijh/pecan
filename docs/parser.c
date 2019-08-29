@@ -205,10 +205,14 @@ static inline void doLOOK(state *s) {
 // Succeed and perform actions, or fail and discard them and backtrack.
 static inline void doTRY(state *s) {
     int saveOut = s->stack[--s->top];
-    s->in = s->stack[--s->top];
+    int saveIn = s->stack[--s->top];
     s->look--;
     if (s->ok && s->look == 0 && s->out > 0) doActions(s);
-    else s->out = saveOut;
+    else if (! s->ok) {
+        s->out = saveOut;
+        s->in = saveIn;
+    }
+    s->pc = s->stack[--s->top];
 }
 
 // {x&}  =  LOOK, HAS, x
