@@ -118,7 +118,7 @@ public class Test {
                 File f = new File(file);
                 f = new File(f.getParentFile(), test.input());
                 String subfile = f.getPath();
-                passed += runTests(subfile, object, line);
+                passed += runTests(subfile, object, 0);
             }
             else {
                 String out = object.test(test.input());
@@ -134,7 +134,6 @@ public class Test {
     // Extract tests from a given file.
     static List<Test> extract(String fileName) {
         Path path = Paths.get(fileName);
-        System.out.println("ext " + fileName);
         List<String> lines = null;
         try { lines = Files.readAllLines(path, StandardCharsets.UTF_8); }
         catch (Exception e) {

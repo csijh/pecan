@@ -30,7 +30,7 @@ static char *opNames[] = {
 // top:     the number of items on the call stack.
 // out:     the number of delayed actions stored in the actions array.
 // stack:   the call stack, i.e. return addresses and saved in/out values.
-// actions: the delayed action codes.
+// actions: the delayed action codes and input positions.
 struct state {
     byte *code, *input;
     int pc, start, in, marked;

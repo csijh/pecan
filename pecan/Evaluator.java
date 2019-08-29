@@ -10,7 +10,7 @@ import static pecan.Node.Flag.*;
 from the tree nodes, and can be used for testing, and for tracing. It also
 effectively defines the operational semantics of the grammar language.
 
-The input is text, or tag names representing tokens, separated by white space.
+The input is text, or tag names representing tokens separated by white space.
 The output describes the external calls generated, with one line per call.
 
 Actions are normally delayed until the next time progress is made, or discarded
@@ -42,6 +42,7 @@ public class Evaluator implements Testable {
     private int start, in, out, marked, lookahead;
     private TreeSet<String> failures;
     private Node[] delay;
+    private int[] delayIn;
     private StringBuffer output;
 
     public static void main(String[] args) {
@@ -83,6 +84,7 @@ public class Evaluator implements Testable {
         lookahead = 0;
         failures = new TreeSet<>();
         delay = new Node[100];
+        delayIn = new int[100];
         output = new StringBuffer();
     }
 
@@ -109,128 +111,29 @@ public class Evaluator implements Testable {
 
     // Parse according to the given node.
     private void parse(Node node) {
-        int saveIn, saveOut, length;
-        String text;
         if (tracing && ! skipTrace) System.out.println(node.trace());
         skipTrace = false;
         switch(node.op()) {
-        case Rule: parseRule(node); break;
-        case Id: parseId(node); break;
-        case Or: parseOr(node); break;
-        case And: parseAnd(node); break;
-        case Opt: parseOpt(node); break;
-        case Any: parseAny(node); break;
-        case Some: parseSome(node); break;
-        case Try: parseTry(node); break;
-        case Has: parseHas(node); break;
-        case Not: parseNot(node); break;
-        case Char:
-            if (in >= input.length()) ok = false;
-            else {
-                int ch = input.codePointAt(in);
-                ok = (ch == node.value());
-                if (ok) {
-                    if (lookahead == 0 && out > 0) takeActions();
-                    int n = Character.charCount(ch);
-                    in += n;
-                    if (tracing) traceInput();
-                }
-            }
-            break;
-        case String:
-            length = node.text().length() - 2;
-            text = node.text().substring(1, length+1);
-            ok = true;
-            if (in + length > input.length()) ok = false;
-            else for (int i=0; i<length; i++) {
-                if (input.charAt(in+i) != text.charAt(i)) { ok = false; break; }
-            }
-            if (ok) {
-                if (lookahead == 0 && out > 0) takeActions();
-                in += length;
-                if (tracing) traceInput();
-            }
-            break;
-        case Set:
-            length = node.text().length() - 2;
-            text = node.text().substring(1, length+1);
-            ok = false;
-            if (in >= input.length()) { }
-            else for (int i=0; i<length; i++) {
-                if (input.charAt(in) != text.charAt(i)) continue;
-                if (lookahead == 0 && out > 0) takeActions();
-                if (Character.isHighSurrogate(text.charAt(i))) {
-                    i++;
-                    if (input.charAt(in+1) != text.charAt(i)) continue;
-                    in++;
-                }
-                in++;
-                if (tracing) traceInput();
-                ok = true;
-            }
-            break;
-        case Range:
-            int low = node.left().value();
-            int high = node.right().value();
-            ok = false;
-            if (in < input.length()) {
-                int ch = input.codePointAt(in);
-                ok = (ch >= low) && (ch <= high);
-                if (ok) {
-                    if (lookahead == 0 && out > 0) takeActions();
-                    int n = Character.charCount(ch);
-                    in += n;
-                    if (tracing) traceInput();
-                }
-            }
-            break;
-        case Cat:
-            ok = false;
-            Category cat = Category.valueOf(node.name());
-            if (in < input.length()) {
-                int ch = input.codePointAt(in);
-                Category c = Category.get(ch);
-                ok = c == cat || cat == Category.Uc;
-                if (ok) {
-                    if (lookahead == 0 && out > 0) takeActions();
-                    int n = Character.charCount(ch);
-                    in += n;
-                    if (tracing) traceInput();
-                }
-            }
-            break;
-        case Tag:
-            String query;
-            if (node.text().charAt(0) == '%') query = node.text().substring(1);
-            else query = node.text().substring(1, node.text().length()-1);
-            if (query.length() == 0) ok = in == input.length();
-            else ok = input.startsWith(query, in);
-            if (ok) {
-                start = in;
-                if (lookahead == 0 && out > 0) takeActions();
-                in += query.length();
-                while (in < input.length() &&
-                    (input.charAt(in) == ' ' || input.charAt(in) == '\n')) in++;
-                if (tracing) traceInput();
-            }
-            break;
-        case Mark:
-            ok = true;
-            if (lookahead > 0) break;
-            if (marked != in) { marked = in; failures.clear(); }
-            failures.add(node.text().substring(1));
-            break;
-        case Drop:
-            ok = true;
-            delay[out++] = node;
-            break;
-        case Act:
-            ok = true;
-            if (lookahead > 0) break;
-            delay[out++] = node;
-            break;
-        default:
-            throw new Error("Not implemented " + node.op());
+            case Rule: parseRule(node); break;
+            case Id: parseId(node); break;
+            case Or: parseOr(node); break;
+            case And: parseAnd(node); break;
+            case Opt: parseOpt(node); break;
+            case Any: parseAny(node); break;
+            case Some: parseSome(node); break;
+            case Try: parseTry(node); break;
+            case Has: parseHas(node); break;
+            case Not: parseNot(node); break;
+            case Char: parseChar(node); break;
+            case String: parseString(node); break;
+            case Set: parseSet(node); break;
+            case Range: parseRange(node); break;
+            case Cat: parseCat(node); break;
+            case Tag: parseTag(node); break;
+            case Mark: parseMark(node); break;
+            case Drop: parseDrop(node); break;
+            case Act: parseAct(node); break;
+            default: throw new Error("Not implemented " + node.op());
         }
     }
 
@@ -316,17 +219,11 @@ public class Evaluator implements Testable {
         lookahead++;
         parse(node.left());
         lookahead--;
-        in = saveIn;
-        if (ok && lookahead == 0) takeActions();
-        if (ok) parse(node.left());
-        else out = saveOut;
-        /*
         if (ok && lookahead == 0) takeActions();
         if (!ok) {
             in = saveIn;
             out = saveOut;
         }
-        */
     }
 
     // Parse x&
@@ -352,7 +249,128 @@ public class Evaluator implements Testable {
         ok = !ok;
     }
 
+    // Parse 127
     private void parseChar(Node node) {
+        if (in >= input.length()) ok = false;
+        else {
+            int ch = input.codePointAt(in);
+            ok = (ch == node.value());
+            if (ok) {
+                if (lookahead == 0 && out > 0) takeActions();
+                int n = Character.charCount(ch);
+                in += n;
+                if (tracing) traceInput();
+            }
+        }
+    }
+
+    // Parse "abc"
+    private void parseString(Node node) {
+        int length = node.text().length() - 2;
+        String text = node.text().substring(1, length+1);
+        ok = true;
+        if (in + length > input.length()) ok = false;
+        else for (int i=0; i<length; i++) {
+            if (input.charAt(in+i) != text.charAt(i)) { ok = false; break; }
+        }
+        if (ok) {
+            if (lookahead == 0 && out > 0) takeActions();
+            in += length;
+            if (tracing) traceInput();
+        }
+    }
+
+    // Parse 'abc'
+    private void parseSet(Node node) {
+        int length = node.text().length() - 2;
+        String text = node.text().substring(1, length+1);
+        ok = false;
+        if (in >= input.length()) { }
+        else for (int i=0; i<length; i++) {
+            if (input.charAt(in) != text.charAt(i)) continue;
+            if (lookahead == 0 && out > 0) takeActions();
+            if (Character.isHighSurrogate(text.charAt(i))) {
+                i++;
+                if (input.charAt(in+1) != text.charAt(i)) continue;
+                in++;
+            }
+            in++;
+            if (tracing) traceInput();
+            ok = true;
+        }
+    }
+
+    // Parse 'a..z' or 0..127
+    private void parseRange(Node node) {
+        int low = node.left().value();
+        int high = node.right().value();
+        ok = false;
+        if (in < input.length()) {
+            int ch = input.codePointAt(in);
+            ok = (ch >= low) && (ch <= high);
+            if (ok) {
+                if (lookahead == 0 && out > 0) takeActions();
+                int n = Character.charCount(ch);
+                in += n;
+                if (tracing) traceInput();
+            }
+        }
+    }
+
+    // Parse Nd
+    private void parseCat(Node node) {
+        ok = false;
+        Category cat = Category.valueOf(node.name());
+        if (in < input.length()) {
+            int ch = input.codePointAt(in);
+            Category c = Category.get(ch);
+            ok = c == cat || cat == Category.Uc;
+            if (ok) {
+                if (lookahead == 0 && out > 0) takeActions();
+                int n = Character.charCount(ch);
+                in += n;
+                if (tracing) traceInput();
+            }
+        }
+    }
+
+    // Parse %t
+    private void parseTag(Node node) {
+        String tag;
+        if (node.text().charAt(0) == '%') tag = node.text().substring(1);
+        else tag = node.text().substring(1, node.text().length()-1);
+        if (tag.length() == 0) ok = in == input.length();
+        else ok = input.startsWith(tag, in);
+        if (ok) {
+            start = in;
+            if (lookahead == 0 && out > 0) takeActions();
+            in += tag.length();
+            while (in < input.length() &&
+                (input.charAt(in) == ' ' || input.charAt(in) == '\n')) in++;
+            if (tracing) traceInput();
+        }
+    }
+
+    // Parse #m
+    private void parseMark(Node node) {
+        ok = true;
+        if (lookahead > 0) return;
+        if (marked != in) { marked = in; failures.clear(); }
+        failures.add(node.text().substring(1));
+    }
+
+    // Parse @
+    private void parseDrop(Node node) {
+        ok = true;
+        delay[out] = node;
+        delayIn[out++] = in;
+    }
+
+    // Parse @2add
+    private void parseAct(Node node) {
+        ok = true;
+        delay[out] = node;
+        delayIn[out++] = in;
     }
 
     // Print out the input position.
@@ -378,23 +396,24 @@ public class Evaluator implements Testable {
     private void takeActions() {
         for (int i = 0; i < out; i++) {
             Node node = delay[i];
+            int oldIn = delayIn[i];
             String s = node.text();
             if (! s.equals("@")) s = s.substring(1);
             if (tracing) System.out.println("O: " + s);
-            takeAction(node);
+            takeAction(node, oldIn);
         }
         out = 0;
     }
 
     // Carry out an action.
-    private void takeAction(Node node) {
-        if (node.op() == Drop) { start = in; return; }
+    private void takeAction(Node node, int oldIn) {
+        if (node.op() == Drop) { start = oldIn; return; }
         if (node.op() != Act) throw new Error("Expecting Act");
         output.append(node.name());
-        if (textInput && in > start) {
-            output.append(" " + input.substring(start,in));
+        if (textInput && oldIn > start) {
+            output.append(" " + input.substring(start, oldIn));
         }
         output.append("\n");
-        start = in;
+        start = oldIn;
     }
 }
