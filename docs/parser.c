@@ -116,10 +116,11 @@ static inline void doSTART(state *s, int arg) {
 // Carry out any outstanding delayed actions. Return NULL for success, or an
 // error report containing a bitmap of markers.
 static inline void doSTOP(state *s, err *e) {
-    e->ok = s->ok;
     if (s->ok && s->out > 0) doActs(s);
-    if (s->ok || s->in > s->marked) e->markers = 0L;
-    else e->markers = s->markers;
+    if (s->ok || s->in > s->marked) s->markers = 0L;
+    e->ok = s->ok;
+    e->position = s->in;
+    e->markers = s->markers;
     if (! s->ok) findLine(s, e, s->in);
 }
 
@@ -424,19 +425,13 @@ static void execute(state *s, err *e) {
     }
 }
 
-void parseText(int n, byte code[], byte input[], doAct *f, void *x, err *e) {
+// By allocating the state structure on the stack in the parse function and
+// using inline functions, efficiency should be the same as using local
+// variables and a monolithic switch statement.
+void parse(int n, byte c[], byte in[], doNext *f, doAct *g, void *x, err *e) {
     state pData;
     state *s = &pData;
-    new(s, code, input, NULL, f, x);
-    entry(s, n);
-    execute(s, e);
-// TAG, CAT,
-}
-
-void parseTokens(int n, byte code[], doNext *next, doAct *f, void *x, err *e) {
-    state pData;
-    state *s = &pData;
-    new(s, code, NULL, next, f, x);
+    new(s, c, in, f, g, x);
     entry(s, n);
     execute(s, e);
 }

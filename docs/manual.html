@@ -15,8 +15,14 @@
 <h1>Pecan Reference Manual</h1>
 
 <ul>
-<li><a href="#intro">Introduction</a></li>
-<li><a href="#install">Installation</a></li>
+<li><a href="#use">Using Pecan</a></li>
+<li><a href="#intro">Background</a></li>
+<ul>
+<li><a href="#cfg">CFG notation</a></li>
+<li><a href="#peg">PEG notation</a></li>
+<li><a href="#rd">Recursive descent and combinators</a></li>
+<li><a href="#pecan">Pecan grammars</a></li>
+</ul>
 <li><a href="#notation">Notation</a>
 <ul>
 <li><a href="#rules">Rules</a></li>
@@ -52,7 +58,7 @@
 <li><a href="#pecan">The Pecan grammar</a></li>
 </ul>
 
-<h2 id="intro">Introduction</h2>
+<h2 id="use">Using Pecan</h2>
 
 <p>Pecan is a tool for developing and checking grammars, and generating scanners
 and parsers. It is aimed at parsers for programming languages, <a
@@ -68,11 +74,11 @@ has these features:</p>
 
 <li>output actions and error markers are included</li>
 
-<li>transformations preserve actions and errors</li>
+<li>transformations on grammars preserve actions and errors</li>
 
-<li>many consistency checks are applied</li>
+<li>many consistency checks are applied to grammars</li>
 
-<li>there is explicit support for development and testing</li>
+<li>there is support for development and testing of grammars</li>
 
 <li>scanner and parser generation is via bytecode</li>
 
@@ -80,17 +86,63 @@ has these features:</p>
 
 </ul>
 
+<p>Having a separate notation for grammars helps to focus attention on the
+various issues that have to be addressed, separately from the programming
+details. However, that also makes grammars rather dense. Creating or translating
+a grammar accurately can be difficult. In addition, programmers typically use
+parser generators only rarely, and are often not grammar experts. Pecan thus has
+explicit support for test-driven grammar development.</p>
+
+<p>The Pecan system is written in Java, so the first step is to make sure a
+reasonably up-to-date version of Java is properly installed. This can be checked
+by typing commands:</p>
+
+<pre>javac -version
+java -version
+</pre>
+
+<p>Pecan is provided as an executable jar file <code>pecan.jar</code>. The jar
+file contains both the compiled program and also the source code. If
+this jar file is downloaded, it can be run with:</p>
+
+<pre>java -jar pecan.jar ...
+</pre>
+
+<p>However, it is more convenient to create a batch file or shell script, or use
+an alias or equivalent, so that the program can be run just by typing:</p>
+
+<pre>pecan ...
+</pre>
+
+<p>The way to do this differs from system to system.</p>
+
+<p>To run tests on a grammar, type a command of the form:</p>
+
+<pre>pecan [-t | -trace] [line] testfile
+</pre>
+
+<p>To generate a bytecode version of a grammar, type a command of the form:</p>
+
+<pre>pecan -o output grammar
+</pre>
+
+<p>The output file is a template written in any target implementation language.
+The command inserts a bytecode array into it to form a parser or application
+program.</p>
+
+<h2 id="intro">Background</h2>
+
 <p>Other approaches to developing parsers are usually based on the <a
 href="http://en.wikipedia.org/wiki/Context-free_grammar">context free
 grammar</a> (CFG) formalism, the <a
 href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">parsing
-expression grammar</a> (PEG) notation, using <a
-href="http://en.wikipedia.org/wiki/Parser_combinator">parser combinators</a> or
-writing <a
+expression grammar</a> (PEG) notation, or writing  <a
 href="https://en.wikipedia.org/wiki/Recursive_descent_parser">recursive
-descent</a> parsers manually.</p>
+descent</a> parsers manually, possibly using using <a
+href="http://en.wikipedia.org/wiki/Parser_combinator">parser
+combinators</a>.</p>
 
-<h3>CFG grammars</h3>
+<h3 id="cfg">CFG grammars</h3>
 
 <p>The CFG notation (in the form of BNF and many variations) has been the main
 formalism for grammars for a long time, and it has been well studied. However,
@@ -125,8 +177,9 @@ of their designs. They often have arbitrary heuristic rules for disambiguation.
 They often support a subset of CFG grammars which is not at all intuitive. They
 often use bottom-up parsing techniques to make parsers near-linear, which makes
 the way they operate impenetrable. And they often support actions and error
-reporting using embedded code fragments which are not part of the grammar. This
-is a very fragile and language-dependent approach.</p>
+reporting using embedded code fragments which are not part of the grammar. The
+code fragments are often restricted to a particular implementation language, and
+the approach is any case very fragile.</p>
 
 <p>These problems with the CFG formalism might be worth putting up with, if the
 formalism had excellent theoretical or practical properties. But it doesn't.
@@ -134,21 +187,21 @@ For example, CFG grammars have poor composability properties, and poor closure
 properties. And, in general, parsing CFG grammars takes O(n<sup>3</sup>) time in
 the worst case.</p>
 
-<h3>PEG grammars</h3>
+<h3 id="peg">PEG grammars</h3>
 
-<p>The main difference with PEG grammars is that the symmetrical choice operator
-<code>|</code> is replaced by an ordered choice operator <code>/</code> which
-has a more operational meaning. The expressive power of PEG grammars is
-extremely close to that of CFG grammars. Examples such as palindromes which are
-a problem for PEG grammars are typically also a problem for the efficient LR or
-LALR subsets of CFG grammars.</p>
+<p>The main difference with PEG grammars compared to CFG grammars is that the
+symmetrical choice operator <code>|</code> is replaced by an ordered choice
+operator <code>/</code> which has a more operational meaning. The expressive
+power of PEG grammars is extremely close to that of CFG grammars. Examples such
+as palindromes which are a problem for PEG grammars are typically also a problem
+for the efficient LR or LALR subsets of CFG grammars.</p>
 
-<p>The theoretical and practical properties of the PEG formalism are superior to
-the CFG formalism in almost every measurable way. PEG grammars never contain any
-ambiguity, they have a direct operational meaning as parsers, they are
-composable, they are closed under a variety of operations, and they can be
-parsed in linear time using the packrat algorithm. This makes the PEG grammar
-formalism a much better starting point for studying grammars and parsers.</p>
+<p>The theoretical and practical properties of the PEG formalism are far
+superior to the CFG formalism. PEG grammars never contain any ambiguity, they
+have a direct operational meaning as parsers, they are composable, they are
+closed under many operations, and they can be parsed in linear time
+using the packrat algorithm. This makes the PEG grammar formalism a much better
+starting point for studying grammars and parsers.</p>
 
 <p>Unfortunately, there are practical problems with PEG parsers. Although the
 packrat algorithm is linear, it is slower and more space hungry than one would
@@ -169,94 +222,57 @@ transform it away. Most uses of left recursion are very simple, of the kind
 <code>a = x | a y</code> which can be translated easily into <code>a = x
 y*</code>.</p>
 
-<h3>Recursive descent parsing and combinators</h3>
+<h3 id="rd">Recursive descent and combinators</h3>
 
 <p>Recursive descent parsers have the advantage of being efficient, intuitive,
-and capable of being hand-written. They can also be embedded in programming
-languages, e.g. in the form of parser combinators.</p>
+and capable of being hand-written. However, for large projects it becomes
+verbose and tedious.</p>
 
-<p>Perhaps the main problem with recursive descent is that a simple approach is
-hardly ever enough. In order to deal with the difficult cases which arise in
-practice, there have to be some extra features such as lookahead. These extra
-features are often added in an ad hoc fashion on practical grounds. That often
-leads to a situation where it is difficult to tell exactly what range of
-grammars or languages are supported by any given recursive descent system.</p>
+<p>Perhaps the main problem with recursive descent, though, is that a simple
+approach is hardly ever enough. In order to deal with the difficult cases which
+arise in practice, extra features such as lookahead are needed. These extra
+features are often added in an ad hoc fashion on practical grounds. That
+typically makes parsers for complex projects obscure and error-prone.</p>
 
-<p>Embedding a parsing system into a language, e.g. in the form of combinators,
-can be very convenient, especially for small domain specific languages where the
-grammar is known in advance. A system like that has a natural feel for
-programmers, often with good control over backtracking.</p>
+<p>A combinator library can ease the process of writing a parser in the
+recursive descent style by providing components which reduce verbosity and
+automate features such as lookahead.</p>
 
-<p>If, however, an approach is needed which is not tied to a particular
-programming language, or if a grammar needs an extended development effort, or
-if it needs to be translated from the CFG formalism, or checked for consistency,
-or optimized to produce a fast parser, then there is a case for a separate
-formalism such as Pecan.</p>
+<p>However, a combinator library typically still has two problems. The first is
+that parsers have to be written in the specific language in which the library is
+written. The second is that there is typically no separate and independent
+grammar, and so there is a lack of analysis and development tools to help with
+the development of parsers.</p>
 
-<h3>Pecan grammars</h3>
+<h3 id="pecan">Pecan grammars</h3>
 
-<p>Pecan uses a language which is based on the PEG notation. However, the
+<p>Pecan provides a notation for grammars, and support for parser development.
+Tools are provided to aid in development and testing, including consistency
+checks on grammars, features for automated testing, and the ability to execute
+grammars as symbolic parsers.</p>
+
+<p>Manual transformations can be carried out on grammars, e.g. to convert CFG
+grammars into Pecan grammars or improve efficiency, and these preserve the
+actions and error handling properties of generated parsers.</p>
+
+<p>Once a grammar has been developed, it can either be used to support the
+manual construction of a parser, or a parser can be generated automatically.
+Parsers are generated as bytecode, so the target implementation language is
+limited only by the availability of a bytecode interpreter. An interpreter for a
+new language can be constructed fairly easily by translating one of the example
+interpreters provided.</p>
+
+<p>The Pecan notation is based roughly on the PEG notation. However, the
 semantics is that of simple recursive descent, with explicitly controlled
-lookahead and backtracking.</p>
-
-<p>The language is independent of any host programming language. Nevertheless,
-grammars can express actions and error reporting, and can be executed
-symbolically for development and testing. Once developed, a grammar can be
-converted into a parser in any desired language, either by hand or
-automatically.</p>
-
-<p>The Pecan system explicitly provides support for the process of developing
-grammars, in the form of consistency checks on grammars, features for automated
-testing, and a context in which manual transformations can be carried out.
-Having a separate notation for grammars helps to focus attention on the various
-issues that have to be addressed, separately from the programming details.
-However, that also makes grammars rather dense. If a grammar is not given in
-advance, creating it or translating it accurately can be difficult. In addition,
-programmers typically use parser generators only rarely, and are often not
-grammar experts. As a result, support for test-driven grammar development is an
-important feature of Pecan.</p>
-
-<h2 id="install">Installation</h2>
-
-<p>Pecan is a tool for developing grammars and generating parsers in a variety
-of programming languages. The Pecan system is written in Java, so the first
-step is to make sure a reasonably up-to-date version of Java is properly
-installed. This can be checked by typing:</p>
-
-<pre>javac -version
-java -version
-</pre>
-
-<p>Pecan is provided as an executable jar file <code>pecan.jar</code>. The jar
-file contains both the compiled program and also the source code. If
-this jar file is downloaded, it can be run with:</p>
-
-<pre>java -jar pecan.jar ...
-</pre>
-
-<p>However, it is more convenient to create a batch file or shell script, or use
-an alias or equivalent, so that the program can be run just by typing:</p>
-
-<pre>pecan ...
-</pre>
-
-<p>The way to do this differs from system to system.</p>
-
-<p>To run tests on a grammar, type a command of the form:</p>
-
-<pre>pecan [-t | -trace] [line] testfile
-</pre>
-
-<p>To generate a bytecode version of a grammar, type a command of the form:</p>
-
-<pre>pecan [-i interpreter] -o output grammar
-</pre>
+lookahead and backtracking. The notation is independent of any host programming
+language. Nevertheless, grammars can contain actions and error handling
+in a symbolic form.</p>
 
 <h2 id="notation">Notation</h2>
 
-<p>The Pecan language is a grammar language for writing parsers, based
+<p>The Pecan language is a grammar language for writing parsers, loosely based
 on the <a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">PEG</a>
-notation. Pecan uses the sequential choice operator <code>x/y</code> but, unlike
+notation. Pecan has a sequential choice operator <code>x/y</code> but, unlike
 the PEG notation, the operator does not automatically involve backtracking.
 There are separate lookahead operators, for the controlled use of backtracking,
 which provide greater control over the progress of parsing. It is much easier

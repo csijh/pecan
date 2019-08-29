@@ -80,7 +80,7 @@ int main(int n, char *args[n]) {
     err eData;
     err *e = &eData;
     s->input = args[1];
-    parseText(0, code, args[1], act, s, e);
+    parse(0, code, args[1], NULL, act, s, e);
     if (e->ok) printf("%d\n", s->stack[0]);
     else {
         report(e, "Syntax error:\n", "Error: expecting ", ", ", ":\n", names);

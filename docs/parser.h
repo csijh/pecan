@@ -20,22 +20,23 @@ enum op {
 typedef void doAct(int a, int start, int in, void *state);
 typedef int doNext(void *state);
 
-// The type of an error report.
+// The type of an error report. If ok is true, position says how far parsing
+// reached. Otherise, the position is where the error occurred, with its line
+// number and column, the start and end positions of the line, and the error
+// items marked at that position.
 struct err {
     bool ok;
-    int line, column, start, end;
+    int position, line, column, start, end;
     uint64_t markers;
 };
 typedef struct err err;
 
-// Use the n'th entry point in the code to parse the input bytes, calling
-// f(arg) to perform each action. The result is NULL or an error report.
-// There is no automatic recovery.
-void parseText(int n, byte code[], byte input[], doAct *f, void *arg, err *e);
-
-// Use the n'th entry point in the code to parse tokens, obtaining the tag of
-// the next token using g(arg) and calling f(arg) to perform actions.
-void parseTokens(int n, byte code[], doNext *g, doAct *f, void *arg, err *e);
+// Use the n'th entry point in the code to parse. For text, the in array is
+// parsed and f can be NULL. For tokens, f is used to scan the tokens, and in
+// can be NULL. The function g is used to carry out actions. The argument x is
+// passed to f or g. The result is NULL or an error report. There is no
+// automatic recovery.
+void parse(int n, byte code[], byte in[], doNext *f, doAct *g, void *x, err *e);
 
 // Print a report on stderr using s if there are no markers, or s1 followed by
 // a list of markers separated by s2 followed by s3, using the names array.
