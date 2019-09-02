@@ -75,7 +75,7 @@ class Binder implements Testable {
         case Tag: bindTag(node); break;
         case Rule: bindRule(node); break;
         case Id: bindId(node); break;
-        case Char: bindChar(node); break;
+        case Number: bindNumber(node); break;
         case String: bindString(node); break;
         case Divider: bindDivider(node); break;
         case Set: bindSet(node); break;
@@ -124,23 +124,19 @@ class Binder implements Testable {
 
     // Find the character code represented by a number, and check in range.
     // Set the TextInput flag on the root node.
-    private void bindChar(Node node) throws Exception {
-        int ch;
-        if (node.text().charAt(0) != '0') ch = Integer.parseInt(node.text());
-        else ch = Integer.parseInt(node.text(), 16);
+    private void bindNumber(Node node) throws Exception {
+        node.set(Char);
+        int ch = node.charCode();
         if (ch > 1114111) err(node, "number too big");
-        node.value(ch);
-        node.note("" + ch);
         root.set(TextInput);
     }
 
     // Set the TextInput flag on the root node.
     // For a single character, set the value to the character code (for ranges).
     private void bindString(Node node) throws Exception {
-        node.value(-1);
-        int n = node.text().codePointCount(1, node.text().length() - 1);
+        int n = node.name().codePointCount(0, node.name().length());
         if (n != 0) root.set(TextInput);
-        if (n == 1) node.value(node.text().codePointAt(1));
+        if (n == 1) node.set(Char);
     }
 
     // Set the TextInput flag on the root node.
@@ -149,43 +145,43 @@ class Binder implements Testable {
         if (n != 0) root.set(TextInput);
     }
 
-    // Check whether a set is a single character, and convert to string.
-    // Recognize ranges 'a..z' and create character subnodes.
+    // Check whether a set is a single character.
+    // Recognize ranges 'a..z' and create subnodes.
     // Check that a set consists of distinct characters.
     // Set the TextInput flag on the root node.
     private void bindSet(Node node) throws Exception {
-        node.value(-1);
-        String text = node.text();
-        int n = text.codePointCount(1, text.length() - 1);
-        if (n != 0) root.set(TextInput);
+        String name = node.name();
+        int n = name.codePointCount(0, name.length());
         if (n == 0) return;
+        root.set(TextInput);
         if (n == 1) {
-            node.op(String);
+            node.set(Char);
             return;
         }
-        int dots = text.indexOf("..");
+        int dots = name.indexOf("..");
+        if (name.startsWith("...")) dots = 1;
         if (dots >= 0) {
-            if (n != 4 || dots == 0 || dots == text.length() - 2) {
+            if (n != 4 || dots == 0 || dots == name.length() - 2) {
                 err(node, "range must have one character at each end");
             }
             node.op(Range);
             int s = node.start();
             int e = node.end();
-            node.left(new Node(String, source, s, s + dots + 1));
-            node.right(new Node(String, source, s + dots + 1, e));
-            bindString(node.left());
-            bindString(node.right());
-            int from = text.codePointAt(1);
-            int to = text.codePointAt(dots + 2);
+            node.left(new Node(Set, source, s, s + 1 + dots + 1));
+            node.right(new Node(Set, source, s + 1 + dots + 1, e));
+            node.left().set(Char);
+            node.right().set(Char);
+            int from = node.left().charCode();
+            int to = node.right().charCode();
             if (to < from) err(node, "empty range");
             return;
         }
         int nb = bytes(node.name()).length;
-        for (int i = 1; i<text.length() - 1; ) {
-            int c1 = text.codePointAt(i);
+        for (int i = 0; i<name.length(); ) {
+            int c1 = name.codePointAt(i);
             i += Character.charCount(c1);
-            for (int j=i; j<text.length() - 1; ) {
-                int c2 = text.codePointAt(j);
+            for (int j=i; j<name.length(); ) {
+                int c2 = name.codePointAt(j);
                 j += Character.charCount(c2);
                 if (c1 != c2) continue;
                 err(node, "set contains duplicate character");
@@ -197,8 +193,12 @@ class Binder implements Testable {
     // Set the TextInput flag on the root node.
     private void bindRange(Node node) throws Exception {
         root.set(TextInput);
-        int from = node.left().value();
-        int to = node.right().value();
+        if (node.left().op() != Number) err(node, "Bad range");
+        node.left().set(Char);
+        if (node.right().op() != Number) err(node, "Bad range");
+        node.right().set(Char);
+        int from = node.left().charCode();
+        int to = node.right().charCode();
         if (to < from) err(node, "empty range");
     }
 
@@ -207,11 +207,7 @@ class Binder implements Testable {
     private void bindAct(Node node) throws Exception {
         String text = node.text();
         String name = node.name();
-        int p = 1;
-        while (Character.isDigit(text.charAt(p))) p++;
-        int arity = 0;
-        if (p > 1) arity = Integer.parseInt(text.substring(1, p));
-        node.value(arity);
+        int arity = node.arity();
         Integer old = arities.get(name);
         if (old == null) arities.put(name, arity);
         else if (arity != old) err(node, "clashes with @" + old + name);

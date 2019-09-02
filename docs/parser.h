@@ -6,27 +6,31 @@
 typedef unsigned char byte;
 
 // The opcodes: first those that take no argument, then those that take an
-// implicit argument of 1, then variations that take a one-byte arument 0..255
-// and then variations that take a two-byte big-endian argument 0..65535.
+// implicit argument of 1, then variations that take a one-byte argument 0..255,
+// then opcodes that always have a one-byte argument, and then variations that
+// take a two-byte big-endian argument 0..65535,
 enum op {
-    STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP, MARK,
-    START, GO, BACK, EITHER, BOTH, ACT, STRING, LOW, HIGH, LESS, SET, CAT, TAG,
-    START1,GO1,BACK1,EITHER1,BOTH1,ACT1,STRING1,LOW1,HIGH1,LESS1,SET1,CAT1,TAG1,
-    START2,GO2,BACK2,EITHER2,BOTH2,ACT2,STRING2,LOW2,HIGH2,LESS2,SET2,CAT2,TAG2,
+    STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP,
+    START,  GO,  BACK,  EITHER,  BOTH,  STRING,  LOW,  HIGH,  LESS,  SET,
+    START1, GO1, BACK1, EITHER1, BOTH1, STRING1, LOW1, HIGH1, LESS1, SET1,
+    ACT, MARK, CAT, TAG,
+    START2, GO2, BACK2, EITHER2, BOTH2, STRING2, LOW2, HIGH2, LESS2, SET2,
 };
 
-// The type of a function to perform an output action, and of a function to get
-// the tag of the next token.
-typedef void doAct(int a, int start, int in, void *state);
+// The type of a function to perform an output action, given the characters
+// most recently matched and the ...
+typedef void doAct(void *state, int a, char *s, int n);
+
+// The type of a function to get the tag of the next token.
 typedef int doNext(void *state);
 
-// The type of an error report. If ok is true, position says how far parsing
-// reached. Otherise, the position is where the error occurred, with its line
+// The type of an error report. If ok is true, 'at' holds how far parsing
+// reached. Otherwise, it is where the error occurred, with its line
 // number and column, the start and end positions of the line, and the error
 // items marked at that position.
 struct err {
     bool ok;
-    int position, line, column, start, end;
+    int at, line, column, start, end;
     uint64_t markers;
 };
 typedef struct err err;

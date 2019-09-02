@@ -102,7 +102,7 @@ class Checker implements Testable {
         case Drop: case Act: case Mark:
             nSN = true;
             break;
-        case Tag: case Char: case Range: case Cat:
+        case Tag: case Number: case Range: case Cat:
             nSP = true;
             nFN = true;
             break;
@@ -193,7 +193,7 @@ class Checker implements Testable {
         case Id:    nWF = node.ref().has(WF);           break;
         case Rule: case Opt: case Try: case Has:
         case Not:   nWF = xWF;                          break;
-        case Mark: case Char: case Range: case Cat:
+        case Mark: case Number: case Range: case Cat:
         case String: case Set: case Drop: case Act:
         case Tag:   nWF = true;                         break;
         case And:   nWF = xWF && (yWF || ! x.has(SN));  break;
@@ -224,7 +224,7 @@ class Checker implements Testable {
         if (y != null) { acting(y); yAA = y.has(AA); yAB = y.has(AB); }
         switch (node.op()) {
             // Has and Not have actions switched off, so don't have AA or AB.
-        case Char: case Range: case Cat: case String: case Set: case Tag:
+        case Number: case Range: case Cat: case String: case Set: case Tag:
         case Mark: case Has: case Not: case Error:
             break;
         // If [x] succeeds, x is executed a second time with actions on.

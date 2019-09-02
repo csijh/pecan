@@ -124,7 +124,7 @@ public class Evaluator implements Testable {
             case Try: parseTry(node); break;
             case Has: parseHas(node); break;
             case Not: parseNot(node); break;
-            case Char: parseChar(node); break;
+            case Number: parseNumber(node); break;
             case String: parseString(node); break;
             case Set: parseSet(node); break;
             case Range: parseRange(node); break;
@@ -250,11 +250,11 @@ public class Evaluator implements Testable {
     }
 
     // Parse 127
-    private void parseChar(Node node) {
+    private void parseNumber(Node node) {
         if (in >= input.length()) ok = false;
         else {
             int ch = input.codePointAt(in);
-            ok = (ch == node.value());
+            ok = (ch == node.charCode());
             if (ok) {
                 if (lookahead == 0 && out > 0) takeActions();
                 int n = Character.charCount(ch);
@@ -302,8 +302,8 @@ public class Evaluator implements Testable {
 
     // Parse 'a..z' or 0..127
     private void parseRange(Node node) {
-        int low = node.left().value();
-        int high = node.right().value();
+        int low = node.left().charCode();
+        int high = node.right().charCode();
         ok = false;
         if (in < input.length()) {
             int ch = input.codePointAt(in);

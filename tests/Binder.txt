@@ -37,7 +37,7 @@ Rule exp
     Id exp
     Id END
 Rule END
-  Char 10 10
+  Number 10
 ==========
 // Set with duplicate character
 s = 'abcdefcghi'
@@ -118,8 +118,26 @@ s = 33..33
 ----------
 Rule s
   Range 33..33
-    Char 33 33
-    Char 33 33
+    Number 33
+    Number 33
+==========
+// Ranges with three dots
+s1 = '.../'
+s2 = '-...'
+s3 = '....'
+----------
+Rule s1
+  Range '.../'
+    Set '..
+    Set ./'
+Rule s2
+  Range '-...'
+    Set '-.
+    Set ..'
+Rule s3
+  Range '....'
+    Set '..
+    Set ..'
 ==========
 // Name clash
 x = @2add @3add
@@ -227,11 +245,11 @@ visible = "x"
 ----------
 Rule string
   And '"' visible* #badstring '"'
-    String '"'
+    Set '"'
     Any visible*
       Id visible
     Mark #badstring
-    String '"'
+    Set '"'
 Rule visible
   String "x"
 ==========
@@ -308,7 +326,7 @@ Rule number
   And ('0' hex* / digit+) @Char skip1
     Or '0' hex* / digit+
       And '0' hex*
-        String '0'
+        Set '0'
         Any hex*
           Id hex
       Some digit+
@@ -329,14 +347,14 @@ Rule set
     Id skip1
 Rule string
   And '"' ('"'! visible)* #BADString '"' @String skip1
-    String '"'
+    Set '"'
     Any ('"'! visible)*
       And '"'! visible
         Not '"'!
-          String '"'
+          Set '"'
         Id visible
     Mark #BADString
-    String '"'
+    Set '"'
     Act @String
     Id skip1
 Rule matcher
@@ -468,23 +486,23 @@ Rule hex
   Or digit / 'A..F' / 'a..f'
     Id digit
     Range 'A..F'
-      String 'A.
-      String .F'
+      Set 'A.
+      Set .F'
     Range 'a..f'
-      String 'a.
-      String .f'
+      Set 'a.
+      Set .f'
 Rule digit
   Range '0..9'
-    String '0.
-    String .9'
+    Set '0.
+    Set .9'
 Rule letter
   Or 'A..Z' / 'a..z'
     Range 'A..Z'
-      String 'A.
-      String .Z'
+      Set 'A.
+      Set .Z'
     Range 'a..z'
-      String 'a.
-      String .z'
+      Set 'a.
+      Set .z'
 Rule alpha
   Or letter / digit / '_-'
     Id letter
@@ -492,20 +510,20 @@ Rule alpha
     Set '_-'
 Rule newline
   Or 10 / 133 / 8232 / 13 10 / 13 133 / 13
-    Char 10 10
-    Char 133 133
-    Char 8232 8232
+    Number 10
+    Number 133
+    Number 8232
     And 13 10
-      Char 13 13
-      Char 10 10
+      Number 13
+      Number 10
     And 13 133
-      Char 13 13
-      Char 133 133
-    Char 13 13
+      Number 13
+      Number 133
+    Number 13
 Rule visible
   Range ' ..~'
-    String ' .
-    String .~'
+    Set ' .
+    Set .~'
 Rule comment
   And "//" visible*
     String "//"

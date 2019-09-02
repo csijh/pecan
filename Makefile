@@ -16,4 +16,4 @@ Run = pecan/Run.java $(Evaluator)
 
 %: pecan/%.java
 	javac $($@)
-	java pecan.$@
+	java -ea pecan.$@

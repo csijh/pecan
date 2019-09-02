@@ -54,7 +54,7 @@ class Generator implements Testable {
             case Or:        encodeOr(node);         break;
             case And:       encodeAnd(node);        break;
             case Opt:       encodeOpt(node);        break;
-            case Any:       encodeAny(node);       break;
+            case Any:       encodeAny(node);        break;
             case Some:      encodeSome(node);       break;
             case Try:       encodeTry(node);        break;
             case Has:       encodeHas(node);        break;
@@ -63,7 +63,7 @@ class Generator implements Testable {
             case Act:       encodeAct(node);        break;
             case Mark:      encodeMark(node);       break;
             case Tag:       encodeTag(node);        break;
-            case Char:      encodeChar(node);       break;
+            case Number:    encodeNumber(node);     break;
             case Cat:       encodeCat(node);        break;
             case String:    encodeString(node);     break;
             case Range:     encodeRange(node);      break;
@@ -159,19 +159,19 @@ class Generator implements Testable {
 
     // {@a}  =  ACT(a)
     private void encodeAct(Node node) {
-        add(ACT.toString() + "1");
+        add(ACT.toString());
         add(node.name());
     }
 
     // {#e}  =  MARK(n)
     private void encodeMark(Node node) {
-        add(MARK.toString() + "1");
+        add(MARK.toString());
         add(node.name());
     }
 
     // {%id}  =  TAG(n)
     private void encodeTag(Node node) {
-        add(TAG.toString() + "1");
+        add(TAG.toString());
         add(node.text());
     }
 
@@ -179,14 +179,14 @@ class Generator implements Testable {
     // {"a"}  =  STRING(1), 97
     // {'a'}  =  STRING(1), 97
     // {128}  =  STRING(2), 194, 128
-    private void encodeChar(Node node) {
-        int ch = node.value();
+    private void encodeNumber(Node node) {
+        int ch = node.charCode();
         add(STRING, bytes(new String(Character.toChars(ch))));
     }
 
     // {Nd}  =  CAT(Nd)
     private void encodeCat(Node node) {
-        add(CAT.toString() + "1");
+        add(CAT.toString());
         add(node.text());
     }
 

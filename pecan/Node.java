@@ -14,11 +14,25 @@ handles them. */
 
 class Node {
 
-    public static void main(String[] args) { }
+    public static void main(String[] args) {
+        Node n = new Node(Number, "127", 0, 3);
+        n.set(Flag.Char);
+        assert(n.name().equals("127"));
+        assert(n.charCode() == 127);
+        n = new Node(Set, "'a'", 0, 3);
+        n.set(Flag.Char);
+        assert(n.name().equals("a"));
+        assert(n.charCode() == 97);
+        n = new Node(Act, "@2add", 0, 5);
+        assert(n.name().equals("add"));
+        assert(n.arity() == 2);
+        n = new Node(Act, "@add", 0, 4);
+        assert(n.name().equals("add"));
+        assert(n.arity() == 0);
+    }
 
 // ---------- The annotation fields and methods -------------------------------
 
-    private int value;
     private int flags;
     private int NET, LOW, PC, LEN;
     private BitSet FIRST = new BitSet();
@@ -28,13 +42,9 @@ class Node {
 
     // Flag constants. See the relevant analysis classes.
     public static enum Flag {
-        TextInput, TokenInput, SN, FN, SP, FP, WF, AA, AB, BP;
+        TextInput, TokenInput, Char, SN, FN, SP, FP, WF, AA, AB, BP;
         int bit() { return 1 << ordinal(); }
     }
-
-    // Get/set the value.
-    int value() { return value; }
-    void value(int v) { value = v; }
 
     // Get, set or unset a flag.
     boolean has(Flag f) { return (flags & f.bit()) != 0; }
@@ -80,11 +90,9 @@ class Node {
     // Construct a node with no subnodes.
     Node(Op o, String s, int b, int e) { this(o, null, null, s, b, e); }
 
-    // Copy a node, with given children. Leave out info except value.
+    // Copy a node, with given children. Leave out info.
     Node copy(Node x, Node y) {
-        Node n = new Node(op, x, y, source, start, end);
-        n.value(value());
-        return n;
+        return new Node(op, x, y, source, start, end);
     }
 
     // Get/set the op and range of text.
@@ -112,7 +120,36 @@ class Node {
         return text();
     }
 
-    // Get/set the children and the cross-reference link.
+    // For a character, extract the value, i.e. Unicode code point.
+    int charCode() {
+        if (! has(Flag.Char)) return -1;
+        String name = name();
+        int ch = -1;
+        switch(op) {
+        case Number:
+            if (name.charAt(0) != '0') ch = Integer.parseInt(name);
+            else ch = Integer.parseInt(name, 16);
+            break;
+        case Set: case String:
+            ch = name.codePointAt(0);
+            break;
+        case Id: case Rule:
+            ch = left().charCode();
+            break;
+        }
+        return ch;
+    }
+
+    // For an action, extract the arity.
+    int arity() {
+        int n = start + 1;
+        while (Character.isDigit(source.charAt(n))) n++;
+        if (n == start + 1) return 0;
+        return Integer.parseInt(source.substring(start + 1, n));
+    }
+
+    // Get/set the children and the cross-reference link. A cross reference link
+    // is recognized as a right child without a left child.
     Node left() { return left; }
     Node right() { return left == null ? null : right; }
     Node ref() { return left != null ? null : right; }

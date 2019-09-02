@@ -1,11 +1,17 @@
-// Generic Pecan bytecode interpreter.
+/* Pecan 1.0 bytecode interpreter. Free and open source. See licence.txt.
+
+Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
+
+The parse function is built up from calls to inline functions, and the state
+structure is allocated locally, so the efficiency should be the same as a single
+function containing a monolithic switch, acting on local variables. */
 #include "parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#define TRACE false
-// TODO tag and cat ops.
-// TODO set up auto testing.
+
+// TODO: tag and cat ops.
+// TODO: backtrack tokens, or pass index in next function.
 
 static char *opNames[] = {
     [STOP]="STOP", [OR]="OR", [AND]="AND", [MAYBE]="MAYBE", [ONE]="ONE",
@@ -33,7 +39,7 @@ static char *opNames[] = {
 // out:     the number of delayed actions stored in the actions array.
 // stack:   the call stack, i.e. return addresses and saved in/out values.
 // actions: the delayed action codes and input positions.
-struct state {
+struct parser {
     byte *code, *input;
     int pc, start, in, marked;
     uint64_t markers;
@@ -44,11 +50,11 @@ struct state {
     int look, top, out;
     int stack[1000], actions[1000];
 };
-typedef struct state state;
+typedef struct parser parser;
 
 // Initialize the parsing state.
 static void new(
-    state *s, byte c[], byte i[], doNext *next, doAct *act, void *arg)
+    parser *s, byte c[], byte i[], doNext *next, doAct *act, void *arg)
 {
     s->code = c;
     s->input = i;
@@ -62,7 +68,7 @@ static void new(
 }
 
 // Find the n'th entry point in the bytecode.
-static void entry(state *s, int n) {
+static void entry(parser *s, int n) {
     for (int i = 0; i < n; i++) {
         int op = s->code[s->pc++];
         int arg = 1;
@@ -81,18 +87,18 @@ static void entry(state *s, int n) {
 }
 
 // Carry out any delayed actions.
-static inline void doActs(state *s) {
+static inline void doActs(parser *s) {
     for (int i = 0; i < s->out; i = i + 2) {
         int a = s->actions[i];
         int oldIn = s->actions[i+1];
-        s->act(a, s->start, oldIn, s->arg);
+        s->act(s->arg, a, &s->input[s->start], oldIn - s->start);
         s->start = oldIn;
     }
     s->out = 0;
 }
 
 // Find the line/column and start/end of line containing an input position.
-static void findLine(state *s, err *e, int p) {
+static void findLine(parser *s, err *e, int p) {
     e->line = 1;
     e->start = 0;
     for (int i = 0; ; i++) {
@@ -108,31 +114,31 @@ static void findLine(state *s, err *e, int p) {
 
 // {id = x}  =  START(nx), {x}, STOP
 // Call {x} returning to STOP.
-static inline void doSTART(state *s, int arg) {
+static inline void doSTART(parser *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
 }
 
 // {id = x}  =  ... STOP
 // Carry out any outstanding delayed actions. Return NULL for success, or an
 // error report containing a bitmap of markers.
-static inline void doSTOP(state *s, err *e) {
+static inline void doSTOP(parser *s, err *e) {
     if (s->ok && s->out > 0) doActs(s);
     if (s->ok || s->in > s->marked) s->markers = 0L;
     e->ok = s->ok;
-    e->position = s->in;
+    e->at = s->in;
     e->markers = s->markers;
     if (! s->ok) findLine(s, e, s->in);
 }
 
 // {id}  =  GO(n)   or   BACK(n)
 // Skip forwards or backwards in the code, to tail-call a remote rule.
-static inline void doGO(state *s, int arg) {
+static inline void doGO(parser *s, int arg) {
     s->pc = s->pc + arg;
 }
 
 // {x / y}  =  EITHER(nx), {x}, OR, {y}
 // Save in/out, call x, returning to OR.
-static inline void doEITHER(state *s, int arg) {
+static inline void doEITHER(parser *s, int arg) {
     s->stack[s->top++] = s->in;
     s->stack[s->top++] = s->out;
     s->stack[s->top++] = s->pc + arg;
@@ -140,7 +146,7 @@ static inline void doEITHER(state *s, int arg) {
 
 // {x / y}  =  EITHER(nx), {x}, OR, {y}
 // After x, check success and progress, return or continue with y.
-static inline void doOR(state *s) {
+static inline void doOR(parser *s) {
     int saveOut = s->stack[--s->top];
     int saveIn = s->stack[--s->top];
     if (s->ok || s->in > saveIn) s->pc = s->stack[--s->top];
@@ -149,19 +155,19 @@ static inline void doOR(state *s) {
 
 // {x y}  =  BOTH(nx), {x}, AND, {y}
 // Call x, returning to AND.
-static inline void doBOTH(state *s, int arg) {
+static inline void doBOTH(parser *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
 }
 
 // {x y}  =  BOTH(nx), {x}, AND, {y}
 // After x, check success, continue with y or return.
-static inline void doAND(state *s) {
+static inline void doAND(parser *s) {
     if (! s->ok) s->pc = s->stack[--s->top];
 }
 
 // {x?}  =  MAYBE, ONE, {x},   and similarly for x*, x+
 // Save in/out and call x, returning to ONE or MANY.
-static inline void doMAYBE(state *s) {
+static inline void doMAYBE(parser *s) {
     s->stack[s->top++] = s->in;
     s->stack[s->top++] = s->out;
     s->stack[s->top++] = s->pc;
@@ -170,7 +176,7 @@ static inline void doMAYBE(state *s) {
 
 // {x?}  =  MAYBE, ONE, {x}
 // After x, check success or no progress and return.
-static inline void doONE(state *s) {
+static inline void doONE(parser *s) {
     int saveOut = s->stack[--s->top];
     int saveIn = s->stack[--s->top];
     if (! s->ok && s->in == saveIn) {
@@ -182,7 +188,7 @@ static inline void doONE(state *s) {
 
 // {x*}  =  MAYBE, MANY, {x}
 // After x, check success and re-try x or return.
-static inline void doMANY(state *s) {
+static inline void doMANY(parser *s) {
     int saveOut = s->stack[--s->top];
     int saveIn = s->stack[--s->top];
     if (s->ok) {
@@ -201,14 +207,14 @@ static inline void doMANY(state *s) {
 
 // {x+}  =  DO, AND, MAYBE, MANY, {x}
 // Call x, returning to AND.
-static inline void doDO(state *s) {
+static inline void doDO(parser *s) {
     s->stack[s->top++] = s->pc;
     s->pc = s->pc + 3;
 }
 
 // {[x]}  =  LOOK, TRY, x,   and similarly for x& and x!
 // Save in/out and call x as a lookahead, returning to TRY or HAS or NOT.
-static inline void doLOOK(state *s) {
+static inline void doLOOK(parser *s) {
     s->stack[s->top++] = s->in;
     s->stack[s->top++] = s->out;
     s->look++;
@@ -218,7 +224,7 @@ static inline void doLOOK(state *s) {
 
 // {[x]}  =  LOOK, TRY, x
 // Succeed and perform actions, or fail and discard them and backtrack.
-static inline void doTRY(state *s) {
+static inline void doTRY(parser *s) {
     int saveOut = s->stack[--s->top];
     int saveIn = s->stack[--s->top];
     s->look--;
@@ -232,7 +238,7 @@ static inline void doTRY(state *s) {
 
 // {x&}  =  LOOK, HAS, x
 // After x, backtrack and return.
-static inline void doHAS(state *s) {
+static inline void doHAS(parser *s) {
     s->out = s->stack[--s->top];
     s->in = s->stack[--s->top];
     s->look--;
@@ -241,7 +247,7 @@ static inline void doHAS(state *s) {
 
 // {x!}  =  LOOK, NOT, x
 // After x, backtrack, invert the result, and return.
-static inline void doNOT(state *s) {
+static inline void doNOT(parser *s) {
     s->out = s->stack[--s->top];
     s->in = s->stack[--s->top];
     s->look--;
@@ -251,23 +257,23 @@ static inline void doNOT(state *s) {
 
 // {@}  =  DROP
 // Discard input and return.
-static inline void doDROP(state *s) {
+static inline void doDROP(parser *s) {
     s->start = s->in;
     s->pc = s->stack[--s->top];
 }
 
-// {@2add}  =  ACT1, add
+// {@2add}  =  ACT, add
 // Delay the action and return success.
-static inline void doACT(state *s, int arg) {
+static inline void doACT(parser *s, int arg) {
     s->actions[s->out++] = arg;
     s->actions[s->out++] = s->in;
     s->ok = true;
     s->pc = s->stack[--s->top];
 }
 
-// {#item}  =  MARK1, item
+// {#item}  =  MARK, item
 // Record an error marker. Assume 0 <= arg <= 62.
-static inline void doMARK(state *s, int arg) {
+static inline void doMARK(parser *s, int arg) {
     if (s->look = 0) {
         if (s->in > s->marked) {
             s->marked = s->in;
@@ -281,7 +287,7 @@ static inline void doMARK(state *s, int arg) {
 
 // {"abc"}  =  STRING(3), 'a', 'b', 'c'
 // Match string and return success or failure.
-static inline void doSTRING(state *s, int arg) {
+static inline void doSTRING(parser *s, int arg) {
     s->ok = true;
     for (int i = 0; i < arg && s->ok; i++) {
         byte b = s->input[s->in + i];
@@ -296,7 +302,7 @@ static inline void doSTRING(state *s, int arg) {
 
 // {'a..z'}  =  LOW(n), 'a', HIGH(n), 'z'
 // Check >= 'a', continue with HIGH or return failure
-static inline void doLOW(state *s, int arg) {
+static inline void doLOW(parser *s, int arg) {
     s->ok = true;
     for (int i = 0; i < arg; i++) {
         byte b = s->input[s->in + i];
@@ -310,7 +316,7 @@ static inline void doLOW(state *s, int arg) {
 
 // {'a..z'}  =  LOW(n), 'a', HIGH(n), 'z'
 // Check <= 'z', return success or failure
-static inline void doHIGH(state *s, int arg) {
+static inline void doHIGH(parser *s, int arg) {
     s->ok = true;
     for (int i = 0; i < arg; i++) {
         byte b = s->input[s->in + i];
@@ -326,7 +332,7 @@ static inline void doHIGH(state *s, int arg) {
 
 // {<abc>}  =  LESS(3), 'a', 'b', 'c'
 // Check if input < "abc", return.
-static inline void doLESS(state *s, int arg) {
+static inline void doLESS(parser *s, int arg) {
     s->ok = true;
     for (int i = 0; i < arg; i++) {
         byte b = s->input[s->in + i];
@@ -345,7 +351,7 @@ static inline int length(byte first) {
 
 // {'abc'}  =  SET(3), 'a', 'b', 'c'
 // Check for one of the characters in a set, and return.
-static inline void doSET(state *s, int arg) {
+static inline void doSET(parser *s, int arg) {
     s->ok = false;
     int n = 0;
     for (int i = 0; i < arg && ! s->ok; ) {
@@ -366,11 +372,11 @@ static inline void doSET(state *s, int arg) {
 
 // {%t} == TAG1, t
 // Check if tag of next token is t and return.
-static inline void doTAG(state *s, int arg) {
+static inline void doTAG(parser *s, int arg) {
 }
 
-static inline void getOpArg(state *s, int *op, int *arg) {
-#if TRACE
+static inline void getOpArg(parser *s, int *op, int *arg) {
+#ifdef TRACE
     int pc0 = s->pc;
 #endif
     *op = s->code[s->pc++];
@@ -384,13 +390,13 @@ static inline void getOpArg(state *s, int *op, int *arg) {
         *arg = s->code[s->pc++];
         *op = *op + (START - START1);
     }
-#if TRACE
+#ifdef TRACE
     if (*op >= START) printf("%d: %s %d\n", pc0, opNames[*op], *arg);
     else printf("%d: %s\n", pc0, opNames[*op]);
 #endif
 }
 
-static void execute(state *s, err *e) {
+static void execute(parser *s, err *e) {
     while (true) {
         int op, arg;
         getOpArg(s, &op, &arg);
@@ -420,17 +426,17 @@ static void execute(state *s, err *e) {
             case LESS: doLESS(s, arg); break;
             case SET: doSET(s, arg); break;
             case TAG: doTAG(s, arg); break;
-            default: printf("Bad op\n"); exit(1);
+            default: printf("Bad op %d\n", op); exit(1);
         }
     }
 }
 
-// By allocating the state structure on the stack in the parse function and
+// By allocating the parser structure on the stack in the parse function and
 // using inline functions, efficiency should be the same as using local
 // variables and a monolithic switch statement.
 void parse(int n, byte c[], byte in[], doNext *f, doAct *g, void *x, err *e) {
-    state pData;
-    state *s = &pData;
+    parser pData;
+    parser *s = &pData;
     new(s, c, in, f, g, x);
     entry(s, n);
     execute(s, e);
@@ -459,3 +465,155 @@ void reportColumn(err *e) {
     for (int i = 0; i < e->column; i++) fprintf(stderr, " ");
     fprintf(stderr, "^\n");
 }
+
+#ifdef TEST
+
+#include <assert.h>
+#include <string.h>
+enum action { number = 0, add = 1, subtract = 2, multiply = 3, divide = 4 };
+enum marker { digit, operator, bracket, newline };
+struct state { int n; char output[100]; };
+typedef struct state state;
+
+// Store actions symbolically.
+static void act(void *vs, int a, char *matched, int n) {
+    state *s = vs;
+    s->output[s->n++] = "#+-*/"[a];
+    if (a == number) for (int i = 0; i < n; i++) {
+        s->output[s->n++] = matched[i];
+    }
+}
+
+// digit = '0..9' @number   (Calculator step 1)
+static byte calc1[] = {
+    START1, 9, BOTH1, 4, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+};
+// number = ('0..9')+ @number   (Calculator step 2)
+static byte calc2[] = {
+    START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT,
+    number, STOP
+};
+// sum = number / number '+' number @2add   (Calculator step 3)
+// number = ('0..9')+ @number
+static byte calc3[] = {
+    START1, 22, EITHER1, 2, GO1, 21, OR, BOTH1, 2, GO1, 16, AND, BOTH1, 2,
+    STRING, 43, AND, BOTH1, 2, GO1, 6, AND, ACT, add, STOP, START1, 13, BOTH1,
+    8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+};
+// sum = number '+' number @2add / number   (Calculator step 4)
+// number = ('0..9')+ @number
+static byte calc4[] = {
+    START1, 22, EITHER1, 17, BOTH1, 2, GO1, 19, AND, BOTH1, 2, STRING, 43, AND,
+    BOTH1, 2, GO1, 9, AND, ACT, add, OR, GO1, 3, STOP, START1, 13, BOTH1, 8,
+    DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+};
+// sum = [number '+'] number @2add / number   (Calculator step 5)
+// number = ('0..9')+ @number
+static byte calc5[] = {
+    START1, 24, EITHER1, 19, BOTH1, 9, LOOK, TRY, BOTH1, 2, GO1, 17, AND,
+    STRING, 43, AND, BOTH1, 2, GO1, 9, AND, ACT, add, OR, GO1, 3, STOP,
+    START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT,
+    number, STOP
+};
+// sum = number ('+' number @2add)?   (Calculator step 6)
+// number = ('0..9')+ @number
+static byte calc6[] = {
+    START1, 19, BOTH1, 2, GO1, 18, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
+    BOTH1, 2, GO1, 6, AND, ACT, add, STOP, START1, 13, BOTH1, 8, DO, AND,
+    MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+};
+// sum = number ('+' @ number @2add)?   (Calculator step 7)
+// number = ('0..9')+ @number
+static byte calc7[] = {
+    START1, 22, BOTH1, 2, GO1, 21, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
+    BOTH, DROP, AND, BOTH1, 2, GO1, 6, AND, ACT, add, STOP, START1, 13, BOTH1,
+    8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+};
+// sum = number ('+' @ number @2add)? end   (Calculator step 8)
+// number = ('0..9')+ @number
+// end = 13? 10 @
+static byte calc8[] = {
+    START1, 27, BOTH1, 2, GO1, 26, AND, BOTH1, 17, MAYBE, ONE, BOTH1, 2, STRING,
+    43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT, add, AND, GO1, 19,
+    STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND,
+    ACT, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE, STRING, 13, AND,
+    BOTH1, 2, STRING, 10, AND, DROP, STOP
+};
+// sum = number ('+' @ number @2add)* end   (Calculator step 9)
+// number = ('0..9')+ @number
+// end = 13? 10 @
+static byte calc9[] = {
+    START1, 27, BOTH1, 2, GO1, 26, AND, BOTH1, 17, MAYBE, MANY, BOTH1, 2,
+    STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT, add, AND,
+    GO1, 19, STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH,
+    57, AND, ACT, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE, STRING, 13,
+    AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
+};
+// sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
+// number = ('0..9')+ @number
+// end = 13? 10 @                         (Calculator step 10)
+static byte calc10[] = {
+    START1, 45, BOTH1, 2, GO1, 44, AND, BOTH1, 35, MAYBE, MANY, EITHER1, 15,
+    BOTH1, 2, STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 25, AND, ACT,
+    add, OR, BOTH1, 2, STRING, 45, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND,
+    ACT, subtract, AND, GO1, 19, STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE,
+    MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP, START1, 13, BOTH1, 4,
+    MAYBE, ONE, STRING, 13, AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
+};
+// sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
+// number = (#digit '0..9')+ @number
+// end = #newline 13? 10 @                (Calculator step 11)
+static byte calc11[] = {
+    START1, 45, BOTH1, 2, GO1, 44, AND, BOTH1, 35, MAYBE, MANY, EITHER1, 15,
+    BOTH1, 2, STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 25, AND, ACT,
+    add, OR, BOTH1, 2, STRING, 45, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND,
+    ACT, subtract, AND, GO1, 24, STOP, START1, 18, BOTH1, 13, DO, AND, MAYBE,
+    MANY, BOTH1, 2, MARK, digit, AND, LOW, 48, HIGH, 57, AND, ACT, number,
+    STOP, START1, 18, BOTH1, 2, MARK, newline, AND, BOTH1, 4, MAYBE, ONE,
+    STRING, 13, AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
+};
+
+static bool run(state *s, byte *code, char *input, char *output) {
+    err eData;
+    err *e = &eData;
+    s->n = 0;
+    parse(0, code, input, NULL, act, s, e);
+    s->output[s->n] = '\0';
+    if (! e->ok) sprintf(&s->output[s->n], "E%d:%lx", e->at, e->markers);
+    if (strcmp(s->output, output) != 0) printf("Output: %s\n", s->output);
+    return strcmp(s->output, output) == 0;
+}
+
+int main() {
+    setbuf(stdout, NULL);
+    state sData;
+    state *s = &sData;
+    assert(run(s, calc1, "2", "#2"));
+    assert(run(s, calc1, "x", "E0:0"));
+    assert(run(s, calc2, "2", "#2"));
+    assert(run(s, calc2, "42", "#42"));
+    assert(run(s, calc2, "2x", "#2"));
+    assert(run(s, calc3, "2", "#2"));
+    assert(run(s, calc3, "42", "#42"));
+    assert(run(s, calc3, "2x", "#2"));
+    assert(run(s, calc4, "2", "E1:0"));
+    assert(run(s, calc5, "2", "#2"));
+    assert(run(s, calc5, "42", "#42"));
+    assert(run(s, calc5, "2+40", "#2#+40+"));
+    assert(run(s, calc6, "2", "#2"));
+    assert(run(s, calc6, "42", "#42"));
+    assert(run(s, calc6, "2+40", "#2#+40+"));
+    assert(run(s, calc7, "2", "#2"));
+    assert(run(s, calc7, "42", "#42"));
+    assert(run(s, calc7, "2+40", "#2#40+"));
+    assert(run(s, calc8, "2\n", "#2"));
+    assert(run(s, calc8, "42\n", "#42"));
+    assert(run(s, calc8, "2+40\n", "#2#40+"));
+    assert(run(s, calc8, "2+40%\n", "#2E4:0"));
+    assert(run(s, calc9, "2+10+12+18\n", "#2#10+#12+#18+"));
+    assert(run(s, calc10, "2+10+12+18\n", "#2#10+#12+#18+"));
+    assert(run(s, calc10, "2-10+53-3\n", "#2#10-#53+#3-"));
+    assert(run(s, calc11, "2-10+53-3\n", "#2#10-#53+#3-"));
+}
+
+#endif

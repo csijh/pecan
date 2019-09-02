@@ -256,7 +256,7 @@ grammars into Pecan grammars or improve efficiency, and these preserve the
 actions and error handling properties of generated parsers.</p>
 
 <p>Once a grammar has been developed, it can either be used to support the
-manual construction of a parser, or a parser can be generated automatically.
+manual construction of a parser, or to generate a parser automatically.
 Parsers are generated as bytecode, so the target implementation language is
 limited only by the availability of a bytecode interpreter. An interpreter for a
 new language can be constructed fairly easily by translating one of the example
@@ -509,14 +509,11 @@ alternatives, any one of which can be matched.  For example:</p>
 
 <pre>op = '+-*/'
 digit = '0123456789'
-letter = 'a..z'
 </pre>
 
 <p>The expression <code>'+-*/'</code> matches any one of the four arithmetic
 operator characters, and is equivalent to <code>'+' / '-' / '*' / '/'</code>.
-The expression <code>'0123456789'</code> matches any digit. An expression such
-as <code>'a..z'</code> is an abbreviation for any one of a range of
-characters.</p>
+The expression <code>'0123456789'</code> matches any digit.</p>
 
 <p>Double quotes indicate a string of characters, which are matched in sequence.
 For example:</p>
@@ -545,10 +542,7 @@ care needs to be taken. For example, <code>'é'</code> is visually ambiguous
 because it could contain one or two code points, depending on whether a combiner
 is used. If it contains two code points, writing it as <code>"é"</code> is more
 likely to convey the intended meaning. Similarly, <code>'éè'</code> is probably
-better written as:</p>
-
-<pre>"é" / "è"
-</pre>
+better written as <code>"é" / "è"</code>.
 
 <p>There is no escape convention within single or double quotes. To represent
 control characters, or to represent Unicode characters using plain text,
@@ -567,10 +561,15 @@ code is in hexadecimal, using <code>a</code> to <code>f</code> or
 newline = 0d? 0a
 </pre>
 
-<p>There is a range notation for characters represented as integers:</p>
+<p>There are two ways to form a range of characters:</p>
 
-<pre>ascii = 0..127
+<pre>letter = 'a..z'
+ascii = 0..127
 </pre>
+
+<p>The first is a variation of the set notation, with a single character either
+side of two dots. The second is a dot-dot operator between two numerical
+character codes.</p>
 
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
@@ -661,6 +660,15 @@ new item, and the new item should be pushed onto the stack. A parser as a whole
 ends with a single item on the stack, which is the output from the parsing
 process.</p>
 
+<p>Defining an action as a stack-based operation allows it to be expressed as a
+self-contained symbol at a specific point in a grammar. That in turn allows
+actions to take part in grammar transformations which move actions away from
+their arguments. For example, the above rule can be transformed to:</p>
+
+<pre>sum = term more*
+more = plus term @2add
+</pre>
+
 <p>The stack is provided and manipulated by external code when a parser is
 generated from the grammar. An action symbol such as <code>@2add</code> is
 translated into the execution of a fragment of external code. The parser could
@@ -686,20 +694,23 @@ convention which allows matched characters to be discarded. For example:</p>
 <p>An <code>@</code> sign on its own causes any recently matched characters to
 be discarded by the parser, without any external code being executed.</p>
 
+<p>Although tokens can be explicitly discarded in this way, it is normal for
+actions to use only the most recent token, in which case tokens are effectively
+discarded implicitly when they are matched but not acted on.</p>
+
 <p>There are severe consistency restrictions on actions. For example, each
 alternative in a choice must create or consume the same number of output items.
 Within a repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>,
 the inner expression <code>x</code> must have no net effect on the number of
-output items. A rule must produce a fixed number of output items. The first
-rule normally produces a single item, but this is not enforced, so that any
-self-contained fragment of a grammar is legal, for testing.</p>
+output items. Every expression or rule must produce or consume a fixed number of
+output items. The first rule in a grammar normally produces a single output item
+overall, but this is not enforced, so that a grammar with no actions is legal,
+and so that any self-contained fragment of a grammar is legal.</p>
 
 <p>The compensation for these severe restrictions is that Pecan can carry out
 strong consistency checks on grammars, ensuring that every expression has the
 right effect on the output stack, that the stack never underflows, and that a
-fixed number of output items is produced overall. There is also the advantage
-that actions are an integral part of the grammar, and are preserved during
-transformations.</p>
+fixed number of output items is produced overall.</p>
 
 <p>Scanners are normally thought of as producing a sequence of tokens. But in
 Pecan, even a scanner must produce a fixed number of output items. A scanner
@@ -840,8 +851,8 @@ that line of the test file is executed.</p>
 <p>A test file contains a number of sections separated by lines consisting of
 three or more equal signs. If a section contains a line of minus signs as a
 separator, then it is a test with sample input and expected output. If a section
-has no minus sign separator, it is a grammar which is used for subsequent tests,
-until another grammar is given. For example:</p>
+has no minus sign separator, it is a grammar or grammar fragment which is used
+for subsequent tests, until another grammar is given. For example:</p>
 
 <pre>// Recognise one digit
 number = ("0".."9") @number
@@ -944,7 +955,7 @@ equivalences:</p>
 <pre>32        &#8801;  ' '
 "ab"      &#8801;  ['a' 'b']
 'ab'      &#8801;  'a' / 'b'
-'a'..'z'  &#8801;  'a' / ... / 'z'
+'a..z'    &#8801;  'a' / ... / 'z'
 Ll        &#8801;  'a' / ... / 'z' / ...
 x?        &#8801;  x / ""
 x+        &#8801;  x x*
@@ -959,7 +970,7 @@ separately. The core features remaining are:</p>
 <code>@x</code>     an action (or drop)
 <code>#x</code>     an error marker
 <code>'x'</code>    a single character
-<code>#x</code>     a token tag
+<code>%x</code>     a token tag
 <code>&lt;x></code>    a divider
 <code>x/y</code>    a choice
 <code>x y</code>    a sequence
@@ -977,27 +988,12 @@ and checking that each rule name is defined exactly once.</p>
 
 <p>A grammar is then checked to see if it represents a text parser or a token
 parser. A text parser must contain no tags. A token parser must not contain
-numerical character codes or character sets or character ranges or dividers. If
-it contains a string, there must be a definition of that string as a synonym for
-a tag:</p>
+numerical character codes or character sets or character ranges or dividers.</p>
 
-<pre>assign = id "=" expression
-...
-"=" = %eq
-</pre>
-
-<p>There are also checks on the range operator:</p>
-
-<pre>digit = "0" .. "9"
-letter = 'a' .. 'z' / 'A' .. 'Z'
-control = NUL .. US
-NUL = 0
-US = 31
-</pre>
-
-<p>There is a check that each operand is a character (code point), i.e. a
-numerical character code or a one-character string or a one-character set, or a
-name which refers to one of those.</p>
+<p>There are also checks on the range operator. For a range of the form
+<code>'a..z'</code> there is a check that there is a single code point either
+side of the <code>..</code> and that the range is non-empty. A range of the
+form <code>0..31</code> must also be non-empty.</p>
 
 <h3 id="loop">Left recursion checking</h3>
 
@@ -1025,13 +1021,14 @@ expression2 = expression1 ...
 beginning, the expression <code>label*</code> may succeed without any input
 being matched, and therefore an infinite loop ensues.</p>
 
-<p>Four boolean properties of expressions <code>SP</code>, <code>SN</code>,
-<code>FP</code>, <code>FN</code> are calculated for each expression, in a very
-similar way to PEG grammars. The <code>SP</code>, <code>SN</code> properties
-mean the expression can succeed with or without progress being made in the
-input, and <code>FP</code>, <code>FN</code> mean that an expression can fail,
-with or without progress. The way these are calculated for the core features of
-grammars (using <code>&amp;</code> for 'and' and <code>|</code> for 'or', with
+<p>To implement the checks, four boolean properties of expressions
+<code>SP</code>, <code>SN</code>, <code>FP</code>, <code>FN</code> are
+calculated for each expression, in a very similar way to PEG grammars. The
+<code>SP</code>, <code>SN</code> properties mean the expression can succeed with
+or without progress being made in the input, and <code>FP</code>,
+<code>FN</code> mean that an expression can fail, with or without progress. The
+way these are calculated for the core features of grammars (using
+<code>&amp;</code> for 'and' and <code>|</code> for 'or', with
 <code>&amp;</code> binding tighter) are:</p>
 
 <pre>SN("") = true;  SP("") = FP("") = FN("") = false
@@ -1066,16 +1063,14 @@ SN(x!) = FN(x) | FP(x);  SP(x!) = false
 FN(x!) = SN(x) | SP(x);  FP(x!) = false
 </pre>
 
-<p>Because the rules include recursion, fixed point iteration is used, i.e. the
-values are calculated repeatedly until they don't change. If all the values are
-set to <code>false</code> at the start, the only possible changes are from
-<code>false</code> to <code>true</code>, so the iteration terminates.</p>
+<p>Because the rules are themselves recursive, fixed point iteration is used,
+i.e. the values are calculated repeatedly until they don't change. If all the
+values are set to <code>false</code> at the start, the only possible changes are
+from <code>false</code> to <code>true</code>, so the iteration terminates.</p>
 
 <p>Once these values are known, a further boolean property, <code>WF</code> is
-calculated to check that the grammar is well formed. If <code>WF</code> turns
-out to be false for any expression, that is reported as an error because it
-contains left recursion. The <code>WF</code> property is calculated (using
-<code>~</code> for 'not') by:</p>
+calculated to check that the grammar is well formed. The <code>WF</code>
+property is calculated (using <code>~</code> for 'not') by:</p>
 
 <pre>WF("") = WF(@a) = WF(#a) = WF('') = WF('a') = WF(%a) = WF(&lt;a>) = true
 WF(x y) = WF(x) &amp; (~SN(x) | WF(y))
@@ -1084,11 +1079,8 @@ WF(x&amp;) = WF(x)
 WF(x!) = WF(x)
 </pre>
 
-<p>This check is implemented by finding out for each expression in the grammar
-whether or not it is optional, i.e. whether it can succeed without making any
-progress by matching some input. Then, for each rule, the rule names which it
-starts with are recorded, taking account of initial optional expressions.
-Finally, any loops within these recorded names are detected.</p>
+<p>If <code>WF</code> turns out to be false for any expression, that expression
+is reported as an error because it contains left recursion.</p>
 
 <h3 id="token">Token checking</h3>
 
@@ -1273,10 +1265,9 @@ language. It must contain a placeholder such as:</p>
 </pre>
 
 <p>The first line contain <code>&lt;pecan></code> in a target-language comment.
-Similarly, the last line must contain <code>&lt;/pecan></code>. Lines in between
-are removed and replaced by the bytecode. Thus bytecode generation may be
-carried out repeatedly on the same source file. The resulting source file is a
-parser which matches the grammar.</p>
+Similarly, the last line must contain <code>&lt;/pecan></code>. Lines in
+between, if any, are removed, and the bytecode is inserted. Thus bytecode
+generation may be carried out repeatedly on the same source file.</p>
 
 <p>The bytecode sequence is printed as text, as a comma-separated list of
 unsigned byte values. Those values which are opcodes, categories, tags, actions

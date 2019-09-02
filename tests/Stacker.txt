@@ -27,7 +27,7 @@ exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP
 Rule exp 1,0
   Or 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP 1,0
     And 'a' @NUM 1,0
-      String 'a' 0,0
+      Set 'a' 0,0
       Act @NUM 1,0
     And "(" @OPEN exp ")" @CLOSE @3EXP 1,0
       String "(" 0,0
@@ -96,5 +96,5 @@ Rule number 1,0
     Act @number 1,0
 Rule digit 0,0
   Range '0..9' 0,0
-    String '0. 0,0
-    String .9' 0,0
+    Set '0. 0,0
+    Set .9' 0,0

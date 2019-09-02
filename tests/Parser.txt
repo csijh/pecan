@@ -1,16 +1,16 @@
 // One-liner
-x = x
+x = y
 ----------
 Rule x
-  Id x
+  Id y
 ==========
 // Choice
-x = x / x
+x = y / z
 ----------
 Rule x
-  Or x / x
-    Id x
-    Id x
+  Or y / z
+    Id y
+    Id z
 ==========
 // Bracket
 x = (y / z)
@@ -274,6 +274,17 @@ Rule exp
     Opt exp?
       Id exp
     Id end
+==========
+// Ranges
+r1 = 0 .. 127
+r2 = 'a..z'
+----------
+Rule r1
+  Range 0 .. 127
+    Number 0
+    Number 127
+Rule r2
+  Set 'a..z'
 ==========
 // Complete scan-parser grammar for sums
 exp = term ("+" term @2add / "-" term @2sub)* ''
@@ -597,11 +608,11 @@ z = 1114111 / 0ffff
 Rule x
   Id abc\960
 Rule y
-  Char 123\1636
+  Number 123\1636
 Rule z
   Or 1114111 / 0ffff
-    Char 1114111
-    Char 0ffff
+    Number 1114111
+    Number 0ffff
 ==========
 // Strings, character sets, unicode
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
@@ -634,17 +645,17 @@ Rule x
     Act @x
 Rule y
   And 0 1 2 10 12 123
-    Char 0
-    Char 1
-    Char 2
-    Char 10
-    Char 12
-    Char 123
+    Number 0
+    Number 1
+    Number 2
+    Number 10
+    Number 12
+    Number 123
 Rule z
   And 0ffff 01ABCDEF23 0FG
-    Char 0ffff
-    Char 01ABCDEF23
-    Char 0F
+    Number 0ffff
+    Number 01ABCDEF23
+    Number 0F
     Id G
 Rule u
   And #err ''

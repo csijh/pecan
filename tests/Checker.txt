@@ -15,7 +15,7 @@ Rule x 0010
 x = 42
 ----------
 Rule x 0110
-  Char 42 0110
+  Number 42 0110
 ==========
 // String: SP or FN
 x = "a"
@@ -27,7 +27,7 @@ Rule x 0110
 x = 'a'
 ----------
 Rule x 0110
-  String 'a' 0110
+  Set 'a' 0110
 ==========
 // Empty string then empty string: SN
 x = "" ""
@@ -41,7 +41,7 @@ Rule x 1000
 x = 'a'
 ----------
 Rule x 0110
-  String 'a' 0110
+  Set 'a' 0110
 ==========
 // Simple left recursive rule
 x = x 'a'
@@ -120,8 +120,8 @@ Rule x 0110
   Or @a 'a' / 'b' 0110
     And @a 'a' 0110
       Act @a 1000
-      String 'a' 0110
-    String 'b' 0110
+      Set 'a' 0110
+    Set 'b' 0110
 ==========
 // Expression which succeeds without progressing, repeated in an infinite loop
 x = (@a @2b)*
@@ -142,11 +142,11 @@ Rule exp 0111
     Any ('+' term @2add / '-' term @2sub)* 1101
       Or '+' term @2add / '-' term @2sub 0111
         And '+' term @2add 0111
-          String '+' 0110
+          Set '+' 0110
           Id term 0111
           Act @2add 1000
         And '-' term @2sub 0111
-          String '-' 0110
+          Set '-' 0110
           Id term 0111
           Act @2sub 1000
     Set 'eof' 0110
@@ -156,11 +156,11 @@ Rule term 0111
     Any ('*' factor @2mul / '/' factor @2div)* 1101
       Or '*' factor @2mul / '/' factor @2div 0111
         And '*' factor @2mul 0111
-          String '*' 0110
+          Set '*' 0110
           Id factor 0111
           Act @2mul 1000
         And '/' factor @2div 0111
-          String '/' 0110
+          Set '/' 0110
           Id factor 0111
           Act @2div 1000
 Rule factor 0111
@@ -168,7 +168,7 @@ Rule factor 0111
     Id primary 0111
     Opt ('^' factor @2pow)? 1101
       And '^' factor @2pow 0111
-        String '^' 0110
+        Set '^' 0110
         Id factor 0111
         Act @2pow 1000
 Rule primary 0111
@@ -177,6 +177,6 @@ Rule primary 0111
       Set 'number' 0110
       Act @number 1000
     And '(' exp ')' 0111
-      String '(' 0110
+      Set '(' 0110
       Id exp 0111
-      String ')' 0110
+      Set ')' 0110

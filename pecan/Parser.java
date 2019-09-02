@@ -117,8 +117,8 @@ class Parser implements Testable {
         );
     }
 
-    // atom = id / action / marker / tag /
-    //     string / set / range / divider / try / bracket
+    // atom = id / action / marker / tag / string / set / range /
+    //     divider / try / bracket
     private boolean atom() {
         int in0 = in;
         return (
@@ -197,7 +197,7 @@ class Parser implements Testable {
         boolean isHex = source.charAt(in-1) == '0';
         if (isHex) while (hex()) { }
         else while (digit()) { }
-        return doName(Char) && gap();
+        return doName(Number) && gap();
     }
 
     // set = "'" ("'"! visible)* #quote "'" @set gap

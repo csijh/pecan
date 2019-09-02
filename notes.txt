@@ -1,3 +1,12 @@
+TODO:
+- in test files, allow a one-liner which specifies an entry point.
+- in test files, when one test is picked out, make sure any previously set up
+    grammar is used.
+- extend the calculator tutorial to include bytecode generation.
+- extend the manual to include a discussion of the C interpreter.
+- have an optimisation tutorial combining recursive ascent and bifurcation.
+- indent for inserted bytecode?
+
 Improvements to syntax
 ----------------------
 
