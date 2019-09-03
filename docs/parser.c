@@ -2,7 +2,7 @@
 
 Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
 
-The parse function is built up from calls to inline functions, and the state
+The parse function is built up from calls to inline functions, and the parser
 structure is allocated locally, so the efficiency should be the same as a single
 function containing a monolithic switch, acting on local variables. */
 #include "parser.h"
@@ -16,10 +16,11 @@ function containing a monolithic switch, acting on local variables. */
 static char *opNames[] = {
     [STOP]="STOP", [OR]="OR", [AND]="AND", [MAYBE]="MAYBE", [ONE]="ONE",
     [MANY]="MANY", [DO]="DO", [LOOK]="LOOK", [TRY]="TRY", [HAS]="HAS",
-    [NOT]="NOT", [DROP]="DROP", [MARK]="MARK", [START]="START", [GO]="GO",
-    [BACK]="BACK", [EITHER]="EITHER", [BOTH]="BOTH", [ACT]="ACT",
-    [STRING]="STRING", [LOW]="LOW", [HIGH]="HIGH", [LESS]="LESS", [SET]="SET",
-    [CAT]="CAT", [TAG]="TAG"
+    [NOT]="NOT", [DROP]="DROP", [STRING1]="STRING1", [LOW1]="LOW1",
+    [HIGH1]="HIGH1", [LESS1]="LESS1", [SET1]="SET1", [START]="START", [GO]="GO",
+    [BACK]="BACK", [EITHER]="EITHER", [BOTH]="BOTH", [STRING]="STRING",
+    [LOW]="LOW", [HIGH]="HIGH", [LESS]="LESS", [SET]="SET", [ACT]="ACT",
+    [MARK]="MARK", [CAT]="CAT", [TAG]="TAG", [GOL]="GOL", [BACKL]="BACKL",
 };
 
 // The parsing state.
@@ -71,14 +72,8 @@ static void new(
 static void entry(parser *s, int n) {
     for (int i = 0; i < n; i++) {
         int op = s->code[s->pc++];
-        int arg = 1;
-        if (op == START) ;
-        else if (op == START1) arg = s->code[s->pc++];
-        else if (op == START2) {
-            arg = s->code[s->pc++];
-            arg = (arg << 8) + s->code[s->pc++];
-        }
-        else {
+        int arg = s->code[s->pc++];
+        if (op != START) {
             printf("Error: badly structured bytecode\n");
             exit(1);
         }
@@ -381,14 +376,12 @@ static inline void getOpArg(parser *s, int *op, int *arg) {
 #endif
     *op = s->code[s->pc++];
     *arg = 1;
-    if (*op >= START2) {
+    if (*op >= O2) {
         *arg = s->code[s->pc++];
         *arg = (*arg << 8) | s->code[s->pc++];
-        *op = *op + (START - START2);
     }
-    else if (*op >= START1) {
+    else if (*op >= O1) {
         *arg = s->code[s->pc++];
-        *op = *op + (START - START1);
     }
 #ifdef TRACE
     if (*op >= START) printf("%d: %s %d\n", pc0, opNames[*op], *arg);
@@ -403,8 +396,8 @@ static void execute(parser *s, err *e) {
         switch (op) {
             case START: doSTART(s, arg); break;
             case STOP: doSTOP(s, e); return;
-            case GO: doGO(s, arg); break;
-            case BACK: doGO(s, -arg); break;
+            case GO: case GOL: doGO(s, arg); break;
+            case BACK: case BACKL: doGO(s, -arg); break;
             case EITHER: doEITHER(s, arg); break;
             case OR: doOR(s); break;
             case BOTH: doBOTH(s, arg); break;
@@ -420,10 +413,10 @@ static void execute(parser *s, err *e) {
             case DROP: doDROP(s); break;
             case ACT: doACT(s, arg); break;
             case MARK: doMARK(s, arg); break;
-            case STRING: doSTRING(s, arg); break;
-            case LOW: doLOW(s, arg); break;
-            case HIGH: doHIGH(s, arg); break;
-            case LESS: doLESS(s, arg); break;
+            case STRING: case STRING1: case SET1: doSTRING(s, arg); break;
+            case LOW: case LOW1: doLOW(s, arg); break;
+            case HIGH: case HIGH1: doHIGH(s, arg); break;
+            case LESS: case LESS1: doLESS(s, arg); break;
             case SET: doSET(s, arg); break;
             case TAG: doTAG(s, arg); break;
             default: printf("Bad op %d\n", op); exit(1);
@@ -486,91 +479,91 @@ static void act(void *vs, int a, char *matched, int n) {
 
 // digit = '0..9' @number   (Calculator step 1)
 static byte calc1[] = {
-    START1, 9, BOTH1, 4, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+    START, 9, BOTH, 4, LOW1, 48, HIGH1, 57, AND, ACT, number, STOP
 };
 // number = ('0..9')+ @number   (Calculator step 2)
 static byte calc2[] = {
-    START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT,
+    START, 13, BOTH, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ACT,
     number, STOP
 };
 // sum = number / number '+' number @2add   (Calculator step 3)
 // number = ('0..9')+ @number
 static byte calc3[] = {
-    START1, 22, EITHER1, 2, GO1, 21, OR, BOTH1, 2, GO1, 16, AND, BOTH1, 2,
-    STRING, 43, AND, BOTH1, 2, GO1, 6, AND, ACT, add, STOP, START1, 13, BOTH1,
-    8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+    START, 22, EITHER, 2, GO, 21, OR, BOTH, 2, GO, 16, AND, BOTH, 2,
+    STRING1, 43, AND, BOTH, 2, GO, 6, AND, ACT, add, STOP, START, 13, BOTH,
+    8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ACT, number, STOP
 };
 // sum = number '+' number @2add / number   (Calculator step 4)
 // number = ('0..9')+ @number
 static byte calc4[] = {
-    START1, 22, EITHER1, 17, BOTH1, 2, GO1, 19, AND, BOTH1, 2, STRING, 43, AND,
-    BOTH1, 2, GO1, 9, AND, ACT, add, OR, GO1, 3, STOP, START1, 13, BOTH1, 8,
-    DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+    START, 22, EITHER, 17, BOTH, 2, GO, 19, AND, BOTH, 2, STRING1, 43, AND,
+    BOTH, 2, GO, 9, AND, ACT, add, OR, GO, 3, STOP, START, 13, BOTH, 8,
+    DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ACT, number, STOP
 };
 // sum = [number '+'] number @2add / number   (Calculator step 5)
 // number = ('0..9')+ @number
 static byte calc5[] = {
-    START1, 24, EITHER1, 19, BOTH1, 9, LOOK, TRY, BOTH1, 2, GO1, 17, AND,
-    STRING, 43, AND, BOTH1, 2, GO1, 9, AND, ACT, add, OR, GO1, 3, STOP,
-    START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT,
+    START, 24, EITHER, 19, BOTH, 9, LOOK, TRY, BOTH, 2, GO, 17, AND,
+    STRING1, 43, AND, BOTH, 2, GO, 9, AND, ACT, add, OR, GO, 3, STOP,
+    START, 13, BOTH, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ACT,
     number, STOP
 };
 // sum = number ('+' number @2add)?   (Calculator step 6)
 // number = ('0..9')+ @number
 static byte calc6[] = {
-    START1, 19, BOTH1, 2, GO1, 18, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
-    BOTH1, 2, GO1, 6, AND, ACT, add, STOP, START1, 13, BOTH1, 8, DO, AND,
-    MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+    START, 19, BOTH, 2, GO, 18, AND, MAYBE, ONE, BOTH, 2, STRING1, 43, AND,
+    BOTH, 2, GO, 6, AND, ACT, add, STOP, START, 13, BOTH, 8, DO, AND,
+    MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ACT, number, STOP
 };
 // sum = number ('+' @ number @2add)?   (Calculator step 7)
 // number = ('0..9')+ @number
 static byte calc7[] = {
-    START1, 22, BOTH1, 2, GO1, 21, AND, MAYBE, ONE, BOTH1, 2, STRING, 43, AND,
-    BOTH, DROP, AND, BOTH1, 2, GO1, 6, AND, ACT, add, STOP, START1, 13, BOTH1,
-    8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP
+    START, 23, BOTH, 2, GO, 22, AND, MAYBE, ONE, BOTH, 2, SET1, 43, AND,
+    BOTH, 1, DROP, AND, BOTH, 2, GO, 6, AND, ACT, add, STOP, START, 13, BOTH,
+    8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ACT, number, STOP
 };
 // sum = number ('+' @ number @2add)? end   (Calculator step 8)
 // number = ('0..9')+ @number
 // end = 13? 10 @
 static byte calc8[] = {
-    START1, 27, BOTH1, 2, GO1, 26, AND, BOTH1, 17, MAYBE, ONE, BOTH1, 2, STRING,
-    43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT, add, AND, GO1, 19,
-    STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH, 57, AND,
-    ACT, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE, STRING, 13, AND,
-    BOTH1, 2, STRING, 10, AND, DROP, STOP
+    START, 28, BOTH, 2, GO, 27, AND, BOTH, 18, MAYBE, ONE, BOTH, 2, STRING1,
+    43, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 9, AND, ACT, add, AND, GO, 19,
+    STOP, START, 13, BOTH, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND,
+    ACT, number, STOP, START, 13, BOTH, 4, MAYBE, ONE, STRING1, 13, AND,
+    BOTH, 2, STRING1, 10, AND, DROP, STOP
 };
 // sum = number ('+' @ number @2add)* end   (Calculator step 9)
 // number = ('0..9')+ @number
 // end = 13? 10 @
 static byte calc9[] = {
-    START1, 27, BOTH1, 2, GO1, 26, AND, BOTH1, 17, MAYBE, MANY, BOTH1, 2,
-    STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND, ACT, add, AND,
-    GO1, 19, STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE, MANY, LOW, 48, HIGH,
-    57, AND, ACT, number, STOP, START1, 13, BOTH1, 4, MAYBE, ONE, STRING, 13,
-    AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
+    START, 28, BOTH, 2, GO, 27, AND, BOTH, 18, MAYBE, MANY, BOTH, 2,
+    STRING1, 43, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 9, AND, ACT, add, AND,
+    GO, 19, STOP, START, 13, BOTH, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1,
+    57, AND, ACT, number, STOP, START, 13, BOTH, 4, MAYBE, ONE, STRING1, 13,
+    AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
 };
 // sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 // number = ('0..9')+ @number
 // end = 13? 10 @                         (Calculator step 10)
 static byte calc10[] = {
-    START1, 45, BOTH1, 2, GO1, 44, AND, BOTH1, 35, MAYBE, MANY, EITHER1, 15,
-    BOTH1, 2, STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 25, AND, ACT,
-    add, OR, BOTH1, 2, STRING, 45, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND,
-    ACT, subtract, AND, GO1, 19, STOP, START1, 13, BOTH1, 8, DO, AND, MAYBE,
-    MANY, LOW, 48, HIGH, 57, AND, ACT, number, STOP, START1, 13, BOTH1, 4,
-    MAYBE, ONE, STRING, 13, AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
+    START, 47, BOTH, 2, GO, 46, AND, BOTH, 37, MAYBE, MANY, EITHER, 16, BOTH, 2,
+    SET1, 43, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 26, AND, ACT, add, OR, BOTH,
+    2, SET1, 45, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 9, AND, ACT, subtract,
+    AND, GO, 19, STOP, START, 13, BOTH, 8, DO, AND, MAYBE, MANY, LOW1, 48,
+    HIGH1, 57, AND, ACT, number, STOP, START, 13, BOTH, 4, MAYBE, ONE, STRING1,
+    13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
 };
 // sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 // number = (#digit '0..9')+ @number
 // end = #newline 13? 10 @                (Calculator step 11)
 static byte calc11[] = {
-    START1, 45, BOTH1, 2, GO1, 44, AND, BOTH1, 35, MAYBE, MANY, EITHER1, 15,
-    BOTH1, 2, STRING, 43, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 25, AND, ACT,
-    add, OR, BOTH1, 2, STRING, 45, AND, BOTH, DROP, AND, BOTH1, 2, GO1, 9, AND,
-    ACT, subtract, AND, GO1, 24, STOP, START1, 18, BOTH1, 13, DO, AND, MAYBE,
-    MANY, BOTH1, 2, MARK, digit, AND, LOW, 48, HIGH, 57, AND, ACT, number,
-    STOP, START1, 18, BOTH1, 2, MARK, newline, AND, BOTH1, 4, MAYBE, ONE,
-    STRING, 13, AND, BOTH1, 2, STRING, 10, AND, DROP, STOP
+    START, 47, BOTH, 2, GO, 46, AND, BOTH, 37, MAYBE, MANY, EITHER, 16, BOTH, 2,
+    SET1, 43, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 26, AND, ACT, add, OR, BOTH,
+    2, SET1, 45, AND, BOTH, 1, DROP, AND, BOTH, 2, GO, 9, AND, ACT, subtract,
+    AND, GO, 24, STOP, START, 18, BOTH, 13, DO, AND, MAYBE, MANY, BOTH, 2,
+    MARK, digit, AND, LOW1, 48, HIGH1, 57, AND, ACT, number, STOP, START, 18,
+    BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH,
+    2, STRING1, 10, AND, DROP, STOP
 };
 
 static bool run(state *s, byte *code, char *input, char *output) {

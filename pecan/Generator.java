@@ -74,7 +74,7 @@ class Generator implements Testable {
         node.LEN(pc - node.PC());
     }
 
-    // {id = x; ...}  =  START(nx), {x}, STOP ...
+    // {id = x; ...}  =  START, nx, {x}, STOP ...
     private void encodeRule(Node node) {
         add(START, node.left().LEN());
         encode(node.left());
@@ -248,19 +248,19 @@ class Generator implements Testable {
 
     // Encode an op and arg.
     private void add(Code op, int arg) {
-        if (arg == 1) {
-            add(op.toString());
+        if (arg == 1 && op.hasText()) {
+            add(op.toString() + "1");
         }
         else if (arg < 256) {
-            add(op.toString() + "1");
+            add(op.toString());
             add(arg);
         }
-        else if (arg < 65536) {
-            add(op.toString() + "2");
+        else if (arg < 65536 && op.hasOffset()) {
+            add(op.toString() + "L");
             add(arg/256);
             add(arg%256);
         }
-        else throw new Error("code too large");
+        else throw new Error("operand out of range");
     }
 
     private void add(byte[] bytes) {

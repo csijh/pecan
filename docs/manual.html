@@ -1298,28 +1298,22 @@ actions and error handling as appropriate.</p>
 <p>Examples are given in this section of how every construct is translated into
 bytecode:</p>
 
-<pre>{id = x}    =   START(nx), {x}, STOP
+<pre>{id = x}    =   START, nx, {x}, STOP
 </pre>
 
 <p>A rule is translated using the <code>START</code> and <code>STOP</code>
 opcodes. The notation <code>{x}</code> means "the bytecode sequence generated
 for expression x" and <code>nx</code> stands for the number of bytes in
-<code>{x}</code>. The notation <code>START(nx)</code> means the opcode
-<code>START</code> with <code>nx</code> as an operand in the following 0 or 1 or
-2 bytes. An opcode which takes an operand comes in three variations. The form
-<code>START</code> with no suffix has the number <code>1</code> as an implicit
-operand. The form <code>START1</code> with suffix <code>1</code> has the operand
-in the following byte, in the range <code>0</code> to <code>255</code>. The form
-<code>START2</code> with suffix <code>2</code> has the operand in the followed
-two bytes, in big-endian format, in the range <code>0</code> to
-<code>65535</code>. By contrast, <code>STOP</code> is an opcode which needs no
-operand.</p>
+<code>{x}</code>. The <code>START</code> opcode takes a one-byte operand in the
+range 0..255, whereas <code>STOP</code> needs no operand. If an instruction
+needs an operand which is greater than 255, a variant of the opcode can be used
+to indicate a two-byte operand.</p>
 
 <p>The <code>START</code> opcode creates a call to <code>{x}</code>, setting up
 the address of <code>STOP</code> as the return address. The <code>STOP</code>
-instruction ends parsing. The operand <code>nx</code> can be thought of as a
-relative offset in the code, from the position after the <code>START</code>
-instruction to the <code>STOP</code> instruction.</p>
+instruction ends parsing. The operand <code>nx</code> to <code>START</code> can
+be thought of as a relative offset in the code, from the position after the
+<code>START</code> instruction to the <code>STOP</code> instruction.</p>
 
 <p><code>START</code> and <code>STOP</code> opcodes are generated for every
 rule, even though they are only executed once for the overall call to the
@@ -1328,8 +1322,8 @@ bytecode interpreter scans the bytecode, skipping the body <code>{x}</code> of
 each rule using the number <code>nx</code>, to find the start of the next
 rule.</p>
 
-<pre>{id}        =   GO(px)
-{id}        =   BACK(px)
+<pre>{id}        =   GO, px
+{id}        =   BACK, px
 </pre>
 
 <p>When the name <code>id</code> of a rule such as <code>id = x</code> is used
@@ -1340,40 +1334,40 @@ instruction. The <code>GO</code> opcode is used when the offset is positive, and
 <code>BACK</code> is used, with a positive operand, when the offset is
 negative.</p>
 
-<pre>{"a"}       =   STRING(1), 97
-{97}        =   STRING(1), 97
-{128}       =   STRING(2), 194, 128
-{"ab"}      =   STRING(2), 97, 98
-{""}        =   STRING(0)
-{"&#960;"}       =   STRING(2), 207, 128
-{"a&#960;"}      =   STRING(3), 97, 207, 128
-{'&#960;'}       =   STRING(2), 207, 128
-{&lt;a>}       =   LESS(1), 97
-{&lt;ab>}      =   LESS(2), 97, 98
-{%id}       =   TAG(id)
+<pre>{"a"}       =   STRING, 1, 97
+{97}        =   STRING, 1, 97
+{128}       =   STRING, 2, 194, 128
+{"ab"}      =   STRING, 2, 97, 98
+{""}        =   STRING, 0
+{"&#960;"}       =   STRING, 2, 207, 128
+{"a&#960;"}      =   STRING, 3, 97, 207, 128
+{'&#960;'}       =   STRING, 2, 207, 128
+{&lt;a>}       =   LESS, 1, 97
+{&lt;ab>}      =   LESS, 2, 97, 98
+{%id}       =   TAG, id
 </pre>
 
-<p>The <code>STRING</code> opcode has the total number of bytes as its operand,
+<p>The <code>STRING</code> opcode has the number of bytes as its operand,
 and is followed by the bytes themselves in UTF-8 format. A divider is translated
 using the <code>LESS</code> opcode, and a tag is translated using the
 <code>TAG</code> opcode. A string or divider containing characters of mixed
 UTF-8 lengths causes no problem, because UTF-8 text can be compared byte by
 byte, without taking account of character boundaries.</p>
 
-<pre>{''}        =   SET(0)
-{'a'}       =   SET(1), 97
-{'ab'}      =   SET(2), 97, 98
-{'&#945;&#946;'}      =   SET(4), 206, 177, 206, 178
-{'a..z'}    =   LOW(1), 97, HIGH(1), 122
-{'&#945;..&#969;'}    =   LOW(2), 206, 177, HIGH(2), 207, 137
-{Nd}        =   CAT(Nd)
+<pre>{''}        =   SET, 0
+{'a'}       =   SET, 1, 97
+{'ab'}      =   SET, 2, 97, 98
+{'&#945;&#946;'}      =   SET, 4, 206, 177, 206, 178
+{'a..z'}    =   LOW, 1, 97, HIGH, 1, 122
+{'&#945;..&#969;'}    =   LOW, 2, 206, 177, HIGH, 2, 207, 137
+{Nd}        =   CAT, Nd
 </pre>
 
 <p>The <code>SET</code> opcode is used for sets of characters. Its operand is
-the total number of bytes. The opcode checks whether any one of the characters
-in the set matches. A sequence with mixed UTF-8 byte lengths cannot be handled
-byte by byte, but the first byte of each character can be used to find the
-character's length. A range is translated into the two opcodes
+the number of bytes which follow. The opcode checks whether any one of the
+characters in the set matches. A sequence with mixed UTF-8 byte lengths cannot
+be handled byte by byte, but the first byte of each character can be used to
+find the character's length. A range is translated into the two opcodes
 <code>LOW</code> and <code>HIGH</code>.</p>
 
 <p>A category is translated using the <code>CAT</code> opcode. The target
@@ -1384,8 +1378,8 @@ two-stage lookup table in the two files <code>table1.bin</code> and
 <code>table2.bin</code> which may be read into memory by the target
 language.</p>
 
-<pre>{x/y}       =   EITHER(nx), {x}, OR, {y}
-{x y}       =   BOTH(nx), {x}, AND, {y}
+<pre>{x/y}       =   EITHER, nx, {x}, OR, {y}
+{x y}       =   BOTH, nx, {x}, AND, {y}
 </pre>
 
 <p>The <code>EITHER</code> opcode initializes a choice, and <code>OR</code>
@@ -1421,9 +1415,9 @@ initializes any of the lookahead constructs, arranging to return to
 <code>TRY</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
 result.</p>
 
-<pre>{@a}        =   ACT(a)
+<pre>{@a}        =   ACT, a
 {@}         =   DROP
-{#e}        =   MARK(e)
+{#e}        =   MARK, e
 </pre>
 
 <p>An action is translated using the <code>ACT</code> opcode. Actions need to be

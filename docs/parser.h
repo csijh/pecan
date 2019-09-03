@@ -5,16 +5,15 @@
 // The type of code bytes and UTF-8 input bytes.
 typedef unsigned char byte;
 
-// The opcodes: first those that take no argument, then those that take an
-// implicit argument of 1, then variations that take a one-byte argument 0..255,
-// then opcodes that always have a one-byte argument, and then variations that
-// take a two-byte big-endian argument 0..65535,
+// The opcodes: first those that take no argument or have an implicit argument
+// of 1, then from O1 those that take a one-byte operand 0..255, and then from
+// O2 those that take a two-byte big-endian argument 0..65535,
 enum op {
     STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP,
-    START,  GO,  BACK,  EITHER,  BOTH,  STRING,  LOW,  HIGH,  LESS,  SET,
-    START1, GO1, BACK1, EITHER1, BOTH1, STRING1, LOW1, HIGH1, LESS1, SET1,
-    ACT, MARK, CAT, TAG,
-    START2, GO2, BACK2, EITHER2, BOTH2, STRING2, LOW2, HIGH2, LESS2, SET2,
+    STRING1, LOW1, HIGH1, LESS1, SET1,
+    O1, START = O1,  GO,  BACK,  EITHER,  BOTH,  STRING,  LOW,  HIGH,  LESS,
+    SET, ACT, MARK, CAT, TAG,
+    O2, GOL = O2, BACKL,
 };
 
 // The type of a function to perform an output action, given the characters
