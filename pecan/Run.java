@@ -10,11 +10,14 @@ import java.nio.charset.*;
 
 /* Read in a file of tests and run them:
 
-    pecan [-trace] [line] testfile
+    pecan [-t | -trace] [line] testfile
+    pecan -o output grammar
+
+This class implements Testable, not for unit testing, but...
 */
 
 class Run implements Testable {
-    private boolean tracing;
+    private boolean tracing, compiling;
     private String infile, outfile, sourcefile;
     private int line = 0;
     private Evaluator evaluator;
@@ -26,19 +29,20 @@ class Run implements Testable {
 
     private void run(String[] args) {
         if (args == null) usage();
+        tracing = compiling = false;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-o")) compiling = true;
+        }
+        if (compiling) runCompile(args);
+        else runTest(args);
+    }
+
+    // pecan [-t | -trace] [line] testfile
+    private void runTest(String[] args) {
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-trace")) tracing = true;
             else if (args[i].equals("-t")) tracing = true;
-            else if (args[i].equals("-i")) {
-                i++;
-                if (i == args.length) usage();
-                infile = args[i];
-            }
-            else if (args[i].equals("-o")) {
-                i++;
-                if (i == args.length) usage();
-                outfile = args[i];
-            }
+            else if (args[i].startsWith("-")) usage();
             else if (Character.isDigit(args[i].charAt(0))) {
                 line = Integer.parseInt(args[i]);
             }
@@ -46,19 +50,60 @@ class Run implements Testable {
             else usage();
         }
         if (sourcefile == null) usage();
-        boolean compiling = outfile != null;
-        if (compiling && tracing) usage();
-        if (!compiling && infile != null) usage();
-        if (compiling) System.out.println("Not yet");
-        else Test.run(sourcefile, this, line);
+        Evaluator e = new Evaluator();
+        Test.run(sourcefile, e, line);
     }
 
-    // Check which form of command line is present by detecting -o.
-    private boolean compiling(String[] args) {
+    // pecan -o output grammar
+    private void runCompile(String[] args) {
         for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-o")) return true;
+            if (args[i].equals("-o")) {
+                outfile = args[i+1];
+                i++;
+            }
+            else if (args[i].startsWith("-")) usage();
+            else if (sourcefile == null) sourcefile = args[i];
+            else usage();
         }
-        return false;
+        if (sourcefile == null) usage();
+        String grammar = null;
+        try {
+            byte[] bytes = Files.readAllBytes(Paths.get(sourcefile));
+            grammar = new String(bytes, "UTF-8");
+        }
+        catch (Exception e) {
+            System.err.println("Error: can't read " + sourcefile + ": " + e);
+            System.exit(1);
+        }
+        Generator gen = new Generator();
+        String code = gen.run(grammar);
+        if (code.startsWith("ERR:")) {
+            System.err.println(code.substring(4));
+            System.exit(1);
+        }
+        insert(code);
+    }
+
+    // Insert the code into the output file.
+    private void insert(String code) {
+        List<String> lines = null;
+        Path p = Paths.get(outfile);
+        PrintStream out = null;
+        try {
+            lines = Files.readAllLines(p, StandardCharsets.UTF_8);
+            out = new PrintStream(new File(outfile));
+        }
+        catch (Exception e) { throw new Error(e); }
+        boolean skipping = false, done = false;
+        for (String line : lines) {
+            if (line.indexOf("</pecan>") >= 0) skipping = false;
+            if (! skipping) out.println(line);
+            if (line.indexOf("<pecan>") >= 0) {
+                skipping = true;
+                out.print(code);
+            }
+        }
+        out.close();
     }
 
     // Give a usage message and stop.
@@ -67,103 +112,7 @@ class Run implements Testable {
             "Usage:\n" +
             "    pecan [-t | -trace] [line] tests\n" +
             "Or:\n" +
-            "    pecan [-i interpreter] -o output grammar\n");
+            "    pecan -o output grammar\n");
         System.exit(1);
     }
-
-    // Carry out a test, or set up grammar for subsequent tests
-    public String test(String input) {
-        if (input.startsWith("GRAMMAR:\n")) {
-            evaluator = new Evaluator();
-            if (tracing) evaluator.trace(true);
-            evaluator.grammar(g);
-            return null;
-        }
-        else return evaluator.test(input);
-    }
-
-/*
-    // Run tests from the command line file through the evaluator.
-    void run(String grammarFile, String testsFile) throws IOException {
-        int passed = 0;
-        String message = null;
-        String grammar = new String(Files.readAllBytes(Paths.get(grammarFile)), StandardCharsets.UTF_8);
-        List<Test> tests = Test.extract(".", testsFile);
-        System.out.println("#tests = " + tests.size());
-        Evaluator evaluator = new Evaluator();
-        for (Test test : tests) {
-            evaluator.prepare(grammar, test.input);
-
-        }
-
-        for (Test t : tests) {
-            message = t.run(interp);
-            if (message != null) break;
-            passed++;
-        }
-        if (message != null) System.err.print(message);
-        else if (passed == 1) System.out.println("Pass 1 test.");
-        else System.out.println("Pass " + passed + " tests.");
-
-    }
-*/
-    // Generate code
-/*
-    private void gen(String list, String grammar) {
-        String[] names = list.trim().split(" *, *");
-        File grammarFile = new File(grammar);
-        File dir = grammarFile.getParentFile();
-        File output = new File(dir, names[1] + ".java");
-        Generator generator = new Generator();
-        PrintWriter pw;
-        try { pw = new PrintWriter(output); }
-        catch (Exception e) { throw new Error(e); }
-        generator.run(grammarFile, pw, names);
-        pw.close();
-    }
-*/
-/*
-    // Do integration testing. The tests come from the Tests.txt file, as with
-    // unit testing, but files are created and run in the TestFiles directory.
-
-    private void itest(String[] args) throws IOException {
-        if (args.length == 1) Evaluator.main(new String[] { });
-        int n = (args.length == 1) ? 0 : Integer.parseInt(args[1]);
-        String grammar = "pecan/TestFiles/grammar.txt";
-        String tests = "pecan/TestFiles/tests.txt";
-        String message = null;
-        for (Test test : Test.extract("Run", n)) {
-            String in = test.input();
-            String[] parts = in.split("~~~~~~~~~~\n", 2);
-            PrintWriter out = new PrintWriter(grammar);
-            out.print(parts[0]);
-            out.close();
-            out = new PrintWriter(tests);
-            parts[1] = parts[1].replace("~~~~~~~~~~\n", "==========\n");
-            parts[1] = parts[1].replace("~~~~~\n", "----------\n");
-            out.print(parts[1]);
-            out.close();
-            PrintStream oldOut = System.out;
-            PrintStream oldErr = System.err;
-            OutputStream output = new ByteArrayOutputStream();
-            PrintStream print = new PrintStream(output);
-            System.setOut(print);
-            System.setErr(print);
-            try { main(new String[] {"-t", tests, grammar}); }
-            catch (Throwable t) {
-                System.setOut(oldOut);
-                System.setErr(oldErr);
-                throw new Error(t);
-            }
-            print.flush();
-            print.close();
-            String result = output.toString();
-            System.setOut(oldOut);
-            System.setErr(oldErr);
-            message = test.check(result);
-            if (message != null) break;
-        }
-        if (message != null) System.err.print(message);
-    }
-*/
 }

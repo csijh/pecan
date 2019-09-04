@@ -1,0 +1,97 @@
+c-scan.txt
+==========
+x // comment
+y
+----------
+tokens
+identifier x
+identifier y
+==========
+x /*
+comment
+*/ y
+----------
+tokens
+identifier x
+identifier y
+==========
+// String literals: note escaped backslashes in input and expected output
+"abc" L"abc" "\\"" "abc\\"xyz"
+----------
+tokens
+string-literal "abc"
+string-literal L"abc"
+string-literal "\\""
+string-literal "abc\\"xyz"
+==========
+// Keywords and identifiers
+int x intx
+----------
+tokens
+key int
+identifier x
+identifier intx
+==========
+// Punctuators
+[](){}+ ++ +++ < << <<< %:%:
+----------
+tokens
+key [
+key ]
+key (
+key )
+key {
+key }
+key +
+key ++
+key ++
+key +
+key <
+key <<
+key <<
+key <
+key %:%:
+==========
+// Character constants
+'a' L'a' '\\''
+----------
+tokens
+constant 'a'
+constant L'a'
+constant '\\''
+==========
+// Integer constants
+0 4 42 42u 42U 42l 42LL
+0123 0128 0x12abCD
+----------
+tokens
+constant 0
+constant 4
+constant 42
+constant 42u
+constant 42U
+constant 42l
+constant 42LL
+constant 0123
+constant 012
+constant 8
+constant 0x12abCD
+==========
+// Floating constants
+0.0 0. .0 1e10 1E10 1.23e10 1e-10 e10
+0x0.0p10 0x0.p10 0x.0p10 0x1p10 0x1P10
+----------
+tokens
+constant 0.0
+constant 0.
+constant .0
+constant 1e10
+constant 1E10
+constant 1.23e10
+constant 1e-10
+identifier e10
+constant 0x0.0p10
+constant 0x0.p10
+constant 0x.0p10
+constant 0x1p10
+constant 0x1P10

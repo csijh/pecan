@@ -18,8 +18,8 @@
 <li><a href="#use">Using Pecan</a></li>
 <li><a href="#intro">Background</a></li>
 <ul>
-<li><a href="#cfg">CFG notation</a></li>
-<li><a href="#peg">PEG notation</a></li>
+<li><a href="#cfg">CFG grammars</a></li>
+<li><a href="#peg">PEG grammars</a></li>
 <li><a href="#rd">Recursive descent and combinators</a></li>
 <li><a href="#pecan">Pecan grammars</a></li>
 </ul>
@@ -42,20 +42,22 @@
 <li><a href="#testing">Testing</a></li>
 <li><a href="#checks">Consistency checks</a>
 <ul>
-<li><a href="#type">Type checking</a></li>
-<li><a href="#loop">Loop checking</a></li>
-<li><a href="#token">Token checking</a></li>
+<li><a href="#type">Input checking</a></li>
+<li><a href="#loop">Left recursion checking</a></li>
+<!--<li><a href="#token">Token checking</a></li>-->
 <li><a href="#output">Output checking</a></li>
 </ul>
 <li><a href="#java">Generating code</a>
 <ul>
-<li><a href="#code">The bytecode</a></li>
+<li><a href="#compilation">Compilation</a></li>
+<li><a href="#code">Bytecode</a></li>
+<li><a href="#interpreters">Interpreters</a></li>
 </ul>
 </li>
 </li>
 <li><a href="#transforms">Transforms</a></li>
 <li><a href="#changes">Recent changes</a></li>
-<li><a href="#pecan">The Pecan grammar</a></li>
+<li><a href="#grammar">The Pecan grammar</a></li>
 </ul>
 
 <h2 id="use">Using Pecan</h2>
@@ -94,16 +96,10 @@ parser generators only rarely, and are often not grammar experts. Pecan thus has
 explicit support for test-driven grammar development.</p>
 
 <p>The Pecan system is written in Java, so the first step is to make sure a
-reasonably up-to-date version of Java is properly installed. This can be checked
-by typing commands:</p>
-
-<pre>javac -version
-java -version
-</pre>
-
-<p>Pecan is provided as an executable jar file <code>pecan.jar</code>. The jar
-file contains both the compiled program and also the source code. If
-this jar file is downloaded, it can be run with:</p>
+reasonably up-to-date version of Java is available. Pecan is provided as an
+executable jar file <code>pecan.jar</code>. The jar file contains both the
+compiled program and also the source code. If this jar file is downloaded, it
+can be run with:</p>
 
 <pre>java -jar pecan.jar ...
 </pre>
@@ -205,13 +201,13 @@ starting point for studying grammars and parsers.</p>
 
 <p>Unfortunately, there are practical problems with PEG parsers. Although the
 packrat algorithm is linear, it is slower and more space hungry than one would
-like for efficient large scale parsing. Also, because of its relatively
-uncontrolled backtracking, it is difficult to produce accurate error messages,
-and difficult to express actions. Published PEG grammars can also often be
-rather unreadable, in the same way that regular expressions tend to be. As a
-result, PEG grammars are typically only used for search expressions, or for
-small domain specific languages, and not for larger applications such as full
-programming languages.</p>
+like for efficient large scale parsing. Also, because of its unlimited
+backtracking, it is difficult to produce accurate error messages, and difficult
+to express actions. Published PEG grammars can also often be rather unreadable,
+in the same way that regular expressions tend to be. As a result, PEG grammars
+are typically only used for search expressions, or for small domain specific
+languages, and not for larger applications such as full programming
+languages.</p>
 
 <p>There is also a relatively minor problem with PEG grammars, which is that
 they don't support left recursion. There have been attempts to add it, but the
@@ -620,7 +616,7 @@ fail = ''
 
 <p>They can occasionally be useful, e.g. in transformations.</p>
 
-<h3 id="tags">Tokens</h3>
+<h3 id="tokens">Tokens</h3>
 
 <p>Support is needed for parsers where the input consists of tokens produced by
 a separate scanner. The input is thought of as an array of tokens instead of an
@@ -663,7 +659,8 @@ process.</p>
 <p>Defining an action as a stack-based operation allows it to be expressed as a
 self-contained symbol at a specific point in a grammar. That in turn allows
 actions to take part in grammar transformations which move actions away from
-their arguments. For example, the above rule can be transformed to:</p>
+their arguments. For example, the above rule can be transformed to these rules,
+where the two arguments to the <code>add</code> action are separated:</p>
 
 <pre>sum = term more*
 more = plus term @2add
@@ -704,13 +701,13 @@ Within a repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>,
 the inner expression <code>x</code> must have no net effect on the number of
 output items. Every expression or rule must produce or consume a fixed number of
 output items. The first rule in a grammar normally produces a single output item
-overall, but this is not enforced, so that a grammar with no actions is legal,
-and so that any self-contained fragment of a grammar is legal.</p>
+overall, but this is not enforced. That means a grammar with no actions is
+legal, and also any self-contained fragment of a grammar is legal.</p>
 
 <p>The compensation for these severe restrictions is that Pecan can carry out
-strong consistency checks on grammars, ensuring that every expression has the
-right effect on the output stack, that the stack never underflows, and that a
-fixed number of output items is produced overall.</p>
+strong consistency checks on grammars, ensuring that there can be no stack
+handling errors such as underflow during parsing, and that a fixed number of
+output items is produced overall.</p>
 
 <p>Scanners are normally thought of as producing a sequence of tokens. But in
 Pecan, even a scanner must produce a fixed number of output items. A scanner
@@ -947,35 +944,35 @@ is a line ending in CR instead of LF</li>
 <h2 id="checks">Consistency checks</h2>
 
 <p>A number of checks are performed on a grammar which help to ensure
-consistency. For some features of grammars, namely numerical characters,
-non-empty strings and sets, ranges, categories, options, one-or-more repetitions
-and try, the results of the checks are clear from these example
-equivalences:</p>
+consistency. Some features of grammars can be expressed in terms of others, or
+handled by analogy to others, as in these example equivalences:</p>
 
 <pre>32        &#8801;  ' '
+'a'       &#8801;  "a"
 "ab"      &#8801;  ['a' 'b']
 'ab'      &#8801;  'a' / 'b'
 'a..z'    &#8801;  'a' / ... / 'z'
 Ll        &#8801;  'a' / ... / 'z' / ...
 x?        &#8801;  x / ""
+x*        &#8801;  xs  where  xs = (x xs)?
 x+        &#8801;  x x*
 [x]       &#8801;  x&amp; x
+x&        &#8801;  x!!
+''        &#8801;  ""!
+&lt;ab>      &#8801;  (Uc! / 0..96 / 97 Uc! / 97 0..97)&
+%a        &#8801;  'a'  (by analogy)
+@a        &#8801;  ""  (by analogy)
+@         &#8801;  ""  (by analogy)
+#a        &#8801;  ""  (by analogy)
 </pre>
 
 <p>This reduces the number of features of grammars that need to be dealt with
 separately. The core features remaining are:</p>
 
-<pre><code>''</code>     the empty set
-<code>""</code>     the empty string
-<code>@x</code>     an action (or drop)
-<code>#x</code>     an error marker
-<code>'x'</code>    a single character
-<code>%x</code>     a token tag
-<code>&lt;x></code>    a divider
+<pre><code>""</code>     the empty string (always succeeds)
+<code>"x"</code>    a single character
 <code>x/y</code>    a choice
 <code>x y</code>    a sequence
-<code>x*</code>     a repetition
-<code>x&amp;</code>     a 'has' lookahead
 <code>x!</code>     a 'not' lookahead
 </pre>
 
@@ -987,13 +984,13 @@ separately. The core features remaining are:</p>
 and checking that each rule name is defined exactly once.</p>
 
 <p>A grammar is then checked to see if it represents a text parser or a token
-parser. A text parser must contain no tags. A token parser must not contain
-numerical character codes or character sets or character ranges or dividers.</p>
+parser. A text parser must contain no tags. A token parser must not contain text
+matchers, i.e. strings, dividers, sets, ranges or numbers.</p>
 
-<p>There are also checks on the range operator. For a range of the form
-<code>'a..z'</code> there is a check that there is a single code point either
-side of the <code>..</code> and that the range is non-empty. A range of the
-form <code>0..31</code> must also be non-empty.</p>
+<p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
+there is a check that there is a single code point either side of the
+<code>..</code> and that the range is non-empty. A range of the form
+<code>0..31</code> must also be non-empty.</p>
 
 <h3 id="loop">Left recursion checking</h3>
 
@@ -1031,15 +1028,11 @@ way these are calculated for the core features of grammars (using
 <code>&amp;</code> for 'and' and <code>|</code> for 'or', with
 <code>&amp;</code> binding tighter) are:</p>
 
-<pre>SN("") = true;  SP("") = FP("") = FN("") = false
-SN(@a) = true;  SP(@a) = FP(@a) = FN(@a) = false
-SN(#a) = true;  SP(#a) = FP(#a) = FN(#a) = false
+<pre>SN("") = true;
+SP("") = FP("") = FN("") = false
 
-FN('') = true;  SP('') = SN('') = FP('') = false
-
-SP('a') = FN('a') = true;  SN('a') = FP('a') = false
-SP(%a) = FN(%a) = true;  SN(%a) = FP(%a) = false
-SN(&lt;a>) = FN(&lt;a>) = true;  SP(&lt;a>) = FP(&lt;a>) = false
+SP("a") = FN("a") = true;
+SN("a") = FP("a") = false
 
 SN(x y) = SN(x) &amp; SN(y);
 SP(x y) = SP(x) &amp; SP(y) | SP(x) &amp; SN(y) | SN(x) &amp; SP(y);
@@ -1051,16 +1044,10 @@ SP(x/y) = SP(x) | FN(x) &amp; SP(y);
 FN(x/y) = FN(x) &amp; FN(y);
 FP(x/y) = FP(x) | FN(x) &amp; FP(y);
 
-SN(x*) = FN(x)
-SP(x*) = SP(x) &amp; FN(x)
-FP(x*) = FP(x)
-FN(x*) = false
-
-SN(x&amp;) = SN(x) | SP(x);  SP(x&amp;) = false
-FN(x&amp;) = FN(x) | FP(x);  FP(x&amp;) = false
-
-SN(x!) = FN(x) | FP(x);  SP(x!) = false
-FN(x!) = SN(x) | SP(x);  FP(x!) = false
+SN(x!) = FN(x) | FP(x);
+SP(x!) = false
+FN(x!) = SN(x) | SP(x);
+FP(x!) = false
 </pre>
 
 <p>Because the rules are themselves recursive, fixed point iteration is used,
@@ -1072,19 +1059,20 @@ from <code>false</code> to <code>true</code>, so the iteration terminates.</p>
 calculated to check that the grammar is well formed. The <code>WF</code>
 property is calculated (using <code>~</code> for 'not') by:</p>
 
-<pre>WF("") = WF(@a) = WF(#a) = WF('') = WF('a') = WF(%a) = WF(&lt;a>) = true
+<pre>WF("") = true
+WF("a") = true
 WF(x y) = WF(x) &amp; (~SN(x) | WF(y))
-WF(x/y) = WF(x) &amp; WF(y)
-WF(x&amp;) = WF(x)
+WF(x / y) = WF(x) &amp; WF(y)
 WF(x!) = WF(x)
 </pre>
 
 <p>If <code>WF</code> turns out to be false for any expression, that expression
 is reported as an error because it contains left recursion.</p>
 
+<hr/>
+<!--
 <h3 id="token">Token checking</h3>
 
-<hr/>
 
 <p>For grammars which have text as input, a check is made that all tokens
 produced are non-empty, so that continual progress is made through the
@@ -1132,7 +1120,7 @@ end = '' @end
 
 <p>This does cause an error, because after recognising the end of text, the
 scanner could continue to look for more tokens.</p>
-
+-->
 <h3 id="output">Output checking</h3>
 
 <p>Actions are assumed to treat output items in a stack-like manner. Restrictive
@@ -1152,7 +1140,7 @@ size of the stack. For example, this rule causes an error:</p>
 <p>The first alternative adds one item to the stack, but the second adds
 nothing. On the other hand, this rule is legal:</p>
 
-<pre>token =  ('0'..'9')+ @1token / ' '+
+<pre>token = ('0'..'9')+ @1token / ' '+
 </pre>
 
 <p>The <code>@1token</code> action pops an item from the stack, presumably a
@@ -1172,21 +1160,21 @@ is reported as an error, because <code>tokens</code> as a whole pushes an
 unknown number of items onto the stack. On the other hand, this definition is
 allowed:</p>
 
-<pre>tokens = @list (('0'..'9')+ @1token)*
+<pre>tokens = (('0'..'9')+ @1token)*
 </pre>
 
-<p>The <code>@list</code> action pushes one item, an empty list, onto the stack.
-The inner expression pops the list, adds a token to it, and pushes the updated
-list onto the stack. As a result, it has a zero net effect on the stack. It can
-be repeated any number of times, still with a zero net effect, and so the
-<code>tokens</code> rule can be deduced to push one item onto the stack.</p>
+<p>The inner expression pops a previous list item, adds a token to it, and
+pushes the updated list onto the stack. As a result, it has a zero net effect on
+the stack. It can be repeated any number of times, still with a zero net effect,
+and so the <code>tokens</code> rule can be deduced to have zero net effect on
+the stack.</p>
 
 <p>A second check is that the stack never underflows. For example:</p>
 
 <pre>example = "1" @n @2add
 </pre>
 
-<p>Here, when the <code>add</code>action is reached, there is only one output
+<p>Here, when the <code>add</code> action is reached, there is only one output
 item on the stack, whereas two previous output items are supposed to be passed
 to <code>add</code>, so an error is reported.</p>
 
@@ -1194,9 +1182,8 @@ to <code>add</code>, so an error is reported.</p>
 to the stack, possibly negative, for each expression in the grammar. It also
 calculates a low water mark value for every expression in the grammar,
 representing the number of items that are needed on the stack during processing
-of the expression. It then checks that for the first rule in the grammar, which
-represents the final result, one item is added, and the low water mark isn't
-negative.</p>
+of the expression. It then checks that for the first rule in the grammar, the
+low water mark isn't negative.</p>
 
 <p>In order to carry out these checks, a very uniform approach to actions has
 to be taken. For example, Pecan checks that each alternative in a choice adds
@@ -1207,8 +1194,7 @@ the stack, so that the number of times <code>x</code> is repeated doesn't
 have any overall effect on the stack size.</p>
 
 <p>These checks are conservative, i.e. there could be pathological grammars
-which always correctly produce one output item in practice, but which don't
-pass the checks.</p>
+which always work correctly in practice, but which don't pass the checks.</p>
 
 <h2 id="java">Generating code</h2>
 <!--
@@ -1248,7 +1234,7 @@ and efficient way using a custom stack</li>
 
 </ul>
 
-<h3>Interpreters</h3>
+<h3 id="compilation">Compilation</h3>
 
 <p>A bytecode sequence is generated using a command of the form:</p>
 
@@ -1279,7 +1265,7 @@ contains:</p>
 
 <p>Then the bytecode sequence generated might be:</p>
 
-<pre>START1, 6, LOW, 48, HIGH, 57, ACT1, number, STOP
+<pre>START, 6, LOW, 1, 48, HIGH, 1, 57, ACT, number, STOP
 </pre>
 
 <p>The values of the symbols are specified by the surrounding interpreter, eg.
@@ -1293,7 +1279,7 @@ provided with Pecan, translating it into the desired programming language if
 necessary, and adapting it to a particular application by customising tags,
 actions and error handling as appropriate.</p>
 
-<h3 id="code">The bytecode</h3>
+<h3 id="code">Bytecode</h3>
 
 <p>Examples are given in this section of how every construct is translated into
 bytecode:</p>
@@ -1305,9 +1291,12 @@ bytecode:</p>
 opcodes. The notation <code>{x}</code> means "the bytecode sequence generated
 for expression x" and <code>nx</code> stands for the number of bytes in
 <code>{x}</code>. The <code>START</code> opcode takes a one-byte operand in the
-range 0..255, whereas <code>STOP</code> needs no operand. If an instruction
-needs an operand which is greater than 255, a variant of the opcode can be used
-to indicate a two-byte operand.</p>
+range 0..255, whereas <code>STOP</code> needs no operand.</p>
+
+<p>If any instruction needs an operand which is greater than 255, a variant of
+the opcode can be used which takes a two-byte operand. There may also be
+variants which allows a one-byte operand to be omitted for some small
+values.</p>
 
 <p>The <code>START</code> opcode creates a call to <code>{x}</code>, setting up
 the address of <code>STOP</code> as the return address. The <code>STOP</code>
@@ -1344,31 +1333,43 @@ negative.</p>
 {'&#960;'}       =   STRING, 2, 207, 128
 {&lt;a>}       =   LESS, 1, 97
 {&lt;ab>}      =   LESS, 2, 97, 98
-{%id}       =   TAG, id
-</pre>
-
-<p>The <code>STRING</code> opcode has the number of bytes as its operand,
-and is followed by the bytes themselves in UTF-8 format. A divider is translated
-using the <code>LESS</code> opcode, and a tag is translated using the
-<code>TAG</code> opcode. A string or divider containing characters of mixed
-UTF-8 lengths causes no problem, because UTF-8 text can be compared byte by
-byte, without taking account of character boundaries.</p>
-
-<pre>{''}        =   SET, 0
-{'a'}       =   SET, 1, 97
-{'ab'}      =   SET, 2, 97, 98
-{'&#945;&#946;'}      =   SET, 4, 206, 177, 206, 178
 {'a..z'}    =   LOW, 1, 97, HIGH, 1, 122
 {'&#945;..&#969;'}    =   LOW, 2, 206, 177, HIGH, 2, 207, 137
+{''}        =   SET, 0
+{'a'}       =   SET, 1, 97
+{'ab'}      =   SET, 2, 97, 98
+{'&#945;&#946;'}      =   SET, 4, 206, 177, 206, 178</pre>
+
+<p>A character matching opcode is followed by a one-byte count, and then that
+number of bytes in UTF-8 format. For opcodes other than <code>SET</code>, a byte
+sequence containing characters of mixed UTF-8 lengths causes no problem, because
+UTF-8 text can be compared byte by byte, without taking account of character
+boundaries. With the <code>SET</code> opcode, a sequence with mixed UTF-8 byte
+lengths cannot be handled byte by byte, but the first byte of each character can
+be used to find the character's length.</p>
+
+<pre>{@a}        =   ACT, a
+{@}         =   DROP
+{#e}        =   MARK, e
+{%id}       =   TAG, id
 {Nd}        =   CAT, Nd
 </pre>
 
-<p>The <code>SET</code> opcode is used for sets of characters. Its operand is
-the number of bytes which follow. The opcode checks whether any one of the
-characters in the set matches. A sequence with mixed UTF-8 byte lengths cannot
-be handled byte by byte, but the first byte of each character can be used to
-find the character's length. A range is translated into the two opcodes
-<code>LOW</code> and <code>HIGH</code>.</p>
+<p>An action is translated using the <code>ACT</code> opcode. Actions need to be
+delayed, either because they are inside a try construct <code>[x]</code>, or
+because they are at the start of a left hand of a choice, e.g. <code>@a x /
+y</code>. On the other hand, in the case of a context sensitive grammar, actions
+need to be carried out as early as possible, so that they have the right effect
+on subsequent parsing. In the sample bytecode interpreters provided, actions are
+delayed by being recorded symbolically, performed whenever progress is made in
+the input outside of lookahead constructs, and performed or discarded at the end
+of any outermost lookahead construct.</p>
+
+<p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
+set, and cleared whenever a new marker is found further on in the input.</p>
+
+<p>Tags are used only in token-based parsers. They cause a call to external code
+to find the tag of a particular token.</p>
 
 <p>A category is translated using the <code>CAT</code> opcode. The target
 programming language may not have a facility for finding the category of a
@@ -1390,7 +1391,7 @@ opcodes handle a sequence.</p>
 <p>If the bytecode interpreter implements each opcode separately using a switch,
 then <code>EITHER</code> or <code>BOTH</code> can be thought of as causing a
 call to <code>{x}</code> returning to <code>OR</code> or <code>AND</code>, which
-can be thought of as causing a tail-call to <code>{y}</code>.</p>
+causes a tail-call to <code>{y}</code>.</p>
 
 <pre>{x?}        =   MAYBE, ONE, {x}
 {x*}        =   MAYBE, MANY, {x}
@@ -1415,36 +1416,22 @@ initializes any of the lookahead constructs, arranging to return to
 <code>TRY</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
 result.</p>
 
-<pre>{@a}        =   ACT, a
-{@}         =   DROP
-{#e}        =   MARK, e
-</pre>
 
-<p>An action is translated using the <code>ACT</code> opcode. Actions need to be
-delayed, either because they are inside a try construct <code>[x]</code>, or
-because they are at the start of a left hand of a choice, e.g. <code>@a x /
-y</code>. On the other hand, in the case of a context sensitive grammar, actions
-need to be carried out as early as possible, so that they have the right effect
-on subsequent parsing. In the sample bytecode interpreters provided, actions are
-delayed by being recorded symbolically, performed whenever progress is made in
-the input outside of lookahead constructs, and performed or discarded at the end
-of any outermost lookahead construct.</p>
-
-<p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
-set, and cleared whenever a new marker is found further on in the input.</p>
+<!--, and a tag is translated using the
+<code>TAG</code> opcode-->
 
 <p>Further details of what each opcode does can be gleaned from the provided
 interpreters and their comments.</p>
 
-<h2 id="interpreters">Example interpreters</h2>
+<h3 id="interpreters">Interpreters</h3>
 
 <p>There are some things that the example interpreters have in common. There is
 an array <code>input</code> of characters or tokens, and two indexes
 <code>start</code> and <code>in</code> into it. The items up to
 <code>start</code> have been processed, and <code>in</code> is the current
-position. So when a zero-arity action is performed, the items between
-<code>start</code> and <code>in</code> are processed, and <code>start</code> is
-updated to be equal to <code>in</code>.</p>
+position. So when an action is performed, the items between <code>start</code>
+and <code>in</code> are processed, and <code>start</code> is updated to be equal
+to <code>in</code>.</p>
 
 <p>There is a list <code>output</code> of delayed actions. The variable
 <code>out</code> represents the current position in the list, i.e. the number of
@@ -1516,7 +1503,7 @@ same output effect and error handling properties as the original.</p>
 <li>parser generation is via bytecode</li>
 </ul>
 
-<h2 id="pecan">The Pecan grammar</h2>
+<h2 id="grammar">The Pecan grammar</h2>
 
 <p>Here is a Pecan parser for the Pecan language itself. It includes scanning
 and layout. The <code>skip</code> rule is used to handle white space between

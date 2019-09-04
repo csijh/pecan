@@ -4,7 +4,8 @@ Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
 
 The parse function is built up from calls to inline functions, and the parser
 structure is allocated locally, so the efficiency should be the same as a single
-function containing a monolithic switch, acting on local variables. */
+monolithic function, with local variables, containing a giant switch statement.
+*/
 #include "parser.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,7 +108,7 @@ static void findLine(parser *s, err *e, int p) {
     e->column = p - e->start;
 }
 
-// {id = x}  =  START(nx), {x}, STOP
+// {id = x}  =  START, nx, {x}, STOP
 // Call {x} returning to STOP.
 static inline void doSTART(parser *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
@@ -125,13 +126,13 @@ static inline void doSTOP(parser *s, err *e) {
     if (! s->ok) findLine(s, e, s->in);
 }
 
-// {id}  =  GO(n)   or   BACK(n)
+// {id}  =  GO, n   or   BACK, n
 // Skip forwards or backwards in the code, to tail-call a remote rule.
 static inline void doGO(parser *s, int arg) {
     s->pc = s->pc + arg;
 }
 
-// {x / y}  =  EITHER(nx), {x}, OR, {y}
+// {x / y}  =  EITHER, nx, {x}, OR, {y}
 // Save in/out, call x, returning to OR.
 static inline void doEITHER(parser *s, int arg) {
     s->stack[s->top++] = s->in;
@@ -139,7 +140,7 @@ static inline void doEITHER(parser *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
 }
 
-// {x / y}  =  EITHER(nx), {x}, OR, {y}
+// {x / y}  =  EITHER, nx, {x}, OR, {y}
 // After x, check success and progress, return or continue with y.
 static inline void doOR(parser *s) {
     int saveOut = s->stack[--s->top];
@@ -148,13 +149,13 @@ static inline void doOR(parser *s) {
     else s->out = saveOut;
 }
 
-// {x y}  =  BOTH(nx), {x}, AND, {y}
+// {x y}  =  BOTH, nx, {x}, AND, {y}
 // Call x, returning to AND.
 static inline void doBOTH(parser *s, int arg) {
     s->stack[s->top++] = s->pc + arg;
 }
 
-// {x y}  =  BOTH(nx), {x}, AND, {y}
+// {x y}  =  ...AND, {y}
 // After x, check success, continue with y or return.
 static inline void doAND(parser *s) {
     if (! s->ok) s->pc = s->stack[--s->top];
@@ -280,7 +281,7 @@ static inline void doMARK(parser *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {"abc"}  =  STRING(3), 'a', 'b', 'c'
+// {"abc"}  =  STRING, 3, 'a', 'b', 'c'
 // Match string and return success or failure.
 static inline void doSTRING(parser *s, int arg) {
     s->ok = true;
@@ -295,7 +296,7 @@ static inline void doSTRING(parser *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {'a..z'}  =  LOW(n), 'a', HIGH(n), 'z'
+// {'a..z'}  =  LOW, n, 'a', HIGH, n, 'z'
 // Check >= 'a', continue with HIGH or return failure
 static inline void doLOW(parser *s, int arg) {
     s->ok = true;
@@ -309,7 +310,7 @@ static inline void doLOW(parser *s, int arg) {
     }
 }
 
-// {'a..z'}  =  LOW(n), 'a', HIGH(n), 'z'
+// {'a..z'}  =  ...HIGH, n, 'z'
 // Check <= 'z', return success or failure
 static inline void doHIGH(parser *s, int arg) {
     s->ok = true;
@@ -325,7 +326,7 @@ static inline void doHIGH(parser *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {<abc>}  =  LESS(3), 'a', 'b', 'c'
+// {<abc>}  =  LESS, 3, 'a', 'b', 'c'
 // Check if input < "abc", return.
 static inline void doLESS(parser *s, int arg) {
     s->ok = true;
@@ -344,7 +345,7 @@ static inline int length(byte first) {
     return 4;
 }
 
-// {'abc'}  =  SET(3), 'a', 'b', 'c'
+// {'abc'}  =  SET, 3, 'a', 'b', 'c'
 // Check for one of the characters in a set, and return.
 static inline void doSET(parser *s, int arg) {
     s->ok = false;
@@ -365,7 +366,7 @@ static inline void doSET(parser *s, int arg) {
     s->pc = s->stack[--s->top];
 }
 
-// {%t} == TAG1, t
+// {%t} == TAG, t
 // Check if tag of next token is t and return.
 static inline void doTAG(parser *s, int arg) {
 }

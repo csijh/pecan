@@ -31,6 +31,7 @@ class Generator implements Testable {
     String run(String grammar) {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
+        if (root.op() == Error) return "ERR:" + root.note();
         output = new StringBuilder();
         changed = true;
         while (changed) {

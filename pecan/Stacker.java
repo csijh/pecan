@@ -34,7 +34,7 @@ stack before compensating by putting items back on. To deal with this, an
 arbitrary limit of -100 is put on LOW values, beyond which it is assumed that
 there is an infinite loop at work.
 
-TODO: improve by detecting repeated configurations. */
+TODO: improve by better analysis. */
 
 class Stacker implements Testable {
     private String source;
