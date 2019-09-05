@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
 <head>
 <title>Pecan Tutorial</title>
-<style> pre { margin-left:40px; } </style>
+<style> pre, .indent { margin-left:40px; } </style>
 </head>
 <body>
 
@@ -462,7 +462,7 @@ Error on line 1:
 <p>This accurately reports the position in the input at which parsing failed,
 but doesn't give any clue about why. The conventional approach is to list the
 things which would allow further parsing. If the list were generated
-automatically by Pecan, it might read:</p>
+automatically, it might read:</p>
 
 <pre>2+40%
 ----------
@@ -716,9 +716,9 @@ Pass 9 tests.
 <h3>Step 16</h3>
 
 <p>Handling spaces is a little bit difficult, because we are scanning and
-parsing in one go, rather than writing a separate scanner and parser. To avoid
-complicating the parser any more than necessary, the best approach is to skip
-spaces at the start and after recognising each token:</p>
+parsing in one go, rather than writing a separate scanner and parser. Perhaps
+the simplest approach is to skip spaces at the start and after recognising each
+token:</p>
 
 <pre>sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
@@ -791,26 +791,13 @@ Pass 10 tests.
 <p>Although there are many more features that could be added, let's stop and say
 we have successfully developed a numerical expression parser.</p>
 
-<h3>Step ?</h3>
+<h3>Step 17</h3>
 
-<p><b><i>Not currently working</i></b></p>
+<p>It is time to compile the grammar, in order to create a real calculator
+program. The first thing to do is to write a skeleton calculator program, in a
+file <kbd>calculate.c</kbd>, say:</p>
 
-<p>To generate code, the first thing to do is to write a skeleton calculator
-program, in a file <kbd>Calculator.java</kbd>, say:</p>
-
-<pre>class Calculator {
-    public static void main(String[] args) { new Calculator().run(args[0]); }
-    void run(String sum) { System.out.println(parse(sum + "\n")); }
-    int number() { return Integer.parseInt(text.substring(start,end)); }
-    int add(int m, int n) { return m+n; }
-    int subtract(int m, int n) { return m-n; }
-    int multiply(int m, int n) { return m*n; }
-    int divide(int m, int n) { return m/n; }
-    boolean err(int row, int col, String line, String[] ss) { return false; }
-    // Begin generated parser: &lt;pecan grammar='calc.txt' type='int'&gt;
-    // End parser &lt;/pecan&gt;
-}
-</pre>
+<p class="indent"><a href="calculate.c">calculate.c</a></p>
 
 <p>The <code>main</code> method gets the program going, assuming that one
 command line argument is given, without doing any validation.

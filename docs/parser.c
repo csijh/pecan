@@ -87,7 +87,7 @@ static inline void doActs(parser *s) {
     for (int i = 0; i < s->out; i = i + 2) {
         int a = s->actions[i];
         int oldIn = s->actions[i+1];
-        s->act(s->arg, a, &s->input[s->start], oldIn - s->start);
+        s->arg = s->act(s->arg, a, oldIn - s->start, &s->input[s->start]);
         s->start = oldIn;
     }
     s->out = 0;

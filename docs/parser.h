@@ -16,9 +16,10 @@ enum op {
     O2, GOL = O2, BACKL,
 };
 
-// The type of a function to perform an output action, given the characters
-// most recently matched and the ...
-typedef void doAct(void *state, int a, char *s, int n);
+// The type of a function to perform an output action. It is passed the output
+// state, the action code, and the characters most recently matched. It returns
+// the possibly updated output state.
+typedef void *doAct(void *state, int a, int n, char s[n]);
 
 // The type of a function to get the tag of the next token.
 typedef int doNext(void *state);

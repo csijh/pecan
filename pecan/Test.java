@@ -80,23 +80,22 @@ public class Test {
     static void run(String file, Testable object) { run(file, object, 0); }
 
     // Run a test or tests from a file. If the file is null, use the default
-    // test file. If the class of the object is Run, assume they are user tests.
+    // unit test file for the given class.
     static void run(String file, Testable object, int line) {
         String name = object.getClass().getSimpleName();
-        boolean user = name.equals("Run");
+        boolean unit = file == null && line == 0;
         if (file == null) file = "tests/"+ name +".txt";
         int n = runTests(file, object, line);
         if (n == 0) {
             System.out.println("No test on line "+ line +".");
             return;
         }
-        if (user) {
+        if (unit) System.out.println(name +" class OK, pass "+ n +" tests.");
+        else if (line > 0) System.out.println("Pass test on line "+ line +".");
+        else {
             if (n == 1) System.out.println("Pass 1 test.");
             else System.out.println("Pass "+ n +" tests.");
-            return;
         }
-        if (line > 0) System.out.println("Pass test on line "+ line +".");
-        else System.out.println(name +" class OK, pass "+ n +" tests.");
     }
 
     // Run tests from a given file on a given object. If line > 0, run just the
@@ -105,7 +104,6 @@ public class Test {
         List<Test> tests = extract(file);
         int passed = 0;
         for (Test test : tests) {
-            if (line > 0 && test.lineNo != line) continue;
             if (test.isGrammar()) {
                 String out = object.test("GRAMMAR:\n" + test.input());
                 if (out == null) out = "";
@@ -119,14 +117,14 @@ public class Test {
                 f = new File(f.getParentFile(), test.input());
                 String subfile = f.getPath();
                 passed += runTests(subfile, object, 0);
+                continue;
             }
-            else {
-                String out = object.test(test.input());
-                String message = test.check(out);
-                if (message == null) { passed++; continue; }
-                System.err.print(message);
-                System.exit(1);
-            }
+            if (line > 0 && test.lineNo != line) continue;
+            String out = object.test(test.input());
+            String message = test.check(out);
+            if (message == null) { passed++; continue; }
+            System.err.print(message);
+            System.exit(1);
         }
         return passed;
     }

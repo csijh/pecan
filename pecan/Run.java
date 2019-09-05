@@ -12,11 +12,9 @@ import java.nio.charset.*;
 
     pecan [-t | -trace] [line] testfile
     pecan -o output grammar
-
-This class implements Testable, not for unit testing, but...
 */
 
-class Run implements Testable {
+class Run {
     private boolean tracing, compiling;
     private String infile, outfile, sourcefile;
     private int line = 0;
@@ -50,7 +48,7 @@ class Run implements Testable {
             else usage();
         }
         if (sourcefile == null) usage();
-        Evaluator e = new Evaluator();
+        Evaluator e = new Evaluator(tracing);
         Test.run(sourcefile, e, line);
     }
 
