@@ -121,3 +121,161 @@ operator, AND, BOTH, 2, SET1, 43, AND, DROP, STOP, START, 11, BOTH, 2, MARK,
 operator, AND, BOTH, 2, SET1, 45, AND, DROP, STOP, START, 9, BOTH, 2, MARK,
 digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 18, BOTH, 2, MARK, newline, AND,
 BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+==========
+// Step 13
+sum = term (plus term @2add / minus term @2subtract)* end
+term = number (times number @2multiply / over number @2divide)*
+number = digit+ @number
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+digit = #digit '0..9'
+end = #newline 13? 10 @
+----------
+START, 39, BOTH, 2, GO, 38, AND, BOTH, 29, MAYBE, MANY, EITHER, 12, BOTH, 2,
+GO, 78, AND, BOTH, 2, GO, 22, AND, ACT, add, OR, BOTH, 2, GO, 79, AND, BOTH,
+2, GO, 9, AND, ACT, subtract, AND, GO, 122, STOP, START, 34, BOTH, 2, GO, 33,
+AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 66, AND, BOTH, 2, GO, 19, AND, ACT,
+multiply, OR, BOTH, 2, GO, 67, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP,
+START, 11, BOTH, 6, DO, AND, MAYBE, MANY, GO, 62, AND, ACT, number, STOP,
+START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 43, AND, DROP, STOP,
+START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 45, AND, DROP, STOP,
+START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 42, AND, DROP, STOP,
+START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 47, AND, DROP, STOP,
+START, 9, BOTH, 2, MARK, digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 18,
+BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2,
+STRING1, 10, AND, DROP, STOP
+==========
+// Step 14
+sum = term (plus term @2add / minus term @2subtract)* end
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open sum close
+number = digit+ @number
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+open = #bracket '(' @
+close = #bracket ')' @
+digit = #digit '0..9'
+end = #newline 13? 10 @
+----------
+START, 39, BOTH, 2, GO, 38, AND, BOTH, 29, MAYBE, MANY, EITHER, 12, BOTH, 2,
+GO, 98, AND, BOTH, 2, GO, 22, AND, ACT, add, OR, BOTH, 2, GO, 99, AND, BOTH,
+2, GO, 9, AND, ACT, subtract, AND, GO, 170, STOP, START, 34, BOTH, 2, GO, 33,
+AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 86, AND, BOTH, 2, GO, 19, AND, ACT,
+multiply, OR, BOTH, 2, GO, 87, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP,
+START, 17, EITHER, 2, GO, 16, OR, BOTH, 2, GO, 81, AND, BOTH, 2, BACK, 93,
+AND, GO, 87, STOP, START, 11, BOTH, 6, DO, AND, MAYBE, MANY, GO, 90, AND, ACT,
+number, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 43, AND,
+DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 45, AND,
+DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 42, AND,
+DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 47, AND,
+DROP, STOP, START, 11, BOTH, 2, MARK, bracket, AND, BOTH, 2, SET1, 40, AND,
+DROP, STOP, START, 11, BOTH, 2, MARK, bracket, AND, BOTH, 2, SET1, 41, AND,
+DROP, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1, 48, HIGH1, 57, STOP,
+START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND,
+BOTH, 2, STRING1, 10, AND, DROP, STOP
+==========
+// Step 15
+sum = expression end
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number
+plus = #operator '+' @
+minus = #operator '-' @
+times = #operator '*' @
+over = #operator '/' @
+open = #bracket '(' @
+close = #bracket ')' @
+digit = #digit '0..9'
+end = #newline 13? 10 @
+----------
+START, 7, BOTH, 2, GO, 6, AND, GO, 207, STOP, START, 34, BOTH, 2, GO, 33, AND,
+MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 95, AND, BOTH, 2, GO, 19, AND, ACT, add,
+OR, BOTH, 2, GO, 96, AND, BOTH, 2, GO, 6, AND, ACT, subtract, STOP, START, 34,
+BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 86, AND, BOTH, 2,
+GO, 19, AND, ACT, multiply, OR, BOTH, 2, GO, 87, AND, BOTH, 2, GO, 6, AND,
+ACT, divide, STOP, START, 17, EITHER, 2, GO, 16, OR, BOTH, 2, GO, 81, AND,
+BOTH, 2, BACK, 88, AND, GO, 87, STOP, START, 11, BOTH, 6, DO, AND, MAYBE,
+MANY, GO, 90, AND, ACT, number, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+BOTH, 2, SET1, 43, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+BOTH, 2, SET1, 45, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+BOTH, 2, SET1, 42, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+BOTH, 2, SET1, 47, AND, DROP, STOP, START, 11, BOTH, 2, MARK, bracket, AND,
+BOTH, 2, SET1, 40, AND, DROP, STOP, START, 11, BOTH, 2, MARK, bracket, AND,
+BOTH, 2, SET1, 41, AND, DROP, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1,
+48, HIGH1, 57, STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE,
+ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+==========
+// Step 16a
+sum = gap expression end
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number gap
+plus = #operator '+' gap
+minus = #operator '-' gap
+times = #operator '*' gap
+over = #operator '/' gap
+open = #bracket '(' gap
+close = #bracket ')' gap
+digit = #digit '0..9'
+gap = (#space ' ')* @
+end = #newline 13? 10 @
+----------
+START, 12, BOTH, 2, GO, 226, AND, BOTH, 2, GO, 6, AND, GO, 234, STOP, START,
+34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
+BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
+AND, ACT, subtract, STOP, START, 34, BOTH, 2, GO, 33, AND, MAYBE, MANY,
+EITHER, 12, BOTH, 2, GO, 93, AND, BOTH, 2, GO, 19, AND, ACT, multiply, OR,
+BOTH, 2, GO, 95, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP, START, 17,
+EITHER, 2, GO, 16, OR, BOTH, 2, GO, 90, AND, BOTH, 2, BACK, 88, AND, GO, 97,
+STOP, START, 16, BOTH, 6, DO, AND, MAYBE, MANY, GO, 101, AND, BOTH, 2, ACT,
+number, AND, GO, 105, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 43, AND, GO, 90, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 45, AND, GO, 75, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 42, AND, GO, 60, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 47, AND, GO, 45, STOP, START, 12, BOTH, 2, MARK, bracket, AND, BOTH, 2,
+SET1, 40, AND, GO, 30, STOP, START, 12, BOTH, 2, MARK, bracket, AND, BOTH, 2,
+SET1, 41, AND, GO, 15, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1, 48,
+HIGH1, 57, STOP, START, 13, BOTH, 9, MAYBE, MANY, BOTH, 2, MARK, space, AND,
+SET1, 32, AND, DROP, STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4,
+MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+==========
+// Step 16b
+sum = gap expression end
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number gap
+plus = #operator '+' gap
+minus = #operator '-' gap
+times = #operator '*' gap
+over = #operator '/' gap
+open = #bracket '(' gap
+close = #bracket ')' gap
+digit = #digit '0..9'
+gap = (' ')* @
+end = #newline 13? 10 @
+----------
+START, 12, BOTH, 2, GO, 226, AND, BOTH, 2, GO, 6, AND, GO, 229, STOP, START,
+34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
+BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
+AND, ACT, subtract, STOP, START, 34, BOTH, 2, GO, 33, AND, MAYBE, MANY,
+EITHER, 12, BOTH, 2, GO, 93, AND, BOTH, 2, GO, 19, AND, ACT, multiply, OR,
+BOTH, 2, GO, 95, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP, START, 17,
+EITHER, 2, GO, 16, OR, BOTH, 2, GO, 90, AND, BOTH, 2, BACK, 88, AND, GO, 97,
+STOP, START, 16, BOTH, 6, DO, AND, MAYBE, MANY, GO, 101, AND, BOTH, 2, ACT,
+number, AND, GO, 105, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 43, AND, GO, 90, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 45, AND, GO, 75, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 42, AND, GO, 60, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH, 2,
+SET1, 47, AND, GO, 45, STOP, START, 12, BOTH, 2, MARK, bracket, AND, BOTH, 2,
+SET1, 40, AND, GO, 30, STOP, START, 12, BOTH, 2, MARK, bracket, AND, BOTH, 2,
+SET1, 41, AND, GO, 15, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1, 48,
+HIGH1, 57, STOP, START, 8, BOTH, 4, MAYBE, MANY, SET1, 32, AND, DROP, STOP,
+START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND,
+BOTH, 2, STRING1, 10, AND, DROP, STOP

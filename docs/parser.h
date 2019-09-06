@@ -19,7 +19,7 @@ enum op {
 // The type of a function to perform an output action. It is passed the output
 // state, the action code, and the characters most recently matched. It returns
 // the possibly updated output state.
-typedef void *doAct(void *state, int a, int n, char s[n]);
+typedef void doAct(void *state, int a, int n, char s[n]);
 
 // The type of a function to get the tag of the next token.
 typedef int doNext(void *state);
@@ -29,6 +29,7 @@ typedef int doNext(void *state);
 // number and column, the start and end positions of the line, and the error
 // items marked at that position.
 struct err {
+    char *input;
     bool ok;
     int at, line, column, start, end;
     uint64_t markers;
@@ -44,10 +45,6 @@ void parse(int n, byte code[], byte in[], doNext *f, doAct *g, void *x, err *e);
 
 // Print a report on stderr using s if there are no markers, or s1 followed by
 // a list of markers separated by s2 followed by s3, using the names array.
-void report(err *e, char *s, char *s1, char *s2, char *s3, char *names[]);
-
 // Print the line containing the error on stderr.
-void reportLine(err *e, char *input);
-
 // Print spaces followed by a ^ character to report the error column on stderr.
-void reportColumn(err *e);
+void report(err *e, char *s, char *s1, char *s2, char *s3, char *names[]);

@@ -42,7 +42,6 @@
 <li><a href="#testing">Testing</a></li>
 <li><a href="#checks">Consistency checks</a>
 <ul>
-<li><a href="#type">Input checking</a></li>
 <li><a href="#loop">Left recursion checking</a></li>
 <!--<li><a href="#token">Token checking</a></li>-->
 <li><a href="#output">Output checking</a></li>
@@ -944,8 +943,23 @@ is a line ending in CR instead of LF</li>
 <h2 id="checks">Consistency checks</h2>
 
 <p>A number of checks are performed on a grammar which help to ensure
-consistency. Some features of grammars can be expressed in terms of others, or
-handled by analogy to others, as in these example equivalences:</p>
+consistency. Some obvious checks are done first, such as syntax checking of the
+grammar, checking that each rule name is defined exactly once, and checking that
+no rule name clashes with a category name.</p>
+
+<p>A grammar is checked to see if it represents a text parser or a token parser.
+A text parser must contain no tags. A token parser must not contain text
+matchers, i.e. strings, dividers, sets, ranges or numbers, with the possible
+exception of <code>""</code> or <code>''</code>.</p>
+
+<p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
+there is a check that there is a single code point either side of the
+<code>..</code> and that the range is non-empty. A range of the form
+<code>0..31</code> must also be non-empty.</p>
+
+<p>Many parsing expressions are
+equivalent, which considerably reduces the number of cases that need be
+discussed. For example:</p>
 
 <pre>32        &#8801;  ' '
 'a'       &#8801;  "a"
@@ -960,37 +974,23 @@ x+        &#8801;  x x*
 x&        &#8801;  x!!
 ''        &#8801;  ""!
 &lt;ab>      &#8801;  (Uc! / 0..96 / 97 Uc! / 97 0..97)&
-%a        &#8801;  'a'  (by analogy)
-@a        &#8801;  ""  (by analogy)
-@         &#8801;  ""  (by analogy)
-#a        &#8801;  ""  (by analogy)
 </pre>
 
-<p>This reduces the number of features of grammars that need to be dealt with
-separately. The core features remaining are:</p>
+<p>The core features remaining are:</p>
 
-<pre><code>""</code>     the empty string (always succeeds)
-<code>"x"</code>    a single character
-<code>x/y</code>    a choice
-<code>x y</code>    a sequence
-<code>x!</code>     a 'not' lookahead
+<pre><code>id = x</code>      rules
+<code>""</code>          the empty string (always succeeds)
+<code>"x"</code>         single characters
+<code>x/y</code>         choices
+<code>x y</code>         sequences
+<code>x!</code>          the 'not' lookahead
+<code>%a</code>          tags
+<code>@2a, @a, @</code>  actions
+<code>#a</code>          markers
 </pre>
 
-<p>The checks can be described under a number of headings.</p>
-
-<h3 id="type">Input checking</h3>
-
-<p>Some obvious checks are done first, such as syntax checking of the grammar,
-and checking that each rule name is defined exactly once.</p>
-
-<p>A grammar is then checked to see if it represents a text parser or a token
-parser. A text parser must contain no tags. A token parser must not contain text
-matchers, i.e. strings, dividers, sets, ranges or numbers.</p>
-
-<p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
-there is a check that there is a single code point either side of the
-<code>..</code> and that the range is non-empty. A range of the form
-<code>0..31</code> must also be non-empty.</p>
+<p>The main remaining checks are making sure that there is no left recursion,
+and that output items are handled consistently.</p>
 
 <h3 id="loop">Left recursion checking</h3>
 
@@ -1020,33 +1020,55 @@ being matched, and therefore an infinite loop ensues.</p>
 
 <p>To implement the checks, four boolean properties of expressions
 <code>SP</code>, <code>SN</code>, <code>FP</code>, <code>FN</code> are
-calculated for each expression, in a very similar way to PEG grammars. The
-<code>SP</code>, <code>SN</code> properties mean the expression can succeed with
-or without progress being made in the input, and <code>FP</code>,
-<code>FN</code> mean that an expression can fail, with or without progress. The
-way these are calculated for the core features of grammars (using
-<code>&amp;</code> for 'and' and <code>|</code> for 'or', with
-<code>&amp;</code> binding tighter) are:</p>
+calculated for each expression. The <code>SP</code>, <code>SN</code> properties
+mean the expression can succeed with or without progress being made in the
+input, and <code>FP</code>, <code>FN</code> mean that an expression can fail,
+with or without progress. These are very similar way to the properties used in
+the analysis of PEG grammars, though there <code>FP</code> and <code>FN</code>
+are not distinguished.</p>
 
-<pre>SN("") = true;
-SP("") = FP("") = FN("") = false
+<p>As well as the equivalences already mentioned, there are further parsing
+expressions which are equivalent from the point of view of success or failure,
+and progress or not:</p>
 
-SP("a") = FN("a") = true;
-SN("a") = FP("a") = false
+<pre>%a          &#8801;  "a"
+@2a, @a, @  &#8801;  ""
+#a          &#8801;  ""
+</pre>
 
-SN(x y) = SN(x) &amp; SN(y);
-SP(x y) = SP(x) &amp; SP(y) | SP(x) &amp; SN(y) | SN(x) &amp; SP(y);
-FN(x y) = FN(x) | SN(x) &amp; FN(y);
-FP(x y) = FP(x) | SN(x) &amp; FP(y) | SP(x) &amp; FN(y) | SP(x) &amp; FP(y);
+<p>The way the properties are calculated for the remaining features of grammars
+(using <code>&amp;</code> for 'and' and <code>|</code> for 'or', with
+<code>&amp;</code> binding tighter, and using <code>def(id)</code> for the right
+hand expression of a rule for identifier <code>id</code>) are:</p>
 
-SN(x/y) = SN(x) | FN(x) &amp; SN(y);
-SP(x/y) = SP(x) | FN(x) &amp; SP(y);
-FN(x/y) = FN(x) &amp; FN(y);
-FP(x/y) = FP(x) | FN(x) &amp; FP(y);
+<pre>SN(id) = SN(def(id))
+SP(id) = SP(def(id))
+FN(id) = FN(def(id))
+FP(id) = FP(def(id))
 
-SN(x!) = FN(x) | FP(x);
+SN("") = true
+SP("") = false
+FP("") = false
+FN("") = false
+
+SP("a") = true
+FN("a") = true
+SN("a") = false
+FP("a") = false
+
+SN(x y) = SN(x) &amp; SN(y)
+SP(x y) = SP(x) &amp; SP(y) | SP(x) &amp; SN(y) | SN(x) &amp; SP(y)
+FN(x y) = FN(x) | SN(x) &amp; FN(y)
+FP(x y) = FP(x) | SN(x) &amp; FP(y) | SP(x) &amp; FN(y) | SP(x) &amp; FP(y)
+
+SN(x/y) = SN(x) | FN(x) &amp; SN(y)
+SP(x/y) = SP(x) | FN(x) &amp; SP(y)
+FN(x/y) = FN(x) &amp; FN(y)
+FP(x/y) = FP(x) | FN(x) &amp; FP(y)
+
+SN(x!) = FN(x) | FP(x)
 SP(x!) = false
-FN(x!) = SN(x) | SP(x);
+FN(x!) = SN(x) | SP(x)
 FP(x!) = false
 </pre>
 
@@ -1059,7 +1081,8 @@ from <code>false</code> to <code>true</code>, so the iteration terminates.</p>
 calculated to check that the grammar is well formed. The <code>WF</code>
 property is calculated (using <code>~</code> for 'not') by:</p>
 
-<pre>WF("") = true
+<pre>WF(id) = WF(def(id))
+WF("") = true
 WF("a") = true
 WF(x y) = WF(x) &amp; (~SN(x) | WF(y))
 WF(x / y) = WF(x) &amp; WF(y)
@@ -1069,7 +1092,6 @@ WF(x!) = WF(x)
 <p>If <code>WF</code> turns out to be false for any expression, that expression
 is reported as an error because it contains left recursion.</p>
 
-<hr/>
 <!--
 <h3 id="token">Token checking</h3>
 
@@ -1169,14 +1191,30 @@ the stack. It can be repeated any number of times, still with a zero net effect,
 and so the <code>tokens</code> rule can be deduced to have zero net effect on
 the stack.</p>
 
-<p>A second check is that the stack never underflows. For example:</p>
+<p>As well as repeated expressions, recursion is restricted so that the number
+of output items produced is fixed. For example:</p>
 
-<pre>example = "1" @n @2add
+<pre>x = 'a' x @a
 </pre>
 
-<p>Here, when the <code>add</code> action is reached, there is only one output
-item on the stack, whereas two previous output items are supposed to be passed
-to <code>add</code>, so an error is reported.</p>
+<p>Here, the number of items pushed onto the stack depends on the number of
+times <code>x</code> calls itself recursively. So this is reported as an
+error.</p>
+
+<p>A second check is that the stack never underflows. To check this, for each
+expression, the number of items which need to be on the stack when the
+expression is executed is calculated. For example, the expression
+<code>('0'..'9')+ @1token</code> needs one item to be on the stack. Any rule
+used as an entry point into the grammar should not need any items on the stack.
+There are situations where the needed number can't be calculated, for
+example:</p>
+
+<pre>x = 'a' / 'b' @2c x @d
+</pre>
+
+<p>Every time <code>x</code> calls itself recursively, one more item is needed
+on the stack, even though the net effect of <code>x</code> is zero. Such a
+situation is reported as an error.</p>
 
 <p>To implement these checks, Pecan calculates the overall number of items added
 to the stack, possibly negative, for each expression in the grammar. It also
@@ -1281,8 +1319,9 @@ actions and error handling as appropriate.</p>
 
 <h3 id="code">Bytecode</h3>
 
-<p>Examples are given in this section of how every construct is translated into
-bytecode:</p>
+<p>The bytecode produced from a grammar is a fairly simple flattening of the
+parse tree for the grammar. Examples are given in this section of how every
+construct is translated into bytecode:</p>
 
 <pre>{id = x}    =   START, nx, {x}, STOP
 </pre>

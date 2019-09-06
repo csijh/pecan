@@ -87,7 +87,7 @@ static inline void doActs(parser *s) {
     for (int i = 0; i < s->out; i = i + 2) {
         int a = s->actions[i];
         int oldIn = s->actions[i+1];
-        s->arg = s->act(s->arg, a, oldIn - s->start, &s->input[s->start]);
+        if (a != -1) s->act(s->arg, a, oldIn - s->start, &s->input[s->start]);
         s->start = oldIn;
     }
     s->out = 0;
@@ -120,6 +120,7 @@ static inline void doSTART(parser *s, int arg) {
 static inline void doSTOP(parser *s, err *e) {
     if (s->ok && s->out > 0) doActs(s);
     if (s->ok || s->in > s->marked) s->markers = 0L;
+    e->input = s->input;
     e->ok = s->ok;
     e->at = s->in;
     e->markers = s->markers;
@@ -252,9 +253,11 @@ static inline void doNOT(parser *s) {
 }
 
 // {@}  =  DROP
-// Discard input and return.
+// Delay the drop, using action code -1.
 static inline void doDROP(parser *s) {
-    s->start = s->in;
+    s->actions[s->out++] = -1;
+    s->actions[s->out++] = s->in;
+    s->ok = true;
     s->pc = s->stack[--s->top];
 }
 
@@ -270,7 +273,7 @@ static inline void doACT(parser *s, int arg) {
 // {#item}  =  MARK, item
 // Record an error marker. Assume 0 <= arg <= 62.
 static inline void doMARK(parser *s, int arg) {
-    if (s->look = 0) {
+    if (s->look == 0) {
         if (s->in > s->marked) {
             s->marked = s->in;
             s->markers = 0L;
@@ -436,6 +439,15 @@ void parse(int n, byte c[], byte in[], doNext *f, doAct *g, void *x, err *e) {
     execute(s, e);
 }
 
+static void reportLine(err *e) {
+    fprintf(stderr, "%.*s\n", e->end - e->start, e->input + e->start);
+}
+
+static void reportColumn(err *e) {
+    for (int i = 0; i < e->column; i++) fprintf(stderr, " ");
+    fprintf(stderr, "^\n");
+}
+
 void report(err *e, char *s, char *s1, char *s2, char *s3, char *names[]) {
     if (e->markers == 0L) { fprintf(stderr, "%s", s); }
     else {
@@ -449,28 +461,23 @@ void report(err *e, char *s, char *s1, char *s2, char *s3, char *names[]) {
         }
         fprintf(stderr, "%s", s3);
     }
-}
-
-void reportLine(err *e, char *input) {
-    fprintf(stderr, "%.*s\n", e->end - e->start, input + e->start);
-}
-
-void reportColumn(err *e) {
-    for (int i = 0; i < e->column; i++) fprintf(stderr, " ");
-    fprintf(stderr, "^\n");
+    reportLine(e);
+    reportColumn(e);
 }
 
 #ifdef TEST
 
+// The examples in the calculator tutorial are used as self-tests.
+
 #include <assert.h>
 #include <string.h>
 enum action { number = 0, add = 1, subtract = 2, multiply = 3, divide = 4 };
-enum marker { digit, operator, bracket, newline };
+enum marker { digit, operator, bracket, newline, space };
 struct state { int n; char output[100]; };
 typedef struct state state;
 
 // Store actions symbolically.
-static void act(void *vs, int a, char *matched, int n) {
+static void act(void *vs, int a, int n, char matched[n]) {
     state *s = vs;
     s->output[s->n++] = "#+-*/"[a];
     if (a == number) for (int i = 0; i < n; i++) {
@@ -566,6 +573,178 @@ static byte calc11[] = {
     BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH,
     2, STRING1, 10, AND, DROP, STOP
 };
+// sum = number (plus number @2add / minus number @2subtract)* end
+// number = digit+ @number
+// plus = #operator '+' @
+// minus = #operator '-' @
+// digit = #digit '0..9'
+// end = #newline 13? 10 @
+static byte calc12[] = {
+    START, 39, BOTH, 2, GO, 38, AND, BOTH, 29, MAYBE, MANY, EITHER, 12, BOTH, 2,
+    GO, 41, AND, BOTH, 2, GO, 22, AND, ACT, add, OR, BOTH, 2, GO, 42, AND, BOTH,
+    2, GO, 9, AND, ACT, subtract, AND, GO, 57, STOP, START, 11, BOTH, 6, DO,
+    AND, MAYBE, MANY, GO, 34, AND, ACT, number, STOP, START, 11, BOTH, 2, MARK,
+    operator, AND, BOTH, 2, SET1, 43, AND, DROP, STOP, START, 11, BOTH, 2, MARK,
+    operator, AND, BOTH, 2, SET1, 45, AND, DROP, STOP, START, 9, BOTH, 2, MARK,
+    digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 18, BOTH, 2, MARK, newline,
+    AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND,
+    DROP, STOP
+};
+// sum = term (plus term @2add / minus term @2subtract)* end
+// term = number (times number @2multiply / over number @2divide)*
+// number = digit+ @number
+// plus = #operator '+' @
+// minus = #operator '-' @
+// times = #operator '*' @
+// over = #operator '/' @
+// digit = #digit '0..9'
+// end = #newline 13? 10 @
+static byte calc13[] = {
+    START, 39, BOTH, 2, GO, 38, AND, BOTH, 29, MAYBE, MANY, EITHER, 12, BOTH, 2,
+    GO, 78, AND, BOTH, 2, GO, 22, AND, ACT, add, OR, BOTH, 2, GO, 79, AND, BOTH,
+    2, GO, 9, AND, ACT, subtract, AND, GO, 122, STOP, START, 34, BOTH, 2, GO,
+    33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 66, AND, BOTH, 2, GO, 19,
+    AND, ACT, multiply, OR, BOTH, 2, GO, 67, AND, BOTH, 2, GO, 6, AND, ACT,
+    divide, STOP, START, 11, BOTH, 6, DO, AND, MAYBE, MANY, GO, 62, AND, ACT,
+    number, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 43,
+    AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 45,
+    AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 42,
+    AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND, BOTH, 2, SET1, 47,
+    AND, DROP, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1, 48, HIGH1, 57,
+    STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1,
+    13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+};
+// sum = term (plus term @2add / minus term @2subtract)* end
+// term = atom (times atom @2multiply / over atom @2divide)*
+// atom = number / open sum close
+// number = digit+ @number
+// plus = #operator '+' @
+// minus = #operator '-' @
+// times = #operator '*' @
+// open = #bracket '(' @
+// over = #operator '/' @
+// close = #bracket ')' @
+// digit = #digit '0..9'
+// end = #newline 13? 10 @
+static byte calc14[] = {
+    START, 39, BOTH, 2, GO, 38, AND, BOTH, 29, MAYBE, MANY, EITHER, 12, BOTH, 2,
+    GO, 98, AND, BOTH, 2, GO, 22, AND, ACT, add, OR, BOTH, 2, GO, 99, AND, BOTH,
+    2, GO, 9, AND, ACT, subtract, AND, GO, 170, STOP, START, 34, BOTH, 2, GO,
+    33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 86, AND, BOTH, 2, GO, 19,
+    AND, ACT, multiply, OR, BOTH, 2, GO, 87, AND, BOTH, 2, GO, 6, AND, ACT,
+    divide, STOP, START, 17, EITHER, 2, GO, 16, OR, BOTH, 2, GO, 81, AND, BOTH,
+    2, BACK, 93, AND, GO, 87, STOP, START, 11, BOTH, 6, DO, AND, MAYBE, MANY,
+    GO, 90, AND, ACT, number, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+    BOTH, 2, SET1, 43, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+    BOTH, 2, SET1, 45, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+    BOTH, 2, SET1, 42, AND, DROP, STOP, START, 11, BOTH, 2, MARK, operator, AND,
+    BOTH, 2, SET1, 47, AND, DROP, STOP, START, 11, BOTH, 2, MARK, bracket, AND,
+    BOTH, 2, SET1, 40, AND, DROP, STOP, START, 11, BOTH, 2, MARK, bracket, AND,
+    BOTH, 2, SET1, 41, AND, DROP, STOP, START, 9, BOTH, 2, MARK, digit, AND,
+    LOW1, 48, HIGH1, 57, STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4,
+    MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+};
+// sum = expression end
+// expression = term (plus term @2add / minus term @2subtract)*
+// term = atom (times atom @2multiply / over atom @2divide)*
+// atom = number / open expression close
+// number = digit+ @number
+// plus = #operator '+' @
+// minus = #operator '-' @
+// times = #operator '*' @
+// over = #operator '/' @
+// open = #bracket '(' @
+// close = #bracket ')' @
+// digit = #digit '0..9'
+// end = #newline 13? 10 @
+static byte calc15[] = {
+    START, 7, BOTH, 2, GO, 6, AND, GO, 207, STOP, START, 34, BOTH, 2, GO, 33,
+    AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 95, AND, BOTH, 2, GO, 19, AND,
+    ACT, add, OR, BOTH, 2, GO, 96, AND, BOTH, 2, GO, 6, AND, ACT, subtract,
+    STOP, START, 34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO,
+    86, AND, BOTH, 2, GO, 19, AND, ACT, multiply, OR, BOTH, 2, GO, 87, AND,
+    BOTH, 2, GO, 6, AND, ACT, divide, STOP, START, 17, EITHER, 2, GO, 16, OR,
+    BOTH, 2, GO, 81, AND, BOTH, 2, BACK, 88, AND, GO, 87, STOP, START, 11, BOTH,
+    6, DO, AND, MAYBE, MANY, GO, 90, AND, ACT, number, STOP, START, 11, BOTH, 2,
+    MARK, operator, AND, BOTH, 2, SET1, 43, AND, DROP, STOP, START, 11, BOTH, 2,
+    MARK, operator, AND, BOTH, 2, SET1, 45, AND, DROP, STOP, START, 11, BOTH, 2,
+    MARK, operator, AND, BOTH, 2, SET1, 42, AND, DROP, STOP, START, 11, BOTH, 2,
+    MARK, operator, AND, BOTH, 2, SET1, 47, AND, DROP, STOP, START, 11, BOTH, 2,
+    MARK, bracket, AND, BOTH, 2, SET1, 40, AND, DROP, STOP, START, 11, BOTH, 2,
+    MARK, bracket, AND, BOTH, 2, SET1, 41, AND, DROP, STOP, START, 9, BOTH, 2,
+    MARK, digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 18, BOTH, 2, MARK,
+    newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10,
+    AND, DROP, STOP
+};
+// sum = gap expression end
+// expression = term (plus term @2add / minus term @2subtract)*
+// term = atom (times atom @2multiply / over atom @2divide)*
+// atom = number / open expression close
+// number = digit+ @number gap
+// plus = #operator '+' gap
+// minus = #operator '-' gap
+// times = #operator '*' gap
+// over = #operator '/' gap
+// open = #bracket '(' gap
+// close = #bracket ')' gap
+// digit = #digit '0..9'
+// gap = (#space ' ')* @
+// end = #newline 13? 10 @
+static byte calc16a[] = {
+    START, 12, BOTH, 2, GO, 226, AND, BOTH, 2, GO, 6, AND, GO, 234, STOP, START,
+    34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
+    BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
+    AND, ACT, subtract, STOP, START, 34, BOTH, 2, GO, 33, AND, MAYBE, MANY,
+    EITHER, 12, BOTH, 2, GO, 93, AND, BOTH, 2, GO, 19, AND, ACT, multiply, OR,
+    BOTH, 2, GO, 95, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP, START, 17,
+    EITHER, 2, GO, 16, OR, BOTH, 2, GO, 90, AND, BOTH, 2, BACK, 88, AND, GO, 97,
+    STOP, START, 16, BOTH, 6, DO, AND, MAYBE, MANY, GO, 101, AND, BOTH, 2, ACT,
+    number, AND, GO, 105, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH,
+    2, SET1, 43, AND, GO, 90, STOP, START, 12, BOTH, 2, MARK, operator, AND,
+    BOTH, 2, SET1, 45, AND, GO, 75, STOP, START, 12, BOTH, 2, MARK, operator,
+    AND, BOTH, 2, SET1, 42, AND, GO, 60, STOP, START, 12, BOTH, 2, MARK,
+    operator, AND, BOTH, 2, SET1, 47, AND, GO, 45, STOP, START, 12, BOTH, 2,
+    MARK, bracket, AND, BOTH, 2, SET1, 40, AND, GO, 30, STOP, START, 12, BOTH,
+    2, MARK, bracket, AND, BOTH, 2, SET1, 41, AND, GO, 15, STOP, START, 9, BOTH,
+    2, MARK, digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 13, BOTH, 9, MAYBE,
+    MANY, BOTH, 2, MARK, space, AND, SET1, 32, AND, DROP, STOP, START, 18, BOTH,
+    2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2,
+    STRING1, 10, AND, DROP, STOP
+};
+// sum = gap expression end
+// expression = term (plus term @2add / minus term @2subtract)*
+// term = atom (times atom @2multiply / over atom @2divide)*
+// atom = number / open expression close
+// number = digit+ @number gap
+// plus = #operator '+' gap
+// minus = #operator '-' gap
+// times = #operator '*' gap
+// over = #operator '/' gap
+// open = #bracket '(' gap
+// close = #bracket ')' gap
+// digit = #digit '0..9'
+// gap = (' ')* @
+// end = #newline 13? 10 @
+static byte calc16b[] = {
+    START, 12, BOTH, 2, GO, 226, AND, BOTH, 2, GO, 6, AND, GO, 229, STOP, START,
+    34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
+    BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
+    AND, ACT, subtract, STOP, START, 34, BOTH, 2, GO, 33, AND, MAYBE, MANY,
+    EITHER, 12, BOTH, 2, GO, 93, AND, BOTH, 2, GO, 19, AND, ACT, multiply, OR,
+    BOTH, 2, GO, 95, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP, START, 17,
+    EITHER, 2, GO, 16, OR, BOTH, 2, GO, 90, AND, BOTH, 2, BACK, 88, AND, GO, 97,
+    STOP, START, 16, BOTH, 6, DO, AND, MAYBE, MANY, GO, 101, AND, BOTH, 2, ACT,
+    number, AND, GO, 105, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH,
+    2, SET1, 43, AND, GO, 90, STOP, START, 12, BOTH, 2, MARK, operator, AND,
+    BOTH, 2, SET1, 45, AND, GO, 75, STOP, START, 12, BOTH, 2, MARK, operator,
+    AND, BOTH, 2, SET1, 42, AND, GO, 60, STOP, START, 12, BOTH, 2, MARK,
+    operator, AND, BOTH, 2, SET1, 47, AND, GO, 45, STOP, START, 12, BOTH, 2,
+    MARK, bracket, AND, BOTH, 2, SET1, 40, AND, GO, 30, STOP, START, 12, BOTH,
+    2, MARK, bracket, AND, BOTH, 2, SET1, 41, AND, GO, 15, STOP, START, 9, BOTH,
+    2, MARK, digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 8, BOTH, 4, MAYBE,
+    MANY, SET1, 32, AND, DROP, STOP, START, 18, BOTH, 2, MARK, newline, AND,
+    BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+};
 
 static bool run(state *s, byte *code, char *input, char *output) {
     err eData;
@@ -608,6 +787,25 @@ int main() {
     assert(run(s, calc10, "2+10+12+18\n", "#2#10+#12+#18+"));
     assert(run(s, calc10, "2-10+53-3\n", "#2#10-#53+#3-"));
     assert(run(s, calc11, "2-10+53-3\n", "#2#10-#53+#3-"));
+    assert(run(s, calc12, "2-10+53-3\n", "#2#10-#53+#3-"));
+    assert(run(s, calc12, "2+\n", "#2E2:1"));
+    assert(run(s, calc12, "2+40%\n", "#2E4:b"));
+    assert(run(s, calc13, "5*8+12/6\n", "#5#8*#12#6/+"));
+    assert(run(s, calc14, "2*(20+1)\n", "#2#20E7:b"));
+    assert(run(s, calc15, "2*(20+1)\n", "#2#20#1+*"));
+    assert(run(s, calc16a, "2\n", "#2"));
+    assert(run(s, calc16a, "2+\n", "#2E2:15"));
+    assert(run(s, calc16b, "2\n", "#2"));
+    assert(run(s, calc16b, "42\n", "#42"));
+    assert(run(s, calc16b, "2+40\n", "#2#40+"));
+    assert(run(s, calc16b, "2+40%\n", "#2E4:b"));
+    assert(run(s, calc16b, "2+10+12+18\n", "#2#10+#12+#18+"));
+    assert(run(s, calc16b, "2-10+53-3\n", "#2#10-#53+#3-"));
+    assert(run(s, calc16b, "2+\n", "#2E2:5"));
+    assert(run(s, calc16b, "5*8+12/6\n", "#5#8*#12#6/+"));
+    assert(run(s, calc16b, "2*(20+1)\n", "#2#20#1+*"));
+    assert(run(s, calc16b, " 2 * ( 20 + 1 ) \n", "#2#20#1+*"));
+    printf("Parser OK\n");
 }
 
 #endif

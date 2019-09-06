@@ -7,7 +7,7 @@ Rule x 1,0
     Act @Id 1,0
     Drop @ 0,0
 ==========
-// Well-formed but non-terminating grammar
+// Well-formed but 'non-terminating' grammar
 x = 'a' x @b
 ----------
 Error on line 2: unable to calculate number of output items produced
@@ -15,10 +15,10 @@ x = 'a' x @b
 ^
 ==========
 // Low water mark continually decreasing
-x = 'a' @a / 'b' @2c x @d
+x = 'a' / 'b' @2c x @d
 ----------
 Error on line 2: outputs may underflow
-x = 'a' @a / 'b' @2c x @d
+x = 'a' / 'b' @2c x @d
 ^
 ==========
 // Choice

@@ -73,6 +73,8 @@ class Run {
             System.err.println("Error: can't read " + sourcefile + ": " + e);
             System.exit(1);
         }
+        int n = grammar.indexOf("===");
+        if (n >= 0) grammar = grammar.substring(0, n);
         Generator gen = new Generator();
         String code = gen.run(grammar);
         if (code.startsWith("ERR:")) {

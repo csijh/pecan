@@ -20,3 +20,6 @@ Run = pecan/Run.java $(Evaluator)
 
 Run: pecan/Run.java
 	javac pecan/Run.java
+
+jar: pecan/Run.class
+	jar -cef pecan.Run pecan.jar pecan
