@@ -14,23 +14,23 @@ static byte code[] = {
 // </pecan>
 };
 
-// Stack structure to hold numbers during calculations.
-struct stack { int top; int items[100]; };
-typedef struct stack stack;
+// Structure to hold input and stack of output numbers during calculations.
+struct state { char *input; int top; int stack[100]; };
+typedef struct state state;
 
 // Stack operations.
-static inline void new(stack *s) { s->top = 0; }
-static inline void push(stack *s, int n) { s->items[s->top++] = n; }
-static inline int pop(stack *s) { return s->items[--s->top]; }
+static inline void new(state *s, char *in) { s->input = in; s->top = 0; }
+static inline void push(state *s, int n) { s->stack[s->top++] = n; }
+static inline int pop(state *s) { return s->stack[--s->top]; }
 
 // Carry out an action.
-static inline void act(void *vs, int a, int n, char matched[n]) {
-    stack *s = vs;
+static inline void act(void *vs, int a, int p, int n) {
+    state *s = vs;
     int x, y;
     switch (a) {
         case number:
             x = 0;
-            for (int i = 0; i < n; i++) x = x * 10 + (matched[i] - '0');
+            for (int i = 0; i < n; i++) x = x * 10 + (s->input[p + i] - '0');
             push(s, x); break;
         case add: y = pop(s); x = pop(s); push(s, x + y); break;
         case subtract: y = pop(s); x = pop(s); push(s, x - y); break;
@@ -42,11 +42,11 @@ static inline void act(void *vs, int a, int n, char matched[n]) {
 int main() {
     char input[100];
     fgets(input, 100, stdin);
-    stack sData;
-    stack *s = &sData;
+    state sData;
+    state *s = &sData;
     result rData;
     result *r = &rData;
-    new(s);
+    new(s, input);
     parseC(code, input, act, s, r);
     if (r->ok) printf("%d\n", pop(s));
     else report(r, "Syntax error:\n", "Error: expecting ", ", ", "\n", names);

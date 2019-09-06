@@ -17,9 +17,15 @@ enum op {
     OP1 = START, OP2 = GOL
 };
 
-// The type of a function to perform an output action. It is passed the output
-// state, the action code, and the characters most recently matched.
-typedef void doAct(void *state, int a, int n, char s[n]);
+// Unicode category codes, in the same order as Java, using unused 17 for Uc.
+enum category {
+    Cn, Lu, Ll, Lt, Lm, Lo, Mn, Me, Mc, Nd, Nl, No, Zs, Zl, Zp, Cc,
+    Cf, Uc, Co, Cs, Pd, Ps, Pe, Pc, Po, Sm, Sc, Sk, So, Pi, Pf
+};
+
+// The type of functions to perform output actions. They take the state, the
+// action code, and the position and number of items most recently matched.
+typedef void doAct(void *state, int a, int p, int n);
 
 // The type of a function to get the tag of a token.
 typedef int doTag(void *token);

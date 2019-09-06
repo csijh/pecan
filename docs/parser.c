@@ -52,276 +52,276 @@ typedef struct parser parser;
 
 // Initialize the parsing state.
 static void new(
-    parser *s, byte c[], byte i[], void **t, doTag *tag, doAct *act, void *arg)
+    parser *p, byte c[], byte i[], void **t, doTag *tag, doAct *act, void *arg)
 {
-    s->code = c;
-    s->input = i;
-    s->tokens = t;
-    s->pc = s->start = s->in = s->marked = 0;
-    s->markers = 0L;
-    s->ok = false;
-    s->act = act;
-    s->arg = arg;
-    s->tag = tag;
-    s->look = s->top = s->out = 0;
+    p->code = c;
+    p->input = i;
+    p->tokens = t;
+    p->pc = p->start = p->in = p->marked = 0;
+    p->markers = 0L;
+    p->ok = false;
+    p->act = act;
+    p->arg = arg;
+    p->tag = tag;
+    p->look = p->top = p->out = 0;
 }
 
 // Carry out any delayed actions.
-static inline void doActs(parser *s) {
-    for (int i = 0; i < s->out; i = i + 2) {
-        int a = s->actions[i];
-        int oldIn = s->actions[i+1];
-        if (a != -1) s->act(s->arg, a, oldIn - s->start, &s->input[s->start]);
-        s->start = oldIn;
+static inline void doActs(parser *p) {
+    for (int i = 0; i < p->out; i = i + 2) {
+        int a = p->actions[i];
+        int oldIn = p->actions[i+1];
+        if (a != -1) p->act(p->arg, a, p->start, oldIn - p->start);
+        p->start = oldIn;
     }
-    s->out = 0;
+    p->out = 0;
 }
 
 // Find the line/column and start/end of line containing an input position.
-static void findLine(parser *s, result *r, int p) {
+static void findLine(parser *p, result *r, int at) {
     r->line = 1;
     r->start = 0;
     for (int i = 0; ; i++) {
-        byte b = s->input[i];
+        byte b = p->input[i];
         if (b == '\0') { r->end = i; break; }
         if (b != '\n') continue;
         r->line++;
-        if (i + 1 <= p) r->start = i + 1;
+        if (i + 1 <= at) r->start = i + 1;
         else { r->end = i; break; }
     }
-    r->column = p - r->start;
+    r->column = at - r->start;
 }
 
 // {id = x}  =  START, nx, {x}, STOP
 // Call {x} returning to STOP.
-static inline void doSTART(parser *s, int arg) {
-    s->stack[s->top++] = s->pc + arg;
+static inline void doSTART(parser *p, int arg) {
+    p->stack[p->top++] = p->pc + arg;
 }
 
 // {id = x}  =  ... STOP
 // Carry out any outstanding delayed actions. Return NULL for success, or an
 // error report containing a bitmap of markers.
-static inline void doSTOP(parser *s, result *r) {
-    if (s->ok && s->out > 0) doActs(s);
-    if (s->ok || s->in > s->marked) s->markers = 0L;
-    r->input = s->input;
-    r->ok = s->ok;
-    r->at = s->in;
-    r->markers = s->markers;
-    if (! s->ok) findLine(s, r, s->in);
+static inline void doSTOP(parser *p, result *r) {
+    if (p->ok && p->out > 0) doActs(p);
+    if (p->ok || p->in > p->marked) p->markers = 0L;
+    r->input = p->input;
+    r->ok = p->ok;
+    r->at = p->in;
+    r->markers = p->markers;
+    if (! p->ok) findLine(p, r, p->in);
 }
 
 // {id}  =  GO, n   or   BACK, n
 // Skip forwards or backwards in the code, to tail-call a remote rule.
-static inline void doGO(parser *s, int arg) {
-    s->pc = s->pc + arg;
+static inline void doGO(parser *p, int arg) {
+    p->pc = p->pc + arg;
 }
 
 // {x / y}  =  EITHER, nx, {x}, OR, {y}
 // Save in/out, call x, returning to OR.
-static inline void doEITHER(parser *s, int arg) {
-    s->stack[s->top++] = s->in;
-    s->stack[s->top++] = s->out;
-    s->stack[s->top++] = s->pc + arg;
+static inline void doEITHER(parser *p, int arg) {
+    p->stack[p->top++] = p->in;
+    p->stack[p->top++] = p->out;
+    p->stack[p->top++] = p->pc + arg;
 }
 
 // {x / y}  =  EITHER, nx, {x}, OR, {y}
 // After x, check success and progress, return or continue with y.
-static inline void doOR(parser *s) {
-    int saveOut = s->stack[--s->top];
-    int saveIn = s->stack[--s->top];
-    if (s->ok || s->in > saveIn) s->pc = s->stack[--s->top];
-    else s->out = saveOut;
+static inline void doOR(parser *p) {
+    int saveOut = p->stack[--p->top];
+    int saveIn = p->stack[--p->top];
+    if (p->ok || p->in > saveIn) p->pc = p->stack[--p->top];
+    else p->out = saveOut;
 }
 
 // {x y}  =  BOTH, nx, {x}, AND, {y}
 // Call x, returning to AND.
-static inline void doBOTH(parser *s, int arg) {
-    s->stack[s->top++] = s->pc + arg;
+static inline void doBOTH(parser *p, int arg) {
+    p->stack[p->top++] = p->pc + arg;
 }
 
 // {x y}  =  ...AND, {y}
 // After x, check success, continue with y or return.
-static inline void doAND(parser *s) {
-    if (! s->ok) s->pc = s->stack[--s->top];
+static inline void doAND(parser *p) {
+    if (! p->ok) p->pc = p->stack[--p->top];
 }
 
 // {x?}  =  MAYBE, ONE, {x},   and similarly for x*, x+
 // Save in/out and call x, returning to ONE or MANY.
-static inline void doMAYBE(parser *s) {
-    s->stack[s->top++] = s->in;
-    s->stack[s->top++] = s->out;
-    s->stack[s->top++] = s->pc;
-    s->pc++;
+static inline void doMAYBE(parser *p) {
+    p->stack[p->top++] = p->in;
+    p->stack[p->top++] = p->out;
+    p->stack[p->top++] = p->pc;
+    p->pc++;
 }
 
 // {x?}  =  MAYBE, ONE, {x}
 // After x, check success or no progress and return.
-static inline void doONE(parser *s) {
-    int saveOut = s->stack[--s->top];
-    int saveIn = s->stack[--s->top];
-    if (! s->ok && s->in == saveIn) {
-        s->out = saveOut;
-        s->ok = true;
+static inline void doONE(parser *p) {
+    int saveOut = p->stack[--p->top];
+    int saveIn = p->stack[--p->top];
+    if (! p->ok && p->in == saveIn) {
+        p->out = saveOut;
+        p->ok = true;
     }
-    s->pc = s->stack[--s->top];
+    p->pc = p->stack[--p->top];
 }
 
 // {x*}  =  MAYBE, MANY, {x}
 // After x, check success and re-try x or return.
-static inline void doMANY(parser *s) {
-    int saveOut = s->stack[--s->top];
-    int saveIn = s->stack[--s->top];
-    if (s->ok) {
-        s->stack[s->top++] = s->in;
-        s->stack[s->top++] = s->out;
-        s->stack[s->top++] = s->pc - 1;
+static inline void doMANY(parser *p) {
+    int saveOut = p->stack[--p->top];
+    int saveIn = p->stack[--p->top];
+    if (p->ok) {
+        p->stack[p->top++] = p->in;
+        p->stack[p->top++] = p->out;
+        p->stack[p->top++] = p->pc - 1;
     }
     else {
-        if (! s->ok && s->in == saveIn) {
-            s->out = saveOut;
-            s->ok = true;
+        if (! p->ok && p->in == saveIn) {
+            p->out = saveOut;
+            p->ok = true;
         }
-        s->pc = s->stack[--s->top];
+        p->pc = p->stack[--p->top];
     }
 }
 
 // {x+}  =  DO, AND, MAYBE, MANY, {x}
 // Call x, returning to AND.
-static inline void doDO(parser *s) {
-    s->stack[s->top++] = s->pc;
-    s->pc = s->pc + 3;
+static inline void doDO(parser *p) {
+    p->stack[p->top++] = p->pc;
+    p->pc = p->pc + 3;
 }
 
 // {[x]}  =  LOOK, TRY, x,   and similarly for x& and x!
 // Save in/out and call x as a lookahead, returning to TRY or HAS or NOT.
-static inline void doLOOK(parser *s) {
-    s->stack[s->top++] = s->in;
-    s->stack[s->top++] = s->out;
-    s->look++;
-    s->stack[s->top++] = s->pc;
-    s->pc++;
+static inline void doLOOK(parser *p) {
+    p->stack[p->top++] = p->in;
+    p->stack[p->top++] = p->out;
+    p->look++;
+    p->stack[p->top++] = p->pc;
+    p->pc++;
 }
 
 // {[x]}  =  LOOK, TRY, x
 // Succeed and perform actions, or fail and discard them and backtrack.
-static inline void doTRY(parser *s) {
-    int saveOut = s->stack[--s->top];
-    int saveIn = s->stack[--s->top];
-    s->look--;
-    if (s->ok && s->look == 0 && s->out > 0) doActs(s);
-    else if (! s->ok) {
-        s->out = saveOut;
-        s->in = saveIn;
+static inline void doTRY(parser *p) {
+    int saveOut = p->stack[--p->top];
+    int saveIn = p->stack[--p->top];
+    p->look--;
+    if (p->ok && p->look == 0 && p->out > 0) doActs(p);
+    else if (! p->ok) {
+        p->out = saveOut;
+        p->in = saveIn;
     }
-    s->pc = s->stack[--s->top];
+    p->pc = p->stack[--p->top];
 }
 
 // {x&}  =  LOOK, HAS, x
 // After x, backtrack and return.
-static inline void doHAS(parser *s) {
-    s->out = s->stack[--s->top];
-    s->in = s->stack[--s->top];
-    s->look--;
-    s->pc = s->stack[--s->top];
+static inline void doHAS(parser *p) {
+    p->out = p->stack[--p->top];
+    p->in = p->stack[--p->top];
+    p->look--;
+    p->pc = p->stack[--p->top];
 }
 
 // {x!}  =  LOOK, NOT, x
 // After x, backtrack, invert the result, and return.
-static inline void doNOT(parser *s) {
-    s->out = s->stack[--s->top];
-    s->in = s->stack[--s->top];
-    s->look--;
-    s->ok = ! s->ok;
-    s->pc = s->stack[--s->top];
+static inline void doNOT(parser *p) {
+    p->out = p->stack[--p->top];
+    p->in = p->stack[--p->top];
+    p->look--;
+    p->ok = ! p->ok;
+    p->pc = p->stack[--p->top];
 }
 
 // {@}  =  DROP
 // Delay the drop, using action code -1.
-static inline void doDROP(parser *s) {
-    s->actions[s->out++] = -1;
-    s->actions[s->out++] = s->in;
-    s->ok = true;
-    s->pc = s->stack[--s->top];
+static inline void doDROP(parser *p) {
+    p->actions[p->out++] = -1;
+    p->actions[p->out++] = p->in;
+    p->ok = true;
+    p->pc = p->stack[--p->top];
 }
 
 // {@2add}  =  ACT, add
 // Delay the action and return success.
-static inline void doACT(parser *s, int arg) {
-    s->actions[s->out++] = arg;
-    s->actions[s->out++] = s->in;
-    s->ok = true;
-    s->pc = s->stack[--s->top];
+static inline void doACT(parser *p, int arg) {
+    p->actions[p->out++] = arg;
+    p->actions[p->out++] = p->in;
+    p->ok = true;
+    p->pc = p->stack[--p->top];
 }
 
 // {#item}  =  MARK, item
 // Record an error marker. Assume 0 <= arg <= 62.
-static inline void doMARK(parser *s, int arg) {
-    if (s->look == 0) {
-        if (s->in > s->marked) {
-            s->marked = s->in;
-            s->markers = 0L;
+static inline void doMARK(parser *p, int arg) {
+    if (p->look == 0) {
+        if (p->in > p->marked) {
+            p->marked = p->in;
+            p->markers = 0L;
         }
-        s->markers = s->markers | (1L << arg);
+        p->markers = p->markers | (1L << arg);
     }
-    s->ok = true;
-    s->pc = s->stack[--s->top];
+    p->ok = true;
+    p->pc = p->stack[--p->top];
 }
 
 // {"abc"}  =  STRING, 3, 'a', 'b', 'c'
 // Match string and return success or failure.
-static inline void doSTRING(parser *s, int arg) {
-    s->ok = true;
-    for (int i = 0; i < arg && s->ok; i++) {
-        byte b = s->input[s->in + i];
-        if (b == '\0' || b != s->code[s->pc + i]) s->ok = false;
+static inline void doSTRING(parser *p, int arg) {
+    p->ok = true;
+    for (int i = 0; i < arg && p->ok; i++) {
+        byte b = p->input[p->in + i];
+        if (b == '\0' || b != p->code[p->pc + i]) p->ok = false;
     }
-    if (s->ok) {
-        s->in = s->in + arg;
-        if (s->look == 0 && s->out > 0) doActs(s);
+    if (p->ok) {
+        p->in = p->in + arg;
+        if (p->look == 0 && p->out > 0) doActs(p);
     }
-    s->pc = s->stack[--s->top];
+    p->pc = p->stack[--p->top];
 }
 
 // {'a..z'}  =  LOW, n, 'a', HIGH, n, 'z'
 // Check >= 'a', continue with HIGH or return failure
-static inline void doLOW(parser *s, int arg) {
-    s->ok = true;
+static inline void doLOW(parser *p, int arg) {
+    p->ok = true;
     for (int i = 0; i < arg; i++) {
-        byte b = s->input[s->in + i];
-        if (b == '\0' || b < s->code[s->pc + i]) s->ok = false;
+        byte b = p->input[p->in + i];
+        if (b == '\0' || b < p->code[p->pc + i]) p->ok = false;
     }
-    if (s->ok) s->pc = s->pc + arg;
+    if (p->ok) p->pc = p->pc + arg;
     else {
-        s->pc = s->stack[--s->top];
+        p->pc = p->stack[--p->top];
     }
 }
 
 // {'a..z'}  =  ...HIGH, n, 'z'
 // Check <= 'z', return success or failure
-static inline void doHIGH(parser *s, int arg) {
-    s->ok = true;
+static inline void doHIGH(parser *p, int arg) {
+    p->ok = true;
     for (int i = 0; i < arg; i++) {
-        byte b = s->input[s->in + i];
-        if (b == '\0' || b > s->code[s->pc + i]) s->ok = false;
+        byte b = p->input[p->in + i];
+        if (b == '\0' || b > p->code[p->pc + i]) p->ok = false;
     }
-    if (s->ok) {
-        s->pc = s->pc + arg;
-        s->in = s->in + arg;
-        if (s->look == 0 && s->out > 0) doActs(s);
+    if (p->ok) {
+        p->pc = p->pc + arg;
+        p->in = p->in + arg;
+        if (p->look == 0 && p->out > 0) doActs(p);
     }
-    s->pc = s->stack[--s->top];
+    p->pc = p->stack[--p->top];
 }
 
 // {<abc>}  =  LESS, 3, 'a', 'b', 'c'
 // Check if input < "abc", return.
-static inline void doLESS(parser *s, int arg) {
-    s->ok = true;
+static inline void doLESS(parser *p, int arg) {
+    p->ok = true;
     for (int i = 0; i < arg; i++) {
-        byte b = s->input[s->in + i];
-        if (b == '\0' || b >= s->code[s->pc + i]) s->ok = false;
+        byte b = p->input[p->in + i];
+        if (b == '\0' || b >= p->code[p->pc + i]) p->ok = false;
     }
-    s->pc = s->stack[--s->top];
+    p->pc = p->stack[--p->top];
 }
 
 // Find the length of a UTF-8 character from its first byte.
@@ -334,42 +334,50 @@ static inline int length(byte first) {
 
 // {'abc'}  =  SET, 3, 'a', 'b', 'c'
 // Check for one of the characters in a set, and return.
-static inline void doSET(parser *s, int arg) {
-    s->ok = false;
+static inline void doSET(parser *p, int arg) {
+    p->ok = false;
     int n = 0;
-    for (int i = 0; i < arg && ! s->ok; ) {
-        byte b = s->code[s->in + i];
+    for (int i = 0; i < arg && ! p->ok; ) {
+        byte b = p->code[p->in + i];
         n = length(b);
         bool oki = true;
         for (int j = 0; j < n && oki; j++) {
-            if (s->input[s->in + j] != s->code[s->pc + i + j]) oki = false;
+            if (p->input[p->in + j] != p->code[p->pc + i + j]) oki = false;
         }
-        if (oki) s->ok = true;
+        if (oki) p->ok = true;
     }
-    if (s->ok) {
-        if (s->look == 0 && s->out > 0) doActs(s);
-        s->in = s->in + n;
+    if (p->ok) {
+        if (p->look == 0 && p->out > 0) doActs(p);
+        p->in = p->in + n;
     }
-    s->pc = s->stack[--s->top];
+    p->pc = p->stack[--p->top];
 }
 
 // {%t} == TAG, t
 // Check if tag of next token is t and return.
-static inline void doTAG(parser *s, int arg) {
+static inline void doTAG(parser *p, int arg) {
 }
 
-static inline void getOpArg(parser *s, int *op, int *arg) {
+// {Nd}  =  CAT, Nd
+// Check if next character is in given category.
+static inline void doCAT(parser *p, int arg) {
+    if (arg == Uc) { p->ok = (p->input[p->in] != '\0'); return; }
+
+
+}
+
+static inline void getOpArg(parser *p, int *op, int *arg) {
 #ifdef TRACE
-    int pc0 = s->pc;
+    int pc0 = p->pc;
 #endif
-    *op = s->code[s->pc++];
+    *op = p->code[p->pc++];
     *arg = 1;
     if (*op >= OP2) {
-        *arg = s->code[s->pc++];
-        *arg = (*arg << 8) | s->code[s->pc++];
+        *arg = p->code[p->pc++];
+        *arg = (*arg << 8) | p->code[p->pc++];
     }
     else if (*op >= OP1) {
-        *arg = s->code[s->pc++];
+        *arg = p->code[p->pc++];
     }
 #ifdef TRACE
     if (*op >= START) printf("%d: %s %d\n", pc0, opNames[*op], *arg);
@@ -377,36 +385,37 @@ static inline void getOpArg(parser *s, int *op, int *arg) {
 #endif
 }
 
-static void execute(parser *s, result *r) {
+static void execute(parser *p, result *r) {
     while (true) {
         int op, arg;
-        getOpArg(s, &op, &arg);
+        getOpArg(p, &op, &arg);
         switch (op) {
-            case START: doSTART(s, arg); break;
-            case STOP: doSTOP(s, r); return;
-            case GO: case GOL: doGO(s, arg); break;
-            case BACK: case BACKL: doGO(s, -arg); break;
-            case EITHER: doEITHER(s, arg); break;
-            case OR: doOR(s); break;
-            case BOTH: doBOTH(s, arg); break;
-            case AND: doAND(s); break;
-            case MAYBE: doMAYBE(s); break;
-            case ONE: doONE(s); break;
-            case MANY: doMANY(s); break;
-            case DO: doDO(s); break;
-            case LOOK: doLOOK(s); break;
-            case TRY: doTRY(s); break;
-            case HAS: doHAS(s); break;
-            case NOT: doNOT(s); break;
-            case DROP: doDROP(s); break;
-            case ACT: doACT(s, arg); break;
-            case MARK: doMARK(s, arg); break;
-            case STRING: case STRING1: case SET1: doSTRING(s, arg); break;
-            case LOW: case LOW1: doLOW(s, arg); break;
-            case HIGH: case HIGH1: doHIGH(s, arg); break;
-            case LESS: case LESS1: doLESS(s, arg); break;
-            case SET: doSET(s, arg); break;
-            case TAG: doTAG(s, arg); break;
+            case START: doSTART(p, arg); break;
+            case STOP: doSTOP(p, r); return;
+            case GO: case GOL: doGO(p, arg); break;
+            case BACK: case BACKL: doGO(p, -arg); break;
+            case EITHER: doEITHER(p, arg); break;
+            case OR: doOR(p); break;
+            case BOTH: doBOTH(p, arg); break;
+            case AND: doAND(p); break;
+            case MAYBE: doMAYBE(p); break;
+            case ONE: doONE(p); break;
+            case MANY: doMANY(p); break;
+            case DO: doDO(p); break;
+            case LOOK: doLOOK(p); break;
+            case TRY: doTRY(p); break;
+            case HAS: doHAS(p); break;
+            case NOT: doNOT(p); break;
+            case DROP: doDROP(p); break;
+            case ACT: doACT(p, arg); break;
+            case MARK: doMARK(p, arg); break;
+            case STRING: case STRING1: case SET1: doSTRING(p, arg); break;
+            case LOW: case LOW1: doLOW(p, arg); break;
+            case HIGH: case HIGH1: doHIGH(p, arg); break;
+            case LESS: case LESS1: doLESS(p, arg); break;
+            case SET: doSET(p, arg); break;
+            case TAG: doTAG(p, arg); break;
+            case CAT: doCAT(p, arg); break;
             default: printf("Bad op %d\n", op); exit(1);
         }
     }
@@ -417,16 +426,16 @@ static void execute(parser *s, result *r) {
 // with local variables, containing a giant switch statement.
 void parseC(byte code[], byte in[], doAct *f, void *x, result *r) {
     parser pData;
-    parser *s = &pData;
-    new(s, code, in, NULL, NULL, f, x);
-    execute(s, r);
+    parser *p = &pData;
+    new(p, code, in, NULL, NULL, f, x);
+    execute(p, r);
 }
 
 void parseT(byte code[], void *in[], doTag *g, doAct *f, void *x, result *r) {
     parser pData;
-    parser *s = &pData;
-    new(s, code, NULL, in, g, f, x);
-    execute(s, r);
+    parser *p = &pData;
+    new(p, code, NULL, in, g, f, x);
+    execute(p, r);
 }
 
 static void reportLine(result *r) {
@@ -463,15 +472,15 @@ void report(result *r, char *s, char *s1, char *s2, char *s3, char *names[]) {
 #include <string.h>
 enum action { number = 0, add = 1, subtract = 2, multiply = 3, divide = 4 };
 enum marker { digit, operator, bracket, newline, space };
-struct state { int n; char output[100]; };
+struct state { char *input; int n; char output[100]; };
 typedef struct state state;
 
 // Store actions symbolically.
-static void act(void *vs, int a, int n, char matched[n]) {
+static void act(void *vs, int a, int p, int n) {
     state *s = vs;
     s->output[s->n++] = "#+-*/"[a];
     if (a == number) for (int i = 0; i < n; i++) {
-        s->output[s->n++] = matched[i];
+        s->output[s->n++] = s->input[p + i];
     }
 }
 
@@ -739,6 +748,7 @@ static byte calc17[] = {
 static bool run(state *s, byte *code, char *input, char *output) {
     result rData;
     result *r = &rData;
+    s->input = input;
     s->n = 0;
     parseC(code, input, act, s, r);
     s->output[s->n] = '\0';

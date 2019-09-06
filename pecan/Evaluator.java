@@ -329,8 +329,7 @@ public class Evaluator implements Testable {
             ok = c == cat || cat == Category.Uc;
             if (ok) {
                 if (lookahead == 0 && out > 0) takeActions();
-                int n = Character.charCount(ch);
-                in += n;
+                in += Character.charCount(ch);
                 if (tracing) traceInput();
             }
         }

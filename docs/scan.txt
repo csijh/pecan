@@ -1,0 +1,12 @@
+tokens = gap @tokens token* end
+token = number / plus / minus / times / over / open / close / bad
+number = ('0..9')+ @1number gap
+plus = '+' @1plus gap
+minus = '-' @1minus gap
+times = '*' @1times gap
+over = '/' @1over gap
+open = '(' @1open gap
+close = ')' @1close gap
+bad = (13 / 10)! Uc @1bad
+end = 13? 10 @ @1end / @1bad
+gap = (' ')* @

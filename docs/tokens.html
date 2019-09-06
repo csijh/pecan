@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
+<head>
+<title>Pecan Tutorial</title>
+<style> pre, .indent { margin-left:40px; } </style>
+</head>
+<body>
+
+<img src="pecan.png" width="300" height="65" />
+<hr/>
+
+<h1>Tokens and trees</h1>
+
+<p>In this tutorial, the calculator example will be changed in two ways. First,
+a scanner will be defined separately from the parser, so that the parser works
+with tokens. Second, the program produced will generate a parse tree from an
+arithmetic expression and print it out, rather than calculate its value. The
+example will thus be closer to what is needed for practical parsing in larger
+scale situations such as compilers for programming languages.</p>
+
+<h3>A grammar for the scanner</h3>
+
+<p>Rather than show the development of a grammar for the scanner step by step,
+we will just present the final result:</p>
+
+<pre>tokens = gap @tokens token* end
+token = number / plus / minus / times / over / open / close / bad
+number = ('0..9')+ @1number gap
+plus = '+' @1plus gap
+minus = '-' @1minus gap
+times = '*' @1times gap
+over = '/' @1over gap
+open = '(' @1open gap
+close = ')' @1close gap
+bad = (13 / 10)! Uc @1bad
+end = 13? 10 @ @1end / @1bad
+gap = (' ')* @
+</pre>
+
+<p>The grammar recognises a sequence of tokens, separated by spaces. There is a
+final <code>end</code> token, which can be convenient for recognising the last
+token in a token parser.</p>
+
+<p>There are no error markers. If an illegal character or lack of line ending is
+encountered, a token is created for it. That means the scanner never fails, and
+errors are passed on to the parser for reporting. A parse error early on in the
+text is thus reported in preference to a scan error later on, creating the
+illusion for the user that scanning and parsing are done together.</p>
+
+<p>One slight worry with this scanner is that the <code>token</code> rule, if
+handled naively, consists of a series of if-then-else tests, which could be
+inefficient. We will deal with this issue in the optimisation tutorial.</p>
+
+<p>In th previous tutorial, the grammar under development and its tests were
+stored in a single file. This time, the grammar is in one file and the tests are
+in a separate file:</p>
+
+<p class="indent"><a href="scan.txt">scan.txt</a><br/>
+<a href="scan-test.txt">scan-test.txt</a></p>
+
+<p>The test file begins with a line which specifies the grammar file. Running
+the tests through Pecan shows all is well:</p>
+
+<pre>pecan scan-test.txt
+Pass 10 tests.
+</pre>
+
+<p>The next task is to turn the grammar into a program.</p>
+
+<h3>The scanner</h3>
+
+</body>
+</html>

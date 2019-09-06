@@ -1,0 +1,97 @@
+scan.txt
+==========
+2
+----------
+tokens
+number 2
+end
+==========
+42
+----------
+tokens
+number 42
+end
+==========
+2+40
+----------
+tokens
+number 2
+plus +
+number 40
+end
+==========
+2+40%
+----------
+tokens
+number 2
+plus +
+number 40
+bad %
+end
+==========
+2+10+12+18
+----------
+tokens
+number 2
+plus +
+number 10
+plus +
+number 12
+plus +
+number 18
+end
+==========
+2-10+53-3
+----------
+tokens
+number 2
+minus -
+number 10
+plus +
+number 53
+minus -
+number 3
+end
+==========
+2+
+----------
+tokens
+number 2
+plus +
+end
+==========
+5*8+12/6
+----------
+tokens
+number 5
+times *
+number 8
+plus +
+number 12
+over /
+number 6
+end
+==========
+2*(20+1)
+----------
+tokens
+number 2
+times *
+open (
+number 20
+plus +
+number 1
+close )
+end
+==========
+ 2 * ( 20 + 1 )
+----------
+tokens
+number 2
+times *
+open (
+number 20
+plus +
+number 1
+close )
+end
