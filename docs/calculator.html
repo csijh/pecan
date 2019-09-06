@@ -2,7 +2,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
 <head>
 <title>Pecan Tutorial</title>
-<style> pre, .indent { margin-left:40px; } </style>
+<style>
+    pre, .indent { margin-left:40px; }
+    pre.pecan, code.pecan { color: #060; }
+</style>
 </head>
 <body>
 
@@ -186,11 +189,11 @@ Running the tests gives:</p>
 
 <pre>pecan sum.txt
 Fail test on line 12 of sum.txt:
-========== Expected ==========
+---------- Expected ----------
 number 2
 number 40
 add
-========== Actual ==========
+---------- Actual ----------
 number 2
 </pre>
 
@@ -208,24 +211,27 @@ P2: '0..9'
 P2: @number
 O: number
 Fail test on line 12 of sum.txt:
-========== Expected ==========
+---------- Expected ----------
 number 2
 number 40
 add
-========== Actual ==========
+---------- Actual ----------
 number 2
 </pre>
 
 <p>A numerical argument to the <code>pecan</code> program represents the line
 number of a single test in the test file. This makes sure only one test is run.
-The <code>-trace</code> (or <code>-t</code>) option switches on trace output.
-Although verbose, this can sometimes be used to resolve difficult issues. Each
-line in the trace starts with <code>I</code>, <code>P</code> or <code>O</code>.
-A line starting with <code>I</code> reports a change in the input position,
-giving an input line number and marking the position in that line with a
-vertical bar. A line starting with <code>P</code> reports a change in the
-current parse expression being executed, displaying a parser line number and the
-expression. A line starting with <code>O</code> reports an output action.</p>
+The <code style="white-space: nowrap">-trace</code> (or <code
+style="white-space: nowrap">-t</code>) option switches on trace output. Although
+verbose, this can sometimes be used to resolve difficult issues. Each line in
+the trace starts with <code>I</code>, <code>P</code> or <code>O</code>. A line
+starting with <code>I</code> reports a change in the input position, giving an
+input line number and marking the position in that line with a vertical bar. A
+line starting with <code>P</code> reports a change in the current parse
+expression being executed, displaying a parser line number and the expression. A
+line starting with <code>O</code> reports an output action. Output actions may
+sometimes appear later in the trace than expected, because actions can be
+delayed.</p>
 
 <p>The trace shows that the parser has a choice <code>number / number '+'
 ...</code>, and the first alternative succeeds, so the second alternative isn't
@@ -246,10 +252,10 @@ number = ('0..9')+ @number
 <p>Now running the tests gives:</p>
 
 <pre>pecan sum.txt
-Fail test on line 1 of sum.txt:
-========== Expected ==========
+Fail test on line 4 of sum.txt:
+---------- Expected ----------
 number 2
-========== Actual ==========
+---------- Actual ----------
 Error on line 1:
 2
  ^
@@ -297,11 +303,11 @@ nothing. Running our tests now gives:</p>
 
 <pre>pecan sum.txt
 The test on line 12 fails:
-========== Expected ==========
+---------- Expected ----------
 number 2
 number 40
 add
-========== Actual ==========
+---------- Actual ----------
 number 2
 number +40
 add
@@ -483,11 +489,11 @@ end = #newline 13? 10 @
 
 <pre>java pecan.Run tests/sum11.txt
 Fail test on line 19 of tests/sum11.txt:
-========== Expected ==========
+---------- Expected ----------
 Error on line 1:
 2+40%
     ^
-========== Actual ==========
+---------- Actual ----------
 Error on line 1: expecting digit, newline
 2+40%
     ^
@@ -561,11 +567,11 @@ actions performed or the error report produced are not changed.</p>
 <p>Running the tests produces:</p>
 
 <pre>Fail test on line 22 of tests/sum12.txt:
-========== Expected ==========
+---------- Expected ----------
 Error on line 1: expecting digit, newline
 2+40%
     ^
-========== Actual ==========
+---------- Actual ----------
 Error on line 1: expecting digit, newline, operator
 2+40%
     ^
@@ -639,11 +645,11 @@ end = #newline 13? 10 @
 <p>Running the existing tests shows up a slight problem:</p>
 
 <pre>Fail test on line 54 of tests/sum14.txt:
-========== Expected ==========
+---------- Expected ----------
 Error on line 1: expecting digit
 2+
   ^
-========== Actual ==========
+---------- Actual ----------
 Error on line 1: expecting bracket, digit
 2+
   ^
@@ -667,13 +673,13 @@ multiply
 
 <pre>pecan sum.txt
 Fail test on line 70 of tests/sum14.txt:
-========== Expected ==========
+---------- Expected ----------
 number 2
 number 20
 number 1
 add
 multiply
-========== Actual ==========
+---------- Actual ----------
 Error on line 1: expecting digit, newline, operator
 2*(20+1)
        ^
@@ -711,7 +717,7 @@ end = #newline 13? 10 @
 Pass 9 tests.
 </pre>
 
-<p>Let's do one more development step, to illustrate allowing spaces.</p>
+<p>Now let's allow spaces.</p>
 
 <h3>Step 16</h3>
 
@@ -752,19 +758,24 @@ multiply
 <p>Running the tests gives:</p>
 
 <pre>Fail test on line 30 of tests/sum16.txt:
-========== Expected ==========
+---------- Expected ----------
 Error on line 1: expecting digit, newline, operator
 2+40%
     ^
-========== Actual ==========
+---------- Actual ----------
 Error on line 1: expecting digit, newline, operator, space
 2+40%
     ^
 </pre>
 
-<p>Rather than change the error messages to add space as an extra expected item,
-let's decide that error messages will look cleaner if spaces are not reported,
-since they are allowed almost anywhere. So, we will change the grammar to:</p>
+<p>The error message is technically correct, but since spaces are allowed almost
+anywhere, it seems rather fussy to mention them.</p>
+
+<h3>Step 17</h3>
+
+<p>Rather than change the error messages to add <code>space</code> as an extra
+expected item, let's decide that error messages will look cleaner if spaces are
+not reported. So, we will change the grammar to:</p>
 
 <pre>sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
@@ -789,14 +800,14 @@ Pass 10 tests.
 </pre>
 
 <p>Although there are many more features that could be added, let's stop and say
-we have successfully developed a numerical expression parser.</p>
+we have successfully developed an arithmetic expression parser.</p>
 
-<h3>Step 17</h3>
+<h3>Step 18</h3>
 
 <p>It is time to compile the grammar, in order to create a real calculator
 program. We will illustrate with a program in C, but in principle the program
 could be created in any language. The first thing to do is to write a skeleton
-calculator program, in a file <kbd>calculate.c</kbd>, say:</p>
+calculator program, in a file <kbd>sum.c</kbd>, say:</p>
 
 <p class="indent"><a href="sum.c">sum.c</a></p>
 
@@ -822,7 +833,7 @@ interpreter which can be used in any C project.</p>
 <pre>gcc -std=c11 sum.c parser.c -o sum
 </pre>
 
-<p>When the program is run, it reads in an arithmetical expression from the
+<p>When the program is run, it reads in an arithmetic expression from the
 user, then prints out the result:</p>
 
 <pre>./sum

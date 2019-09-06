@@ -210,7 +210,7 @@ BOTH, 2, SET1, 41, AND, DROP, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1,
 48, HIGH1, 57, STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE,
 ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
 ==========
-// Step 16a
+// Step 16
 sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
@@ -245,7 +245,7 @@ HIGH1, 57, STOP, START, 13, BOTH, 9, MAYBE, MANY, BOTH, 2, MARK, space, AND,
 SET1, 32, AND, DROP, STOP, START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4,
 MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
 ==========
-// Step 16b
+// Step 17
 sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*

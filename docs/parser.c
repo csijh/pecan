@@ -1,10 +1,6 @@
-/* Pecan 1.0 bytecode interpreter. Free and open source. See licence.txt.
+/* Pecan 1.0 bytecode interpreter in C. Free and open source. See licence.txt.
 
 Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
-
-The parse function is built up from calls to inline functions, and the parser
-structure is allocated locally, so the efficiency should be the same as a single
-monolithic function, with local variables, containing a giant switch statement.
 */
 #include "parser.h"
 #include <stdio.h>
@@ -12,7 +8,6 @@ monolithic function, with local variables, containing a giant switch statement.
 #include <assert.h>
 
 // TODO: tag and cat ops.
-// TODO: backtrack tokens, or pass index in next function.
 
 static char *opNames[] = {
     [STOP]="STOP", [OR]="OR", [AND]="AND", [MAYBE]="MAYBE", [ONE]="ONE",
@@ -34,8 +29,8 @@ static char *opNames[] = {
 // markers: a bitmap of expected items for reporting errors.
 // ok:      boolean to say whether the most recent parsing expression succeeded.
 // act:     an external function to call to carry out an action.
-// next:    an external function to call to get the tag of the next token.
-// arg:     an argument to pass to the act or next function.
+// tag:     an external function to call to get the tag of the i'th token.
+// arg:     an argument to pass to the act or tag function.
 // look:    the nesting depth inside lookahead constructs.
 // top:     the number of items on the call stack.
 // out:     the number of delayed actions stored in the actions array.
@@ -43,11 +38,12 @@ static char *opNames[] = {
 // actions: the delayed action codes and input positions.
 struct parser {
     byte *code, *input;
+    void **tokens;
     int pc, start, in, marked;
     uint64_t markers;
     bool ok;
     doAct *act;
-    doNext *next;
+    doTag *tag;
     void *arg;
     int look, top, out;
     int stack[1000], actions[1000];
@@ -56,30 +52,18 @@ typedef struct parser parser;
 
 // Initialize the parsing state.
 static void new(
-    parser *s, byte c[], byte i[], doNext *next, doAct *act, void *arg)
+    parser *s, byte c[], byte i[], void **t, doTag *tag, doAct *act, void *arg)
 {
     s->code = c;
     s->input = i;
+    s->tokens = t;
     s->pc = s->start = s->in = s->marked = 0;
     s->markers = 0L;
     s->ok = false;
     s->act = act;
     s->arg = arg;
-    s->next = next;
+    s->tag = tag;
     s->look = s->top = s->out = 0;
-}
-
-// Find the n'th entry point in the bytecode.
-static void entry(parser *s, int n) {
-    for (int i = 0; i < n; i++) {
-        int op = s->code[s->pc++];
-        int arg = s->code[s->pc++];
-        if (op != START) {
-            printf("Error: badly structured bytecode\n");
-            exit(1);
-        }
-        s->pc += arg + 1;
-    }
 }
 
 // Carry out any delayed actions.
@@ -94,18 +78,18 @@ static inline void doActs(parser *s) {
 }
 
 // Find the line/column and start/end of line containing an input position.
-static void findLine(parser *s, err *e, int p) {
-    e->line = 1;
-    e->start = 0;
+static void findLine(parser *s, result *r, int p) {
+    r->line = 1;
+    r->start = 0;
     for (int i = 0; ; i++) {
         byte b = s->input[i];
-        if (b == '\0') { e->end = i; break; }
+        if (b == '\0') { r->end = i; break; }
         if (b != '\n') continue;
-        e->line++;
-        if (i + 1 <= p) e->start = i + 1;
-        else { e->end = i; break; }
+        r->line++;
+        if (i + 1 <= p) r->start = i + 1;
+        else { r->end = i; break; }
     }
-    e->column = p - e->start;
+    r->column = p - r->start;
 }
 
 // {id = x}  =  START, nx, {x}, STOP
@@ -117,14 +101,14 @@ static inline void doSTART(parser *s, int arg) {
 // {id = x}  =  ... STOP
 // Carry out any outstanding delayed actions. Return NULL for success, or an
 // error report containing a bitmap of markers.
-static inline void doSTOP(parser *s, err *e) {
+static inline void doSTOP(parser *s, result *r) {
     if (s->ok && s->out > 0) doActs(s);
     if (s->ok || s->in > s->marked) s->markers = 0L;
-    e->input = s->input;
-    e->ok = s->ok;
-    e->at = s->in;
-    e->markers = s->markers;
-    if (! s->ok) findLine(s, e, s->in);
+    r->input = s->input;
+    r->ok = s->ok;
+    r->at = s->in;
+    r->markers = s->markers;
+    if (! s->ok) findLine(s, r, s->in);
 }
 
 // {id}  =  GO, n   or   BACK, n
@@ -380,11 +364,11 @@ static inline void getOpArg(parser *s, int *op, int *arg) {
 #endif
     *op = s->code[s->pc++];
     *arg = 1;
-    if (*op >= O2) {
+    if (*op >= OP2) {
         *arg = s->code[s->pc++];
         *arg = (*arg << 8) | s->code[s->pc++];
     }
-    else if (*op >= O1) {
+    else if (*op >= OP1) {
         *arg = s->code[s->pc++];
     }
 #ifdef TRACE
@@ -393,13 +377,13 @@ static inline void getOpArg(parser *s, int *op, int *arg) {
 #endif
 }
 
-static void execute(parser *s, err *e) {
+static void execute(parser *s, result *r) {
     while (true) {
         int op, arg;
         getOpArg(s, &op, &arg);
         switch (op) {
             case START: doSTART(s, arg); break;
-            case STOP: doSTOP(s, e); return;
+            case STOP: doSTOP(s, r); return;
             case GO: case GOL: doGO(s, arg); break;
             case BACK: case BACKL: doGO(s, -arg); break;
             case EITHER: doEITHER(s, arg); break;
@@ -428,41 +412,47 @@ static void execute(parser *s, err *e) {
     }
 }
 
-// By allocating the parser structure on the stack in the parse function and
-// using inline functions, efficiency should be the same as using local
-// variables and a monolithic switch statement.
-void parse(int n, byte c[], byte in[], doNext *f, doAct *g, void *x, err *e) {
+// The parse function makes calls to inline functions, and the parser structure
+// is allocated locally, so it should be as efficient as a monolithic function,
+// with local variables, containing a giant switch statement.
+void parseC(byte code[], byte in[], doAct *f, void *x, result *r) {
     parser pData;
     parser *s = &pData;
-    new(s, c, in, f, g, x);
-    entry(s, n);
-    execute(s, e);
+    new(s, code, in, NULL, NULL, f, x);
+    execute(s, r);
 }
 
-static void reportLine(err *e) {
-    fprintf(stderr, "%.*s\n", e->end - e->start, e->input + e->start);
+void parseT(byte code[], void *in[], doTag *g, doAct *f, void *x, result *r) {
+    parser pData;
+    parser *s = &pData;
+    new(s, code, NULL, in, g, f, x);
+    execute(s, r);
 }
 
-static void reportColumn(err *e) {
-    for (int i = 0; i < e->column; i++) fprintf(stderr, " ");
+static void reportLine(result *r) {
+    fprintf(stderr, "%.*s\n", r->end - r->start, r->input + r->start);
+}
+
+static void reportColumn(result *r) {
+    for (int i = 0; i < r->column; i++) fprintf(stderr, " ");
     fprintf(stderr, "^\n");
 }
 
-void report(err *e, char *s, char *s1, char *s2, char *s3, char *names[]) {
-    if (e->markers == 0L) { fprintf(stderr, "%s", s); }
+void report(result *r, char *s, char *s1, char *s2, char *s3, char *names[]) {
+    if (r->markers == 0L) { fprintf(stderr, "%s", s); }
     else {
         fprintf(stderr, "%s", s1);
         bool first = true;
         for (int i = 0; i < 64; i++) {
-            if ((e->markers & (1L << i)) == 0) continue;
+            if ((r->markers & (1L << i)) == 0) continue;
             if (! first) fprintf(stderr, "%s", s2);
             first = false;
             fprintf(stderr, "%s", names[i]);
         }
         fprintf(stderr, "%s", s3);
     }
-    reportLine(e);
-    reportColumn(e);
+    reportLine(r);
+    reportColumn(r);
 }
 
 #ifdef TEST
@@ -690,7 +680,7 @@ static byte calc15[] = {
 // digit = #digit '0..9'
 // gap = (#space ' ')* @
 // end = #newline 13? 10 @
-static byte calc16a[] = {
+static byte calc16[] = {
     START, 12, BOTH, 2, GO, 226, AND, BOTH, 2, GO, 6, AND, GO, 234, STOP, START,
     34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
     BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
@@ -725,7 +715,7 @@ static byte calc16a[] = {
 // digit = #digit '0..9'
 // gap = (' ')* @
 // end = #newline 13? 10 @
-static byte calc16b[] = {
+static byte calc17[] = {
     START, 12, BOTH, 2, GO, 226, AND, BOTH, 2, GO, 6, AND, GO, 229, STOP, START,
     34, BOTH, 2, GO, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
     BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
@@ -747,12 +737,12 @@ static byte calc16b[] = {
 };
 
 static bool run(state *s, byte *code, char *input, char *output) {
-    err eData;
-    err *e = &eData;
+    result rData;
+    result *r = &rData;
     s->n = 0;
-    parse(0, code, input, NULL, act, s, e);
+    parseC(code, input, act, s, r);
     s->output[s->n] = '\0';
-    if (! e->ok) sprintf(&s->output[s->n], "E%d:%lx", e->at, e->markers);
+    if (! r->ok) sprintf(&s->output[s->n], "E%d:%lx", r->at, r->markers);
     if (strcmp(s->output, output) != 0) printf("Output: %s\n", s->output);
     return strcmp(s->output, output) == 0;
 }
@@ -793,18 +783,18 @@ int main() {
     assert(run(s, calc13, "5*8+12/6\n", "#5#8*#12#6/+"));
     assert(run(s, calc14, "2*(20+1)\n", "#2#20E7:b"));
     assert(run(s, calc15, "2*(20+1)\n", "#2#20#1+*"));
-    assert(run(s, calc16a, "2\n", "#2"));
-    assert(run(s, calc16a, "2+\n", "#2E2:15"));
-    assert(run(s, calc16b, "2\n", "#2"));
-    assert(run(s, calc16b, "42\n", "#42"));
-    assert(run(s, calc16b, "2+40\n", "#2#40+"));
-    assert(run(s, calc16b, "2+40%\n", "#2E4:b"));
-    assert(run(s, calc16b, "2+10+12+18\n", "#2#10+#12+#18+"));
-    assert(run(s, calc16b, "2-10+53-3\n", "#2#10-#53+#3-"));
-    assert(run(s, calc16b, "2+\n", "#2E2:5"));
-    assert(run(s, calc16b, "5*8+12/6\n", "#5#8*#12#6/+"));
-    assert(run(s, calc16b, "2*(20+1)\n", "#2#20#1+*"));
-    assert(run(s, calc16b, " 2 * ( 20 + 1 ) \n", "#2#20#1+*"));
+    assert(run(s, calc16, "2\n", "#2"));
+    assert(run(s, calc16, "2+\n", "#2E2:15"));
+    assert(run(s, calc17, "2\n", "#2"));
+    assert(run(s, calc17, "42\n", "#42"));
+    assert(run(s, calc17, "2+40\n", "#2#40+"));
+    assert(run(s, calc17, "2+40%\n", "#2E4:b"));
+    assert(run(s, calc17, "2+10+12+18\n", "#2#10+#12+#18+"));
+    assert(run(s, calc17, "2-10+53-3\n", "#2#10-#53+#3-"));
+    assert(run(s, calc17, "2+\n", "#2E2:5"));
+    assert(run(s, calc17, "5*8+12/6\n", "#5#8*#12#6/+"));
+    assert(run(s, calc17, "2*(20+1)\n", "#2#20#1+*"));
+    assert(run(s, calc17, " 2 * ( 20 + 1 ) \n", "#2#20#1+*"));
     printf("Parser OK\n");
 }
 

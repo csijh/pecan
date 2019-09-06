@@ -1,4 +1,4 @@
-// Tutorial step 16b (spaces, without reporting)
+// Tutorial step 16 (spaces, with reporting)
 sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
@@ -11,7 +11,7 @@ over = #operator '/' gap
 open = #bracket '(' gap
 close = #bracket ')' gap
 digit = #digit '0..9'
-gap = (' ')* @
+gap = (#space ' ')* @
 end = #newline 13? 10 @
 ==========
 2
@@ -30,7 +30,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline, operator
+Error on line 1: expecting digit, newline, operator, space
 2+40%
     ^
 ==========
@@ -56,7 +56,7 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting bracket, digit
+Error on line 1: expecting bracket, digit, space
 2+
   ^
 ==========

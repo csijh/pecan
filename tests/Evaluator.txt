@@ -28,9 +28,9 @@ sum14.txt
 ==========
 sum15.txt
 ==========
-sum16a.txt
+sum16.txt
 ==========
-sum16b.txt
+sum17.txt
 ==========
 // Try succeeds
 dots = ['.' '.'] @dots / '.' '3' @num
