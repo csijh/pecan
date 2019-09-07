@@ -16,34 +16,32 @@ struct token { int tag, at, length; };
 typedef struct token token;
 
 // Structure to hold the input and list of tokens.
-struct state { char *input; int length, max; token **list; };
+struct state { char *input; int length, max; token *list; };
 typedef struct state state;
 
 // Create a new state with a given input and empty token list of size n.
 static inline state *newState(char *in, int n) {
     state *s = malloc(sizeof(state));
     *s = (state) {
-        .input = in, .length = 0, .max = n, .list = malloc(n*sizeof(token *))
+        .input = in, .length = 0, .max = n, .list = malloc(n * sizeof(token))
     };
     return s;
 }
 
-// Free the state and its tokens.
+// Free the state and its list of tokens.
 static inline void freeState(state *s) {
-    for (int i = 0; i < s->length; i++) free(s->list[i]);
     free(s->list);
     free(s);
 }
 
 // Add a token, doubling the size of the list if necessary.
 static inline void add(state *s, int tag, int p, int n) {
-    token *t = malloc(sizeof(token));
-    *t = (token) { .tag = tag, .at = p, .length = n };
     if (s->length >= s->max) {
         s->max = s->max * 2;
-        s->list = realloc(s->list, s->max);
+        s->list = realloc(s->list, s->max * sizeof(token));
     }
-    s->list[s->length++] = t;
+    token *t = &s->list[s->length++];
+    *t = (token) { .tag = tag, .at = p, .length = n };
 }
 
 // Carry out an action. The action is normally a token tag.
@@ -55,12 +53,13 @@ static inline void act(void *vs, int a, int p, int n) {
 
 int main() {
     char input[100];
-    fgets(input, 100, stdin);
+    char *out = fgets(input, 100, stdin);
+    if (out == NULL) printf("Can't read stdin\n");
     state *s = newState(input, 8);
     result *r = malloc(sizeof(result));
-    parseC(code, input, act, s, r);
+    parseText(code, input, act, s, r);
     for (int i = 0; i < s->length; i++) {
-        token *t = s->list[i];
+        token *t = &s->list[i];
         printf("%d %d %d\n", t->tag, t->at, t->length);
     }
     free(r);

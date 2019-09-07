@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// The type of code bytes and UTF-8 input bytes.
+// The type of code bytes.
 typedef unsigned char byte;
 
 // The opcodes: first those that take no argument or have an implicit argument
@@ -27,15 +27,14 @@ enum category {
 // action code, and the position and number of items most recently matched.
 typedef void doAct(void *state, int a, int p, int n);
 
-// The type of a function to get the tag of a token.
-typedef int doTag(void *token);
+// The type of a function to get the tag of the i'th token.
+typedef int doTag(void *state, int i);
 
 // The type of a parsing result. If ok is true, 'at' holds how far parsing
 // reached. Otherwise, it is where the error occurred, with its line number and
 // column, the start and end positions of the line, and the error items marked
 // at that position.
 struct result {
-    char *input;
     bool ok;
     int at, line, column, start, end;
     uint64_t markers;
@@ -45,15 +44,15 @@ typedef struct result result;
 // Parse character input according to the provided bytecode. Use function f to
 // carry out actions, passing it x as an argument. Fill in the given result
 // structure. There is no automatic recovery.
-void parseC(byte code[], byte in[], doAct *f, void *x, result *r);
+void parseText(byte code[], char in[], doAct *f, void *x, result *r);
 
 // Parse tokens according to the provided bytecode. Use function g to find the
 // tags of tokens, and f to carry out actions, passing x as an argument to
 // either function. Fill in the result structure provided.
-void parseT(byte code[], void *in[], doTag *g, doAct *f, void *x, result *r);
+void parseTokens(byte code[], doTag *g, doAct *f, void *x, result *r);
 
-// Print a report on stderr using s if there are no markers, or s1 followed by
-// a list of markers separated by s2 followed by s3, using the names array.
-// Print the line containing the error on stderr.
-// Print spaces followed by a ^ character to report the error column on stderr.
-void report(result *e, char *s, char *s1, char *s2, char *s3, char *names[]);
+// Print a report on stderr using s0 if there are no markers, or s if there are,
+// with s containing two copies of %s as an example print string for two
+// markers. Print the line containing the error on stderr. Print spaces followed
+// by a ^ character to report the error column on stderr.
+void report(char *input, result *e, char *s0, char *s, char *names[]);

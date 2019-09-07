@@ -5,10 +5,12 @@ Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
 #include "parser.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <string.h>
 
 // TODO: tag and cat ops.
 
+// Names of opcodes for tracing.
+#ifdef TRACE
 static char *opNames[] = {
     [STOP]="STOP", [OR]="OR", [AND]="AND", [MAYBE]="MAYBE", [ONE]="ONE",
     [MANY]="MANY", [DO]="DO", [LOOK]="LOOK", [TRY]="TRY", [HAS]="HAS",
@@ -18,6 +20,7 @@ static char *opNames[] = {
     [LOW]="LOW", [HIGH]="HIGH", [LESS]="LESS", [SET]="SET", [ACT]="ACT",
     [MARK]="MARK", [CAT]="CAT", [TAG]="TAG", [GOL]="GOL", [BACKL]="BACKL",
 };
+#endif
 
 // The parsing state.
 // code:    the bytecode.
@@ -37,8 +40,8 @@ static char *opNames[] = {
 // stack:   the call stack, i.e. return addresses and saved in/out values.
 // actions: the delayed action codes and input positions.
 struct parser {
-    byte *code, *input;
-    void **tokens;
+    byte *code;
+    char *input;
     int pc, start, in, marked;
     uint64_t markers;
     bool ok;
@@ -52,11 +55,10 @@ typedef struct parser parser;
 
 // Initialize the parsing state.
 static void new(
-    parser *p, byte c[], byte i[], void **t, doTag *tag, doAct *act, void *arg)
+    parser *p, byte c[], char in[], doTag *tag, doAct *act, void *arg)
 {
     p->code = c;
-    p->input = i;
-    p->tokens = t;
+    p->input = in;
     p->pc = p->start = p->in = p->marked = 0;
     p->markers = 0L;
     p->ok = false;
@@ -104,7 +106,6 @@ static inline void doSTART(parser *p, int arg) {
 static inline void doSTOP(parser *p, result *r) {
     if (p->ok && p->out > 0) doActs(p);
     if (p->ok || p->in > p->marked) p->markers = 0L;
-    r->input = p->input;
     r->ok = p->ok;
     r->at = p->in;
     r->markers = p->markers;
@@ -355,7 +356,11 @@ static inline void doSET(parser *p, int arg) {
 
 // {%t} == TAG, t
 // Check if tag of next token is t and return.
-static inline void doTAG(parser *p, int arg) {
+// TODO: cache next tag instead of making repeated calls.
+static inline void doTAG(parser *p, int t) {
+    int nextTag = p->tag(p->arg, p->in);
+    p->ok = (nextTag == t);
+    p->pc = p->stack[--p->top];
 }
 
 // {Nd}  =  CAT, Nd
@@ -424,22 +429,22 @@ static void execute(parser *p, result *r) {
 // The parse function makes calls to inline functions, and the parser structure
 // is allocated locally, so it should be as efficient as a monolithic function,
 // with local variables, containing a giant switch statement.
-void parseC(byte code[], byte in[], doAct *f, void *x, result *r) {
+void parseText(byte code[], char in[], doAct *f, void *x, result *r) {
     parser pData;
     parser *p = &pData;
-    new(p, code, in, NULL, NULL, f, x);
+    new(p, code, in, NULL, f, x);
     execute(p, r);
 }
 
-void parseT(byte code[], void *in[], doTag *g, doAct *f, void *x, result *r) {
+void parseTokens(byte code[], doTag *g, doAct *f, void *x, result *r) {
     parser pData;
     parser *p = &pData;
-    new(p, code, NULL, in, g, f, x);
+    new(p, code, NULL, g, f, x);
     execute(p, r);
 }
 
-static void reportLine(result *r) {
-    fprintf(stderr, "%.*s\n", r->end - r->start, r->input + r->start);
+static void reportLine(char *in, result *r) {
+    fprintf(stderr, "%.*s\n", r->end - r->start, in + r->start);
 }
 
 static void reportColumn(result *r) {
@@ -447,20 +452,28 @@ static void reportColumn(result *r) {
     fprintf(stderr, "^\n");
 }
 
-void report(result *r, char *s, char *s1, char *s2, char *s3, char *names[]) {
-    if (r->markers == 0L) { fprintf(stderr, "%s", s); }
+void report(char *in, result *r, char *s0, char *s, char *names[]) {
+    if (r->markers == 0L) { fprintf(stderr, "%s", s0); }
     else {
-        fprintf(stderr, "%s", s1);
+        char text[100];
+        strcpy(text, s);
+        int n = strstr(text, "%s") - text;
+        text[n] = '\0';
+        fprintf(stderr, "%s", text);
+        strcpy(text, text + n + 2);
+        n = strstr(text, "%s") - text;
+        text[n] = '\0';
         bool first = true;
         for (int i = 0; i < 64; i++) {
             if ((r->markers & (1L << i)) == 0) continue;
-            if (! first) fprintf(stderr, "%s", s2);
+            if (! first) fprintf(stderr, "%s", text);
             first = false;
             fprintf(stderr, "%s", names[i]);
         }
-        fprintf(stderr, "%s", s3);
+        strcpy(text, text + n + 2);
+        fprintf(stderr, "%s", text);
     }
-    reportLine(r);
+    reportLine(in, r);
     reportColumn(r);
 }
 
@@ -469,13 +482,13 @@ void report(result *r, char *s, char *s1, char *s2, char *s3, char *names[]) {
 // The examples in the calculator tutorial are used as self-tests.
 
 #include <assert.h>
-#include <string.h>
+
 enum action { number = 0, add = 1, subtract = 2, multiply = 3, divide = 4 };
 enum marker { digit, operator, bracket, newline, space };
 struct state { char *input; int n; char output[100]; };
 typedef struct state state;
 
-// Store actions symbolically.
+// Store actions symbolically for testing.
 static void act(void *vs, int a, int p, int n) {
     state *s = vs;
     s->output[s->n++] = "#+-*/"[a];
@@ -750,7 +763,7 @@ static bool run(state *s, byte *code, char *input, char *output) {
     result *r = &rData;
     s->input = input;
     s->n = 0;
-    parseC(code, input, act, s, r);
+    parseText(code, input, act, s, r);
     s->output[s->n] = '\0';
     if (! r->ok) sprintf(&s->output[s->n], "E%d:%lx", r->at, r->markers);
     if (strcmp(s->output, output) != 0) printf("Output: %s\n", s->output);

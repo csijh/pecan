@@ -40,14 +40,16 @@ static inline void act(void *vs, int a, int p, int n) {
 }
 
 int main() {
-    char input[100];
-    fgets(input, 100, stdin);
+    setbuf(stdout, NULL);
+    char in[100];
+    char *out = fgets(in, 100, stdin);
+    if (out == NULL) printf("Can't read stdin\n");
     state sData;
     state *s = &sData;
     result rData;
     result *r = &rData;
-    new(s, input);
-    parseC(code, input, act, s, r);
+    new(s, in);
+    parseText(code, in, act, s, r);
     if (r->ok) printf("%d\n", pop(s));
-    else report(r, "Syntax error:\n", "Error: expecting ", ", ", "\n", names);
+    else report(in, r, "Syntax error:\n", "Error: expecting %s, %s\n", names);
 }

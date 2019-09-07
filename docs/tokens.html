@@ -42,19 +42,21 @@ gap = (' ')* @
 
 <p>The grammar recognises a sequence of tokens, separated by spaces. There is a
 final <code>end</code> token, which can be convenient for recognising the last
-token in a token parser.</p>
+token in a token parser. With the exception of <code>tokens</code>, each action
+creates a token. The name of the action will be used as the token's tag.</p>
 
 <p>There are no error markers. If an illegal character or lack of line ending is
-encountered, a token is created for it. That means the scanner never fails, and
-errors are passed on to the parser for reporting. A parse error early on in the
-text is thus reported in preference to a scan error later on, creating the
-illusion for the user that scanning and parsing are done together.</p>
+encountered, a token with tag <code>bad</code> is created for it. That means the
+scanner never fails, and errors are passed on to the parser for reporting. A
+parse error early on in the text is thus reported in preference to a scan error
+later on, creating the illusion for the user that scanning and parsing are done
+together.</p>
 
 <p>One slight worry with this scanner is that the <code>token</code> rule, if
 handled naively, consists of a series of if-then-else tests, which could be
 inefficient. We will deal with this issue in the optimisation tutorial.</p>
 
-<p>In th previous tutorial, the grammar under development and its tests were
+<p>In the previous tutorial, the grammar under development and its tests were
 stored in a single file. This time, the grammar is in one file and the tests are
 in a separate file:</p>
 
