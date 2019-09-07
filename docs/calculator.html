@@ -2,20 +2,24 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
 <head>
 <title>Pecan Tutorial</title>
-<style> pre, .indent { margin-left:40px; } </style>
+<style>
+    body { font-size: 120%; }
+    pre, .indent { margin-left:40px; }
+</style>
 </head>
 <body>
 
 <img src="pecan.png" width="300" height="65" />
 <hr/>
 
-<h1>Developing a Calculator</h1>
+<h1>A calculator</h1>
 
 <p>Suppose we want to implement a calculator where the user can type in a sum
 such as <kbd>6+3*(10+2)</kbd> and get the answer <samp>42</samp>. A calculator
 like this consists mostly of a parser for arithmetic expressions. Although it
-would be easy to write by hand, it illustrates how to use Pecan to develop a
-parser in a step-by-step, test-driven fashion.</p>
+would be easy to write by hand, developing it using Pecan illustrates Pecan's
+features and the way it supports the development of a parser in a step-by-step,
+test-driven fashion.</p>
 
 <!--
 <p>It is possible to write a parser by hand, using the recursive descent
