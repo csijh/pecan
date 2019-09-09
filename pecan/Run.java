@@ -112,7 +112,7 @@ class Run {
             "Usage:\n" +
             "    pecan [-t | -trace] [line] tests\n" +
             "Or:\n" +
-            "    pecan -o output grammar\n");
+            "    pecan grammar -o output\n");
         System.exit(1);
     }
 }

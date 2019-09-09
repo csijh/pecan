@@ -2,7 +2,7 @@
 
 Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
 */
-#include "parser.h"
+#include "interpret.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -818,7 +818,7 @@ int main() {
     assert(run(s, calc17, "5*8+12/6\n", "#5#8*#12#6/+"));
     assert(run(s, calc17, "2*(20+1)\n", "#2#20#1+*"));
     assert(run(s, calc17, " 2 * ( 20 + 1 ) \n", "#2#20#1+*"));
-    printf("Parser OK\n");
+    printf("Interpreter OK\n");
 }
 
 #endif

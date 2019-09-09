@@ -1,0 +1,4 @@
+sum = gap expression %end
+expression = term (%plus term @2add / %minus term @2subtract)*
+term = atom (%times atom @2multiply / %over atom @2divide)*
+atom = %number / %open expression %close

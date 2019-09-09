@@ -21,10 +21,10 @@ arithmetic expression and print it out, rather than calculate its value. The
 example will thus be closer to what is needed for practical parsing in larger
 scale situations such as compilers for programming languages.</p>
 
-<h3>A grammar for the scanner</h3>
+<h3>A scanner</h3>
 
-<p>Rather than show the development of a grammar for the scanner step by step,
-we will just present the final result:</p>
+<p>It is easy enough to develop a scanner, based on the full calculator in
+the previous tutorial:</p>
 
 <pre>tokens = gap @tokens token* end
 token = number / plus / minus / times / over / open / close / bad
@@ -36,14 +36,15 @@ over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
 bad = (13 / 10)! Uc @1bad
-end = 13? 10 @ @1end / @1bad
+end = 13? 10 @1end / @1bad
 gap = (' ')* @
 </pre>
 
 <p>The grammar recognises a sequence of tokens, separated by spaces. There is a
-final <code>end</code> token, which can be convenient for recognising the last
-token in a token parser. With the exception of <code>tokens</code>, each action
-creates a token. The name of the action will be used as the token's tag.</p>
+final <code>end</code> token, which is common in scanners because it can be
+convenient for recognising the last token in a token parser. With the exception
+of <code>tokens</code>, each action creates a token. The name of the action will
+be used as the token's tag.</p>
 
 <p>There are no error markers. If an illegal character or lack of line ending is
 encountered, a token with tag <code>bad</code> is created for it. That means the
@@ -70,9 +71,28 @@ the tests through Pecan shows all is well:</p>
 Pass 10 tests.
 </pre>
 
-<p>The next task is to turn the grammar into a program.</p>
+<p>The next task is to turn the grammar into a program. A skeleton program is
+written, using the generic bytecode interpreter as before:</p>
 
-<h3>The scanner</h3>
+<p class="indent"><a href="scan.c">scan.c</a><br/>
+<a href="interpret.h">interpret.h</a><br/>
+<a href="interpret.c">interpret.c</a></p>
+
+<p>The grammar is compiled into bytecode within the skeleton program:</p>
+
+<pre>pecan scan.txt -o scan.c
+</pre>
+
+<p>Then the program is compiled:</p>
+
+<pre>gcc -std=c11 -Wall -O2 scan.c interpret.c -o scan
+</pre>
+
+<p>The program reads in a line of text from the user, breaks it into an array of
+tokens, then prints out their tags, and their positions and lengths in the
+source text.</p>
+
+<h3>A token parser</h3>
 
 </body>
 </html>
