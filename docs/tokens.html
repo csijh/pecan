@@ -36,26 +36,20 @@ over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
 bad = (13 / 10)! Uc @1bad
-end = 13? 10 @1end / @1bad
+end = 13? 10 / @1bad
 gap = (' ')* @
 </pre>
 
 <p>This grammar recognises a sequence of tokens, possibly separated by spaces.
-There is a final <code>end</code> token, which is common in scanners because it
-can be convenient for recognising the last token in a token parser. With the
-exception of <code>tokens</code>, each action creates a token. The name of the
-action will be used as the token's tag.</p>
+With the exception of <code>tokens</code>, each action creates a token. The name
+of the action will be used as the token's tag.</p>
 
 <p>There are no error markers. If an illegal character or lack of line ending is
 encountered, a token with tag <code>bad</code> is created for it. That means the
 scanner never fails, and errors are passed on to the parser for reporting. A
 parse error early on in the text is thus reported in preference to a scan error
-later on, creating the illusion for the user that scanning and parsing are done
-together.</p>
-
-<p>One slight worry with this scanner is that the <code>token</code> rule, if
-handled naively, consists of a series of if-then-else tests, which could be
-inefficient. We will deal with this issue in the optimisation tutorial.</p>
+later on, creating the illusion for the user of the final program that scanning
+and parsing are done together.</p>
 
 <p>In the previous tutorial, the grammar under development and its tests were
 stored in a single file. This time, the grammar is in one file and the tests are
@@ -65,7 +59,7 @@ in a separate file:</p>
 <a href="scan-test.txt">scan-test.txt</a></p>
 
 <p>The test file begins with a line which specifies the grammar file. Running
-the tests through Pecan shows all is well:</p>
+the tests through Pecan shows that all is well:</p>
 
 <pre>pecan scan-test.txt
 Pass 10 tests.
@@ -74,23 +68,37 @@ Pass 10 tests.
 <p>The next task is to turn the grammar into a program. A skeleton program is
 written, using the generic bytecode interpreter as before:</p>
 
-<p class="indent"><a href="scan.c">scan.c</a><br/>
+<p class="indent"><a href="scan.h">scan.h</a>
+<a href="scan.c">scan.c</a><br/>
 <a href="interpret.h">interpret.h</a><br/>
 <a href="interpret.c">interpret.c</a></p>
 
-<p>The grammar is compiled into bytecode within the skeleton program:</p>
+<p>The <code>scan</code> program is written as a reusable module, but with a
+<code>main</code> function available with the <code>scanTest</code> conditional
+compilation flag, so that the program can be interactively tested on its own. It
+provides a <code>scan</code> function which returns an array of token
+structures. There is a final sentinel structure with a negative tag, so that the
+length of the array does not need to be passed around with the array. The
+grammar is compiled into bytecode within the skeleton program:</p>
 
 <pre>pecan scan.txt -o scan.c
 </pre>
 
-<p>Then the program is compiled:</p>
+<p>Then the program is compiled, with the conditional compilation flag:</p>
 
-<pre>gcc -std=c11 -Wall -O2 scan.c interpret.c -o scan
+<pre>gcc -std=c11 -Wall -O2 -DscanTest scan.c interpret.c -o scan
 </pre>
 
 <p>The program reads in a line of text from the user, breaks it into an array of
 tokens, then prints out their tags, and their positions and lengths in the
-source text.</p>
+source text:</p>
+
+<pre>./scan
+Type a sum: 2+2
+number 0 1
+plus 1 1
+number 2 1
+</pre>
 
 <h3>The parser</h3>
 
@@ -100,14 +108,15 @@ the previous tutorial, replacing the low level rules by tags:</p>
 <pre>sum = exp #newline %end
 exp = term (#op %plus term @2add / #op %minus term @2subtract)*
 term = atom (#op %times atom @2multiply / #op %over atom @2divide)*
-atom = #digit %number @value / bracket
-bracket = #bracket %open @start exp #bracket %close @end @3group
+atom = #digit %number @value / #bracket %open exp #bracket %close
 </pre>
 
 <p>The grammar avoids name clashes between actions, tags and markers. The
-intention is that in the final parser, each action will form a tree node with
-some constituent subnodes as children, according to its arity.</p>
+intention is that in the final program, each action will form a tree node with
+some constituent subnodes as children, according to its arity. The grammar is
+stored in a file, and its tests are stored in a separate file:</p>
 
+<!--
 <p>In the <code>bracket</code> rule, open and close brackets are converted into
 nodes and pushed onto the output stack, and then discarded by the
 <code>group</code> action, which creates a tree node for the bracketed
@@ -120,9 +129,8 @@ constituents. The bracketed expression nodes can be discarded after tree
 construction, if desired. The remaining nodes will have accurate text extents,
 which can be used to form good quality error messages in any further processing
 done on the tree.</p>
+-->
 
-<p>The grammar is stored in a file, and its tests are stored in a separate
-file:</p>
 
 <p class="indent"><a href="parse.txt">parse.txt</a><br/>
 <a href="parse-test.txt">parse-test.txt</a></p>
@@ -133,13 +141,17 @@ file:</p>
 Pass 7 tests
 </pre>
 
-<p>Errors are reported by token index. In the real parser, with the original
-text available, the token index can be converted into a text position, to
-produce a conventional error message.</p>
+<p>When an error is reported, its token index is given. In the real parser, with
+the original text available, the token index can be converted into a text
+position, to produce a conventional error message. The next step is to write a
+skeleton parser, which uses both the scanner module and the provided bytecode
+interpreter:</p>
 
-<p>The next step is to write a skeleton parser:</p>
-
-<p class="indent"><a href="parse.c">parse.c</a></p>
+<p class="indent"><a href="parse.c">parse.c</a><br/>
+<a href="scan.h">scan.h</a>
+<a href="scan.c">scan.c</a><br/>
+<a href="interpret.h">interpret.h</a><br/>
+<a href="interpret.c">interpret.c</a></p>
 
 </body>
 </html>

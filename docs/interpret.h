@@ -27,7 +27,8 @@ enum category {
 // action code, and the position and number of items most recently matched.
 typedef void doAct(void *state, int a, int p, int n);
 
-// The type of a function to get the tag of the i'th token.
+// The type of a function to get the tag of the i'th token. The result is
+// negative if there are no more tokens.
 typedef int doTag(void *state, int i);
 
 // The type of a parsing result. If ok is true, 'at' holds how far parsing

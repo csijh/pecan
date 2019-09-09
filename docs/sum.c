@@ -40,8 +40,8 @@ static inline void act(void *vs, int a, int p, int n) {
 }
 
 int main() {
-    setbuf(stdout, NULL);
     char in[100];
+    printf("Type a sum: ");
     char *out = fgets(in, 100, stdin);
     if (out == NULL) printf("Can't read stdin\n");
     state sData;

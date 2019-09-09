@@ -477,7 +477,7 @@ void report(char *in, result *r, char *s0, char *s, char *names[]) {
     reportColumn(r);
 }
 
-#ifdef TEST
+#ifdef interpretTest
 
 // The examples in the calculator tutorial are used as self-tests.
 

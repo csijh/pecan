@@ -8,5 +8,5 @@ over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
 bad = (13 / 10)! Uc @1bad
-end = 13? 10 @1end / @1bad
+end = 13? 10 / @1bad
 gap = (' ')* @
