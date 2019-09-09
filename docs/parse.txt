@@ -1,0 +1,5 @@
+sum = exp #newline %end
+exp = term (#op %plus term @2add / #op %minus term @2subtract)*
+term = atom (#op %times atom @2multiply / #op %over atom @2divide)*
+atom = #digit %number @value / bracket
+bracket = #bracket %open @start exp #bracket %close @end @3group

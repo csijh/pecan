@@ -1,0 +1,46 @@
+parse.txt
+==========
+number end
+----------
+value
+==========
+number plus number end
+----------
+value
+value
+add
+==========
+number times number plus number end
+----------
+value
+value
+multiply
+value
+add
+==========
+number plus number times number end
+----------
+value
+value
+value
+multiply
+add
+==========
+number plus open number close plus number end
+----------
+value
+start
+value
+end
+group
+add
+value
+add
+==========
+number plus end
+----------
+Error at token 2: expecting bracket, digit
+==========
+number plus bad
+----------
+Error at token 2: expecting bracket, digit

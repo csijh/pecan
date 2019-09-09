@@ -39,7 +39,7 @@ public class Evaluator implements Testable {
     private boolean textInput, ok;
     private String input;
     private Node root;
-    private int start, in, out, marked, lookahead;
+    private int start, in, out, marked, lookahead, tokenIndex;
     private TreeSet<String> failures;
     private Node[] delay;
     private int[] delayIn;
@@ -79,11 +79,7 @@ public class Evaluator implements Testable {
     private void prepare(String text) {
         input = text;
         ok = true;
-        start = 0;
-        in = 0;
-        out = 0;
-        marked = 0;
-        lookahead = 0;
+        start = in = out = marked = lookahead = tokenIndex = 0;
         failures = new TreeSet<>();
         delay = new Node[100];
         delayIn = new int[100];
@@ -105,7 +101,8 @@ public class Evaluator implements Testable {
                 else s += ", ";
                 s += mark;
             }
-            output.append(Node.err(input, in, in, s));
+            if (textInput) output.append(Node.err(input, in, in, s));
+            else output.append("Error at token " + tokenIndex + ": " + s);
             output.append("\n");
         }
         return output.toString();
@@ -344,6 +341,7 @@ public class Evaluator implements Testable {
         else ok = input.startsWith(tag, in);
         if (ok) {
             start = in;
+            tokenIndex++;
             if (lookahead == 0 && out > 0) takeActions();
             in += tag.length();
             while (in < input.length() &&
