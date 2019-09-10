@@ -124,14 +124,12 @@ lower x
 upper Y
 lower z
 ==========
-// Token parser using queries
+// Token parser using tags
 sum = %num @num (%plus @ %num @num @2add)*
 ==========
 id
 ----------
-Error on line 1:
-id
-^
+Error at token 0
 ==========
 num plus num
 ----------
@@ -153,7 +151,7 @@ number 2
 add
 ==========
 x = 'x' end @x
-end = #end Uc!
+end = #end <>
 ==========
 x
 ----------

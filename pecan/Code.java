@@ -9,7 +9,7 @@ public enum Code {
     START, STOP, GO, BACK,
     EITHER, OR, BOTH, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT,
     DROP, ACT, MARK, TAG,
-    CAT, STRING, LESS, LOW, HIGH, SET;
+    CAT, STRING, LESS, LOW, HIGH, SET, END;
 
     // Codes such as STRING followed by characters have a compact version such
     // as STRING1 to avoid an operand when the number of bytes is one.

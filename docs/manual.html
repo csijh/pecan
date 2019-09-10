@@ -91,8 +91,8 @@ has these features:</p>
 various issues that have to be addressed, separately from the programming
 details. However, that also makes grammars rather dense. Creating or translating
 a grammar accurately can be difficult. In addition, programmers typically use
-parser generators only rarely, and are often not grammar experts. Pecan thus has
-explicit support for test-driven grammar development.</p>
+parser generators only rarely, and are often not grammar experts. That's why
+Pecan has explicit support for test-driven grammar development.</p>
 
 <p>The Pecan system is written in Java, so the first step is to make sure that
 version 8 or better of Java is available. Pecan is provided as an executable jar
@@ -199,7 +199,7 @@ starting point for studying grammars and parsers.</p>
 
 <p>Unfortunately, there are practical problems with PEG parsers. Although the
 packrat algorithm is linear, it is slower and more space hungry than one would
-like for efficient large scale parsing. Also, because of its unlimited
+like for efficient large scale parsing. Also, because of its implicit unlimited
 backtracking, it is difficult to produce accurate error messages, and difficult
 to express actions. Published PEG grammars can also often be rather unreadable,
 in the same way that regular expressions tend to be. As a result, PEG grammars
@@ -286,19 +286,18 @@ PEG grammars, there is only a single possible outcome for this operation.</p>
 parsing expression. By default, the first rule specifies the output of the
 whole parsing process. For example, a parser might start with:</p>
 
-<pre>module = function+ end
+<pre>module = function+ &lt;>
 
 function = id arguments body
 
-end = Uc!
 ...
 </pre>
 
 <p>Apart from being the starting point of the parser, the first rule is not
 treated in any special way. In particular, it may succeed without consuming all
-the input. So an explicit test is often included, as here, to check that the
-end of the input has been reached. In the <code>end</code> rule,
-<code>Uc!</code> means no Unicode character can be matched.</p>
+the input. So an explicit test is often included, as here, to check that the end
+of the input has been reached. The notation <code>&lt;></code>, a less than sign
+followed by a greater than sign, matches the end of the input.</p>
 
 <p>The text of a grammar is assumed to be encoded using UTF-8, so Unicode
 characters can be included. A rule name starts with any Unicode letter and
@@ -483,11 +482,13 @@ fails, an assignment is parsed. A negative example is:</p>
 quote. The bracketed expression only matches a visible character if a double
 quote does not appear next in the input.</p>
 
-<p>During a try operation <code>[x]</code>, actions are delayed by storing them
-symbolically. If <code>x</code> succeeds, the delayed actions are performed. If
-<code>x</code> fails, the delayed actions are discarded. During
-has and not operations <code>x&amp;</code> or <code>x!</code>, actions
-are always discarded.</p>
+<p>Lookahead expressions are regarded only as ways to decide which alternative
+to take, so actions and error reporting are suspended. During has and not
+operations <code>x&amp;</code> or <code>x!</code>, actions and error markers are
+ignored. During a try operation <code>[x]</code>, actions are delayed by storing
+them symbolically. If <code>x</code> succeeds, the delayed actions are
+performed. If <code>x</code> fails, the delayed actions are discarded. Thus
+<code>[x]</code> behaves in exactly the same way as <code>x& x</code>.</p>
 
 <p>The fact that actions are not performed during speculative parsing restricts
 the possible context sensitive aspects of a language, which can only depend on
@@ -606,19 +607,21 @@ less than sign can be thought of as a mnemonic for the meaning of the
 divider.</p>
 
 <p>The empty string <code>""</code> always succeeds, and the empty set
-<code>''</code> always fails:</p>
+<code>''</code> always fails. These can occasionally be useful, e.g. in
+transformations. The empty divider <code>&lt;></code> is reserved as a special
+symbol to detect the end of the input.</p>
 
 <pre>succeed = ""
 fail = ''
+end = &lt;>
 </pre>
 
-<p>They can occasionally be useful, e.g. in transformations.</p>
 
 <h3 id="tokens">Tokens</h3>
 
-<p>Support is needed for parsers where the input consists of tokens produced by
-a separate scanner. The input is thought of as an array of tokens instead of an
-array of characters.</p>
+<p>Support is provided for parsers where the input consists of tokens produced
+by a separate scanner. The input is thought of as an array of tokens instead of
+an array of characters.</p>
 
 <p>A tag is represented as a symbol consisting of the <code>%</code> character
 followed by a name. Each tag represents a specific kind of token. For example, a
@@ -628,13 +631,16 @@ this:</p>
 <pre>sum = term (%plus term @2add / %minus term @2subtract)* end
 term = number (%times number @2multiply / %over number @2divide)*
 number = %number @number
-end = %
+end = &lt;>
 </pre>
 
 <p>In this case, the input is an array of tokens with tags <code>%number</code>,
 <code>%plus</code>, <code>%minus</code>, <code>%times</code> or
-<code>%over</code>. The tag <code>%</code> with no name is matched only at the
-end of the input. This is equivalent to using <code>Uc!</code> in a scanner.</p>
+<code>%over</code>.</p>
+
+<p>In token-based parsers, text matching notations are not allowed, except for
+<code>''</code>, <code>""</code> and <code>&lt;></code>. Similarly, tags are not
+allowed in text-based parsers.</p>
 
 <h3 id="actions">Actions</h3>
 
@@ -689,9 +695,11 @@ convention which allows matched characters to be discarded. For example:</p>
 <p>An <code>@</code> sign on its own causes any recently matched characters to
 be discarded by the parser, without any external code being executed.</p>
 
+<!--
 <p>Although tokens can be explicitly discarded in this way, it is normal for
 actions to use only the most recent token, in which case tokens are effectively
 discarded implicitly when they are matched but not acted on.</p>
+-->
 
 <p>There are severe consistency restrictions on actions. For example, each
 alternative in a choice must create or consume the same number of output items.
@@ -718,28 +726,28 @@ token = id @1id / number @1number / ...
 <p>The <code>@tokens</code> action creates an output item representing the list
 or array of tokens to be generated, initially empty. Each action such as
 <code>@1id</code> takes the recently matched characters, creates a token from
-them, and adds it to the list.</p>
+them, and adds it to the list. The list is the only output from the scanner.</p>
 
 <p>In a token-based parser, there are often variable-length sequences, which
 need to be dealt with in a similar way. For example, a comma-separated list of
 identifiers can be expressed by:</p>
 
-<pre>ids = @list id @2add ("," id @2add)* @1end
+<pre>ids = @list id @2id ("," id @2id)* @1end
 </pre>
 
 <p>The <code>id</code> rule is assumed to push a single item onto the output
 stack. The <code>@list</code> action creates an empty list. The
-<code>@2add</code> action pops the list and most recent id, adds the id to the
+<code>@2id</code> action pops the list and most recent id, adds the id to the
 list, and pushes the resulting list back on the stack. The <code>@1end</code>
 action does anything necessary to finalize the list.</p>
 
 <p>The external code in a generated parser may choose a different implementation
 with the same overall effect. For example, <code>@list</code> may mark a
-position in the output stack, <code>@add</code> may do nothing so that ids
+position in the output stack, <code>@2id</code> may do nothing so that ids
 accumulate on the stack, and <code>@1end</code> may use the marked stack
 position to create an array out of the accumulated ids. Alternatively,
 <code>@list</code> could create a linked list, and each subsequent
-<code>@2add</code> could chain the next id onto the end of the list.</p>
+<code>@2id</code> could chain the next id onto the end of the list.</p>
 
 <p>Techniques like this for handling variable-length lists can easily lead to a
 left hand alternative which begins with an action, for example:</p>
@@ -767,7 +775,7 @@ details. For example, suppose this rule is being parsed:</p>
 <p>Then a message like this might be produced for an incorrect operator:</p>
 
 <pre>Error on line 1:
-40~2
+40%2
   ^
 </pre>
 
@@ -783,7 +791,7 @@ example, suppose the rule above is changed to:</p>
 and <code>"-"</code> both fail, so the error message produced becomes:</p>
 
 <pre>Error on line 1: expecting minus, plus
-40~2
+40%2
   ^
 </pre>
 
@@ -800,7 +808,7 @@ is changed to:</p>
 <p>Then the error message becomes:</p>
 
 <pre>Error on line 1: expecting operator
-40~2
+40%2
   ^
 </pre>
 
@@ -814,7 +822,7 @@ example, a parser for a programming language might contain rules such as:</p>
 letter = #letter (Lu / Ll / Lt / Lm / Lo)
 number = #number ('0'..'9')+ @number " "* @
 newline = #newline 13? 10 @
-end = #end Uc!
+end = #end &lt;>
 </pre>
 
 <p>The <code>plus</code> rule specifies that the plus sign is to be described as
@@ -972,7 +980,7 @@ x+        &#8801;  x x*
 [x]       &#8801;  x&amp; x
 x&        &#8801;  x!!
 ''        &#8801;  ""!
-&lt;ab>      &#8801;  (Uc! / 0..96 / 97 Uc! / 97 0..97)&
+&lt;ab>      &#8801;  (&lt;> / 0..96 / 97 &lt;> / 97 0..97)&
 </pre>
 
 <p>The core features remaining are:</p>
@@ -1549,8 +1557,9 @@ tokens. The <code>gap</code> rule deals with the continuation line convention.
 It follows a token which can end a rule, and looks ahead for a possible
 continuation to see if the next newline should be skipped. Brackets are treated
 as tokens so that the extent in the source text of an expression is just the
-maximum extent of its subexpressions. Ranges such as <code>'a..z'</code> are not
-distinguished from other sets during parsing.</p>
+maximum extent of its subexpressions. Category names such as <code>Nd</code> are
+not distinguished from identifiers, and ranges such as <code>'a..z'</code> are
+not distinguished from other sets, during parsing.</p>
 
 <pre>pecan = skip rules end
 rules = rule (rules @2add)?
@@ -1570,8 +1579,8 @@ bracket = rb expression re @3bracket
 id = #atom letter alpha* @id gap
 action = '@' (digit* #letter letter alpha* @act / @drop) gap
 marker = "#" #letter letter alpha* @mark gap
-tag = "%" (letter alpha*)? @tag gap
-divider = '&lt;' ('>'! visible)* '>' @divider gap
+tag = "%" letter alpha*? @tag gap
+divider = '&lt;' ('>' @end / ('>'! visible)+ '>' @divider) gap
 set = "'" ("'"! visible)* #quote "'" @set gap
 string = '"' ('"'! visible)* #quote '"' @string gap
 number = (("1".."9") digit* / "0" hex*) @number gap
@@ -1599,7 +1608,7 @@ alpha = letter / digit / '_' / '-'
 letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
 hex = digit / 'ABCDEFabcdef'
-end = #end Uc!
+end = #end &lt;>
 </pre>
 
 <p>The Unicode standard defines many different newline conventions which should

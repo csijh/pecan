@@ -756,13 +756,12 @@ Rule keyword2
     String "switch"
     String "while"
 ==========
-end = #end Uc!
+end = #end <>
 ----------
 Rule end
-  And #end Uc!
+  And #end <>
     Mark #end
-    Not Uc!
-      Id Uc
+    End <>
 ==========
 // Underscore
 a_b = xy_
@@ -776,11 +775,11 @@ a-b = xy-
 Rule a-b
   Id xy-
 ==========
-// End-of-file tag
-end = %
+// End-of-file
+end = <>
 ----------
 Rule end
-  Tag %
+  End <>
 ==========
 // Backslash in quotes
 bs = '\\'

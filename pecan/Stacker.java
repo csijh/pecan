@@ -88,7 +88,7 @@ class Stacker implements Testable {
         switch(node.op()) {
         case Drop: case String: case Set: case Divider: case Range: case Cat:
         case Tag: case Some: case Any: case Opt: case Has: case Not:
-        case Number: case Mark:
+        case Number: case Mark: case End:
             nNet = 0;   break;
         case Act:
             int arity = node.arity();
@@ -148,7 +148,7 @@ class Stacker implements Testable {
         if (y != null) { low(y); yLow = y.LOW(); }
         switch(node.op()) {
         case Drop: case String: case Set: case Number: case Divider: case Range:
-        case Cat: case Tag: case Mark:
+        case Cat: case Tag: case Mark: case End:
             break;
         case Act:
             int arity = node.arity();

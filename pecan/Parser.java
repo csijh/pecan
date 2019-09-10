@@ -175,12 +175,11 @@ class Parser implements Testable {
         return gap();
     }
 
-    // tag = "%" (letter alpha*)? @tag gap
+    // tag = "%" letter alpha* @tag gap
     private boolean tag() {
         if (! accept('%')) return false;
-        if (letter()) {
-            while (alpha()) { }
-        }
+        if (! letter()) return false;
+        while (alpha()) { }
         return doName(Tag) && gap();
     }
 
@@ -215,9 +214,10 @@ class Parser implements Testable {
         return mark(QUOTE) && accept('"') && doName(String) && gap();
     }
 
-    // divider = '<' ('>'! visible)* '>' @divider gap
+    // divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
     private boolean divider() {
         if (! accept('<')) return false;
+        if (accept('>')) return doName(End) && gap();
         while (! look('>') && visible()) { }
         return accept('>') && doName(Divider) && gap();
     }
@@ -349,7 +349,7 @@ class Parser implements Testable {
         return ok;
     }
 
-    // end = #end Uc!
+    // end = #end <>
     private boolean end() {
         return in >= source.length();
     }
@@ -399,7 +399,7 @@ class Parser implements Testable {
         return true;
     }
 
-    // Name: one of @id, @drop, @action, @tag, @err
+    // Name: one of @id, @drop, @action, @tag, @err, @end
     private boolean doName(Op op) {
         if (out >= output.length) {
             output = Arrays.copyOf(output, output.length * 2);

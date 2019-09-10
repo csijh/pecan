@@ -102,7 +102,10 @@ public class Evaluator implements Testable {
                 s += mark;
             }
             if (textInput) output.append(Node.err(input, in, in, s));
-            else output.append("Error at token " + tokenIndex + ": " + s);
+            else {
+                output.append("Error at token " + tokenIndex);
+                if (s.length() > 0) output.append(": " + s);
+            }
             output.append("\n");
         }
         return output.toString();
@@ -132,6 +135,7 @@ public class Evaluator implements Testable {
             case Mark: parseMark(node); break;
             case Drop: parseDrop(node); break;
             case Act: parseAct(node); break;
+            case End: parseEnd(node); break;
             default: throw new Error("Not implemented " + node.op());
         }
     }
@@ -335,10 +339,8 @@ public class Evaluator implements Testable {
     // Parse %t
     private void parseTag(Node node) {
         String tag;
-        if (node.text().charAt(0) == '%') tag = node.text().substring(1);
-        else tag = node.text().substring(1, node.text().length()-1);
-        if (tag.length() == 0) ok = in == input.length();
-        else ok = input.startsWith(tag, in);
+        tag = node.text().substring(1);
+        ok = input.startsWith(tag, in);
         if (ok) {
             start = in;
             tokenIndex++;
@@ -370,6 +372,11 @@ public class Evaluator implements Testable {
         ok = true;
         delay[out] = node;
         delayIn[out++] = in;
+    }
+
+    // Parse <>
+    private void parseEnd(Node node) {
+        ok = in == input.length();
     }
 
     // Print out the input position.

@@ -371,6 +371,14 @@ static inline void doCAT(parser *p, int arg) {
 
 }
 
+// {<>}  =  END
+// Check for end of input.
+static inline void doEND(parser *p) {
+    if (p->input != NULL) p->ok = p->input[p->in] == '\0';
+    else p->ok = p->tag(p->arg, p->in) < 0;
+    p->pc = p->stack[--p->top];
+}
+
 static inline void getOpArg(parser *p, int *op, int *arg) {
 #ifdef TRACE
     int pc0 = p->pc;
@@ -421,6 +429,7 @@ static void execute(parser *p, result *r) {
             case SET: doSET(p, arg); break;
             case TAG: doTAG(p, arg); break;
             case CAT: doCAT(p, arg); break;
+            case END: doEND(p); break;
             default: printf("Bad op %d\n", op); exit(1);
         }
     }

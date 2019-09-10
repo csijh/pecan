@@ -69,7 +69,7 @@ class Binder implements Testable {
         if (node.right() != null) scan(node.right());
         switch(node.op()) {
         case And: case Or: case Opt: case Any: case Some: case Drop:
-        case Has: case Not: case Try: case Mark:
+        case Has: case Not: case Try: case Mark: case End:
             break;
         case Cat: bindCat(node); break;
         case Tag: bindTag(node); break;

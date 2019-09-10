@@ -9,7 +9,7 @@ typedef unsigned char byte;
 // of 1, then from OP1 those that take a one-byte operand 0..255, and then from
 // OP2 those that take a two-byte big-endian argument 0..65535,
 enum op {
-    STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP,
+    STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP, END,
     STRING1, LOW1, HIGH1, LESS1, SET1,
     START,  GO,  BACK,  EITHER,  BOTH,  STRING,  LOW,  HIGH,  LESS,
     SET, ACT, MARK, CAT, TAG,

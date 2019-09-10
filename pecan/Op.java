@@ -23,6 +23,7 @@ public enum Op {
     String,  // Character sequence, "..."
     Set,     // Choice of characters, '...'
     Divider, // Lookahead for text less than string, <...>
+    End,     // End of input, <>
     Range,   // Character range, x..y
     Cat,     // Unicode category, e.g. Lu
     Tag,     // Match a type of token.
