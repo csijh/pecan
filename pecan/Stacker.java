@@ -7,9 +7,13 @@ import java.io.*;
 import static pecan.Op.*;
 
 /* This pass checks that output handling is consistent, that a fixed number of
-output items is produced for any given rule, and that there is no stack
-underflow. (This is a change from version 0.4, where the first rule was forced
-to produce a single output item. This is to support grammar fragments.)
+output items is produced for any given node, and that a fixed number of output
+items is needed at the start of any node.
+
+As a change from version 0.4, if the first rule of a grammar doesn't produce one
+item, or needs output items and thus causes stack underflow, reporting is
+delayed until bytecode generation so that, during development and testing,
+grammars with no actions, and arbitrary fragments of grammars, are legal.
 
 A NET number is calculated for each node, representing the overall change in
 output stack size, positive or negative, as a result of parsing. The value for
@@ -177,9 +181,14 @@ class Stacker implements Testable {
         node.note("" + node.NET() + "," + node.LOW());
     }
 
-    // Check for underflow of the first rule.
+    // Check for any node where underflow can't be calculated.
     private String checkLow(Node node) {
-        if (node.LOW() < 0) return err(node, "outputs may underflow");
+        String x = null;
+        if (node.left() != null) x = checkLow(node.left());
+        if (x != null) return x;
+        if (node.right() != null) x = checkLow(node.left());
+        if (x != null) return x;
+        if (node.LOW() == -100) return err(node, "outputs may underflow");
         else return null;
     }
 

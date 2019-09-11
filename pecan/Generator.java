@@ -31,7 +31,13 @@ class Generator implements Testable {
     String run(String grammar) {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
-        if (root.op() == Error) return "ERR:" + root.note();
+        if (root.op() == Error) return "Error: " + root.note();
+        if (root.NET() != 1) {
+            return "Error: first rule produces " + root.NET() + " items\n";
+        }
+        if (root.LOW() < 0) {
+            return "Error: first rule produces underflow\n";
+        }
         output = new StringBuilder();
         changed = true;
         while (changed) {

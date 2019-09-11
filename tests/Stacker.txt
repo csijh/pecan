@@ -19,7 +19,7 @@ x = 'a' / 'b' @2c x @d
 ----------
 Error on line 2: outputs may underflow
 x = 'a' / 'b' @2c x @d
-^
+    ^^^^^^^^^^^^^^^^^^
 ==========
 // Choice
 exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP

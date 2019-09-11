@@ -187,3 +187,18 @@ letter x
 Error on line 1:
 9
 ^
+==========
+// First rule not producing a single result (allowed during testing).
+x = 'a' @one @two
+==========
+a
+----------
+one a
+two
+==========
+// First rule underflows the output stack (allowed during testing).
+x = 'a' @1one
+==========
+a
+----------
+one a

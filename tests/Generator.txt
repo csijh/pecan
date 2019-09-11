@@ -284,3 +284,13 @@ BOTH, 2, STRING1, 10, AND, DROP, STOP
 ch = Ll @letter
 ----------
 START, 7, BOTH, 2, CAT, Ll, AND, ACT, letter, STOP
+==========
+// First rule producing two output items.
+x = 'a' @one @two
+----------
+Error: first rule produces 2 items
+==========
+// First rule underflows the output stack.
+x = 'a' @1one @two
+----------
+Error: first rule produces underflow

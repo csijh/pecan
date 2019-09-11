@@ -155,7 +155,9 @@ bytecode interpreter:</p>
 <a href="interpret.c">interpret.c</a></p>
 
 <p>The <code>parse</code> program creates a parse tree, and prints it out using
-indenting to indicate the tree structure.</p>
+indenting to indicate the tree structure. The actions only ever take account of
+the most recently matched tokens. Thus, in the grammar, there is no need to
+discard unwanted tokens using the <code>@</code> symbol.</p>
 
 </body>
 </html>

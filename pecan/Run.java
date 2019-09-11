@@ -77,8 +77,8 @@ class Run {
         if (n >= 0) grammar = grammar.substring(0, n);
         Generator gen = new Generator();
         String code = gen.run(grammar);
-        if (code.startsWith("ERR:")) {
-            System.err.println(code.substring(4));
+        if (code.startsWith("Error: ")) {
+            System.err.println(code.substring(7));
             System.exit(1);
         }
         insert(code);

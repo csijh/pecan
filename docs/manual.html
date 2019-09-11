@@ -4,7 +4,7 @@
 <title>Pecan Manual</title>
 <style>
   body { font-size: 120%; }
-  pre { margin-left:40px; }
+  pre, .indent { margin-left:40px; }
 </style>
 </head>
 <body>
@@ -692,8 +692,9 @@ convention which allows matched characters to be discarded. For example:</p>
 <pre>spaces = ' '+ @
 </pre>
 
-<p>An <code>@</code> sign on its own causes any recently matched characters to
-be discarded by the parser, without any external code being executed.</p>
+<p>An <code>@</code> sign on its own causes any recently matched characters (or
+tokens) to be discarded by the parser, without any external code being
+executed.</p>
 
 <!--
 <p>Although tokens can be explicitly discarded in this way, it is normal for
@@ -706,9 +707,13 @@ alternative in a choice must create or consume the same number of output items.
 Within a repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>,
 the inner expression <code>x</code> must have no net effect on the number of
 output items. Every expression or rule must produce or consume a fixed number of
-output items. The first rule in a grammar normally produces a single output item
-overall, but this is not enforced. That means a grammar with no actions is
-legal, and also any self-contained fragment of a grammar is legal.</p>
+output items.</p>
+
+<p>The first rule in a grammar must produce a single output item overall.
+However, if it doesn't, the error is reported only when attempting to generate
+bytecode from the grammar. That means, during development and testing, a grammar
+with no actions is legal, and also any self-contained fragment of a grammar is
+legal.</p>
 
 <p>The compensation for these severe restrictions is that Pecan can carry out
 strong consistency checks on grammars, ensuring that there can be no stack
@@ -743,11 +748,12 @@ action does anything necessary to finalize the list.</p>
 
 <p>The external code in a generated parser may choose a different implementation
 with the same overall effect. For example, <code>@list</code> may mark a
-position in the output stack, <code>@2id</code> may do nothing so that ids
+position in the output stack, <code>@2id</code> may do nothing, so that ids
 accumulate on the stack, and <code>@1end</code> may use the marked stack
 position to create an array out of the accumulated ids. Alternatively,
-<code>@list</code> could create a linked list, and each subsequent
-<code>@2id</code> could chain the next id onto the end of the list.</p>
+<code>@list</code> could create a linked list, each subsequent
+<code>@2id</code> could chain the next id onto the end of the list, and
+<code>@1end</code> could do nothing.</p>
 
 <p>Techniques like this for handling variable-length lists can easily lead to a
 left hand alternative which begins with an action, for example:</p>
@@ -818,9 +824,9 @@ of a grammar involving primitive character matchers, i.e. strings, sets,
 character codes, or Unicode identifiers, and begin each with a marker. For
 example, a parser for a programming language might contain rules such as:</p>
 
-<pre>plus = #operator "+" " "* @
+<pre>plus = #operator "+" @
 letter = #letter (Lu / Ll / Lt / Lm / Lo)
-number = #number ('0'..'9')+ @number " "* @
+number = #number ('0'..'9')+ @number
 newline = #newline 13? 10 @
 end = #end &lt;>
 </pre>
@@ -852,10 +858,11 @@ are displayed. If a line number is given, only the single test that starts on
 that line of the test file is executed.</p>
 
 <p>A test file contains a number of sections separated by lines consisting of
-three or more equal signs. If a section contains a line of minus signs as a
-separator, then it is a test with sample input and expected output. If a section
-has no minus sign separator, it is a grammar or grammar fragment which is used
-for subsequent tests, until another grammar is given. For example:</p>
+three or more equal signs. If a section contains a line of three or more minus
+signs as a separator, then it is a test with sample input and expected output.
+If a section has no minus sign separator, it is a grammar or grammar fragment
+which is used for subsequent tests, until another grammar is given. For
+example:</p>
 
 <pre>// Recognise one digit
 number = ("0".."9") @number
@@ -897,34 +904,33 @@ Fail test on line 24 of tests.txt:
 ...
 
 pecan -trace 24 tests.txt
+...
 </pre>
 
 <p>A section of the test file can consist of a single line. If the line doesn't
-contain an equal sign, it has a special meaning. Examples of each possibility
-are:</p>
+contain an equal sign, it has a special meaning. It is the name of a file
+containing a grammar to be used for subsequent tests. This supports the common
+case where the grammar is in one file and its tests are in another:</p>
 
-<pre>grammar.pecan
+<pre>grammar.txt
 ==========
-tests.txt
-==========
-number
-==========
-// Comment
+// First test
+...
 </pre>
 
-<p>In the first example, which is recognised by the presence of a dot, the
-section consists of the name of a file containing a grammar to be used for
-subsequent tests. This supports the common case where the grammar is in one file
-and its tests are in another. The second example is the name of a secondary test
-file to execute, allowing a suite of tests to be split across several files.
-There is no conflict between these first two examples, because a grammar file is
-equivalent to a test file which sets up a grammar but contains no tests. The
-third example is the name of a rule in the current grammar, to be used as an
-entry point for subsequent tests. It can be recognised by the lack of a dot
-character. This allows a grammar to be developed rule by rule, with old tests on
-particular rules being kept as regression tests. In the final example, a section
-consists entirely of comment lines. The section has no effect, but can be used
-to explain tests.</p>
+<p>The line could alternatively be the name of a secondary test file to execute,
+allowing a suite of tests to be split across several files:</p>
+
+<pre>group1.txt
+==========
+group2.txt
+==========
+...
+</pre>
+
+<p>There is no conflict between these two examples, because a grammar file is
+equivalent to a test file which sets up a grammar for subsequent tests, but
+contains no tests.</p>
 
 <p>Test files can use the UTF-8 encoding, but there is also an escape convention
 which allows control characters or Unicode characters to be included as plain
@@ -956,8 +962,8 @@ no rule name clashes with a category name.</p>
 
 <p>A grammar is checked to see if it represents a text parser or a token parser.
 A text parser must contain no tags. A token parser must not contain text
-matchers, i.e. strings, dividers, sets, ranges or numbers, with the possible
-exception of <code>""</code> or <code>''</code>.</p>
+matchers, i.e. strings, dividers, sets, ranges or numbers, with the
+exception of <code>""</code> or <code>''</code> or <code>&lt;></code>.</p>
 
 <p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
 there is a check that there is a single code point either side of the
@@ -1160,8 +1166,11 @@ appears. For example if a grammar contains both <code>@1add</code> and
 that each expression in the grammar produces a fixed, known number of output
 items.</p>
 
-<p>Both alternatives in a choice expression must have the same net effect on the
-size of the stack. For example, this rule causes an error:</p>
+<p>The net overall number of items added to the stack, possibly negative, is
+calculated for each expression in the grammar.</p>
+
+<p>Both alternatives in a choice expression must have the same net effect. For
+example, this rule causes an error:</p>
 
 <pre>token = ('0'..'9')+ @token / ' '+
 </pre>
@@ -1174,12 +1183,12 @@ nothing. On the other hand, this rule is legal:</p>
 
 <p>The <code>@1token</code> action pops an item from the stack, presumably a
 list of tokens, and pushes one item back on the stack, presumably the updated
-list. It thus has zero net effect on the stack. Since both alternatives now have
-a net zero effect, the <code>token</code> rule itself can be deduced as having a
-net zero effect.</p>
+list. It thus has zero net effect. Since both alternatives now have a zero net
+effect, the <code>token</code> rule itself can be deduced as having a zero net
+effect.</p>
 
-<p>A repeated expression must have zero net effect on the stack. For example,
-suppose the grammar contains:</p>
+<p>A repeated expression must have zero net effect. For example, suppose the
+grammar contains:</p>
 
 <pre>tokens = (('0'..'9')+ @token)*
 </pre>
@@ -1193,13 +1202,12 @@ allowed:</p>
 </pre>
 
 <p>The inner expression pops a previous list item, adds a token to it, and
-pushes the updated list onto the stack. As a result, it has a zero net effect on
-the stack. It can be repeated any number of times, still with a zero net effect,
-and so the <code>tokens</code> rule can be deduced to have zero net effect on
-the stack.</p>
+pushes the updated list onto the stack. As a result, it has a zero net effect.
+It can be repeated any number of times, still with a zero net effect, and so the
+<code>tokens</code> rule can be deduced to have zero net effect.</p>
 
-<p>As well as repeated expressions, recursion is restricted so that the number
-of output items produced is fixed. For example:</p>
+<p>As well as repeated expressions, recursion is also restricted so that the
+number of output items produced is fixed. For example:</p>
 
 <pre>x = 'a' x @a
 </pre>
@@ -1211,10 +1219,8 @@ error.</p>
 <p>A second check is that the stack never underflows. To check this, for each
 expression, the number of items which need to be on the stack when the
 expression is executed is calculated. For example, the expression
-<code>('0'..'9')+ @1token</code> needs one item to be on the stack. Any rule
-used as an entry point into the grammar should not need any items on the stack.
-There are situations where the needed number can't be calculated, for
-example:</p>
+<code>('0'..'9')+ @1token</code> needs one item to be on the stack. There are
+situations where the needed number can't be calculated, for example:</p>
 
 <pre>x = 'a' / 'b' @2c x @d
 </pre>
@@ -1223,20 +1229,10 @@ example:</p>
 on the stack, even though the net effect of <code>x</code> is zero. Such a
 situation is reported as an error.</p>
 
-<p>To implement these checks, Pecan calculates the overall number of items added
-to the stack, possibly negative, for each expression in the grammar. It also
-calculates a low water mark value for every expression in the grammar,
-representing the number of items that are needed on the stack during processing
-of the expression. It then checks that for the first rule in the grammar, the
-low water mark isn't negative.</p>
-
-<p>In order to carry out these checks, a very uniform approach to actions has
-to be taken. For example, Pecan checks that each alternative in a choice adds
-the same number of items to the stack, and that where there is a repetition
-operator, e.g. <code>x?</code> or <code>x*</code> or <code>x+</code>, the
-subexpression <code>x</code> has no overall effect on the number of items on
-the stack, so that the number of times <code>x</code> is repeated doesn't
-have any overall effect on the stack size.</p>
+<p>Any situation where the net effect or the needed number can't be calculated
+as a fixed integer is reported. For a complete grammar which is to be compiled
+into bytecode, the first rule is checked to make sure its net effect is one, and
+its needed number is zero, so that stack underflow is impossible.</p>
 
 <p>These checks are conservative, i.e. there could be pathological grammars
 which always work correctly in practice, but which don't pass the checks.</p>
@@ -1353,9 +1349,8 @@ be thought of as a relative offset in the code, from the position after the
 <p><code>START</code> and <code>STOP</code> opcodes are generated for every
 rule, even though they are only executed once for the overall call to the
 parser. This is so that any rule can be used as an entry point, if desired. The
-bytecode interpreter scans the bytecode, skipping the body <code>{x}</code> of
-each rule using the number <code>nx</code>, to find the start of the next
-rule.</p>
+bytecode can be scanned, skipping the body <code>{x}</code> of each rule using
+the number <code>nx</code>, to find the start of the next rule.</p>
 
 <pre>{id}        =   GO, px
 {id}        =   BACK, px
@@ -1412,10 +1407,12 @@ the input outside of lookahead constructs, and performed or discarded at the end
 of any outermost lookahead construct.</p>
 
 <p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
-set, and cleared whenever a new marker is found further on in the input.</p>
-
-<p>Tags are used only in token-based parsers. They cause a call to external code
-to find the tag of a particular token.</p>
+set, and cleared whenever a new marker is found further on in the input. Tags
+are used only in token-based parsers. They cause a call to external code to find
+the tag of a particular token. Currently, there is a limit of 256 different
+action names, 256 marker names, and 256 tag names, so that only one-byte
+operands are needed. If the interpreter uses a 64-bit integer as a bitset of
+markers, then there is a limit of 64 marker names.</p>
 
 <p>A category is translated using the <code>CAT</code> opcode. The target
 programming language may not have a facility for finding the category of a
@@ -1432,12 +1429,10 @@ language.</p>
 <p>The <code>EITHER</code> opcode initializes a choice, and <code>OR</code>
 checks what happens after <code>{x}</code> to decide whether or not to continue
 with <code>{y}</code>. Similarly, the <code>BOTH</code> and <code>AND</code>
-opcodes handle a sequence.</p>
-
-<p>If the bytecode interpreter implements each opcode separately using a switch,
-then <code>EITHER</code> or <code>BOTH</code> can be thought of as causing a
-call to <code>{x}</code> returning to <code>OR</code> or <code>AND</code>, which
-causes a tail-call to <code>{y}</code>.</p>
+opcodes handle a sequence. The <code>EITHER</code> or <code>BOTH</code> opcode
+can be thought of as causing a call to <code>{x}</code> returning to
+<code>OR</code> or <code>AND</code>, which causes a tail-call to
+<code>{y}</code>.</p>
 
 <pre>{x?}        =   MAYBE, ONE, {x}
 {x*}        =   MAYBE, MANY, {x}
@@ -1471,8 +1466,13 @@ interpreters and their comments.</p>
 
 <h3 id="interpreters">Interpreters</h3>
 
-<p>There are some things that the example interpreters have in common. There is
-an array <code>input</code> of characters or tokens, and two indexes
+<p>The main example interpreter currently provided is in C. It can be used as
+starting point for developing interpreters in other languages:</p>
+
+<p class="indent"><a href="interpret.h">interpret.h</a><br/>
+<a href="interpret.c">interpret.c</a></p>
+
+<p>There is an array of characters or tokens as input, and two indexes
 <code>start</code> and <code>in</code> into it. The items up to
 <code>start</code> have been processed, and <code>in</code> is the current
 position. So when an action is performed, the items between <code>start</code>
@@ -1483,7 +1483,7 @@ to <code>in</code>.</p>
 <code>out</code> represents the current position in the list, i.e. the number of
 delayed actions.</p>
 
-<p>Actions must be delayed during lookaheads, and discarded on backtracking. The
+<p>Actions must be delayed during lookahead, and discarded on backtracking. The
 left hand expression <code>x</code> in a choice <code>x / y</code> also involves
 an implicit one-item lookahead. Since <code>x</code> may involve actions before
 matching anything, actions need to be delayed in this case too, and discarded if
@@ -1496,12 +1496,11 @@ list, and the current value of <code>in</code> is stored with it. For left hand
 choices and lookaheads, <code>out</code> is saved. If the construct fails or
 backtracks, accumulated actions are discarded by setting <code>out</code> to the
 saved value. Whenever progress is made in the input, other than in a lookahead
-construct, all the delayed actions are performed. (If a number of nested left
+construct, all the delayed actions are performed. If a number of nested left
 hand choices are under way, and there is progress, all the left choices become
-committed, so it is correct to perform all the delayed actions at that point.)
-If a try <code>[x]</code> succeeds, any accumulated actions are kept, and if
-progress was made during <code>[x]</code>, all the delayed actions are
-performed.</p>
+committed, so it is correct to perform all the delayed actions at that point. If
+a try <code>[x]</code> succeeds, any accumulated actions are kept, and performed
+at the next opportunity.</p>
 
 <h2 id="transforms">Transforms</h2>
 
@@ -1541,10 +1540,10 @@ same output effect and error handling properties as the original.</p>
 <li>actions are now allowed at the start of a left hand choice</li>
 <li>actions are delayed in case they need to be discarded</li>
 <li>error markers are no longer postfix</li>
-<li>the divider notation <code>&lt;abc></code> has been added</li>
+<li>the divider notation <code>&lt;abc></code> and end notation
+    <code>&lt;></code> have been added</li>
 <li>tags with backquotes have been removed</li>
 <li>separate grammar and test files are supported</li>
-<li>individual rules within a grammar can be tested</li>
 <li>one test file can be called from within another</li>
 <li>parser generation is via bytecode</li>
 </ul>
