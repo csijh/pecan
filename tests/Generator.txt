@@ -279,3 +279,8 @@ SET1, 41, AND, GO, 15, STOP, START, 9, BOTH, 2, MARK, digit, AND, LOW1, 48,
 HIGH1, 57, STOP, START, 8, BOTH, 4, MAYBE, MANY, SET1, 32, AND, DROP, STOP,
 START, 18, BOTH, 2, MARK, newline, AND, BOTH, 4, MAYBE, ONE, STRING1, 13, AND,
 BOTH, 2, STRING1, 10, AND, DROP, STOP
+==========
+// Test category recognition
+ch = Ll @letter
+----------
+START, 7, BOTH, 2, CAT, Ll, AND, ACT, letter, STOP

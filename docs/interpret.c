@@ -8,8 +8,6 @@ Use option -DTRACE for tracing.
 #include <stdlib.h>
 #include <string.h>
 
-// TODO: cat op.
-
 // Names of opcodes for tracing.
 #ifdef TRACE
 static char *opNames[] = {
@@ -53,6 +51,29 @@ struct parser {
     int stack[1000], actions[1000];
 };
 typedef struct parser parser;
+
+// Unicode category lookup tables, read in lazily.
+static byte *table1 = NULL, *table2 = NULL;
+
+// Read in a binary file.
+static byte *readFile(char *filename) {
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL) { printf("Can't read %s\n", filename); exit(1); }
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    byte *content = malloc(size);
+    int n = fread(content, 1, size, fp);
+    if (n != size) { printf("Can't read %s\n", filename); exit(1); }
+    fclose(fp);
+    return content;
+}
+
+// Read in lookup tables.
+static void readTables() {
+    table1 = readFile("table1.bin");
+    table2 = readFile("table2.bin");
+}
 
 // Initialize the parsing state.
 static void new(
@@ -311,11 +332,23 @@ static inline void doLESS(parser *p, int arg) {
 }
 
 // Find the length of a UTF-8 character from its first byte.
-static inline int length(byte first) {
+static inline int lengthUTF8(byte first) {
     if ((first & 0x80) == 0) return 1;
     if ((first & 0xE0) == 0xC0) return 2;
     if ((first & 0xF0) == 0xE0) return 3;
     return 4;
+}
+
+// Read a UTF-8 character and its length.
+static inline int getUTF8(char const *s, int *plength) {
+    int ch = s[0], len = 1;
+    if ((ch & 0x80) == 0) { *plength = len; return ch; }
+    else if ((ch & 0xE0) == 0xC0) { len = 2; ch = ch & 0x3F; }
+    else if ((ch & 0xF0) == 0xE0) { len = 3; ch = ch & 0x1F; }
+    else if ((ch & 0xF8) == 0xF0) { len = 4; ch = ch & 0x0F; }
+    for (int i = 1; i < len; i++) ch = (ch << 6) | (s[i] & 0x3F);
+    *plength = len;
+    return ch;
 }
 
 // {'abc'}  =  SET, 3, 'a', 'b', 'c'
@@ -325,7 +358,7 @@ static inline void doSET(parser *p, int arg) {
     int n = 0;
     for (int i = 0; i < arg && ! p->ok; ) {
         byte b = p->code[p->in + i];
-        n = length(b);
+        n = lengthUTF8(b);
         bool oki = true;
         for (int j = 0; j < n && oki; j++) {
             if (p->input[p->in + j] != p->code[p->pc + i + j]) oki = false;
@@ -355,9 +388,18 @@ static inline void doTAG(parser *p, int t) {
 // {Nd}  =  CAT, Nd
 // Check if next character is in given category.
 static inline void doCAT(parser *p, int arg) {
-    if (arg == Uc) { p->ok = (p->input[p->in] != '\0'); return; }
-
-
+    if (p->input[p->in] == '\0') { p->ok = false; return; }
+    if (arg == Uc) { p->ok = true; return; }
+    if (table1 == NULL) readTables();
+    int ch, len;
+    ch = getUTF8(&p->input[p->in], &len);
+    int cat = table2[table1[ch>>8]*256+(ch&255)];
+    p->ok = cat == arg;
+    if (p->ok) {
+        if (p->look == 0 && p->out > 0) doActs(p);
+        p->in += len;
+    }
+    p->pc = p->stack[--p->top];
 }
 
 // {<>}  =  END
@@ -778,6 +820,12 @@ static byte calc17[] = {
     BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
 };
 
+// Test for category recognition.
+// ch = Nd @number
+static byte cat[] = {
+    START, 7, BOTH, 2, CAT, Nd, AND, ACT, number, STOP
+};
+
 static bool run(state *s, byte *code, char *input, char *output) {
     result rData;
     result *r = &rData;
@@ -838,6 +886,8 @@ int main() {
     assert(run(s, calc17, "5*8+12/6\n", "#5#8*#12#6/+"));
     assert(run(s, calc17, "2*(20+1)\n", "#2#20#1+*"));
     assert(run(s, calc17, " 2 * ( 20 + 1 ) \n", "#2#20#1+*"));
+    assert(run(s, cat, "2", "#2"));
+    assert(run(s, cat, "x", "E0:0"));
     printf("Interpreter OK\n");
 }
 

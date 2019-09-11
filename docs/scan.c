@@ -61,7 +61,7 @@ static char *names[] = {
     "number", "plus", "minus", "times", "over", "open", "close", "bad", "tokens"
 };
 
-// Running the scanner interactively on its own.
+// Run the scanner interactively on its own.
 int main() {
     char input[100];
     printf("Type a sum: ");

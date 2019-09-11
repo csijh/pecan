@@ -174,3 +174,16 @@ left
 1
 ----------
 right
+==========
+// Test category recognition
+ch = Ll @letter
+==========
+x
+----------
+letter x
+==========
+9
+----------
+Error on line 1:
+9
+^

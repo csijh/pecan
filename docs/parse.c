@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Node types, also used as actions, and theor spellings.
+// Node types, also used as actions, and their spellings.
 enum type { value, add, subtract, multiply, divide };
 static char *typeNames[] = { "value", "add", "subtract", "multiply", "divide" };
 
