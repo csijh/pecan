@@ -786,3 +786,10 @@ bs = '\\'
 ----------
 Rule bs
   Set '\\'
+==========
+// Empty tag name
+x = y %
+----------
+Error on line 2: expecting letter
+x = y %
+       ^

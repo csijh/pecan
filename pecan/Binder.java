@@ -60,6 +60,9 @@ class Binder implements Testable {
         if (root.has(TextInput) && root.has(TokenInput)) {
             err(root, "there is both text and token input");
         }
+        if (! root.has(TextInput) && ! root.has(TokenInput)) {
+            root.set(TextInput);
+        }
         return root;
     }
 

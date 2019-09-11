@@ -175,10 +175,9 @@ class Parser implements Testable {
         return gap();
     }
 
-    // tag = "%" letter alpha* @tag gap
+    // tag = "%" #letter letter alpha* @tag gap
     private boolean tag() {
-        if (! accept('%')) return false;
-        if (! letter()) return false;
+        if (! (accept('%') && mark(LETTER) && letter())) return false;
         while (alpha()) { }
         return doName(Tag) && gap();
     }
