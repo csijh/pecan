@@ -32,14 +32,9 @@ typedef void doAct(void *state, int a, int p, int n);
 typedef int doTag(void *state, int i);
 
 // The type of a parsing result. If ok is true, 'at' holds how far parsing
-// reached. Otherwise, it is where the error occurred, with its line number and
-// column, the start and end positions of the line, and the error items marked
-// at that position.
-struct result {
-    bool ok;
-    int at, line, column, start, end;
-    uint64_t markers;
-};
+// reached. Otherwise, it is where the error occurred. In the case of token
+// parsing, 'at' is the index in the token array.
+struct result { bool ok; int at; uint64_t markers; };
 typedef struct result result;
 
 // Parse character input according to the provided bytecode. Use function f to

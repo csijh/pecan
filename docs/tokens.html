@@ -68,18 +68,19 @@ Pass 10 tests.
 <p>The next task is to turn the grammar into a program. A skeleton program is
 written, using the generic bytecode interpreter as before:</p>
 
-<p class="indent"><a href="scan.h">scan.h</a>
+<p class="indent"><a href="scan.h">scan.h</a><br/>
 <a href="scan.c">scan.c</a><br/>
 <a href="interpret.h">interpret.h</a><br/>
 <a href="interpret.c">interpret.c</a></p>
 
-<p>The <code>scan</code> program is written as a reusable module, but with a
-<code>main</code> function available with the <code>scanTest</code> conditional
-compilation flag, so that the program can be interactively tested on its own. It
-provides a <code>scan</code> function which returns an array of token
-structures. There is a final sentinel structure with a negative tag, so that the
-length of the array does not need to be passed around with the array. The
-grammar is compiled into bytecode within the skeleton program:</p>
+<p>The <code>scan</code> program is written as a reusable module. If the
+<code>scanTest</code> conditional compilation flag is used, a <code>main</code>
+function is provided, so that the <code>scan</code> module can be interactively
+tested on its own. The module provides a <code>scan</code> function which
+returns an array of token structures. There is a final sentinel structure with a
+negative tag, so that the length of the array does not need to be passed around
+with the array. The grammar is compiled into bytecode within the skeleton
+program:</p>
 
 <pre>pecan scan.txt -o scan.c
 </pre>
@@ -105,7 +106,7 @@ number 2 1
 <p>A token-based parser for sums can be developed from the full calculator in
 the previous tutorial, replacing the low level rules by tags:</p>
 
-<pre>sum = exp #newline %end
+<pre>sum = exp #newline &lt;>
 exp = term (#op %plus term @2add / #op %minus term @2subtract)*
 term = atom (#op %times atom @2multiply / #op %over atom @2divide)*
 atom = #digit %number @value / #bracket %open exp #bracket %close
@@ -141,17 +142,20 @@ done on the tree.</p>
 Pass 7 tests
 </pre>
 
-<p>When an error is reported, its token index is given. In the real parser, with
-the original text available, the token index can be converted into a text
-position, to produce a conventional error message. The next step is to write a
-skeleton parser, which uses both the scanner module and the provided bytecode
-interpreter:</p>
+<p>In the tests, when an error is reported, its token index is given. In the
+real parser, with the original text available, the token index can be converted
+into a text position, to produce a conventional error message. The next step is
+to write a skeleton parser, which uses both the scanner module and the provided
+bytecode interpreter:</p>
 
 <p class="indent"><a href="parse.c">parse.c</a><br/>
-<a href="scan.h">scan.h</a>
+<a href="scan.h">scan.h</a><br/>
 <a href="scan.c">scan.c</a><br/>
 <a href="interpret.h">interpret.h</a><br/>
 <a href="interpret.c">interpret.c</a></p>
+
+<p>The <code>parse</code> program creates a parse tree, and prints it out using
+indenting to indicate the tree structure.</p>
 
 </body>
 </html>

@@ -1,13 +1,14 @@
 /* Pecan 1.0 bytecode interpreter in C. Free and open source. See licence.txt.
 
-Compile with option -DTEST (and maybe option -DTRACE) to carry out self-tests.
+Compile with option -DinterpretTest to carry out self-tests.
+Use option -DTRACE for tracing.
 */
 #include "interpret.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// TODO: tag and cat ops.
+// TODO: cat op.
 
 // Names of opcodes for tracing.
 #ifdef TRACE
@@ -79,21 +80,6 @@ static inline void doActs(parser *p) {
     p->out = 0;
 }
 
-// Find the line/column and start/end of line containing an input position.
-static void findLine(parser *p, result *r, int at) {
-    r->line = 1;
-    r->start = 0;
-    for (int i = 0; ; i++) {
-        byte b = p->input[i];
-        if (b == '\0') { r->end = i; break; }
-        if (b != '\n') continue;
-        r->line++;
-        if (i + 1 <= at) r->start = i + 1;
-        else { r->end = i; break; }
-    }
-    r->column = at - r->start;
-}
-
 // {id = x}  =  START, nx, {x}, STOP
 // Call {x} returning to STOP.
 static inline void doSTART(parser *p, int arg) {
@@ -109,7 +95,6 @@ static inline void doSTOP(parser *p, result *r) {
     r->ok = p->ok;
     r->at = p->in;
     r->markers = p->markers;
-    if (! p->ok) findLine(p, r, p->in);
 }
 
 // {id}  =  GO, n   or   BACK, n
@@ -360,6 +345,10 @@ static inline void doSET(parser *p, int arg) {
 static inline void doTAG(parser *p, int t) {
     int nextTag = p->tag(p->arg, p->in);
     p->ok = (nextTag == t);
+    if (p->ok) {
+        if (p->look == 0 && p->out > 0) doActs(p);
+        p->in++;
+    }
     p->pc = p->stack[--p->top];
 }
 
@@ -452,16 +441,38 @@ void parseTokens(byte code[], doTag *g, doAct *f, void *x, result *r) {
     execute(p, r);
 }
 
-static void reportLine(char *in, result *r) {
-    fprintf(stderr, "%.*s\n", r->end - r->start, in + r->start);
+// Line/column and start/end of line containing an input position
+struct lineInfo { int line, column, start, end; };
+typedef struct lineInfo lineInfo;
+
+// Find the line/column and start/end of line containing an input position.
+static void findLine(char *input, int at, lineInfo *li) {
+    li->line = 1;
+    li->start = 0;
+    for (int i = 0; ; i++) {
+        byte b = input[i];
+        if (b == '\0') { li->end = i; break; }
+        if (b != '\n') continue;
+        li->line++;
+        if (i + 1 <= at) li->start = i + 1;
+        else { li->end = i; break; }
+    }
+    li->column = at - li->start;
 }
 
-static void reportColumn(result *r) {
-    for (int i = 0; i < r->column; i++) fprintf(stderr, " ");
+static void reportLine(char *in, lineInfo *li) {
+    fprintf(stderr, "%.*s\n", li->end - li->start, in + li->start);
+}
+
+static void reportColumn(lineInfo *li) {
+    for (int i = 0; i < li->column; i++) fprintf(stderr, " ");
     fprintf(stderr, "^\n");
 }
 
 void report(char *in, result *r, char *s0, char *s, char *names[]) {
+    lineInfo liData;
+    lineInfo *li = &liData;
+    findLine(in, r->at, li);
     if (r->markers == 0L) { fprintf(stderr, "%s", s0); }
     else {
         char text[100];
@@ -482,8 +493,8 @@ void report(char *in, result *r, char *s0, char *s, char *names[]) {
         strcpy(text, text + n + 2);
         fprintf(stderr, "%s", text);
     }
-    reportLine(in, r);
-    reportColumn(r);
+    reportLine(in, li);
+    reportColumn(li);
 }
 
 #ifdef interpretTest

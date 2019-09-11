@@ -174,7 +174,7 @@ class Generator implements Testable {
     // {%id}  =  TAG(n)
     private void encodeTag(Node node) {
         add(TAG.toString());
-        add(node.text());
+        add(node.name());
     }
 
     // {10}  =  STRING(1), 10

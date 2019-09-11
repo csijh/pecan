@@ -1,16 +1,16 @@
 parse.txt
 ==========
-number end
+number
 ----------
 value
 ==========
-number plus number end
+number plus number
 ----------
 value
 value
 add
 ==========
-number times number plus number end
+number times number plus number
 ----------
 value
 value
@@ -18,7 +18,7 @@ multiply
 value
 add
 ==========
-number plus number times number end
+number plus number times number
 ----------
 value
 value
@@ -26,7 +26,7 @@ value
 multiply
 add
 ==========
-number plus open number close plus number end
+number plus open number close plus number
 ----------
 value
 value
@@ -34,7 +34,7 @@ add
 value
 add
 ==========
-number plus end
+number plus
 ----------
 Error at token 2: expecting bracket, digit
 ==========
