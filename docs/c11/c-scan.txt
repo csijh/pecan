@@ -6,7 +6,7 @@
 
 //  ----- A.1.1 Tokens -----
 
-tokens = @tokens token* Uc!
+tokens = @tokens token* <>
 
 // String-literals and constants and keywords must come before identifiers.
 token =

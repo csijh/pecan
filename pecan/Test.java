@@ -150,7 +150,7 @@ public class Test {
             if (i < lines.size() && ! all(lines.get(i), '=')) continue;
             Test t = readTest(lines, start, i);
             if (t == null) continue;
-            t.input = unescape(t.input);
+            if (! t.isGrammar) t.input = unescape(t.input);
             t.fileName = file;
             tests.add(t);
             start = i + 1;
