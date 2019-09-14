@@ -286,6 +286,12 @@ Rule r1
 Rule r2
   Set 'a..z'
 ==========
+// Backquote id
+`x` = "abc"
+----------
+Rule `x`
+  String "abc"
+==========
 // Complete scan-parser grammar for sums
 exp = term ("+" term @2add / "-" term @2sub)* ''
 term = factor ("*" factor @2mul / "/" factor @2div)*

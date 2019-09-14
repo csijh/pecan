@@ -2,7 +2,7 @@
 // ignoring all preparation and preprocessor issues, and translated into Pecan
 // syntax, except for explicit CFG | choice operators. This is a starting point
 // for transformation into a recursive descent Pecan grammar, replacing the |
-// operator by the PEG choice operator /.
+// operator by the Pecan choice operator /.
 
 // A.1.1 Lexical elements
 

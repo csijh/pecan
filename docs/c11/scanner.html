@@ -17,96 +17,102 @@
 <h1>The Scanner</h1>
 
 <p>The complete Pecan scanner for C11, and a small collection of tests, are in
-the file:</p>
+the files:</p>
 
-<p class="indent"><a href="c-scan.txt">c-scan.txt</a></p>
+<p class="indent"><a href="c-scan.txt">c-scan.txt</a><br/>
+<a href="c-scan-test.txt">c-scan-test.txt</a></p>
 
 <p>The scanner is based on the lexical grammar which is gathered together in
-appendix A.1 of the standard.  It is assumed that the implementation-defined
+appendix A.1 of the standard. It is assumed that the implementation-defined
 source character set consists of the visible Unicode characters, and that the
 character encoding is UTF-8. It is also assumed that conversion of all newlines
 to <code>\n</code>, translation of trigraphs, splicing of lines which end in
 <code>\</code>, combining of consecutive string literals, and preprocessing have
-already been done.  Scanning does not then involve any changes to the source
+already been done. Scanning does not then involve any changes to the source
 text.</p>
 
 <h2>Tokens</h2>
 
 <p>The initial rule of the scanner is:</p>
 
-<pre class="pecan">tokens = @tokens token* Uc!
+<pre class="pecan">tokens = @tokens token* &lt;>
 </pre>
 
 <p>To ensure that the scanner produces a single output, there is an initial
 action <code class="pecan">@tokens</code> which produces an empty list of
-tokens. Thereafter, as each token is recognized, an action adds the token to the
-list. The end of file is recognized using <code class="pecan">Uc!</code>. The
-original rule for a token from the standard is:</p>
+tokens. As each token is recognized, an action adds the token to the list. The
+action name is intended to be used as the token's tag name, e.g. <code
+class="pecan">@1identifier</code> produces a token which will be matched by a
+tag <code class="pecan">%identifier</code> in the parser. The end of file is
+recognized using <code class="pecan">&lt;></code>. The original rule for a token
+from the standard is:</p>
 
 <pre class="c11">token = keyword | identifier | constant | string-literal | punctuator
 </pre>
 
 <p>In order to take a uniform approach to scanning, white space and comments,
 described elsewhere in the standard, are included, so that all of the text is
-processed.  (Technically, these are supposed to be handled during preprocessing,
+processed. (Technically, these are supposed to be handled during preprocessing,
 but they have been left in here for illustrative purposes.)</p>
 
 <p>The order of the alternatives is changed to recognise string literals and
 constants before keywords or identifiers, because of the ambiguity between
-encoding prefixes and identifiers. And keywords are recognized before
+encoding prefixes on literals and identifiers. Keywords are recognized before
 identifiers, to keep the definition of identifiers simple, as in the original
-grammar.  So the translated rule is:</p>
+grammar. So the translated rule is:</p>
 
 <pre class="pecan">token =
-    gap @ / comment @ / constant @1constant / string-literal @1string-literal /
-    keyword @1key / identifier @1identifier / punctuator @1key
+    gap / comment / constant / string-literal / keyword /
+    identifier / punctuator
 </pre>
 
-<p>The action <code>@</code> is used to discard white space and comments.  The
-actions <code>@1constant</code>, <code>@1string-literal</code> and
-<code>@1identifier</code> are assumed to produce tokens of types
-<code>`constant`</code>, <code>`string-literal`</code> and
-<code>`identifier`</code>.  The <code>@1key</code> action is assumed to produce
-tokens whose types are essentially their spellings, e.g. <code>`int`</code> or
-<code>`++`</code>. White space and comments can be recognized by:</p>
+<p>White
+space and comments can be recognized by:</p>
 
-<pre class="pecan">gap = (' ' / newline / tab / vtab / formfeed)+
+<pre class="pecan">gap = (' ' / newline / tab / vtab / formfeed)+ @
 
 comment =
-    "//" (newline! visible)* /
-    "/*" ("*/"! visible)* "*/"
+    "//" (newline! visible)* @ /
+    "/*" ("*/"! visible)* "*/" @
 </pre>
+
+<p>The action <code class="pecan">@</code> is used to discard the white space
+and comments, once matched.</p>
 
 <h2>Keywords</h2>
 
 <p>In C, as in many languages, a word like <code>int</code> is not recognized as
-a keyword if it is followed by more letters or digits, e.g. <code>intx</code> is
-a single identifier, not the keyword <code>int</code> followed by
+a keyword if it is followed by more letters or digits. For example
+<code>intx</code> is an identifier, not the keyword <code>int</code> followed by
 <code>x</code>. This fact is not entirely clear from the original grammar, which
-has a local ambiguity at this point.  Although it can be argued according to CFG
+has a local ambiguity at this point. Although it can be argued according to CFG
 semantics that such ambiguities get resolved at a more global level, it is much
-clearer to resolve them locally.  Many such ambiguities, including this one, can
+clearer to resolve them locally. Many such ambiguities, including this one, can
 be resolved using a greedy convention, sometimes called maximal munch, where it
 is assumed that the longest alternative is the one intended. To deal with this,
 lookahead is used to check that a keyword is not followed by a letter or
 digit:</p>
 
-<pre class="pecan">keyword = [keyword-symbol (identifier-nondigit / digit)!]
+<pre class="pecan">k = (identifier-nondigit / digit)!
 
-keyword-symbol =
-    "alignof"     / "auto"        / "break"           / "case"          /
-    ...
-    "_Imaginary"  / "_Noreturn"   / "_Static_assert"  / "_Thread_local"
+keyword
+= ["alignof" k] @1Alignof
+/ ["auto" k] @1Auto
+...
+/ ["_Thread_local" k] @1ThreadLocal
 </pre>
 
+<p>The rule <code>k</code> checks that there is no following letter or digit. A
+try construct <code>[...]</code> is used to backtrack if a keyword is not
+properly matched.</p>
+
 <p>A direct translation of this grammar into a scanner function as a series of
-tests would be inefficient. An optimised translation involving switch statements
-to recognise characters would produce a much more efficient scanner function.
-However, each word would potentially still be examined twice, once as a possible
-keyword, and then again as an identifier. The traditional way to improve the
-efficiency further is to move the keyword checking from the grammar into the
-externally attached code, which looks up words in a hash table to decide if they
-are keywords or identifiers.</p>
+tests would be inefficient. An translation using dividers would improve
+efficiency. However, each word would potentially still be examined twice, once
+as a possible keyword, and then again as an identifier. The traditional way to
+improve the efficiency further is to move the keyword checking from the grammar
+into the externally attached code, which looks up words in a hash table to
+decide if they are keywords or identifiers.</p>
 
 <h2>Identifiers</h2>
 
@@ -122,11 +128,11 @@ later during parsing. The original rule for identifiers is:</p>
 </pre>
 
 <p>Many of the original grammar rules use left recursion in this simple way to
-express repetition.  Such rules can usually be translated in a routine way using
+express repetition. Such rules can usually be translated in a routine way using
 repetition operators like this:</p>
 
 <pre class="pecan">identifier =
-    identifier-nondigit (identifier-nondigit / digit)*
+    identifier-nondigit (identifier-nondigit / digit)* @1identifier
 </pre>
 
 <p>Using Unicode letters in place of "other implementation-defined characters",
@@ -134,9 +140,9 @@ the remaining translated rules for identifiers are:</p>
 
 <pre class="pecan">identifier-nondigit = nondigit / universal-character-name / other
 
-nondigit = '_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+nondigit = '_' / 'A..Z' / 'a..z'
 
-digit = '0123456789'
+digit = '0..9'
 
 hexadecimal-digit = '0123456789abcdefABCDEF'
 
@@ -166,7 +172,7 @@ hex-quad =
 so they need to be removed from this rule and dealt with in the parser.
 Numerical
 constants cause a problem, because both integer and floating constants can start
-with digits.  It is possible to translate directly into a Pecan grammar rule by
+with digits. It is possible to translate directly into a Pecan grammar rule by
 using lookahead to try one alternative and then the other:</p>
 
 <pre class="c11">constant =
@@ -174,18 +180,20 @@ using lookahead to try one alternative and then the other:</p>
 </pre>
 
 <p>It is tempting to try to improve on this by using a transformation approach
-to find an equivalent form where no lookahead is needed.  However, this turns
+to find an equivalent form where no lookahead is needed. However, this turns
 out to be impossible. That's because, for example, the source text
 <code>08</code> is technically two tokens because <code>8</code> is not an octal
 digit, whereas the three characters <code>08.</code> form a single floating
-constant.  That means, after accepting the <code>0</code>, lookahead is needed
+constant. That means, after accepting the <code>0</code>, lookahead is needed
 at least as far as the dot before knowing whether the token has ended.
 Detection of non-octal digits in octal constants could be left until a later
 semantic pass, but perhaps a better approach is to find a cheap lookahead which
 looks for the first non-digit.</p>
 
 <pre class="pecan">constant =
-    character-constant / is-float! integer-constant / floating-constant
+    character-constant @1constant /
+    is-float! integer-constant @1constant /
+    floating-constant @1constant
 
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
 </pre>
@@ -201,7 +209,7 @@ is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
 <p>This is another place in the C11 grammar where there is a local ambiguity. If
 the source text contains <code>0x1</code> then this could match
 <code>hexadecimal-constant</code>, or the first <code>0</code> on its own could
-match <code>octal-constant</code>.  The greedy convention suggests that the
+match <code>octal-constant</code>. The greedy convention suggests that the
 hexadecimal case should be checked first:</p>
 
 <pre class="pecan">integer-constant =
@@ -219,7 +227,7 @@ constant, with this original rule:</p>
 </pre>
 
 <p>The alternatives have possible initial digits in common, so this needs some
-work.  The original rule for <code>fractional-constant</code> is:</p>
+work. The original rule for <code>fractional-constant</code> is:</p>
 
 <pre class="c11">fractional-constant =
     digit-sequence? '.' digit-sequence |
@@ -255,7 +263,7 @@ rule, and similar transformations applied to the result, to give:</p>
 
 <p>Character constants may have an encoding prefix before the <code>"'"</code>.
 To avoid a clash with identifiers, a small amount of lookahead, just two
-characters, is needed.  Pecan's string notation is sufficient for this:</p>
+characters, is needed. Pecan's string notation is sufficient for this:</p>
 
 <pre class="pecan">character-constant =
     ("'" / "L'" / "u'" / "U'") c-char-sequence "'"
@@ -289,13 +297,17 @@ the overlap between prefixes and identifiers.</p>
 <p>Punctuators are easier to recognize than keywords, because it doesn't matter
 what they are followed by. However, they have to be ordered so that if one is a
 prefix of another, the longer one is earlier and recognized preferentially,
-according to the greedy convention.  Perhaps the easiest way to be sure of that
+according to the greedy convention. Perhaps the easiest way to be sure of that
 is to list them in order of length.</p>
 
-<pre class="pecan">punctuator =
-    "%:%:" / "&lt;&lt;=" / ">>=" / "..." /
-    ...
-    "#"
+<pre class="pecan">punctuator
+= "%:%:" @PercentColonPercentColon
+/ "<<=" @LessLessEquals
+/ ">>=" @GreaterGreaterEquals
+/ "..." @DotDotDot
+/ "->" @Arrow
+...
+/ "#" @Hash
 </pre>
 
 <p>The same approach can be taken to the remaining original lexical rules.</p>

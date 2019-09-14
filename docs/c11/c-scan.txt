@@ -1,4 +1,4 @@
-// A scanner for C11.  It is assumed that the implementation-defined source
+// A scanner for C11. It is assumed that the implementation-defined source
 // character set is Unicode in the UTF-8 encoding, and that the source text has
 // been prepared by converting newlines to \n, expanding trigraphs, splicing
 // lines ending with \, eliding consecutive string literals, and carrying out
@@ -10,49 +10,82 @@ tokens = @tokens token* <>
 
 // String-literals and constants and keywords must come before identifiers.
 token =
-    gap @ / comment @ / constant @1constant / string-literal @1string-literal /
-    keyword @1key / identifier @1identifier / punctuator @1key
+    gap / comment / constant / string-literal / keyword /
+    identifier / punctuator
 
-gap = (' ' / newline / tab / vtab / formfeed)+
+gap = (' ' / newline / tab / vtab / formfeed)+ @
 newline = 10
 tab = 9
 vtab = 11
 formfeed = 12
 
 comment =
-    "//" (newline! visible)* /
-    "/*" ("*/"! visible)* "*/"
+    "//" (newline! visible)* @ /
+    "/*" ("*/"! visible)* "*/" @
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc / newline
 
 // ----- A.1.2 Keywords -----
 
 // Check that keywords aren't followed by letters or digits
-keyword = [keyword-symbol (identifier-nondigit / digit)!]
+k = (identifier-nondigit / digit)!
 
-keyword-symbol =
-    "alignof"     / "auto"        / "break"           / "case"          /
-    "char"        / "const"       / "continue"        / "default"       /
-    "do"          / "double"      / "else"            / "enum"          /
-    "extern"      / "float"       / "for"             / "goto"          /
-    "if"          / "inline"      / "int"             / "long"          /
-    "register"    / "restrict"    / "return"          / "short"         /
-    "signed"      / "sizeof"      / "static"          / "struct"        /
-    "switch"      / "typedef"     / "union"           / "unsigned"      /
-    "void"        / "volatile"    / "while"           / "_Alignas"      /
-    "_Atomic"     / "_Bool"       / "_Complex"        / "_Generic"      /
-    "_Imaginary"  / "_Noreturn"   / "_Static_assert"  / "_Thread_local"
+keyword
+= ["alignof" k] @1Alignof
+/ ["auto" k] @1Auto
+/ ["break" k] @1Break
+/ ["case" k] @1Case
+/ ["char" k] @1Char
+/ ["const" k] @1Const
+/ ["continue" k] @1Continue
+/ ["default" k] @1Default
+/ ["do" k] @1Do
+/ ["double" k] @1Double
+/ ["else" k] @1Else
+/ ["enum" k] @1Enum
+/ ["extern" k] @1Extern
+/ ["float" k] @1Float
+/ ["for" k] @1For
+/ ["goto" k] @1Goto
+/ ["if" k] @1If
+/ ["inline" k] @1Inline
+/ ["int" k] @1Int
+/ ["long" k] @1Long
+/ ["register" k] @1Register
+/ ["restrict" k] @1Restrict
+/ ["return" k] @1Return
+/ ["short" k] @1Short
+/ ["signed" k] @1Signed
+/ ["sizeof" k] @1Sizeof
+/ ["static" k] @1Static
+/ ["struct" k] @1Struct
+/ ["switch" k] @1Switch
+/ ["typedef" k] @1Typedef
+/ ["union" k] @1Union
+/ ["unsigned" k] @1Unsigned
+/ ["void" k] @1Void
+/ ["volatile" k] @1Volatile
+/ ["while" k] @1While
+/ ["_Alignas" k] @1Alignas
+/ ["_Atomic" k] @1Atomic
+/ ["_Bool" k] @1Bool
+/ ["_Complex" k] @1Complex
+/ ["_Generic" k] @1Generic
+/ ["_Imaginary" k] @1Imaginary
+/ ["_Noreturn" k] @1Noreturn
+/ ["_Static_assert" k] @1StaticAssert
+/ ["_Thread_local" k] @1ThreadLocal
 
 // ----- A.1.3 Identifiers -----
 
-// Assume keywords have already been excluded.  Include Unicode letters.
+// Assume keywords have already been excluded. Include Unicode letters.
 identifier =
-    identifier-nondigit (identifier-nondigit / digit)*
+    identifier-nondigit (identifier-nondigit / digit)* @1identifier
 
 identifier-nondigit = nondigit / universal-character-name / other
 
-nondigit = '_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+nondigit = '_' / 'A..Z' / 'a..z'
 
-digit = '0123456789'
+digit = '0..9'
 
 other = Lu / Ll / Lt / Lm / Lo
 
@@ -67,7 +100,9 @@ hex-quad =
 
 // Omit enumeration constants.
 constant =
-    character-constant / is-float! integer-constant / floating-constant
+    character-constant @1constant /
+    is-float! integer-constant @1constant /
+    floating-constant @1constant
 
 // Look ahead to see if a number is floating or not
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
@@ -158,8 +193,8 @@ hex-escape-sequence = "\x" hexadecimal-digit+
 // ----- A.1.6 String literals -----
 
 string-literal =
-    '"' s-char-sequence? '"' /
-    [encoding-prefix '"'] s-char-sequence? '"'
+    '"' s-char-sequence? '"' @1stringLiteral /
+    [encoding-prefix '"'] s-char-sequence? '"' @1stringLiteral
 
 encoding-prefix = "u8" / "u" / "U" / "L"
 
@@ -169,13 +204,58 @@ s-char = ('"' / '\' / newline)! visible / escape-sequence
 
 // ----- A.1.7 Punctuators -----
 
-punctuator =
-    "%:%:" / "<<=" / ">>=" / "..." /
-    "->" / "++" / "--" / "<<" / ">>" / "<=" / ">=" / "==" /
-    "!=" / "&&" / "||" / "*=" / "/=" / "%=" / "+=" / "-=" /
-    "&=" / "^=" / "|=" / "##" / "<:" / ":>" / "<%" / "%>" /
-    "%:" /
-    "[" / "]" / "(" / ")" / "{" / "}" / "." / "&" /
-    "*" / "+" / "-" / "~" / "!" / "/" / "%" / "<" /
-    ">" / "^" / "|" / "?" / ":" / ";" / "=" / "," /
-    "#"
+punctuator
+= "%:%:" @1PercentColonPercentColon
+/ "<<=" @1LessLessEquals
+/ ">>=" @1GreaterGreaterEquals
+/ "..." @1DotDotDot
+/ "->" @1Arrow
+/ "++" @1PlusPlus
+/ "--" @1MinusMinus
+/ "<<" @1LessLess
+/ ">>" @1GreaterGreater
+/ "<=" @1LessEquals
+/ ">=" @1GreaterEquals
+/ "==" @1EqualsEquals
+/ "!=" @1NotEquals
+/ "&&" @1AndAnd
+/ "||" @1OrOr
+/ "*=" @1StarEquals
+/ "/=" @1SlashEquals
+/ "%=" @1PercentEquals
+/ "+=" @1PlusEquals
+/ "-=" @1MinusEquals
+/ "&=" @1AndEquals
+/ "^=" @1HatEquals
+/ "|=" @1OrEquals
+/ "##" @1HashHash
+/ "<:" @1LessColon
+/ ":>" @1ColonGreater
+/ "<%" @1LessPercent
+/ "%>" @1PercentGreater
+/ "%:" @1PercentColon
+/ "[" @1OpenS
+/ "]" @1CloseS
+/ "(" @1OpenR
+/ ")" @1CloseR
+/ "{" @1OpenC
+/ "}" @1CloseC
+/ "." @1Dot
+/ "&" @1And
+/ "*" @1Star
+/ "+" @1Plus
+/ "-" @1Minus
+/ "~" @1Tilde
+/ "!" @1Not
+/ "/" @1Slash
+/ "%" @1Percent
+/ "<" @1Less
+/ ">" @1Greater
+/ "^" @1Hat
+/ "|" @1Or
+/ "?" @1Query
+/ ":" @1Colon
+/ ";" @1Semi
+/ "=" @1Equals
+/ "," @1Comma
+/ "#" @1Hash

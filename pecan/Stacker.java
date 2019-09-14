@@ -121,8 +121,16 @@ class Stacker implements Testable {
     private String checkNet(Node node) {
         int xNet = UNKNOWN, yNet = UNKNOWN;
         Node x = node.left(), y = node.right();
-        if (x != null) { checkNet(x); xNet = x.NET(); }
-        if (y != null) { checkNet(y); yNet = y.NET(); }
+        if (x != null) {
+            String s = checkNet(x);
+            if (s != null) return s;
+            xNet = x.NET();
+        }
+        if (y != null) {
+            String s = checkNet(y);
+            if (s != null) return s;
+            yNet = y.NET();
+        }
         if (node.NET() == UNKNOWN) {
             return err(
                 node, "unable to calculate number of output items produced");

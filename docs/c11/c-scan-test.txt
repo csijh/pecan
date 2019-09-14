@@ -19,16 +19,16 @@ identifier y
 "abc" L"abc" "\\"" "abc\\"xyz"
 ----------
 tokens
-string-literal "abc"
-string-literal L"abc"
-string-literal "\\""
-string-literal "abc\\"xyz"
+stringLiteral "abc"
+stringLiteral L"abc"
+stringLiteral "\\""
+stringLiteral "abc\\"xyz"
 ==========
 // Keywords and identifiers
 int x intx
 ----------
 tokens
-key int
+Int int
 identifier x
 identifier intx
 ==========
@@ -36,21 +36,21 @@ identifier intx
 [](){}+ ++ +++ < << <<< %:%:
 ----------
 tokens
-key [
-key ]
-key (
-key )
-key {
-key }
-key +
-key ++
-key ++
-key +
-key <
-key <<
-key <<
-key <
-key %:%:
+OpenS [
+CloseS ]
+OpenR (
+CloseR )
+OpenC {
+CloseC }
+Plus +
+PlusPlus ++
+PlusPlus ++
+Plus +
+Less <
+LessLess <<
+LessLess <<
+Less <
+PercentColonPercentColon %:%:
 ==========
 // Character constants
 'a' L'a' '\\''

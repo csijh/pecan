@@ -14,68 +14,58 @@
 <img src="../pecan.png" width="300" height="65" />
 <hr/>
 
-<h1>The Raw Parser</h1>
+<h1>The Parser</h1>
 
 <p>The parser is defined separately, with tokens from the scanner as its input.
-At this stage, the parser rules will be developed without actions.  The
-resulting raw Pecan scanner for C11, with one test just to establish that the
-parser passes Pecan's consistency checks, is in the file:</p>
+The rules are presented in stages, in the order given in appendix A.2 of the
+standard.</p>
 
-<p class="indent"><a href="c-parse.txt">c-parse.txt</a></p>
+<p>The input to the parser is an array of tokens produced by the scanner. The
+tag of a token is defined by the action used in the scanner to create it. It is
+assumed, however, that a tag <code>%identifier</code> is changed to
+<code>%typedefName</code> where appropriate by the parser's external code, in
+response to actions taken when parsing typedefs.</p>
 
-<p>The rules are presented in the order given in appendix A.2 of the standard.
-However, the first rule in Pecan must be the top rule of the grammar, so an
-extra rule is added to achieve this:</p>
+<p>In the grammar for the parser, there are definitions for recognizing tokens
+which are designed to make the grammar more readable by making it more closely
+resemble the original C11 grammar:</p>
 
-<pre class="pecan">start = translation-unit @translation-unit
+<pre>identifier = %identifier @Identifier
+constant = %constant @Constant
+string-literal = %stringLiteral @StringLiteral
+typedef-name = %typedefName @TypedefName
+
+`alignof` = %Alignof
+`auto` = %Auto
+...
+`_Thread_local` = %ThreadLocal
+
+`%:%:` = %PercentColonPercentColon
+`<<=` = %LessLessEquals
+...
+`#` = %Hash
 </pre>
 
-<p>A single action is included, just to satisfy Pecan's consistency check that a
-single item is produced as output.</p>
+<p>The first group of definitions deal with types of token which have variable
+spellings. For example, the <code>identifier</code> rule recognizes a token with
+tag <code>%identifier</code> and converts it into an output item.</p>
 
-<p>It is assumed that tokens which have fixed names, that is keywords and
-punctuators, are passed from the scanner with token types that match their
-names.  For example, the keyword <code>int</code> is passed as a token with type
-<code>`int`</code>, and the operator <code>++</code> is passed as a token with
-type <code>`++`</code>. This helps with readability, and with comparisons with
-the original rules.</p>
-
-<p>For tokens which do not have fixed names, it is assumed that tokens are
-passed with types such as <code>`identifier`</code> which match rule names in
-the scanner.  It also assumed, as discussed earlier, that the external code
-linked with the parser tracks <code>typedef</code>s and reclassifies identifiers
-as type names where appropriate.  Enumeration constants, on the other hand, do
-not need to be recognised by external code, so they can be treated as
-identifiers. To achieve a close match with the original rules, synonyms are
-defined for these cases:</p>
-
-<pre class="pecan">identifier = `identifier`
-constant = `constant`
-string-literal = `string-literal`
-typedef-name = `typedef-name`
-enumeration-constant = `identifier`
-</pre>
-
-<p>This establishes the communication between the scanner and the parser.</p>
+<p>The remaining definitions deal with tokens which have fixed spellings. The
+ids use the original token spellings, in backquotes, rather then the tag names
+passed from the scanner to the parser.</p>
 
 <h2>Expressions</h2>
 
 <p>Precedence and associativity are dealt with in the original grammar by
-defining hierarchically layered rules for expressions.  The transformation into
-Pecan follows the same style, and is reasonably straightforward.</p>
-
-<p>The resulting parser is not very efficient, because of the number of calls
-involved in the hierarchy.  It can be made acceptably efficient by transforming
-the recursive descent style into a recursive ascent style, but it seems better
-to do that separately as a later exercise.</p>
-
-<p>The original rule for primary expressions is:</p>
+defining hierarchically layered rules for expressions. The transformation into
+Pecan follows the same style, and is reasonably straightforward. The original
+rule for primary expressions is:</p>
 
 <pre class="c11">primary-expression =
     identifier |
     constant |
     string-literal |
-    `(` expression `)` |
+    '(' expression ')' |
     generic-selection
 </pre>
 
@@ -86,7 +76,7 @@ different type of token:</p>
     identifier /
     constant /
     string-literal /
-    `(` expression `)` /
+    `(`expression `)` /
     generic-selection
 </pre>
 
@@ -94,32 +84,35 @@ different type of token:</p>
 problems:</p>
 
 <pre class="pecan">generic-selection =
-    `_Generic` `(` assignment-expression `,` generic-assoc-list `)`
+    `_Generic` `(` assignment-expression `,` generic-assoc-list `)` @2generic
 
-generic-assoc-list = generic-association+
+generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
-    type-name `:` assignment-expression /
-    `default` `:` assignment-expression
+    type-name `:` assignment-expression @2assoc /
+    `default` `:` assignment-expression @1defaultAssoc
 </pre>
+
+<p>The <code>@2pair</code> action is a general purpose one for building
+lists.</p>
 
 <p>The original rule for postfix expressions is:</p>
 
 <pre class="c11">postfix-expression =
     primary-expression |
-    postfix-expression `[` expression `]` |
-    postfix-expression `(` argument-expression-list? `)` |
-    postfix-expression `.` identifier |
-    postfix-expression `->` identifier |
-    postfix-expression `++` |
-    postfix-expression `--` |
-    `(` type-name `)` `{` initializer-list `}` |
-    `(` type-name `)` `{` initializer-list `,` `}`
+    postfix-expression '[' expression ']' |
+    postfix-expression '(' argument-expression-list? ')' |
+    postfix-expression '.' identifier |
+    postfix-expression '->' identifier |
+    postfix-expression '++' |
+    postfix-expression '--' |
+    '(' type-name ')' '{' initializer-list '}' |
+    '(' type-name ')' '{' initializer-list ',' '}'
 </pre>
 
 <p>There is a problem here because the first alternative can be a bracketed
-expression which begins with <code>`(`</code>, and the last two alternatives
-also begin with <code>`(`</code>. An expression and a type name begin with
+expression which begins with <code>'('</code>, and the last two alternatives
+also begin with <code>'('</code>. An expression and a type name begin with
 different tokens but, when bracketed, they require a two-token lookahead to
 distinguish them.</p>
 
@@ -134,30 +127,48 @@ lookahead rule is used to check for the open curly bracket:</p>
 </pre>
 
 <p>This may be regarded as a bit inefficient, but it is in the context of a top
-down hierarchy of rules which is already inefficient.  So, it is best to defer a
-good solution to this problem until later, when a transformation to a recursive
-ascent style is investigated.</p>
+down hierarchy of rules. If a transformation to a recursive ascent style is
+investigated later for efficiency, the issue can be revisited.</p>
 
 <p>Now the left recursion can be removed from the postfix expression rule, the
 last two alternatives can be merged and put at the beginning, and an extra rule
 can be added for clarity to define the items that can come after a primary
-expression.  The result is:</p>
+expression. The result is:</p>
 
 <pre class="pecan">postfix-expression =
     is-compound-literal&amp; `(` type-name `)` `{` initializer-list `,`? `}` /
-    primary-expression pe-suffix*
+    primary-expression (pe-suffix @2pair)*
 
 pe-suffix =
     `[` expression `]` /
-    `(` argument-expression-list? `)` /
+    `(` (argument-expression-list / "" @missing) `)` /
     `.` identifier /
     `->` identifier /
-    `++` /
-    `--`
+    `++` @inc /
+    `--` @dec
 </pre>
 
 <p>The rule for an initializer list will later need to be defined to exclude the
 optional final comma shown here.</p>
+
+
+<hr/>
+
+
+
+
+<p class="indent"><a href="c-parse.txt">c-parse.txt</a></p>
+<p>However, the first rule in Pecan must be the top rule of the grammar, so an
+extra rule is added to achieve this:</p>
+<pre class="pecan">start = translation-unit @translation-unit
+</pre>
+<p>The resulting parser is not very efficient, because of the number of calls
+involved in the hierarchy. It can be made acceptably efficient by transforming
+the recursive descent style into a recursive ascent style, but it seems better
+to do that separately as a later exercise.</p>
+
+
+
 
 <p>The next layer up in the expression hierarchy is unary expressions, with
 original rule:</p>
@@ -218,7 +229,7 @@ expressions, defined by the original rule:</p>
 <p>The same approach can be taken to additive expressions, shift expressions,
 relational expressions, equality expressions, AND expressions, exclusive OR
 expressions, inclusive OR expressions, logical AND expressions, and logical OR
-expressions.  These all define the precedences of infix operators in the same
+expressions. These all define the precedences of infix operators in the same
 way.</p>
 
 <p>The original rule for conditional expressions is:</p>
@@ -243,8 +254,8 @@ prefixes and making the suffix optional:</p>
 </pre>
 
 <p>This uses right recursion rather than left recursion, to capture the right
-associativity of the assignment operators.  So the recursion can stay as it is.
-However, there is a problematic overlap between the two alternatives.  Rather
+associativity of the assignment operators. So the recursion can stay as it is.
+However, there is a problematic overlap between the two alternatives. Rather
 than try to do anything efficient, the alternatives are swapped and lookahead is
 used to recognise the assignment operator before accepting the new first
 alternative:</p>
@@ -267,8 +278,8 @@ alternative:</p>
     assignment-expression (`,` assignment-expression)*
 </pre>
 
-<p>The expression section of the C11 grammar has one more rule in it.  It is
-just a synonym which makes some of the later rules more readable.  There is no
+<p>The expression section of the C11 grammar has one more rule in it. It is
+just a synonym which makes some of the later rules more readable. There is no
 harm in including it in the Pecan translation:</p>
 
 <pre class="pecan">constant-expression =
@@ -285,7 +296,7 @@ declarations from appendix section A.2.2 of the C11 standard, is:</p>
 
 <p class="indent"><a href="c-parse-b.txt">c-parse-b.txt</a></p>
 
-<p>Most of the problems faced in parsing declarations are fairly easy.  For
+<p>Most of the problems faced in parsing declarations are fairly easy. For
 example, the original grammar rule from the C11 standard (A.2.2) for a struct or
 union specifier is:</p>
 
@@ -323,7 +334,7 @@ rearranging and combining left factors as before, is:</p>
 </pre>
 
 <p>However, the fact that there is an optional final comma before the close
-curly bracket causes a problem.  It means that care is needed to prevent it from
+curly bracket causes a problem. It means that care is needed to prevent it from
 being matched in the second rule:</p>
 
 <pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
@@ -415,9 +426,9 @@ dad-simple-array-size =
 
 <p>The approach taken earlier to combine alternatives by transformation to find
 their common prefixes doesn't work here, because recursion intervenes before the
-issue is resolved.  So, it is better to use lookahead.  However, it is worth
-finding a 'cheap' lookahead.  The main difference between the alternatives is
-that <code>declarator</code> includes an identifier.  Checking the
+issue is resolved. So, it is better to use lookahead. However, it is worth
+finding a 'cheap' lookahead. The main difference between the alternatives is
+that <code>declarator</code> includes an identifier. Checking the
 possibilities, only <code>`*`</code> or <code>type-qualifier</code> or
 <code>`(`</code> tokens can occur before the identifier. On the other hand, in
 an <code>abstract-declarator</code>, a close bracket must appear before the end.
@@ -442,7 +453,7 @@ straightforward.</p>
 <h2>External definitions</h2>
 
 <p>The remainder of the C11 grammar covering the parser rules will be tackled in
-sections.  A first prototype of the grammar, just demonstrating the handling of
+sections. A first prototype of the grammar, just demonstrating the handling of
 external definitions in section A.2.4 of the standard, is:</p>
 
 <p class="indent"><a href="c-parse-a.txt">c-parse-a.txt</a></p>
@@ -476,7 +487,7 @@ grammar rule by using lookahead to try one alternative and then the other:</p>
 
 <p>However, since replacing the body of a function definition by a semicolon
 yields a declaration, it is clear that the two alternatives share a lot in
-common, to the point where it is worth merging them.  A fairly straightforward
+common, to the point where it is worth merging them. A fairly straightforward
 transformation approach can be used to reach an equivalent form with no
 lookahead needed. The relevant rules from the original grammar needed during the
 transformation, with left recursion removed, are:</p>
@@ -563,7 +574,7 @@ alternatives gives:</p>
 
 <p>Looking at the two innermost alternatives, the second can clearly only start
 with a token <code>`=`</code> or <code>`,`</code> or
-<code>`;`</code>.  It is easy to check that the first alternative
+<code>`;`</code>. It is easy to check that the first alternative
 cannot start with any of these, so no lookahead is necessary any more.</p>
 
 <p>Converting to Pecan notation, adding some actions, and rearranging a bit,
@@ -582,7 +593,7 @@ gives:</p>
 
 <p>It is worth pointing out that, since <code class="pecan">declarator</code>
 includes function declarators, this grammar does not preclude a declaration of
-the form <code>int f() = 3;</code>.  A brief investigation of actual C compilers
+the form <code>int f() = 3;</code>. A brief investigation of actual C compilers
 suggests that this error is normally detected after, rather than during,
 parsing.</p>
 
@@ -608,9 +619,9 @@ statement =
 
 <p>Most statements begin with a distinctive keyword. A simple check reveals that
 the only overlap of first tokens is that <code>labeled-statement</code> and
-<code>expression-statement</code> can both start with an identifier.  However,
+<code>expression-statement</code> can both start with an identifier. However,
 only in the <code>labeled-statement</code> case is it immediately followed by a
-colon.  Thus the above rule can be translated trivially, and
+colon. Thus the above rule can be translated trivially, and
 <code>labeled-statement</code> can be given a simple two-token lookahead:</p>
 
 <pre class="pecan">
@@ -641,12 +652,12 @@ into:</p>
 
 <p>The only overlap between the first tokens of the two alternatives is that a
 declaration may start with an identifier which is a typedef name, and a
-statement may begin with an identifier.  Typedef names need to be recognised
-separately.  That is done by adding an action to the grammar at the point where
-a typedef name is declared, as well as actions which keep track of scopes.  The
+statement may begin with an identifier. Typedef names need to be recognised
+separately. That is done by adding an action to the grammar at the point where
+a typedef name is declared, as well as actions which keep track of scopes. The
 action causes the externally linked code to record the new typedef name in a
-symbol table.  Thereafter, within the scope of the typedef name, tokens matching
-the typedef name are presented to the parser with a different token type.  In
+symbol table. Thereafter, within the scope of the typedef name, tokens matching
+the typedef name are presented to the parser with a different token type. In
 addition, it is necessary to <em>remove</em> the rule from the grammar for
 typedef names:</p>
 
@@ -702,7 +713,7 @@ attached to the closest <code>if</code> statement.</p>
 </pre>
 
 <p>The only problem is with the last pair of alternatives concerning
-<code>for</code> statements.  The last alternatives look slightly odd, as if it
+<code>for</code> statements. The last alternatives look slightly odd, as if it
 lacks a semicolon. That's because a declaration includes its terminating
 semicolon. Given the treatment of typedef names already described, declarations
 and expressions are easily distinguished by their first tokens, so the rule can

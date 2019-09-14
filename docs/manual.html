@@ -296,8 +296,19 @@ function = id arguments body
 <p>Apart from being the starting point of the parser, the first rule is not
 treated in any special way. In particular, it may succeed without consuming all
 the input. So an explicit test is often included, as here, to check that the end
-of the input has been reached. The notation <code>&lt;></code>, a less than sign
-followed by a greater than sign, matches the end of the input.</p>
+of the input has been reached. The notation <code>&lt;></code> which is a less
+than sign followed by a greater than sign, matches the end of the input.</p>
+
+<p>An identifier introduced by a rule starts with a letter and continues with
+letters, digits, hyphens or underscores. There is also an alternative form of
+identifier formed by arbitrary text inside backquotes:</p>
+
+<pre>`->` = %arrow
+</pre>
+
+<p>Here, <code>`->`</code> is used in a token-based parser to stand for a token
+with tag <code>%arrow</code>. This can help to make token-based parsers more
+readable.</p>
 
 <p>The text of a grammar is assumed to be encoded using UTF-8, so Unicode
 characters can be included. A rule name starts with any Unicode letter and
@@ -1542,7 +1553,7 @@ same output effect and error handling properties as the original.</p>
 <li>error markers are no longer postfix</li>
 <li>the divider notation <code>&lt;abc></code> and end notation
     <code>&lt;></code> have been added</li>
-<li>tags with backquotes have been removed</li>
+<li>backquoted tags have been replaced by backquoted ids</li>
 <li>separate grammar and test files are supported</li>
 <li>one test file can be called from within another</li>
 <li>parser generation is via bytecode</li>
@@ -1575,7 +1586,7 @@ range = number (dots number @2range)?
 try = sb expression se @3back
 bracket = rb expression re @3bracket
 
-id = #atom letter alpha* @id gap
+id = #atom letter alpha* @id gap / "`" ("`" visible)* #quote "`" @id gap
 action = '@' (digit* #letter letter alpha* @act / @drop) gap
 marker = "#" #letter letter alpha* @mark gap
 tag = "%" #letter letter alpha*? @tag gap

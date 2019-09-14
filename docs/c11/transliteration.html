@@ -31,12 +31,12 @@ choices which are implicit from the layout have explicit choice operators
 <code>|</code> added.  Rules are effectively presented in a mythical language
 which is Pecan with an extra <code>|</code> operator having CFG semantics. The
 aim is to apply transformations until the alternatives of any <code>|</code>
-operator can clearly be distinguished by the PEG operator <code>/</code>
-instead, so that the <code>|</code> operator can be eliminated.</p>
+operator can clearly be distinguished by the Pecan's choice operator
+<code>/</code> instead, so that the <code>|</code> operator can be
+eliminated.</p>
 
-<p>The transformations of the rules will be described in the order of their
-appearance in appendix A of the C11 standard, and the result will be presented
-as a separate scanner and parser. During transformations, rules taken from the
+<p>The transformations of the rules from the C11 standard will be presented as a
+separate scanner and parser. During transformations, rules taken from the
 standard, or needing more transformation work, are displayed in <code
 class="c11">blue</code>, whereas final Pecan rules are displayed in <code
 class="pecan">green</code>.  In describing transformations, only the first

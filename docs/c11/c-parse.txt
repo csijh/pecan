@@ -311,8 +311,3 @@ external-declaration = declaration-specifiers (
 )
 
 declaration-list = declaration+
-
-==========
-int identifier;
-----------
-translation-unit

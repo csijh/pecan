@@ -12,7 +12,7 @@ x = 'a' x @b
 ----------
 Error on line 2: unable to calculate number of output items produced
 x = 'a' x @b
-^
+        ^
 ==========
 // Low water mark continually decreasing
 x = 'a' / 'b' @2c x @d
@@ -20,6 +20,13 @@ x = 'a' / 'b' @2c x @d
 Error on line 2: outputs may underflow
 x = 'a' / 'b' @2c x @d
     ^^^^^^^^^^^^^^^^^^
+==========
+// Choices disagree
+x = @1a / @2b
+----------
+Error on line 2: choices produce unequal numbers of outputs
+x = @1a / @2b
+    ^^^^^^^^^
 ==========
 // Choice
 exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP

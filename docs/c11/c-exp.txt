@@ -1,12 +1,6 @@
-start = expression @expression
-
-identifier = `identifier`
-constant = `constant`
-string-literal = `string-literal`
-typedef-name = `typedef-name`
-enumeration-constant = `identifier`
-type-name = `type-name`
-initializer-list = `initializer-list`
+enumeration-constant = identifier
+type-name = %type-name @typeName
+initializer-list = %initializer-list
 
 primary-expression =
     identifier /
@@ -16,13 +10,14 @@ primary-expression =
     generic-selection
 
 generic-selection =
-    `_Generic` `(` assignment-expression `,` generic-assoc-list `)`
+    `_Generic` `(` @assignment-expression `,` @generic-assoc-list `)` (
+    @2genericSelection)
 
-generic-assoc-list = generic-association+
+generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
-    type-name `:` assignment-expression /
-    `default` `:` assignment-expression
+    @type-name `:` assignment-expression @2pair /
+    `default` @Default `:` assignment-expression @2pair
 
 // Look ahead to the open curly bracket of a compound literal.
 is-compound-literal = `(`type-name `)` `{`
@@ -101,6 +96,112 @@ expression =
     conditional-expression expression2
 expression2 = (`,` assignment-expression)*
 
+// Definitions for individual tokens.
+
+identifier = %identifier @Identifier
+constant = %constant @Constant
+string-literal = %stringLiteral @StringLiteral
+typedef-name = %typedefName @TypedefName
+
+`alignof` = %Alignof
+`auto` = %Auto
+`break` = %Break
+`case` = %Case
+`char` = %Char
+`const` = %Const
+`continue` = %Continue
+`default` = %Default
+`do` = %Do
+`double` = %Double
+`else` = %Else
+`enum` = %Enum
+`extern` = %Extern
+`float` = %Float
+`for` = %For
+`goto` = %Goto
+`if` = %If
+`inline` = %Inline
+`int` = %Int
+`long` = %Long
+`register` = %Register
+`restrict` = %Restrict
+`return` = %Return
+`short` = %Short
+`signed` = %Signed
+`sizeof` = %Sizeof
+`static` = %Static
+`struct` = %Struct
+`switch` = %Switch
+`typedef` = %Typedef
+`union` = %Union
+`unsigned` = %Unsigned
+`void` = %Void
+`volatile` = %Volatile
+`while` = %While
+`_Alignas` = %Alignas
+`_Atomic` = %Atomic
+`_Bool` = %Bool
+`_Complex` = %Complex
+`_Generic` = %Generic
+`_Imaginary` = %Imaginary
+`_Noreturn` = %Noreturn
+`_Static_assert` = %StaticAssert
+`_Thread_local` = %ThreadLocal
+
+`%:%:` = %PercentColonPercentColon
+`<<=` = %LessLessEquals
+`>>=` = %GreaterGreaterEquals
+`...` = %DotDotDot
+`->` = %Arrow
+`++` = %PlusPlus
+`--` = %MinusMinus
+`<<` = %LessLess
+`>>` = %GreaterGreater
+`<=` = %LessEquals
+`>=` = %GreaterEquals
+`==` = %EqualsEquals
+`!=` = %NotEquals
+`&&` = %AndAnd
+`||` = %OrOr
+`*=` = %StarEquals
+`/=` = %SlashEquals
+`%=` = %PercentEquals
+`+=` = %PlusEquals
+`-=` = %MinusEquals
+`&=` = %AndEquals
+`^=` = %HatEquals
+`|=` = %OrEquals
+`##` = %HashHash
+`<:` = %LessColon
+`:>` = %ColonGreater
+`<%` = %LessPercent
+`%>` = %PercentGreater
+`%:` = %PercentColon
+`[` = %OpenS
+`]` = %CloseS
+`(` = %OpenR
+`)` = %CloseR
+`{` = %OpenC
+`}` = %CloseC
+`.` = %Dot
+`&` = %And
+`*` = %Star
+`+` = %Plus
+`-` = %Minus
+`~` = %Tilde
+`!` = %Not
+`/` = %Slash
+`%` = %Percent
+`<` = %Less
+`>` = %Greater
+`^` = %Hat
+`|` = %Or
+`?` = %Query
+`:` = %Colon
+`;` = %Semi
+`=` = %Equals
+`,` = %Comma
+`#` = %Hash
 ==========
 identifier
 ----------

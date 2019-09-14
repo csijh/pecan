@@ -14,39 +14,39 @@
 <img src="../pecan.png" width="300" height="65" />
 <hr/>
 
-<h1>Pecan Case study: C11</h1>
+<h1>A parser for C</h1>
 
-<p>The development of a scanner and parser for C11 presented here is based on
+<p>The development of a scanner and parser for C presented here is based on
 the <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf">C11
 standard</a>. It demonstrates the use of Pecan and, in particular, the use of
 manual grammar transformation as a way of developing parsers.</p>
 
 <p>The result is simply a literal translation of the official C11 grammar into
 the Pecan notation.  It does not take into account common extensions or other
-variations to the C11 language, or differing interpretations of the standard,
-nor does it attempt to deal with the preprocessing phase or all of the practical
-issues that arise in real C compilers. It has also only been lightly tested. It
-is not intended to be a compiler-grade parser, merely a reinterpretation of the
-official grammar.</p>
+variations to the C11 language, or differing interpretations of the standard.
+Nor does it attempt to deal with the preprocessing phase or other practical
+issues that arise in real C compilers. It is not intended to be a compiler-grade
+parser, merely a reinterpretation of the official grammar, and it has also only
+been lightly tested.</p>
 
 <p>Infamously, parsing of C requires type names introduced using
 <code>typedef</code> to be differentiated from other identifiers.  This cannot
 be done during scanning.  Instead, token tags must be altered during parsing,
-which must include some form of symbol table construction.  Pecan parsers allow
-for this in their interaction with external code.  It is assumed that suitable
-external code will be added to the parser to achieve this.</p>
+which must include some form of symbol table construction. It is assumed that
+the external code associated with the parser when the grammar is compiled will
+do this.</p>
 
 <p>The development described here amounts to translating the C11 syntax into a
 nearly-recursive-descent form, which has been done before in various compilers.
 The difference is that a potentially reusable grammar has been produced rather
 than a one-off parser for a specific purpose.</p>
 
-<p>The development has been carried out in a number of stages:</p>
+<!-- <p>The development has been carried out in a number of stages:</p>-->
 
 <ul>
 <li><a href="transliteration.html">Transliteration</a></li>
 <li><a href="scanner.html">The Scanner</a></li>
-<li><a href="rawparser.html">The Raw Parser</a></li>
+<li><a href="parser.html">The Parser</a></li>
 </ul>
 
 

@@ -152,11 +152,16 @@ class Parser implements Testable {
         return open('(') && exp() && close(')') && doBracket();
     }
 
-    // id = #id letter alpha* @id gap
+    // id = #atom letter alpha* @id gap / "`" ("`" visible)* #quote "`" @id gap
     private boolean id() {
-        if (! (mark(ATOM) && letter())) return false;
-        while (alpha()) { }
-        return doName(Id) && gap();
+        mark(ATOM);
+        if (letter()) {
+            while (alpha()) { }
+            return doName(Id) && gap();
+        }
+        if (! accept('`')) return false;
+        while (! look('`') && visible()) { }
+        return mark(QUOTE) && accept('`') && doName(Id) && gap();
     }
 
     // action = '@' (digit* #letter letter alpha* @act / @drop) gap
