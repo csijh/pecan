@@ -6,7 +6,7 @@
 
 //  ----- A.1.1 Tokens -----
 
-tokens = @tokens token* <>
+tokens = @Tokens token* <>
 
 // String-literals and constants and keywords must come before identifiers.
 token =
@@ -79,7 +79,7 @@ keyword
 
 // Assume keywords have already been excluded. Include Unicode letters.
 identifier =
-    identifier-nondigit (identifier-nondigit / digit)* @1identifier
+    identifier-nondigit (identifier-nondigit / digit)* @1Identifier
 
 identifier-nondigit = nondigit / universal-character-name / other
 
@@ -100,9 +100,9 @@ hex-quad =
 
 // Omit enumeration constants.
 constant =
-    character-constant @1constant /
-    is-float! integer-constant @1constant /
-    floating-constant @1constant
+    character-constant @1Constant /
+    is-float! integer-constant @1Constant /
+    floating-constant @1Constant
 
 // Look ahead to see if a number is floating or not
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
@@ -193,8 +193,8 @@ hex-escape-sequence = "\x" hexadecimal-digit+
 // ----- A.1.6 String literals -----
 
 string-literal =
-    '"' s-char-sequence? '"' @1stringLiteral /
-    [encoding-prefix '"'] s-char-sequence? '"' @1stringLiteral
+    '"' s-char-sequence? '"' @1StringLiteral /
+    [encoding-prefix '"'] s-char-sequence? '"' @1StringLiteral
 
 encoding-prefix = "u8" / "u" / "U" / "L"
 

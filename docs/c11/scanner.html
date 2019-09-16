@@ -1,7 +1,8 @@
 <!DOCTYPE html>
+<!-- Free and open source, see licence.txt. -->
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
 <head>
-<title>Pecan Tutorial: C</title>
+<title>Pecan Tutorial: C Scanner</title>
 <style>
     body { font-size: 120%; }
     pre, .indent { margin-left: 40px; }
@@ -14,7 +15,7 @@
 <img src="../pecan.png" width="300" height="65" />
 <hr/>
 
-<h1>The Scanner</h1>
+<h1>The C scanner</h1>
 
 <p>The complete Pecan scanner for C11, and a small collection of tests, are in
 the files:</p>
@@ -35,15 +36,15 @@ text.</p>
 
 <p>The initial rule of the scanner is:</p>
 
-<pre class="pecan">tokens = @tokens token* &lt;>
+<pre class="pecan">tokens = @Tokens token* &lt;>
 </pre>
 
 <p>To ensure that the scanner produces a single output, there is an initial
-action <code class="pecan">@tokens</code> which produces an empty list of
+action <code class="pecan">@Tokens</code> which produces an empty list of
 tokens. As each token is recognized, an action adds the token to the list. The
 action name is intended to be used as the token's tag name, e.g. <code
-class="pecan">@1identifier</code> produces a token which will be matched by a
-tag <code class="pecan">%identifier</code> in the parser. The end of file is
+class="pecan">@1Identifier</code> produces a token which will be matched by a
+tag <code class="pecan">%Identifier</code> in the parser. The end of file is
 recognized using <code class="pecan">&lt;></code>. The original rule for a token
 from the standard is:</p>
 
@@ -132,7 +133,7 @@ express repetition. Such rules can usually be translated in a routine way using
 repetition operators like this:</p>
 
 <pre class="pecan">identifier =
-    identifier-nondigit (identifier-nondigit / digit)* @1identifier
+    identifier-nondigit (identifier-nondigit / digit)* @1Identifier
 </pre>
 
 <p>Using Unicode letters in place of "other implementation-defined characters",
@@ -191,9 +192,9 @@ semantic pass, but perhaps a better approach is to find a cheap lookahead which
 looks for the first non-digit.</p>
 
 <pre class="pecan">constant =
-    character-constant @1constant /
-    is-float! integer-constant @1constant /
-    floating-constant @1constant
+    character-constant @1Constant /
+    is-float! integer-constant @1Constant /
+    floating-constant @1Constant
 
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
 </pre>

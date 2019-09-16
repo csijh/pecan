@@ -1,7 +1,8 @@
 <!DOCTYPE html>
+<!-- Free and open source, see licence.txt. -->
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
 <head>
-<title>Pecan Tutorial: C</title>
+<title>Pecan Tutorial: C Parser</title>
 <style>
     body { font-size: 120%; }
     pre, .indent { margin-left: 40px; }
@@ -14,47 +15,78 @@
 <img src="../pecan.png" width="300" height="65" />
 <hr/>
 
-<h1>The Parser</h1>
+<h1>The C parser</h1>
 
 <p>The parser is defined separately, with tokens from the scanner as its input.
-The rules are presented in stages, in the order given in appendix A.2 of the
+The rules are presented in stages, in the order given in appendix A of the C11
 standard.</p>
+
+<h2>Expressions</h2>
+
+<p>A separate file is used to define and test C expressions, separately from the
+remainder of the grammar:</p>
+
+<p class="indent"><a href="c-expressions.txt">c-expressions.txt</a></p>
+
+<p>The grammar begins with:</p>
+
+<pre class="pecan">start = expression
+type-name = %TypeName @typeName
+initializer-list = %InitializerList @initializerList
+</pre>
+
+<p>The <code class="pecan">start</code> rule allows the definitions to be
+presented in the order of the standard, with the <code
+class="pecan">expression</code> rule at the end. The other two rules temporarily
+cover forward references from the expression section of the standard to a later
+section, by defining them as if they were tokens.</p>
 
 <p>The input to the parser is an array of tokens produced by the scanner. The
 tag of a token is defined by the action used in the scanner to create it. It is
-assumed, however, that a tag <code>%identifier</code> is changed to
-<code>%typedefName</code> where appropriate by the parser's external code, in
-response to actions taken when parsing typedefs.</p>
+assumed, however, that a tag <code class="pecan">%Identifier</code> is changed
+to <code class="pecan">%TypedefName</code> where appropriate by the parser's
+external code, in response to actions taken when parsing typedefs. In addition,
+since enumeration constants are not distinguished from identifiers in the
+scanner, this definition is included from the lexical grammar:</p>
 
-<p>In the grammar for the parser, there are definitions for recognizing tokens
-which are designed to make the grammar more readable by making it more closely
-resemble the original C11 grammar:</p>
-
-<pre>identifier = %identifier @Identifier
-constant = %constant @Constant
-string-literal = %stringLiteral @StringLiteral
-typedef-name = %typedefName @TypedefName
-
-`alignof` = %Alignof
-`auto` = %Auto
-...
-`_Thread_local` = %ThreadLocal
-
-`%:%:` = %PercentColonPercentColon
-`<<=` = %LessLessEquals
-...
-`#` = %Hash
+<pre class="pecan">enumeration-constant = identifier
 </pre>
 
-<p>The first group of definitions deal with types of token which have variable
-spellings. For example, the <code>identifier</code> rule recognizes a token with
-tag <code>%identifier</code> and converts it into an output item.</p>
+<p>Definitions are also introduced to recognize individual tokens, and establish
+error markers. These are intended to make the rest of the grammar more readable
+by making it more closely resemble the original C11 grammar. First there are
+definitions which deal with types of token with variable spellings:</p>
 
-<p>The remaining definitions deal with tokens which have fixed spellings. The
-ids use the original token spellings, in backquotes, rather then the tag names
-passed from the scanner to the parser.</p>
+<pre class="pecan">identifier = #atom %Identifier @identifier
+constant = #atom %Constant @constant
+string-literal = #atom %StringLiteral @StringLiteral
+typedef-name = #atom %TypedefName @TypedefName
+</pre>
 
-<h2>Expressions</h2>
+<p>The <code class="pecan">identifier</code> rule, for example, sets up an error
+marker, matches a token with tag <code class="pecan">%Identifier</code> and
+converts it into an output item. There is a group of rules for keywords:</p>
+
+<pre class="pecan">`alignof` = %Alignof
+`auto` = #type %Auto
+...
+`_Thread_local` = %ThreadLocal
+</pre>
+
+<p>These use backquote identifiers using the original spellings for the
+keywords. Keywords which have to do with types system are marked with the <code
+class="pecan">#type</code> marker. Also, keywords which continue a construct
+rather than start a new one are given error markers. There is a group of
+definitions for punctuators:</p>
+
+<pre class="pecan">`%:%:` = #op %PercentColonPercentColon
+`<<=` = #op %LessLessEquals
+...
+`#` = #hash %Hash
+</pre>
+
+<p>Again, these use the original spelling in backquotes, to match the original
+grammar closely, and error markers are included.</p>
 
 <p>Precedence and associativity are dealt with in the original grammar by
 defining hierarchically layered rules for expressions. The transformation into
@@ -93,8 +125,8 @@ generic-association =
     `default` `:` assignment-expression @1defaultAssoc
 </pre>
 
-<p>The <code>@2pair</code> action is a general purpose one for building
-lists.</p>
+<p>The <code class="pecan">@2pair</code> action is a general purpose one for
+building lists.</p>
 
 <p>The original rule for postfix expressions is:</p>
 
@@ -120,79 +152,55 @@ distinguish them.</p>
 will cause an overlap later in the grammar with cast expressions, which also
 begin with a bracketed type name.</p>
 
-<p>Rather than stray too far from the structure of the original rules, a
-lookahead rule is used to check for the open curly bracket:</p>
+<p>Rather than stray too far from the structure of the original rules, a try
+expression is used to check for the open curly bracket:</p>
 
-<pre class="pecan">is-compound-literal = `(`type-name `)` `{`
+<pre class="pecan">[`(` type-name `)` `{`]
 </pre>
 
-<p>This may be regarded as a bit inefficient, but it is in the context of a top
-down hierarchy of rules. If a transformation to a recursive ascent style is
-investigated later for efficiency, the issue can be revisited.</p>
-
-<p>Now the left recursion can be removed from the postfix expression rule, the
-last two alternatives can be merged and put at the beginning, and an extra rule
-can be added for clarity to define the items that can come after a primary
-expression. The result is:</p>
+<p>Now the left recursion can be removed from the postfix expression rule, and
+the last two alternatives can be merged and put at the beginning:</p>
 
 <pre class="pecan">postfix-expression =
-    is-compound-literal&amp; `(` type-name `)` `{` initializer-list `,`? `}` /
-    primary-expression (pe-suffix @2pair)*
-
-pe-suffix =
-    `[` expression `]` /
-    `(` (argument-expression-list / "" @missing) `)` /
-    `.` identifier /
-    `->` identifier /
-    `++` @inc /
-    `--` @dec
+    [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
+    primary-expression (
+        `[` expression `]` @2index /
+        `(` (argument-expression-list / "" @missing) `)` @2apply /
+        `.` identifier @2field /
+        `->` identifier @2arrow /
+        `++` @1postInc /
+        `--` @1postDec
+    )*
 </pre>
 
 <p>The rule for an initializer list will later need to be defined to exclude the
 optional final comma shown here.</p>
-
-
-<hr/>
-
-
-
-
-<p class="indent"><a href="c-parse.txt">c-parse.txt</a></p>
-<p>However, the first rule in Pecan must be the top rule of the grammar, so an
-extra rule is added to achieve this:</p>
-<pre class="pecan">start = translation-unit @translation-unit
-</pre>
-<p>The resulting parser is not very efficient, because of the number of calls
-involved in the hierarchy. It can be made acceptably efficient by transforming
-the recursive descent style into a recursive ascent style, but it seems better
-to do that separately as a later exercise.</p>
-
-
-
 
 <p>The next layer up in the expression hierarchy is unary expressions, with
 original rule:</p>
 
 <pre class="c11">unary-expression  =
     postfix-expression |
-    `++` unary-expression |
-    `--` unary-expression |
+    '++' unary-expression |
+    '--' unary-expression |
     unary-operator cast-expression |
-    `sizeof` unary-expression |
-    `sizeof` `(` type-name `)` |
-    `alignof` `(` type-name `)`
+    'sizeof' unary-expression |
+    'sizeof' '(' type-name ')' |
+    'alignof' '(' type-name ')'
 </pre>
 
-<p>This is easily transformed, combining the two overlapping alternatives, to
-give:</p>
+<p>The two alternatives starting with <code class="c11">sizeof</code> overlap,
+because a <code class="c11">unary-expression</code> can be bracketed. To resolve
+this, the two alternatives can be reversed and a try expression applied:</p>
 
 <pre class="pecan">unary-expression  =
     postfix-expression /
-    `++` unary-expression /
-    `--` unary-expression /
-    unary-operator cast-expression /
-    `sizeof` (unary-expression / `(` type-name `)`) /
-    `alignof` `(` type-name `)`
+    `++` unary-expression @1preInc /
+    `--` unary-expression @1preDec /
+    unary-operator cast-expression @2preOp /
+    [`sizeof` `(` type-name `)`] @1typeSize /
+    `sizeof` unary-expression @1varSize /
+    `alignof` `(` type-name `)` @1align
 </pre>
 
 <p>The next layer up is cast expressions, with original rule:</p>
@@ -202,15 +210,17 @@ give:</p>
     "(" type-name ")" cast-expression
 </pre>
 
-<p>Again there is a problem with brackets, and again the route taken is to use
-the lookahead rule defined earlier, in order to stay close to the structure of
-the original rule:</p>
+<p>The first alternative overlaps with the second, because it can start with a
+bracket. And the second alternative overlaps with compound literals. The
+alternatives can be swapped, and a lookahead used to check for a type-name but
+no curly bracket:</p>
 
 <pre class="pecan">cast-expression =
-    (is-compound-literal! `(` type-name `)`)* unary-expression
+    [`(` type-name `)` `{`!] cast-expression @2cast /
+    unary-expression
 </pre>
 
-<p>The next level up in the hierarchy of expression is multiplicative
+<p>The next level up in the expression hierarchy is multiplicative
 expressions, defined by the original rule:</p>
 
 <pre class="c11">multiplicative-expression =
@@ -223,7 +233,12 @@ expressions, defined by the original rule:</p>
 <p>This can be transformed in a straightforward way to:</p>
 
 <pre class="pecan">multiplicative-expression =
-    cast-expression ((`*` / `/` / `%`) cast-expression)*
+    cast-expression (
+        `*` cast-expression @2multiply /
+        `/` cast-expression @2divide /
+        `%` cast-expression @2remainder
+    )*
+
 </pre>
 
 <p>The same approach can be taken to additive expressions, shift expressions,
@@ -239,11 +254,11 @@ way.</p>
     logical-OR-expression "?" expression ":" conditional-expression
 </pre>
 
-<p>This defines the ternary operator, but it easy to handle by combining the
+<p>This defines the ternary operator. It easy to handle by combining the
 prefixes and making the suffix optional:</p>
 
 <pre class="pecan">conditional-expression =
-    logical-OR-expression (`?` expression `:` conditional-expression)?
+    logical-OR-expression (`?` expression `:` conditional-expression @3ifExp)?
 </pre>
 
 <p>The original rule for assignment expressions is:</p>
@@ -254,14 +269,14 @@ prefixes and making the suffix optional:</p>
 </pre>
 
 <p>This uses right recursion rather than left recursion, to capture the right
-associativity of the assignment operators. So the recursion can stay as it is.
-However, there is a problematic overlap between the two alternatives. Rather
-than try to do anything efficient, the alternatives are swapped and lookahead is
-used to recognise the assignment operator before accepting the new first
+associativity of the assignment operators. The right recursion can remain in the
+translation. However, there is a problematic overlap between the two
+alternatives. Perhaps the simplest approach is to swap the alternatives and use
+lookahead to match the assignment operator before accepting the new first
 alternative:</p>
 
 <pre class="pecan">assignment-expression =
-    [unary-expression assignment-operator] assignment-expression /
+    [unary-expression assignment-operator] assignment-expression @3assign /
     conditional-expression
 </pre>
 
@@ -275,7 +290,7 @@ alternative:</p>
 <p>This poses no problems, beyond the usual removal of left recursion:</p>
 
 <pre class="pecan">expression =
-    assignment-expression (`,` assignment-expression)*
+    assignment-expression (`,` assignment-expression @2comma)*
 </pre>
 
 <p>The expression section of the C11 grammar has one more rule in it. It is
@@ -286,10 +301,19 @@ harm in including it in the Pecan translation:</p>
     conditional-expression
 </pre>
 
-<p>Three rules (for initializer lists, type specifiers and type qualifiers) are
-used in the expression rules, but are not defined until later.</p>
-
 <h2>Declarations</h2>
+
+<p>Here is a file which adds declaration rules to the expression rules developed
+so far, and which provides tests for these new rules:</p>
+
+<p class="indent"><a href="c-declarations.txt">c-declarations.txt</a></p>
+
+declaration =
+    static_assert-declaration /
+    declaration-specifiers (init-declarator-list @2declare)? `;`
+
+<hr/>
+
 
 <p>A second prototype of the grammar, demonstrating the full range of
 declarations from appendix section A.2.2 of the C11 standard, is:</p>

@@ -38,8 +38,9 @@ public class Evaluator implements Testable {
     private String grammar;
     private boolean textInput, ok;
     private String input;
+    private String[] tokens;
     private Node root;
-    private int start, in, out, marked, lookahead, tokenIndex;
+    private int start, in, out, marked, lookahead;
     private TreeSet<String> failures;
     private Node[] delay;
     private int[] delayIn;
@@ -78,8 +79,9 @@ public class Evaluator implements Testable {
     // Get the Evaluator ready to run, with the given input.
     private void prepare(String text) {
         input = text;
+        if (root.has(TokenInput)) tokens = text.split("\\s+");
         ok = true;
-        start = in = out = marked = lookahead = tokenIndex = 0;
+        start = in = out = marked = lookahead = 0;
         failures = new TreeSet<>();
         delay = new Node[100];
         delayIn = new int[100];
@@ -103,7 +105,7 @@ public class Evaluator implements Testable {
             }
             if (textInput) output.append(Node.err(input, in, in, s));
             else {
-                output.append("Error at token " + tokenIndex);
+                output.append("Error at token " + in);
                 if (s.length() > 0) output.append(": " + s);
             }
             output.append("\n");
@@ -340,14 +342,12 @@ public class Evaluator implements Testable {
     private void parseTag(Node node) {
         String tag;
         tag = node.text().substring(1);
-        ok = input.startsWith(tag, in);
+        if (in < tokens.length) ok = tokens[in].equals(tag);
+        else ok = false;
         if (ok) {
             start = in;
-            tokenIndex++;
             if (lookahead == 0 && out > 0) takeActions();
-            in += tag.length();
-            while (in < input.length() &&
-                (input.charAt(in) == ' ' || input.charAt(in) == '\n')) in++;
+            in++;
             if (tracing) traceInput();
         }
     }

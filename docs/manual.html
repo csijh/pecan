@@ -829,6 +829,9 @@ is changed to:</p>
   ^
 </pre>
 
+<p>During testing, the order in which markers are reported is alphabetical. When
+a grammar is compiled, the order is determined by the external code.</p>
+
 <p>One way to ensure that all the items which could possibly allow parsing to
 continue are reported is to write separate rules to describe low level features
 of a grammar involving primitive character matchers, i.e. strings, sets,
@@ -875,7 +878,7 @@ If a section has no minus sign separator, it is a grammar or grammar fragment
 which is used for subsequent tests, until another grammar is given. For
 example:</p>
 
-<pre>// Recognise one digit
+<pre>// Match one digit
 number = ("0".."9") @number
 ==========
 2
@@ -886,7 +889,7 @@ number 2
 ----------
 number 4
 ==========
-// Recognise any number of digits
+// Match any number of digits
 number = ("0".."9") @number
 ==========
 42
@@ -900,8 +903,23 @@ using the second grammar.</p>
 
 <p>The output from running a test using a given grammar and sample input is a
 list of the actions that would be performed by a parser generated from the
-grammar. If the input is text rather than tokens, the characters matched since
-the previous action or discard are displayed.</p>
+grammar. If the input is text, the characters matched since the previous action
+or discard are displayed.</p>
+
+<p>For a token-based grammar, the input consists of a sequence of tag names
+separated by white space:</p>
+
+<pre>// Match a list of numbers.
+list = %number @value (%comma %number @value @2and)*
+==========
+number comma number comma number
+----------
+value
+value
+and
+value
+and
+</pre>
 
 <p>When a test fails, its line number is reported in the error message. That
 line number can then be used to re-run the testing, but picking out only that
@@ -918,30 +936,35 @@ pecan -trace 24 tests.txt
 ...
 </pre>
 
-<p>A section of the test file can consist of a single line. If the line doesn't
-contain an equal sign, it has a special meaning. It is the name of a file
-containing a grammar to be used for subsequent tests. This supports the common
-case where the grammar is in one file and its tests are in another:</p>
+<p>A section of the test file can consist of a single line. If the line starts
+with <code>//</code>, the section is ignored as a comment. Otherwise, if the
+line doesn't contain an equal sign, it has a special meaning. It is the name of
+a file containing a grammar to be used for subsequent tests. This supports the
+common case where the grammar is in one file and its tests are in another:</p>
 
-<pre>grammar.txt
+<pre>// The next section imports the grammar file.
+==========
+grammar.txt
 ==========
 // First test
 ...
 </pre>
 
-<p>The line could alternatively be the name of a secondary test file to execute,
-allowing a suite of tests to be split across several files:</p>
+<p>A single-line section can alternatively be the name of a secondary test file
+to execute, allowing a suite of tests to be split across several files:</p>
 
-<pre>group1.txt
+<pre>// Do testing in stages.
 ==========
-group2.txt
+stage1.txt
+==========
+stage2.txt
 ==========
 ...
 </pre>
 
-<p>There is no conflict between these two examples, because a grammar file is
-equivalent to a test file which sets up a grammar for subsequent tests, but
-contains no tests.</p>
+<p>There is no conflict between a filename representing a grammar and one
+representing a subfile of tests. That is because a grammar file is equivalent to
+a test file which sets up a grammar, but contains no tests.</p>
 
 <p>Test files can use the UTF-8 encoding, but there is also an escape convention
 which allows control characters or Unicode characters to be included as plain

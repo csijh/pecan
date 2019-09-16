@@ -129,13 +129,13 @@ digit-sequence =
     digit-sequence digit
 
 hexadecimal-fractional-constant =
-    hexadecimal-digit-sequence? `.` |
+    hexadecimal-digit-sequence? '.' |
     hexadecimal-digit-sequence  |
-    hexadecimal-digit-sequence `.`
+    hexadecimal-digit-sequence '.'
 
 binary-exponent-part =
-    `p` sign? digit-sequence  |
-    `P` sign? digit-sequence
+    'p' sign? digit-sequence  |
+    'P' sign? digit-sequence
 
 hexadecimal-digit-sequence =
     hexadecimal-digit  |

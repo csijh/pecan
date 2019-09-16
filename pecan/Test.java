@@ -149,10 +149,11 @@ public class Test {
         for (int i=0; i<=lines.size(); i++) {
             if (i < lines.size() && ! all(lines.get(i), '=')) continue;
             Test t = readTest(lines, start, i);
-            if (t == null) continue;
-            if (! t.isGrammar) t.input = unescape(t.input);
-            t.fileName = file;
-            tests.add(t);
+            if (t != null) {
+                if (! t.isGrammar) t.input = unescape(t.input);
+                t.fileName = file;
+                tests.add(t);
+            }
             start = i + 1;
         }
         return tests;

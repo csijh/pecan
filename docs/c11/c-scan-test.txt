@@ -3,39 +3,39 @@ c-scan.txt
 x // comment
 y
 ----------
-tokens
-identifier x
-identifier y
+Tokens
+Identifier x
+Identifier y
 ==========
 x /*
 comment
 */ y
 ----------
-tokens
-identifier x
-identifier y
+Tokens
+Identifier x
+Identifier y
 ==========
 // String literals: note escaped backslashes in input and expected output
 "abc" L"abc" "\\"" "abc\\"xyz"
 ----------
-tokens
-stringLiteral "abc"
-stringLiteral L"abc"
-stringLiteral "\\""
-stringLiteral "abc\\"xyz"
+Tokens
+StringLiteral "abc"
+StringLiteral L"abc"
+StringLiteral "\\""
+StringLiteral "abc\\"xyz"
 ==========
 // Keywords and identifiers
 int x intx
 ----------
-tokens
+Tokens
 Int int
-identifier x
-identifier intx
+Identifier x
+Identifier intx
 ==========
 // Punctuators
 [](){}+ ++ +++ < << <<< %:%:
 ----------
-tokens
+Tokens
 OpenS [
 CloseS ]
 OpenR (
@@ -55,43 +55,43 @@ PercentColonPercentColon %:%:
 // Character constants
 'a' L'a' '\\''
 ----------
-tokens
-constant 'a'
-constant L'a'
-constant '\\''
+Tokens
+Constant 'a'
+Constant L'a'
+Constant '\\''
 ==========
 // Integer constants
 0 4 42 42u 42U 42l 42LL
 0123 0128 0x12abCD
 ----------
-tokens
-constant 0
-constant 4
-constant 42
-constant 42u
-constant 42U
-constant 42l
-constant 42LL
-constant 0123
-constant 012
-constant 8
-constant 0x12abCD
+Tokens
+Constant 0
+Constant 4
+Constant 42
+Constant 42u
+Constant 42U
+Constant 42l
+Constant 42LL
+Constant 0123
+Constant 012
+Constant 8
+Constant 0x12abCD
 ==========
 // Floating constants
 0.0 0. .0 1e10 1E10 1.23e10 1e-10 e10
 0x0.0p10 0x0.p10 0x.0p10 0x1p10 0x1P10
 ----------
-tokens
-constant 0.0
-constant 0.
-constant .0
-constant 1e10
-constant 1E10
-constant 1.23e10
-constant 1e-10
-identifier e10
-constant 0x0.0p10
-constant 0x0.p10
-constant 0x.0p10
-constant 0x1p10
-constant 0x1P10
+Tokens
+Constant 0.0
+Constant 0.
+Constant .0
+Constant 1e10
+Constant 1E10
+Constant 1.23e10
+Constant 1e-10
+Identifier e10
+Constant 0x0.0p10
+Constant 0x0.p10
+Constant 0x.0p10
+Constant 0x1p10
+Constant 0x1P10
