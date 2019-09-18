@@ -15,29 +15,30 @@ handles them. */
 class Node {
 
     public static void main(String[] args) {
-        Node n = new Node(Number, "127", 0, 3);
+        Source s = new Source("127", "file", 1);
+        Node n = new Node(Number, s, 0, 3);
         n.set(Flag.Char);
         assert(n.name().equals("127"));
         assert(n.charCode() == 127);
-        n = new Node(Set, "'a'", 0, 3);
+        s = new Source("'a'", "file", 1);
+        n = new Node(Set, s, 0, 3);
         n.set(Flag.Char);
         assert(n.name().equals("a"));
         assert(n.charCode() == 97);
-        n = new Node(Act, "@2add", 0, 5);
-        assert(n.name().equals("add"));
-        assert(n.arity() == 2);
-        n = new Node(Act, "@add", 0, 4);
+        s = new Source("@add", "file", 1);
+        n = new Node(Act, s, 0, 4);
         assert(n.name().equals("add"));
         assert(n.arity() == 0);
+        s = new Source("@2add", "file", 1);
+        n = new Node(Act, s, 0, 5);
+        assert(n.name().equals("add"));
+        assert(n.arity() == 2);
     }
 
 // ---------- The annotation fields and methods -------------------------------
 
     private int flags;
     private int NET, LOW, PC, LEN;
-    private BitSet FIRST = new BitSet();
-    private BitSet START = new BitSet();
-    private BitSet FOLLOW = new BitSet();
     private String note = "";
 
     // Flag constants. See the relevant analysis classes.
@@ -56,9 +57,6 @@ class Node {
     int LOW() { return LOW; }
     void NET(int n) { NET = n; }
     void LOW(int l) { LOW = l; }
-    BitSet FIRST() { return FIRST; }
-    BitSet START() { return START; }
-    BitSet FOLLOW() { return FOLLOW; }
 
     // Get/set the note.
     String note() { return note; }
@@ -75,20 +73,20 @@ class Node {
 // ---------- The structural fields and methods -------------------------------
 
     private Op op;
-    private String source;
+    private Source source;
     private int start, end;
     private Node left, right;
 
     // Construct a node.
-    Node(Op o, Node r1, Node r2, String s, int b, int e) {
+    Node(Op o, Node r1, Node r2, Source s, int b, int e) {
         op = o; left = r1; right = r2; source = s; start = b; end = e;
     }
 
     // Construct a node with one subnode.
-    Node(Op o, Node r, String s, int b, int e) { this(o, r, null, s, b, e); }
+    Node(Op o, Node r, Source s, int b, int e) { this(o, r, null, s, b, e); }
 
     // Construct a node with no subnodes.
-    Node(Op o, String s, int b, int e) { this(o, null, null, s, b, e); }
+    Node(Op o, Source s, int b, int e) { this(o, null, null, s, b, e); }
 
     // Copy a node, with given children. Leave out info.
     Node copy(Node x, Node y) {
@@ -99,6 +97,7 @@ class Node {
     Op op() { return op; }
     int start() { return start; }
     int end() { return end; }
+    Source source() { return source; }
     String text() { return source.substring(start, end); }
     void op(Op o) { op = o; }
     void start(int s) { start = s; }
@@ -214,8 +213,8 @@ class Node {
 
     // Print the source text of a node on one line, e.g. when tracing.
     String trace() {
-        int firstLine = row(source, start);
-        int lastLine = row(source, end);
+        int firstLine = source.lineNumber(start);
+        int lastLine = source.lineNumber(end);
         if (lastLine == firstLine) {
             return "P" + firstLine + ": " + source.substring(start, end);
         }
@@ -232,11 +231,12 @@ class Node {
         return s;
     }
 
+/*
     // Create an error message based on a source.
     static String err(String source, int start, int end, String error) {
         int firstLineNumber = row(source, start);
         int lastLineNumber = row(source, end);
-        int column = column(source, end);
+//        int column = column(source, end);
         if (! error.equals("")) error = " " + error;
         String line = line(source, start);
         int col = column(source, start) - 1;
@@ -296,4 +296,5 @@ class Node {
         }
         return p - start + 1;
     }
+    */
 }

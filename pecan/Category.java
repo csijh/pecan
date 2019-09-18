@@ -49,7 +49,7 @@ enum Category {
     Category() {
         ascii = new BitSet();
         int type = ordinal();
-        for (int ch=0; ch<128; ch++) {
+        for (int ch = 0; ch < 128; ch++) {
             if (Character.getType(ch) == type) ascii.set(ch);
         }
     }

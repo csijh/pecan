@@ -1,6 +1,7 @@
 # Pecan classes, in dependency order.
 Category = pecan/Category.java
 Op = pecan/Op.java
+Source = pecan/Source.java
 Node = pecan/Node.java $(Op)
 Test = pecan/Test.java
 Parser = pecan/Parser.java $(Test) $(Node)

@@ -1,0 +1,31 @@
+primary-expression =
+    identifier /
+    constant /
+    string-literal /
+    `(` expression `)` /
+    generic-selection
+
+
+string-literal = %stringLiteral @string
+
+generic-selection =
+    %Generic `(` assignment-expression %Comma generic-assoc-list `)` @2genericSelection
+
+generic-assoc-list = generic-association (generic-association @2and)*
+
+generic-association =
+    type-name %Colon assignment-expression @2assoc /
+    %Default %Colon assignment-expression @1defaultAssoc
+
+expression = %expression @exp
+assignment-expression = %ae @assign
+type-name = %typeName @type
+
+`(` = OpenR
+`)` = CloseR
+identifier = %identifier @id
+constant = %constant @value
+==========
+identifier
+----------
+id

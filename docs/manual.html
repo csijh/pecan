@@ -306,13 +306,22 @@ identifier formed by arbitrary text inside backquotes:</p>
 <pre>`->` = %arrow
 </pre>
 
-<p>Here, <code>`->`</code> is used in a token-based parser to stand for a token
-with tag <code>%arrow</code>. This can help to make token-based parsers more
+<p>Here, <code>`->`</code> might be used to stand for a token with tag
+<code>%arrow</code>. This can help to make token-based parsers more
 readable.</p>
 
 <p>The text of a grammar is assumed to be encoded using UTF-8, so Unicode
 characters can be included. A rule name starts with any Unicode letter and
 continues with Unicode letters or decimal digits or underscores or hyphens.</p>
+
+<p>In place of a rule, an inclusion may be used:</p>
+
+<pre># "expressions.txt"
+</pre>
+
+<p>This is a hash sign followed by a string giving a file name or path to
+another file of grammar rules to be included at this point. This can help in
+presenting and testing large grammars in a modular way.</p>
 
 <p>If a parser fails, only the first failure is reported. There is no attempt to
 recover. If error recovery is required, this can be accomplished by writing a
