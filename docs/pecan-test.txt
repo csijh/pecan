@@ -1,0 +1,676 @@
+// A Pecan grammar for the Pecan language itself, with tests.
+
+// A grammar is a sequence of rules, possibly with inclusions.
+pecan = skip rules end
+rules = (rule / inclusion) (rules @2list)?
+rule = id equals expression newline skip @2rule
+inclusion = string newline skip @1include
+
+// An expression breaks down into terms, factors, compounds and atoms.
+expression = term (slash expression @2or)?
+term = factor (term @2and)?
+factor = compound postop*
+postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
+compound = try / bracket / atom
+atom = category / id / action / marker / tag / string / set / number / divider
+
+// The compounds are bracketed expressions.
+try = sb expression se @3try
+bracket = rb expression re @3bracket
+
+// The atoms mostly start with different characters.
+category = code alpha! @category gap
+id = #atom letter alpha* @id gap / "`" ("`"! visible)* #quote "`" @id gap
+action = '@' (digit* #letter letter alpha* @act / @drop) gap
+marker = "#" #letter letter alpha* @mark gap
+tag = "%" #letter letter alpha*? @tag gap
+divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
+set = range / "'" ("'"! visible)* #quote "'" @set gap
+range = numbers / ["'" ("'"! visible) ".."] ("'"! visible) "'" @range gap
+numbers = [digits '.'] #dot '.' digits @range gap
+string = '"' ('"'! visible)* #quote '"' @string gap
+number = digits @number gap
+
+// Operator and punctuation symbols include error markers.
+// Brackets produce output items, to help with text ranges of parse tree nodes.
+dots = '.' #dot '.' skip @
+equals = #equals "=" skip @
+slash = #op "/" skip @
+has = #op "&" gap @
+not = #op "!" gap @
+opt = #op "?" gap @
+any = #op "*" gap @
+some = #op "+" gap @
+rb = "(" @token skip @
+sb = "[" @token skip @
+re = #bracket ")" @token gap @
+se = #bracket "]" @token gap @
+
+// Rules for white space, comments, layout, character sets and category codes.
+skip = (space / comment / newline)*
+gap = space* comment? continuation @
+space = ' '
+continuation = [newline skip '=/)]'&]?
+newline = #newline 13? 10 @
+comment = ["//"] visible* newline
+visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+alpha = letter / Nd / '_' / '-'
+letter = Lu / Ll / Lt / Lm / Lo
+digit = '0..9'
+hex = digit / 'ABCDEFabcdef'
+digits = ('1..9' digit*) / '0' hex*
+code = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
+    "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
+    "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
+end = #end <>
+==========
+// Single rule
+x = y
+----------
+id x
+id y
+rule
+==========
+// Inclusion
+"other.txt"
+x = y
+----------
+string "other.txt"
+include
+id x
+id y
+rule
+list
+==========
+// Choice
+x = y / z
+----------
+id x
+id y
+id z
+or
+rule
+==========
+// Bracket
+x = (y / z)
+----------
+id x
+token (
+id y
+id z
+or
+token )
+bracket
+rule
+==========
+// Empty grammar
+----------
+Error on line 2: expecting atom, newline
+
+^
+==========
+// Expecting =
+x
+----------
+Error on line 2: expecting equals
+x
+ ^
+==========
+// Two rules, normal \n line endings
+x = x
+y = y
+---------
+id x
+id x
+rule
+id y
+id y
+rule
+list
+==========
+// Windows \r\n line endings
+x=x\13\10\
+y=y\13\10\
+----------
+id x
+id x
+rule
+id y
+id y
+rule
+list
+==========
+// Blank line
+
+x = x
+----------
+id x
+id x
+rule
+==========
+// Trailing spaces
+x = x    \10
+         \10
+y = y    \10
+----------
+id x
+id x
+rule
+id y
+id y
+rule
+list
+==========
+// Trailing blank line
+x = x
+y = y
+
+----------
+id x
+id x
+rule
+id y
+id y
+rule
+list
+==========
+// Trailing blank lines
+x = x
+y = y
+
+
+----------
+id x
+id x
+rule
+id y
+id y
+rule
+list
+==========
+// No final newline
+x = x
+y = y\
+----------
+Error on line 3: expecting atom, newline, op
+y = y
+     ^
+==========
+// No final newline
+x = x
+// comment\
+----------
+Error on line 3: expecting newline
+// comment
+          ^
+==========
+// Varied comments and empty lines
+// initial comment
+
+x = y
+
+// middle comment
+y = z
+
+// end comment
+----------
+id x
+id y
+rule
+id y
+id z
+rule
+list
+==========
+// Unexpected character
+x = |y|
+----------
+Error on line 2: expecting atom, newline
+x = |y|
+    ^
+==========
+// Incomplete string
+x = "abc
+----------
+Error on line 2: expecting quote
+x = "abc
+        ^
+==========
+// Incomplete set
+x = 'abc
+----------
+Error on line 2: expecting quote
+x = 'abc
+        ^
+==========
+// Expecting atom
+x = /
+----------
+Error on line 2: expecting atom, newline
+x = /
+    ^
+==========
+// Missing close bracket
+x = (y
+y = z
+----------
+Error on line 2: expecting atom, bracket, op
+x = (y
+      ^
+==========
+// Dot in the wrong place
+x = .
+----------
+Error on line 2: expecting atom, newline
+x = .
+    ^
+==========
+// Incomplete dot dot
+x = 0.
+----------
+Error on line 2: expecting dot
+x = 0.
+      ^
+==========
+// Incomplete action
+x = @3
+----------
+Error on line 2: expecting letter
+x = @3
+      ^
+==========
+// Tag
+x = %x
+----------
+id x
+tag %x
+rule
+==========
+// Bad tag
+x = %
+----------
+Error on line 2: expecting letter
+x = %
+     ^
+==========
+// Marker
+x = #m
+----------
+id x
+mark #m
+rule
+==========
+// Bad marker
+x = 'x' #3
+----------
+Error on line 2: expecting letter
+x = 'x' #3
+         ^
+==========
+// Brackets
+exp = (exp) end
+exp = [exp] end
+----------
+id exp
+token (
+id exp
+token )
+bracket
+id end
+and
+rule
+id exp
+token [
+id exp
+token ]
+try
+id end
+and
+rule
+list
+==========
+// Continuation lines
+x =
+y /
+z
+x =
+(
+a) [
+c]
+x
+= y
+/ z
+x
+= y (a
+) [c
+]
+----------
+id x
+id y
+id z
+or
+rule
+id x
+token (
+id a
+token )
+bracket
+token [
+id c
+token ]
+try
+and
+rule
+id x
+id y
+id z
+or
+rule
+id x
+id y
+token (
+id a
+token )
+bracket
+token [
+id c
+token ]
+try
+and
+and
+rule
+list
+list
+list
+==========
+// The + * ? postfix operators
+exp = exp* exp+ exp? end
+----------
+id exp
+id exp
+any
+id exp
+some
+id exp
+opt
+id end
+and
+and
+and
+rule
+==========
+// Ranges
+r1 = 0..127
+r2 = 'a..z'
+----------
+id r1
+range 0..127
+rule
+id r2
+range 'a..z'
+rule
+list
+==========
+// Backquote id
+`x` = "abc"
+----------
+id `x`
+string "abc"
+rule
+==========
+// Error marker
+assignment = left #equals "=" right
+----------
+id assignment
+id left
+mark #equals
+string "="
+id right
+and
+and
+and
+rule
+==========
+// Error on line 3
+x = y /
+z / /
+----------
+Error on line 3: expecting atom, newline
+z / /
+    ^
+==========
+// Actions, tests, numbers and errors
+x = %x @0x @1x @ @x
+y = 0 1 2 10 12 123
+z = 0ffff 01ABCDEF23 0FG
+u = #err ''
+----------
+id x
+tag %x
+act @0x
+act @1x
+drop @
+act @x
+and
+and
+and
+and
+rule
+id y
+number 0
+number 1
+number 2
+number 10
+number 12
+number 123
+and
+and
+and
+and
+and
+rule
+id z
+number 0ffff
+number 01ABCDEF23
+number 0F
+id G
+and
+and
+and
+rule
+id u
+mark #err
+set ''
+and
+rule
+list
+list
+list
+==========
+// Unicode letters and digits in identifiers, maximum numbers
+x = abc\960
+y = d123\1636
+z = 1114111 / 0ffff
+----------
+id x
+id abc\960
+rule
+id y
+id d123\1636
+rule
+id z
+number 1114111
+number 0ffff
+or
+rule
+list
+list
+==========
+// Strings, character sets, unicode
+x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+pi = "\960"
+----------
+id x
+string "abc"
+string " !#$%^&*()_-=+[]`{};:'@#~"
+and
+rule
+id y
+set 'abc'
+set ' !#$%^&*()_-=+[]`{};:"@#~'
+and
+rule
+id pi
+string "\960"
+rule
+list
+list
+==========
+// Brackets and operators
+x = (y / z) / y?
+x = (y/z)+ / y*
+x = y z w ! / y
+x = [y z] / w
+----------
+id x
+token (
+id y
+id z
+or
+token )
+bracket
+id y
+opt
+or
+rule
+id x
+token (
+id y
+id z
+or
+token )
+bracket
+some
+id y
+any
+or
+rule
+id x
+id y
+id z
+id w
+not
+and
+and
+id y
+or
+rule
+id x
+token [
+id y
+id z
+and
+token ]
+try
+id w
+or
+rule
+list
+list
+list
+==========
+// Comments before and after continuation lines
+x =
+ // comment
+ y /
+ // comment
+ z
+x
+ // Comment
+= y
+ // Comment
+/ z
+----------
+id x
+id y
+id z
+or
+rule
+id x
+id y
+id z
+or
+rule
+list
+==========
+// Dividers
+keyword = <do> keyword1 / keyword2
+keyword1 = "break" / "case" / "catch" / "continue" / "default"
+keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
+----------
+id keyword
+divider <do>
+id keyword1
+and
+id keyword2
+or
+rule
+id keyword1
+string "break"
+string "case"
+string "catch"
+string "continue"
+string "default"
+or
+or
+or
+or
+rule
+id keyword2
+string "do"
+string "else"
+string "for"
+string "if"
+string "switch"
+string "while"
+or
+or
+or
+or
+or
+rule
+list
+list
+==========
+// End of input
+end = #end <>
+----------
+id end
+mark #end
+end <>
+and
+rule
+==========
+// Underscore
+a_b = xy_
+----------
+id a_b
+id xy_
+rule
+==========
+// Hyphen
+a-b = xy-
+----------
+id a-b
+id xy-
+rule
+==========
+// Single backslash in quotes (escaped using test file conventions)
+bs = '\\n' "\\n"
+----------
+id bs
+set '\\n'
+string "\\n"
+and
+rule

@@ -316,12 +316,12 @@ continues with Unicode letters or decimal digits or underscores or hyphens.</p>
 
 <p>In place of a rule, an inclusion may be used:</p>
 
-<pre># "expressions.txt"
+<pre>"expressions.txt"
 </pre>
 
-<p>This is a hash sign followed by a string giving a file name or path to
-another file of grammar rules to be included at this point. This can help in
-presenting and testing large grammars in a modular way.</p>
+<p>This is a string giving a file name or path to another file of grammar rules
+to be included at this point. This can help in presenting and testing large
+grammars in a modular way.</p>
 
 <p>If a parser fails, only the first failure is reported. There is no attempt to
 recover. If error recovery is required, this can be accomplished by writing a
@@ -1598,34 +1598,35 @@ and layout. The <code>skip</code> rule is used to handle white space between
 tokens. The <code>gap</code> rule deals with the continuation line convention.
 It follows a token which can end a rule, and looks ahead for a possible
 continuation to see if the next newline should be skipped. Brackets are treated
-as tokens so that the extent in the source text of an expression is just the
-maximum extent of its subexpressions. Category names such as <code>Nd</code> are
-not distinguished from identifiers, and ranges such as <code>'a..z'</code> are
-not distinguished from other sets, during parsing.</p>
+as tokens, so that the extent in the source text of an expression is just the
+maximum extent of its subexpressions.</p>
 
 <pre>pecan = skip rules end
-rules = rule (rules @2add)?
+rules = (rule / inclusion) (rules @2add)?
 rule = id equals expression newline skip @2rule
+inclusion = string newline skip @2include
 
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
 factor = atom postop*
 postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-atom = id / action / marker / tag / string / set / range /
-    divider / try / bracket
+atom = category / id / action / marker / tag / string / chars / set /
+    numbers / divider / try / bracket
 
-range = number (dots number @2range)?
+numbers = number (dots number @2range)?
 try = sb expression se @3back
 bracket = rb expression re @3bracket
 
+category = code alpha! @category gap
 id = #atom letter alpha* @id gap / "`" ("`" visible)* #quote "`" @id gap
 action = '@' (digit* #letter letter alpha* @act / @drop) gap
 marker = "#" #letter letter alpha* @mark gap
 tag = "%" #letter letter alpha*? @tag gap
 divider = '&lt;' ('>' @end / ('>'! visible)+ '>' @divider) gap
+chars = ["'" ("'"! visible) ".."] ("'"! visible) "." @range gap
 set = "'" ("'"! visible)* #quote "'" @set gap
 string = '"' ('"'! visible)* #quote '"' @string gap
-number = (("1".."9") digit* / "0" hex*) @number gap
+number = (("1..9") digit* / "0" hex*) @number gap
 
 dots = '.' #dot '.' skip @
 equals = #equals "=" skip @
@@ -1650,6 +1651,9 @@ alpha = letter / digit / '_' / '-'
 letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
 hex = digit / 'ABCDEFabcdef'
+code = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
+    "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
+    "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
 end = #end &lt;>
 </pre>
 

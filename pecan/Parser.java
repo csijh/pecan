@@ -194,7 +194,7 @@ class Parser implements Testable {
         return doName(Mark) && gap();
     }
 
-    // number = (("1".."9") digit* / "0" hex*) @number gap
+    // number = (('1..9') digit* / "0" hex*) @number gap
     private boolean number() {
         if (! digit()) return false;
         boolean isHex = source.charAt(in-1) == '0';
@@ -332,13 +332,9 @@ class Parser implements Testable {
         return digit() || accept('A', 'F') || accept('a', 'f');
     }
 
-    // digit = Nd
+    // digit = '0..9'
     private boolean digit() {
-        if (in >= source.length()) return false;
-        int ch = source.codePointAt(in);
-        Category cat = Category.get(ch);
-        if (cat == Nd) in += Character.charCount(ch);
-        return cat == Nd;
+        return accept('0', '9');
     }
 
     // letter = Lu / Ll / Lt / Lm / Lo
