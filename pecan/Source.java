@@ -3,20 +3,34 @@
 package pecan;
 import java.util.*;
 
-/* Store a string representing a grammar, usually the contents or partial
-contents of a file, and generate error messages based on ranges of text. */
+/* A source is a string, with a filename and line number, so that error messages
+can be generated based on ranges of text. There is a flag to say that the
+string represents a default grammar during a series of tests. There is also a
+flag to specify tracing during testing. */
 
 class Source {
     private String text;
-    private String filename;
+    private String fileName;
     private int firstLine;
+    private boolean grammar, trace;
     private int[] rows;
 
+    // Create a source object. The filename can be null.
     Source(String t, String f, int n) {
         text = t;
-        filename = f;
+        fileName = f;
         firstLine = n;
+        grammar = trace = false;
+        findRows();
     }
+
+    // Get or set the fields.
+    int firstLine() { return firstLine; }
+    String fileName() { return fileName; }
+    boolean grammar() { return grammar; }
+    void grammar(boolean b) { grammar = b; }
+    boolean trace() { return trace; }
+    void trace(boolean b) { trace = b; }
 
     // Delegate string methods to the text.
     String substring(int start, int end) { return text.substring(start, end); }
@@ -28,20 +42,20 @@ class Source {
         return firstLine + row(p);
     }
 
-    // Create an error message, based on a range.
+    // Create an error message, based on a text range.
     String error(int start, int end, String message) {
-        if (rows == null) findRows();
         int startRow = row(start);
         int endRow = row(end);
         if (! message.equals("")) message = " " + message;
         String line = text.substring(rows[startRow], rows[startRow + 1] - 1);
         int col = start - rows[startRow];
+        String s1;
+        if (fileName != null) s1 = "Error in " + fileName + ", ";
+        else s1 = "Error on ";
         if (endRow == startRow) {
-            String s1 = "Error in " + filename + ", ";
             String s2 = "line " + (firstLine + startRow) + ":";
             message = s1 + s2 + message + "\n" + line + "\n";
         } else {
-            String s1 = "Error in " + filename + ", ";
             String s2 = "lines " + (firstLine + startRow) + " ";
             String s3 = "to " + (firstLine + endRow) + ":";
             message = s1 + s2 + s3 + message + "\n" + line + "...\n";
@@ -88,5 +102,11 @@ class Source {
             "Line one...\n" +
             "     ^^^";
         assert(s.error(5,16,"message").equals(out));
+        s.fileName = null;
+        out =
+            "Error on line 2: message\n" +
+            "Line two\n" +
+            "     ^^^";
+        assert(s.error(14,17,"message").equals(out));
     }
 }

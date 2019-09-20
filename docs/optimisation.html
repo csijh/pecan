@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-gb" xml:lang="en-gb">
+<head>
+<title>Pecan Tutorial</title>
+<style>
+    body { font-size: 120%; }
+    pre { margin-left:40px; }
+</style>
+</head>
+<body>
+
+<img src="pecan.png" width="300" height="65" />
+<hr/>
+
+<h1>Optimisation</h1>
+
+<p>Pecan currently offers little internal optimisation. Instead, it aims to
+provide expressive power so that the parser writer can control efficiency.</p>
+
+<p>An efficiency problem is very often due to overall design or a bottleneck of
+some kind. That means it is futile to try to make every detail as efficient as
+possible. It is much better to find the design or bottleneck problem, perhaps by
+instrumentation, and concentrate effort on solving that.</p>
+
+<p>For example, there often used to be a particular bottleneck in parsers, due
+to using a function call to read each character individually from a file, as old
+textbooks recommended. In today's world of large computer memories, it is far
+more efficient to read the whole file into an array in memory in one go, and
+then carry out scanning or parsing on the array. It also makes lookahead and
+backtracking far easier.</p>
+
+<p>In this tutorial, we will look at a few issues which may cause inefficiency,
+and how to tackle them.</p>
+
+<h3>Scanners</h3>
+
+<p>A common problem with a combined scanner and parser is that individual
+characters of text may be processed too many times. Suppose, for example, there
+are rules roughly like this:</p>
+
+<pre>statement = for ... / while ... / if ... / ...
+identifier = keyword! letter+
+keyword = for / while / if / ...
+for = "for" letter!
+while = "while" letter!
+if = "if" letter!
+</pre>
+
+<p>Identifiers and keywords may be used anywhere in the grammar, so they need to
+be mutually exclusive. The identifier rule has to exclude keywords. The keyword
+rules assume that identifiers such as <code>form</code> are allowed, which have
+a keyword as a prefix. So, after matching a keyword string, there needs to be a
+check that there are no more letters which turn it into an identifier. This
+issue can be seen in the grammar for Pecan itself, where category names are
+effectively keywords.</p>
+
+<p>In trying different alternatives in the grammar, the identifier rule and each
+of the keyword rules may be tried repeatedly at the same text position.</p>
+
+<p>The efficiency advantage of having a separate scanner is that the scanner can
+be written so as to effectively make a single linear pass over the characters.
+The parser can then check alternatives by looking at the next token tag rather
+than by processing at the character level.</p>
+
+<p>At any one text position, the scanner is looking for a token of any kind. If
+keywords are checked before identifiers, then the identifier rule can be
+simplified:</p>
+
+<pre>token = keyword / identifier / ...
+identifier = letter+
+</pre>
+
+<p>The keyword strings themselves can be combined:</p>
+
+<pre>token = keyword / identifier / ...
+identifier = letter+
+keyword = key letter!
+key = "for" / "while" / "if" / ...
+</pre>
+
+<p>The keyword rule can be changed to avoid backtracking in the case where it is
+recognised but is followed by more letters:</p>
+
+<pre>keyword = key (letter+ @1identifer / @1keyword)
+</pre>
+
+<p>Once the keyword strings are together, the implicit linear sequence of tests
+can be replaced by a binary search using dividers. The strings are ordered, and
+then a divider placed between the first half and second half:</p>
+
+<pre>key = &lt;do> key1 / key2
+key1 = "break" / "case" / "catch" / "continue" / "default"
+key2 = "do" / "else" / "for" / "if" / "switch" / "while"
+</pre>
+
+<p>Each half of the list can be split again, and so on as many times as
+necessary.</p>
+
+<p>Conventional parser generators translate long sequences of alternatives using
+switches. Pecan doesn't do this. Instead, dividers allow most of the efficiency
+gain to be obtained in a way which can be expressed directly as a
+transformation on the grammar that can be applied by the programmer. If greater
+efficiency is really needed, keyword recognition can be moved out of the grammar
+into the associated code. For example:</p>
+
+<pre>idOrKey = letter+ @1idOrKey
+</pre>
+
+<p>The <code>idOrKey</code> action can check whether the word is an identifier
+or keyword. Alternatively, if desired, the whole of the scanner can be
+hand-crafted, using the Pecan version as a specification.</p>
+
+<h3>Recursive ascent</h3>
+
+<p>Often, a hierarchy of grammar rules is used to specify the precedence and
+associativity of operators in a language.  As an example, here is a simple
+grammar of arithmetic expressions, including a power operator <code>^</code> to
+illustrate right-associativity, and assuming that a separate scanner is used to
+ensure that, at the character level, each character is processed only once:</p>
+
+<pre>expression = term (`+` term @2add / `-` term @2subtract)*
+term = factor (`*` factor @2multiply / `/` factor @2divide)*
+factor = atom (`^` factor @2power)?
+atom = `number` @atom / `(` expression `)`
+</pre>
+
+<p>For every expression in the source program, the <code>expression</code> rule
+is applied, which causes <code>term</code> to be applied, which causes
+<code>factor</code> to be applied, which causes <code>atom</code> to be applied,
+all before making any progress in the input.</p>
+
+<p>This is not an issue which can easily be solved by an internal optimisation
+in a parser generator. One traditional way round the inefficiency is to switch
+to a different type of parser, an <a
+hjref="https://en.wikipedia.org/wiki/Operator-precedence_parser">operator
+precedence</a> parser, for the expression part of the grammar.  Another
+traditional approach (which works well if the language includes
+programmer-defined operators) is to parse expressions without regard to
+precedence and associativity, then post-process the resulting parse tree
+later.</p>
+
+<p>Another technique, which deserves to be much better known and understood, is
+to use a normal recursive descent parser, but to re-work the rules in a
+bottom-up fashion.  This is related to <a
+href="https://en.wikipedia.org/wiki/Recursive_ascent_parser">recursive
+ascent</a> parsing from which the name of this technique has been borrowed, and
+<a href="https://dl.acm.org/citation.cfm?id=512931">top-down operator
+precedence</a> parsing (by Pratt, also described by <a
+href="http://crockford.com/javascript/tdop/tdop.html">Crockford</a>).  The
+technique will be illustrated by transforming the expression grammar above.</p>
+
+<p>The first step is to split each of the <code>expression</code>,
+<code>term</code> and <code>factor</code> rules into two, for convenience:</p>
+
+<pre>expression = term terms
+terms = (`+` term @2add / `-` term @2subtract)*
+term = factor factors
+factors = (`*` factor @2multiply / `/` factor @2divide)*
+factor = atom powers
+powers = (`^` factor @2power)?
+</pre>
+
+<p>Next, substitute the definition of <code>factor</code> into
+<code>term</code>, and the resulting definition of <code>term</code> into
+<code>expression</code>:</p>
+
+<pre>expression = atom powers factors terms
+term = atom powers factors
+...
+</pre>
+
+<p>Next, split these definitions into two again:</p>
+
+<pre>expression = atom expression2
+expression2 = powers factors terms
+term = atom term2
+term2 = powers factors
+...
+</pre>
+
+<p>Next, substitute the definition of <code>atom</code> into
+<code>expression</code>, <code>term</code> and <code>factor</code>:</p>
+
+<pre>expression = (`number` @atom / `(` expression `)`) expression2
+term = (`number` @atom / `(` expression `)`) factor3
+factor = (`number` @atom / `(` expression `)`) powers
+...
+</pre>
+
+<p>Next, distribute the two alternatives of <code>atom</code> in each of the
+three rules. The full set of rules at this point is:</p>
+
+<pre>expression = `number` @atom expression2 / `(` expression `)` expression2
+terms = (`+` term @2add / `-` term @2subtract)*
+expression2 = powers factors terms
+term = `number` @atom term2 / `(` expression `)` term2
+factors = (`*` factor @2multiply / `/` factor @2divide)*
+term2 = powers factors
+factor = `number` @atom powers / `(` expression `)` powers
+powers = (`^` factor @2power)?
+atom = `number` @atom / `(` expression `)`
+</pre>
+
+<p>Finally, just for completeness, the definition of <code>powers</code> can be
+substituted into the <code>expression2</code> and <code>term2</code> rules:</p>
+
+<pre>expression = `number` @atom expression2 / `(` expression `)` expression2
+terms = (`+` term @2add / `-` term @2subtract)*
+expression2 = (`^` factor @2power)? factors terms
+term = `number` @atom term2 / `(` expression `)` term2
+factors = (`*` factor @2multiply / `/` factor @2divide)*
+term2 = (`^` factor @2power)? factors
+factor = `number` @atom powers / `(` expression `)` powers
+powers = (`^` factor @2power)?
+atom = `number` @atom / `(` expression `)`
+</pre>
+
+<p>Now each of the rules begins more-or-less immediately with the recognition of
+its first token. The result of this transformation may or may not be as good as
+the best bottom-up parser generators or custom algorithms, but the bulk of the
+inefficiency has been eliminated.</p>
+
+<h3>Hand translation</h3>
+
+<p>It is, of course, possible to write a recursive descent parser by hand. At
+first, it seems remarkably easy, but experience shows that it often becomes
+extremely difficult, tedious, repetitive and error-prone in the face of the mass
+of detail needed for a real project such as a programming language compiler.</p>
+
+<p>Pecan is designed, in part, to help in writing recursive descent parsers by
+hand. By developing the grammar first, in a test-driven fashion, most of the
+nitty-gritty design issues can be sorted out in advance, before getting bogged
+down in a verbose implementation.</p>
+
+<p>It is desirable to find a uniform translation from a Pecan grammar into a
+reasonably conventional recursive descent style. Then a translation can be done
+with high confidence that the hand-written parser will have the same
+functionality as the grammar. A safe approach would then be to carry out the
+uniform translation, then translate the tests used to develop the Pecan grammar
+to verify correctness, then improve the parser manually as desired with the
+tests in place.</p>
+
+<p>A first step is to turn each rule into a function. So the rule for
+<code>atom</code> becomes a function <code>atom()</code>. It is assumed that the
+function has access to the parser state as an implicit surrounding context, or
+via an argument variable not shown here. Now how are <code>x y</code> and
+<code>x / y</code> translated? It is tempting to translate them using combiner
+functions as:</p>
+
+<pre>and(x(), y())
+or(x(), y())
+</pre>
+
+<p>However, unless the language has lazy function calling, <code>y()</code> will
+be executed before the call to the combiner, regardless of the success or
+failure of <code>x()</code>. A possible way round this, for languages which
+support some kind of function passing, is to define <code>x y</code> and <code>x
+/ y</code> by:</p>
+
+<pre>and(x, y)
+or(x, y)
+</pre>
+
+<p>The functions can first call <code>x()</code> and then decide whether or not
+to call <code>y()</code>. Expressions such as <code>and(x,y)</code>,
+<code>or(x,y)</code>need to take part in further sequences or choices, so
+<code>and</code> and <code>or</code> need to return a function to make the
+calls, rather than make the calls immediately. If this route is followed, the
+net effect is to represent the grammar as a data structure, essentially a
+version of the parse tree for the grammar, and then handle that data structure
+interpretively to carry out parsing. This is the approach taken in parser
+combinator libraries, and in Pecan bytecode, and following a similar route by
+hand is not very likely to improve efficiency.</p>
+
+<p>Another option is to represent <code>x y</code> and <code>x / y</code>
+by:</p>
+
+<pre>x() &amp;&amp; y()
+x() || y()
+</pre>
+
+<p>This assumes that parsing functions return logical values for success or
+failure, and that the implementation language has logical operators
+<code>&amp;&amp;</code> (and) and <code>||</code> (or) which use <a
+href="https://en.wikipedia.org/wiki/Short-circuit_evaluation">short-circuit
+evaluation</a> to ensure that <code>y()</code> is not evaluated
+unnecessarily.</p>
+
+<p>Now the problem is how to deal with error handling. The difficult case is
+<code>x() || y()</code> where <code>x()</code> fails after having made some
+progress in the input. Despite the fact that <code>x()</code> has failed,
+<code>y()</code> should not be called.</p>
+
+<p>The traditional way to solve this problem is by handling input matching in
+two ways. Given a tag such as <code>%id</code> to be matched, for example, this
+would be translated to one of:</p>
+
+<pre>accept(id)
+expect(id)
+</pre>
+
+<p>In the case of a mismatch, the first would return false, whereas the second
+would emit an error message and stop parsing. The problem with this is that each
+occurrence of <code>%id</code> has to be analysed to check which translation to
+use and, in general, there are many places in Pecan grammars where the
+occurrence could be either, depending on context. So, for a uniform translation
+scheme, something more general is needed.</p>
+
+<p>Effectively, each parsing operation returns two boolean results. One is
+success or failure, and the other is whether or not there was any progress in
+the input. Returning two results is awkward in many languages, and besides we
+wouldn't then be able to take advantage of the brevity and convenience of using
+the logical operators and their short-circuit evaluation.</p>
+
+<pre>x() {
+    int in0 = in;
+    ...
+    soft = soft && (in == in0);
+}
+x() && y()
+x() || soft && y()
+in0 = in; x() || in == in0 && y()
+
+In x() && y(), soft must start true. Or must it? True => no overall progress.
+
+In x() || soft && y(), soft must be set RELATIVE to the start of x.
+
+either(0) && x() ||
+or(0) && y() ||
+or(0) && z()
+
+either(0) sets savein[0] and returns true.
+or(0) checks in == savein[0].
+</pre>
+
+
+</body>
+</html>

@@ -153,7 +153,7 @@ public class Evaluator implements Testable {
         parse(node.ref());
     }
 
-    // Parse x / y. Try x, and it fails without progress, try y instead.
+    // Parse x / y. Parse x, and if it fails without progress, parse y instead.
     private void parseOr(Node node) {
         int saveIn = in;
         int saveOut = out;
@@ -216,7 +216,6 @@ public class Evaluator implements Testable {
         }
     }
 
-    // TODO check if need to take out redo x
     // Parse [x]
     private void parseTry(Node node) {
         int saveIn = in;
@@ -226,6 +225,7 @@ public class Evaluator implements Testable {
         lookahead--;
         if (ok && lookahead == 0) takeActions();
         if (!ok) {
+            if (in != saveIn && tracing) traceInput();
             in = saveIn;
             out = saveOut;
         }
@@ -239,6 +239,7 @@ public class Evaluator implements Testable {
         parse(node.left());
         lookahead--;
         out = saveOut;
+        if (in != saveIn && tracing) traceInput();
         in = saveIn;
     }
 
@@ -250,6 +251,7 @@ public class Evaluator implements Testable {
         parse(node.left());
         lookahead--;
         out = saveOut;
+        if (in != saveIn && tracing) traceInput();
         in = saveIn;
         ok = !ok;
     }

@@ -6,8 +6,9 @@ package pecan;
 Test class. */
 
 interface Testable {
-    // Run a test on an object, with input and output expressed as strings.
-    // If the input is prefixed with "GRAMMAR:\n" it is a grammar to be used
-    // for subsequent tests.
-    String test(String in);
+    // Run a test on an object. The input is a source, i.e. a string with
+    // filename and start line number for error messages. If the grammar flag is
+    // set on the input, it is a default grammar to be used for subsequent
+    // tests. The output is a string, or has a meaningful toString value.
+    Object test(Source in);
 }

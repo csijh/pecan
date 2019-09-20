@@ -8,25 +8,43 @@ import static pecan.Op.*;
 import static pecan.Parser.Marker.*;
 
 /* Parse a Pecan source text, assumed to be in UTF8 format, producing a tree.
-The parser has been hand-translated from the pecan grammar in the comments. */
+
+The parser has been hand-translated from the pecan grammar in the comments, to
+make this class self-contained. The grammar (a) has no left-hand alternative
+starting with an action and (b) has no lookahead construct containing error
+markers or actions. That means actions don't need to be delayed.
+
+Each parser method returns success or failure. The translations used are:
+
+    x y    ->  x() && y()
+    x / y  ->  either(n) && x() || or(n) && y()
+    x?     ->  either(n) && x() || or(n)
+    [x]    ->  maybe(n, look(n) && x())
+    x&     ->  has(n, look(n) && x())
+    x!     ->  not(n, look(n) && x())
+
+Here, n is the nesting depth of the expression, to ensure that expressions which
+are under way simultaneously are distinguihed. */
 
 class Parser implements Testable {
-    private String source;
+    private Source source;
     private Node[] output;
     private int start, in, out, lookahead, marked;
     private Set<Marker> markers = EnumSet.noneOf(Marker.class);
+    private int[] save = new int[10];
+    private Set<String> cats;
 
     public static void main(String[] args) {
-        if (args.length == 0) Test.run(new Parser());
-        else Test.run(new Parser(), Integer.parseInt(args[0]));
+        Test.run(new Parser(), args);
     }
 
+    // Error markers, in alphabetical order.
     enum Marker {
-        NEWLINE, EQUALS, BRACKET, QUOTE, DOT, LETTER, ATOM, TAG, END_OF_TEXT
+        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, LETTER, NEWLINE, QUOTE, TAG
     }
 
     public String test(String g) {
-        return "" + run(g);
+        return run(new Source(g, null, 1)).toString();
     }
 
     // Record an error marker for the current input position.
@@ -52,16 +70,56 @@ class Parser implements Testable {
         return s;
     }
 
+    // Prepare for a choice by recording the input position. The number n is the
+    // nesting depth of the choice construct in the grammar.
+    private boolean either(int n) {
+        save[n] = in;
+        return true;
+    }
+
+    // Check whether progress has already been made before continuing with the
+    // second or subsequent alternative of a choice.
+    private boolean or(int n) {
+        return in == save[n];
+    }
+
+    // Start a lookahead. Save the input position. Assume that lookahead
+    // expressions don't include error markers or actions.
+    private boolean look(int n) {
+        save[n] = in;
+        return true;
+    }
+
+    // Implement [x] as maybe(n, look(n) && x())
+    private boolean maybe(int n, boolean b) {
+        if (! b) in = save[n];
+        return b;
+    }
+
+    // Implement x& as has(n, look(n) && x())
+    private boolean has(int n, boolean b) {
+        in = save[n];
+        return b;
+    }
+
+    // Implement x! as not(n, look(n) && x())
+    private boolean not(int n, boolean b) {
+        in = save[n];
+        return ! b;
+    }
+
     // Parse the grammar, returning a node (possibly an error node).
-    Node run(String s) {
+    Node run(Source s) {
         source = s;
         if (output == null) output = new Node[1];
         start = in = out = lookahead = marked = 0;
         markers.clear();
+        cats = new HashSet<String>();
+        for (Category cat : Category.values()) cats.add(cat.toString());
         boolean ok = pecan();
         if (! ok) {
             Node err = new Node(Error, s, in, in);
-            err.note(Node.err(s, in, in, "expecting " + message()));
+            err.note(s.error(in, in, "expecting " + message()));
             return err;
         }
         return prune(output[0]);
@@ -72,38 +130,52 @@ class Parser implements Testable {
         return skip() && rules() && end();
     }
 
-    // rules = rule (rules @2add)?
+    // rules = rule (rules @2list)?
     private boolean rules() {
-        if (! rule()) return false;
-        int in0 = in;
-        return rules() && doAdd() || in == in0;
+        return rule() && (
+            either(0) && rules() && doList() ||
+            or(0)
+        );
     }
 
-    // rule = id equals expression newline skip @2rule
+    // rule = inclusion / id equals expression endline skip @2rule
     private boolean rule() {
-        return id() && equals() && exp() && newline() && skip() && doRule();
+        return either(0) && inclusion() ||
+        or(0) && id() && equals() && exp() && endline() && skip() && doRule();
+    }
+
+    // inclusion = string endline skip @1include
+    private boolean inclusion() {
+        return string() && endline() && skip() && doInclude();
     }
 
     // expression = term (slash expression @2or)?
     private boolean exp() {
-        if (! term()) return false;
-        int in0 = in;
-        return infix('/') && exp() && doInfix(Or) || in == in0;
+        return term() && (
+            either(0) && infix('/') && exp() && doInfix(Or) ||
+            or(0)
+        );
     }
 
     // term = factor (term @2and)?
     private boolean term() {
-        if (! factor()) return false;
-        int in0 = in;
-        return term() && doInfix(And) || in == in0;
+        return factor() && (
+            either(0) && term() && doInfix(And) ||
+            or(0)
+        );
     }
 
     // factor = atom postop*
+    // Changed postop* to postops
     private boolean factor() {
-        if (! atom()) return false;
-        int in0 = in;
-        while (postop()) { in0 = in; }
-        return in0 == in;
+        return atom() && postops();
+    }
+
+    // postops = (postop postops)?
+    // Extra rule for postop*
+    private boolean postops() {
+        do { either(0); } while (postop());
+        return or(0);
     }
 
     // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
@@ -117,23 +189,171 @@ class Parser implements Testable {
         );
     }
 
-    // atom = id / action / marker / tag / string / set / range /
-    //     divider / try / bracket
+    // atom = text / id / action / marker / tag / try / bracket
     private boolean atom() {
-        int in0 = in;
         return (
-            id() ||
-            in == in0 && action() ||
-            in == in0 && marker() ||
-            in == in0 && tag() ||
-            in == in0 && string() ||
-            in == in0 && set() ||
-            in == in0 && range() ||
-            in == in0 && divider() ||
-            in == in0 && try_() ||
-            in == in0 && bracket()
+            either(0) && text() ||
+            or(0) && id() ||
+            or(0) && action() ||
+            or(0) && marker() ||
+            or(0) && tag() ||
+            or(0) && try_() ||
+            or(0) && bracket()
         );
     }
+
+    // text = string / set / number / divider / category
+    private boolean atom() {
+        return (
+            either(0) && string() ||
+            or(0) && set() ||
+            or(0) && number() ||
+            or(0) && divider() ||
+            or(0) && category()
+        );
+    }
+
+    // category = [cat alpha!] @category gap
+    private boolean category() {
+        return maybe(0, look(0) &&
+            cat() && not(1, look(1) && alpha())
+        ) && doCategory() && gap();
+    }
+
+    // id = #atom (cat alpha!)! letter alpha* @id gap / backquote
+    // Changed alpha* to alphas
+    private boolean id() {
+        return either(0) && (
+            mark(ATOM) && not(1, look(1) &&
+                cat() && not(2, look(2) && alpha())) &&
+            letter() && alphas && doName(Id) && gap();
+        ) ||
+        or(0) && backquote();
+    }
+
+    // alpha* = (alpha alphas)?
+    // Extra rule for postop*
+    private boolean alphas() {
+        do { either(0); } while (alpha());
+        return or();
+    }
+
+    // backquote = "`" ("`"! visible)* #quote "`" @id gap
+    // Changed  ("`"! visible)*  to bqvisibles
+    private boolean backquote() {
+        return accept('`') && bqvisibles && mark(QUOTE) && accept('`') &&
+        doName(Id) && gap();
+    }
+
+    // bqvisibles* = ("`"! visible bqvisibles)?
+    // Extra rule for ("`"! visible)*
+    private boolean bqvisibles() {
+        do { either(0); } while (! next('`') && visible());
+        return or();
+    }
+
+    // action = '@' (decimal* #letter letter alpha* @act / @drop) gap
+    // Changed decimal* to decimals and alpha* to alphas
+    private boolean action() {
+        accept('@') && (
+            either(0) && decimal() && mark(LETTER) && alphas() && doName(Act) ||
+            or(0) && doName(Drop)
+        ) && gap();
+    }
+
+    // decimals* = (decimal decimals)?
+    // Extra rule for decimal*
+    private boolean decimals() {
+        do { either(0); } while (decimal());
+        return or();
+    }
+
+    // marker = "#" #letter letter alpha* @mark gap
+    // Changed alpha* to alphas
+    private boolean marker() {
+        return accept('#') && mark(LETTER) && letter() && alphas() &&
+        doName(Mark) && gap();
+    }
+
+    // tag = "%" #letter letter alpha* @tag gap
+    // Changed alpha* to alphas
+    private boolean tag() {
+        return accept('%') && mark(LETTER) && letter() && alphas() &&
+        doName(Tag) && gap();
+    }
+
+    // divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
+    // changed  ('>'! visible)+  to  visible dvisibles
+    private boolean divider() {
+        return accept('<') && (
+            either(0) && accept('>') && doName(End) ||
+            or(0) && visible() && dvisibles() && accept('>') && doName(Divider)
+        ) && gap();
+    }
+
+    // dvisibles* = ('>'! visible dvisibles)?
+    // Extra rule for ('>'! visible)*
+    private boolean dvisibles() {
+        do { either(0); } while (! next('>') && visible());
+        return or();
+    }
+
+    // set = range / "'" ("'"! visible)* #quote "'" @set gap
+    // Changed  ("'"! visible)*  to sqvisible
+    private boolean set() {
+        return either(0) && range() ||
+        or(0) && (
+            accept('\'') && sqvisible() && mark(QUOTE) && accept('\'') &&
+            doName(Set) && gap()
+        );
+    }
+
+    // range = numbers / ["'" ("'"! visible) ".."] ("'"! visible) "'" @range gap
+    private boolean range() {
+
+    }
+
+    // numbers = [digits '.'] #dot '.' digits @range gap
+    // string = '"' ('"'! visible)* #quote '"' @string gap
+    // number = digits @number gap
+    // try = sb expression se @3try
+    // bracket = rb expression re @3bracket
+
+    // dots = '.' #dot '.' skip @
+    // equals = #equals "=" skip @
+    // slash = #op "/" skip @
+    // has = #op "&" gap @
+    // not = #op "!" gap @
+    // opt = #op "?" gap @
+    // any = #op "*" gap @
+    // some = #op "+" gap @
+    // rb = "(" @token skip @
+    // sb = "[" @token skip @
+    // re = #bracket ")" @token gap @
+    // se = #bracket "]" @token gap @
+
+    // skip = (space / comment / newline)*
+    // gap = space* comment? continuation @
+    // space = ' '
+    // continuation = [newline skip '=/)]'&]?
+    // newline = #newline 13? 10 @
+    // comment = ["//"] visible* newline
+    // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+    // alpha = letter / Nd / '_' / '-'
+    // letter = Lu / Ll / Lt / Lm / Lo
+    // decimal = '0..9'
+    // hex = decimal / 'ABCDEFabcdef'
+    // digits = ('1..9' decimal*) / '0' hex*
+    // code = "Uc" / "Cc" / ...
+    // end = #end <>
+
+    // Hand optimised.
+    private boolean cat() {
+        if (in >= source.length() - 2) return false;
+        return cats.contains(source.substring(in, in + 2));
+    }
+
+
 
     // range = number (dots number @2range)?
     private boolean range() {
@@ -152,78 +372,21 @@ class Parser implements Testable {
         return open('(') && exp() && close(')') && doBracket();
     }
 
-    // id = #atom letter alpha* @id gap / "`" ("`" visible)* #quote "`" @id gap
-    private boolean id() {
-        mark(ATOM);
-        if (letter()) {
-            while (alpha()) { }
-            return doName(Id) && gap();
-        }
-        if (! accept('`')) return false;
-        while (! look('`') && visible()) { }
-        return mark(QUOTE) && accept('`') && doName(Id) && gap();
-    }
-
-    // action = '@' (digit* #letter letter alpha* @act / @drop) gap
-    private boolean action() {
-        if (! accept('@')) return false;
-        int in0 = in;
-        while (digit()) { }
-        mark(LETTER);
-        boolean t = letter();
-        if (in > in0 && ! t) return false;
-        if (t) {
-            while (alpha()) { }
-            doName(Act);
-        }
-        else doName(Drop);
-        return gap();
-    }
-
-    // tag = "%" #letter letter alpha* @tag gap
-    private boolean tag() {
-        if (! (accept('%') && mark(LETTER) && letter())) return false;
-        while (alpha()) { }
-        return doName(Tag) && gap();
-    }
-
-    // marker = "#" #letter letter alpha* @mark gap
-    private boolean marker() {
-        if (! (accept('#') && mark(LETTER) && letter())) return false;
-        while (alpha()) { }
-        return doName(Mark) && gap();
-    }
-
-    // number = (('1..9') digit* / "0" hex*) @number gap
+    // number = (('1..9') decimal* / "0" hex*) @number gap
     private boolean number() {
-        if (! digit()) return false;
+        if (! decimal()) return false;
         boolean isHex = source.charAt(in-1) == '0';
         if (isHex) while (hex()) { }
-        else while (digit()) { }
+        else while (decimal()) { }
         return doName(Number) && gap();
     }
 
-    // set = "'" ("'"! visible)* #quote "'" @set gap
-    // (includes ranges 'a..z')
-    private boolean set() {
-        if (! accept('\'')) return false;
-        while (! look('\'') && visible()) { }
-        return mark(QUOTE) && accept('\'') && doName(Set) && gap();
-    }
 
     // string = '"' ('"'! visible)* #quote '"' @string gap
     private boolean string() {
         if (! accept('"')) return false;
-        while (! look('"') && visible()) { }
+        while (! next('"') && visible()) { }
         return mark(QUOTE) && accept('"') && doName(String) && gap();
-    }
-
-    // divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
-    private boolean divider() {
-        if (! accept('<')) return false;
-        if (accept('>')) return doName(End) && gap();
-        while (! look('>') && visible()) { }
-        return accept('>') && doName(Divider) && gap();
     }
 
     // dots = '.' #dot '.' skip @
@@ -283,7 +446,7 @@ class Parser implements Testable {
         int in0 = in;
         lookahead++;
         boolean t = newline() && skip() && (
-            look('=') || look('/') || look(')') || look(']')
+            next('=') || next('/') || next(')') || next(']')
         );
         lookahead--;
         if (! t) in = in0;
@@ -298,7 +461,7 @@ class Parser implements Testable {
 
     // comment = "//" visible* newline
     private boolean comment() {
-        if (! look("//")) return false;
+        if (! next("//")) return false;
         accept('/');
         accept('/');
         while (visible()) { }
@@ -327,13 +490,13 @@ class Parser implements Testable {
         return letter() || digit() || accept('_') || accept('-');
     }
 
-    // hex = digit / 'ABCDEFabcdef'
+    // hex = decimal / 'ABCDEFabcdef'
     private boolean hex() {
-        return digit() || accept('A', 'F') || accept('a', 'f');
+        return decimal() || accept('A', 'F') || accept('a', 'f');
     }
 
-    // digit = '0..9'
-    private boolean digit() {
+    // decimal = '0..9'
+    private boolean decimal() {
         return accept('0', '9');
     }
 

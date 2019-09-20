@@ -56,7 +56,6 @@
 </li>
 <li><a href="#transforms">Transforms</a></li>
 <li><a href="#changes">Recent changes</a></li>
-<li><a href="#grammar">The Pecan grammar</a></li>
 </ul>
 
 <h2 id="use">Using Pecan</h2>
@@ -219,7 +218,7 @@ y*</code>.</p>
 <h3 id="rd">Recursive descent and combinators</h3>
 
 <p>Recursive descent parsers have the advantage of being efficient, intuitive,
-and capable of being hand-written. However, for large projects it becomes
+and capable of being hand-written. However, for large projects they become
 verbose and tedious.</p>
 
 <p>Perhaps the main problem with recursive descent, though, is that a simple
@@ -269,10 +268,13 @@ on the <a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">PEG</a>
 notation. Pecan has a sequential choice operator <code>x/y</code> but, unlike
 the PEG notation, the operator does not automatically involve backtracking.
 There are separate lookahead operators, for the controlled use of backtracking,
-which provide greater control over the progress of parsing. It is much easier
-to generate accurate error messages, and parsers can be kept reasonably
-efficient by the programmer, without the space overhead of such techniques as
-the PEG packrat algorithm.</p>
+which provide greater control over the progress of parsing. It is much easier to
+generate accurate error messages, and parsers can be kept reasonably efficient
+by the programmer, without the space overhead of such techniques as the PEG
+packrat algorithm. The syntax of Pecan grammars is explained below, and there is
+a Pecan grammar for the Pecan language, with tests, in the file:</p>
+
+<p class="indent"><a href="pecan.txt">pecan.txt</a></p>
 
 <p>As with PEG grammars, any parsing expression within a grammar represents a
 matching operation which succeeds or fails when applied at a particular position
@@ -1591,86 +1593,13 @@ same output effect and error handling properties as the original.</p>
 <li>parser generation is via bytecode</li>
 </ul>
 
-<h2 id="grammar">The Pecan grammar</h2>
-
-<p>Here is a Pecan parser for the Pecan language itself. It includes scanning
-and layout. The <code>skip</code> rule is used to handle white space between
-tokens. The <code>gap</code> rule deals with the continuation line convention.
-It follows a token which can end a rule, and looks ahead for a possible
-continuation to see if the next newline should be skipped. Brackets are treated
-as tokens, so that the extent in the source text of an expression is just the
-maximum extent of its subexpressions.</p>
-
-<pre>pecan = skip rules end
-rules = (rule / inclusion) (rules @2add)?
-rule = id equals expression newline skip @2rule
-inclusion = string newline skip @2include
-
-expression = term (slash expression @2or)?
-term = factor (term @2and)?
-factor = atom postop*
-postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-atom = category / id / action / marker / tag / string / chars / set /
-    numbers / divider / try / bracket
-
-numbers = number (dots number @2range)?
-try = sb expression se @3back
-bracket = rb expression re @3bracket
-
-category = code alpha! @category gap
-id = #atom letter alpha* @id gap / "`" ("`" visible)* #quote "`" @id gap
-action = '@' (digit* #letter letter alpha* @act / @drop) gap
-marker = "#" #letter letter alpha* @mark gap
-tag = "%" #letter letter alpha*? @tag gap
-divider = '&lt;' ('>' @end / ('>'! visible)+ '>' @divider) gap
-chars = ["'" ("'"! visible) ".."] ("'"! visible) "." @range gap
-set = "'" ("'"! visible)* #quote "'" @set gap
-string = '"' ('"'! visible)* #quote '"' @string gap
-number = (("1..9") digit* / "0" hex*) @number gap
-
-dots = '.' #dot '.' skip @
-equals = #equals "=" skip @
-slash = #slash "/" skip @
-rb = "(" @token skip @
-sb = "[" @token skip @
-has = #look "&amp;" @token gap @
-not = #look "!" @token gap @
-opt = #query "?" @token gap @
-any = #any "*" @token gap @
-some = #some "+" @token gap @
-re = #bracket ")" @token gap @
-se = #bracket "]" @token gap @
-
-skip = (space / comment / newline)*
-gap = space* comment? continuation @
-continuation = [nl skip '=/)]'&amp;]?
-newline = #newline 13? 10 @
-comment = ["//"] visible* newline
-visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
-alpha = letter / digit / '_' / '-'
-letter = Lu / Ll / Lt / Lm / Lo
-digit = Nd
-hex = digit / 'ABCDEFabcdef'
-code = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
-    "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
-    "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
-end = #end &lt;>
-</pre>
-
-<p>The Unicode standard defines many different newline conventions which should
-be recognised by software handling arbitrary text files. However, for text files
-in computer languages, it seems better to promote uniformity. In fact, there is
-a lot to be said for insisting that all such text files be stored using LF
-newlines, even on Windows now that Notepad accepts LF. However, as a temporary
-practical concession, Pecan supports CR+LF newlines.</p>
-
 <!--
 <h2>Tutorial Topics</h2>
 
 <p>Topics: grammar operators, left recursion, right recursion, iteration.
 Stack-based actions. Actions not done and undone if backtrack. Actions can do
 stuff or build trees. Built-in scanning and drawbacks. Separate scanner. How
-to join then up.</p>
+to join them up.</p>
 -->
 
 </body>

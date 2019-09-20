@@ -2,26 +2,24 @@
 
 // A grammar is a sequence of rules, possibly with inclusions.
 pecan = skip rules end
-rules = (rule / inclusion) (rules @2list)?
-rule = id equals expression newline skip @2rule
+rules = rule (rules @2list)?
+rule = inclusion / id equals expression newline skip @2rule
 inclusion = string newline skip @1include
 
-// An expression breaks down into terms, factors, compounds and atoms.
+// An expression breaks down into terms, factors and atoms.
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
-factor = compound postop*
+factor = atom postop*
 postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-compound = try / bracket / atom
-atom = category / id / action / marker / tag / string / set / number / divider
+atom = text / id / action / marker / tag / try / bracket
+text = string / set / number / divider / category
 
-// The compounds are bracketed expressions.
-try = sb expression se @3try
-bracket = rb expression re @3bracket
-
-// The atoms mostly start with different characters.
-category = code alpha! @category gap
-id = #atom letter alpha* @id gap / "`" ("`"! visible)* #quote "`" @id gap
-action = '@' (digit* #letter letter alpha* @act / @drop) gap
+// The atoms mostly start with different characters. As this parser includes
+// scanning, categories and ids are made mutually exclusive.
+category = [cat alpha!] @category gap
+id = #atom (cat alpha!)! letter alpha* @id gap / backquote
+backquote = "`" ("`"! visible)* #quote "`" @id gap
+action = '@' (decimal* #letter letter alpha* @act / @drop) gap
 marker = "#" #letter letter alpha* @mark gap
 tag = "%" #letter letter alpha*? @tag gap
 divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
@@ -30,6 +28,8 @@ range = numbers / ["'" ("'"! visible) ".."] ("'"! visible) "'" @range gap
 numbers = [digits '.'] #dot '.' digits @range gap
 string = '"' ('"'! visible)* #quote '"' @string gap
 number = digits @number gap
+try = sb expression se @3try
+bracket = rb expression re @3bracket
 
 // Operator and punctuation symbols include error markers.
 // Brackets produce output items, to help with text ranges of parse tree nodes.
@@ -52,14 +52,14 @@ gap = space* comment? continuation @
 space = ' '
 continuation = [newline skip '=/)]'&]?
 newline = #newline 13? 10 @
-comment = ["//"] visible* newline
+comment = "//" visible* newline
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
 alpha = letter / Nd / '_' / '-'
 letter = Lu / Ll / Lt / Lm / Lo
-digit = '0..9'
-hex = digit / 'ABCDEFabcdef'
-digits = ('1..9' digit*) / '0' hex*
-code = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
+decimal = '0..9'
+hex = decimal / 'ABCDEFabcdef'
+digits = ('1..9' decimal*) / '0' hex*
+cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
     "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
     "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
 end = #end <>
@@ -278,6 +278,20 @@ x = @3
 Error on line 2: expecting letter
 x = @3
       ^
+==========
+// Id extending category name
+x = Ndx
+----------
+id x
+id Ndx
+rule
+==========
+// Definition of category
+Nd = "x"
+----------
+Error on line 2: expecting atom, newline
+Nd = "x"
+^
 ==========
 // Tag
 x = %x

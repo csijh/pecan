@@ -40,7 +40,7 @@ Rule x
   Id x
 Rule y
   Id y
-==========
+==========\ switch on escape conventions
 // Windows \r\n line endings
 x=x\13\10\
 y=y\13\10\
@@ -59,9 +59,9 @@ Rule x
   Id x
 ==========
 // Trailing spaces
-x = x    \10
-         \10
-y = y    \10
+x = x    \10\
+         \10\
+y = y    \10\
 ----------
 Rule x
   Id x
