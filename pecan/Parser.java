@@ -44,7 +44,7 @@ class Parser implements Testable {
         start = in = out = lookahead = marked = 0;
         markers.clear();
         cats = new HashSet<String>();
-        save = new int[10];
+        save = new int[100];
         top = 0;
         for (Category cat : Category.values()) cats.add(cat.toString());
         boolean ok = grammar();
@@ -77,17 +77,17 @@ class Parser implements Testable {
         );
     }
 
-    // inclusion = string endline skip @1include
+    // inclusion = string endline @1include skip
     private boolean inclusion() {
-        return string() && endline() && skip() && ACT1(Include);
+        return string() && endline() && ACT1(Include) && skip();
     }
 
-    // rule = #id (id / backquote) equals expression newline skip @2rule
+    // rule = #id (id / backquote) equals expression newline @2rule skip
     private boolean rule() {
         return MARK(ID) && ALT(
             GO() && id() ||
             OR() && backquote()
-        ) && equals() && exp() && newline() && skip() && ACT2(Rule);
+        ) && equals() && exp() && newline() && ACT2(Rule) && skip();
     }
 
     // expression = term (slash expression @2or)?
@@ -284,7 +284,9 @@ class Parser implements Testable {
 
     // category = [cat alpha!] @cat blank
     private boolean category() {
-        return TRY(cat() && NOT(GO() && alpha())) && ACT(Cat) && blank();
+        return TRY(
+            GO() && cat() && NOT(GO() && alpha())
+        ) && ACT(Cat) && blank();
     }
 
     // cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" /
@@ -301,9 +303,9 @@ class Parser implements Testable {
 
     // blank = spaces [endline spaces '=/)]' &]? @
     private boolean blank() {
-        return spaces() && TRY(
+        return spaces() && OPT(GO() && TRY(
             GO() && endline() && spaces() && HAS(GO() && SET("=/)]"))
-        ) && ACT();
+        )) && ACT();
     }
 
     // gap = spaces (newline spaces)? @
@@ -313,9 +315,9 @@ class Parser implements Testable {
 
     // skip = ((space / comment / newline) @ skip)?
     private boolean skip() {
-        return OPT(
-            GO() && ALT(
-                GO() && space() || OR() && comment() || OR() && newline()
+        return OPT(GO() &&
+            ALT(GO() &&
+                space() || OR() && comment() || OR() && newline()
             ) && ACT() && skip()
         );
     }
@@ -417,22 +419,22 @@ class Parser implements Testable {
 
     // noquotes = ("'"! visible)*
     private boolean noquotes() {
-        return OPT(NOT(GO() && CHAR('\'')) && visible() && noquotes());
+        return OPT(GO() && NOT(GO() && CHAR('\'')) && visible() && noquotes());
     }
 
     // nodquotes = ('"'! visible)*
     private boolean nodquotes() {
-        return OPT(NOT(GO() && CHAR('"')) && visible() && nodquotes());
+        return OPT(GO() && NOT(GO() && CHAR('"')) && visible() && nodquotes());
     }
 
     // nobquotes = ("`"! visible)*
     private boolean nobquotes() {
-        return OPT(NOT(GO() && CHAR('`')) && visible() && nobquotes());
+        return OPT(GO() && NOT(GO() && CHAR('`')) && visible() && nobquotes());
     }
 
     // noangles = ('>'! visible)*
     private boolean noangles() {
-        return OPT(NOT(GO() && CHAR('>')) && visible() && noangles());
+        return OPT(GO() && NOT(GO() && CHAR('>')) && visible() && noangles());
     }
 
     // endline = 13? 10
@@ -465,16 +467,16 @@ class Parser implements Testable {
         return b;
     }
 
-    // Backtrack to saved position and return true.
+    // Backtrack to saved position.
     private boolean HAS(boolean b) {
         in = save[--top];
-        return true;
+        return b;
     }
 
-    // Backtrack to saved position and return false.
+    // Backtrack to saved position and negate result.
     private boolean NOT(boolean b) {
         in = save[--top];
-        return false;
+        return !b;
     }
 
     // Backtrack on failure.

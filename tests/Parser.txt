@@ -1,4 +1,95 @@
 x = y
 ----------
+Rule x = y
+  Id x
+  Id y
+==========
+-- One-liner with comment
+x = y
+----------
+Rule x = y
+  Id x
+  Id y
+==========
+-- Choice
+x = y / z
+----------
+Rule x = y / z
+  Id x
+  Or y / z
+    Id y
+    Id z
+==========
+-- Bracket
+x = (y / z)
+----------
+Rule x = (y / z)
+  Id x
+  Or y / z
+    Id y
+    Id z
+==========
+----------
+Error in tests/Parser.txt, line 32: expecting id, newline
+
+^
+==========
+-- Expecting =
+x
+----------
+Error in tests/Parser.txt, line 38: expecting equals
+x
+ ^
+==========
+-- Normal \n line endings
+x = x
+y = y
+---------
+List x = x...
+  Rule x = x
+    Id x
+    Id x
+  Rule y = y
+    Id y
+    Id y
+==========
+-- Windows \r\n line endings (using test file escape conventions)
+x=x\13\10\
+y=y\13\10\
+----------
+List x=x\13...
+  Rule x=x
+    Id x
+    Id x
+  Rule y=y
+    Id y
+    Id y
+==========
+-- Lines containing only spaces are comments
+
+
+x = x
+----------
+Rule x = x
+  Id x
+  Id x
+==========
+-- Trailing spaces (using test file escape conventions)
+x = x    \10\
+         \10\
+y = y    \10\
+----------
 Rule x
+  Id x
+Rule y
+  Id y
+==========
+-- Trailing blank line
+x = x
+y = y
+
+----------
+Rule x
+  Id x
+Rule y
   Id y

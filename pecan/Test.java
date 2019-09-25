@@ -153,6 +153,8 @@ public class Test {
     private static void report(boolean unitTest, String name, int line, int n) {
         if (n == 0) System.out.println(
             "No test on line " + line + ".");
+        else if (unitTest && n == 1) System.out.println(
+            name + " class OK, pass 1 test.");
         else if (unitTest) System.out.println(
             name + " class OK, pass " + n + " tests.");
         else if (line > 0) System.out.println(

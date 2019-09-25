@@ -1,35 +1,33 @@
-// A Pecan grammar for the Pecan language itself, with tests.
+// Removed (a) categories (b) inclusions (c) backquotes (d) hex
+// Made suitable for pecan-paper.
 
-// A grammar is a sequence of rules, possibly with inclusions.
+// Pecan grammar for Pecan grammars: rules
 pecan = skip rules #end <>
-rules = (inclusion / rule) (rules @2list)?
-inclusion = string newline @1include skip
-rule = #id (id / backquote) equals expression newline @2rule skip
+rules = rule (rules @2list)?
+rule = #id id equals expression newline @2rule skip
 
-// An expression breaks down into terms, factors and atoms.
+// Expressions
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
-factor = #atom atom postops
-postops = postop*
-postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-atom = bracketed / try / id / backquote / act / mark / tag /
-    codes / code / range / set / string / split / category
+factor = #atom atom (repeat / lookahead)*
+repeat = opt @1opt / any @1any / some @1some
+lookahead = has @1has / not @1not
+atom = bracketed / try / id / act / mark / tag /
+    codes / code / range / set / string / split
 
-// Atoms. Categories and ids are made mutually exclusive.
-// Brackets produce output items, to help with text ranges of parse tree nodes.
+// Atoms
 bracketed = open expression close @3bracketed
 try = sopen expression sclose @3try
-id = (cat alpha!)! letter alphas @id blank
-backquote = "`" nobquotes #quote "`" @id blank
-act = '@' decimals alphas @act blank
-mark = "#" initial alphas @mark blank
-tag = "%" initial alphas @tag blank
+id = letter alpha* @id blank
+act = '@' digits? alpha* @act blank
+mark = "#" initial alpha* @mark blank
+tag = "%" initial alpha* @tag blank
 codes = [digits '.'] #dot '.' digits @range blank
 code = digits @code blank
 range = ["'" noquote ".."] noquote "'" @range blank
-set = "'" noquotes #quote "'" @set blank
-string = '"' nodquotes #quote '"' @string blank
-split = '<' noangles #gt '>' @split blank
+set = "'" noquote* #quote "'" @set blank
+string = '"' nodquote* #quote '"' @string blank
+split = '<' noangle* #gt '>' @split blank
 equals = #equals "=" gap
 slash = #op "/" gap
 has = "&" blank
@@ -41,40 +39,26 @@ open = "(" @bracket gap
 sopen = "[" @bracket gap
 close = #bracket ")" @bracket blank
 sclose = #bracket "]" @bracket blank
-category = [cat alpha!] @cat blank
-cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
-    "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
-    "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
 
-// Rules for white space and continuations. A blank is after =/([ and a gap is
-// after atom or &!?*+)] and a skip is after a rule.
-blank = spaces [endline spaces '=/)]' &]? @
-gap = spaces (newline spaces)? @
-skip = ((space / comment / newline) @)*
-comment = "--" visibles newline
+// White space and continuations.
+blank = space* [endline space* '=/)]' &]? @
+gap = space* (newline space*)? @
+skip = (space / comment / newline)* @
+comment = "--" visible* newline
 newline = #newline endline @
 
-// Rules for character sets.
+// Character sets.
 space = ' '
-spaces = space*
-visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
-visibles = visible*
-alpha = letter / Nd / '_' / '-'
-alphas = alpha*
-letter = Lu / Ll / Lt / Lm / Lo
+visible = ' ..~'
+alpha = letter / '0..9' / '_' / '-'
 initial = #letter letter
-
-decimal = '0..9'
-decimals = decimal*
-hex = decimal / 'ABCDEFabcdef'
-hexes = hex*
-digits = ('1..9' decimals) / '0' hexes
+letter = 'a..z' / 'A..Z'
+digits = '0' / ('1..9' '0..9'*)
 noquote = "'"! visible
-noquotes = ("'"! visible)*
-nodquotes = ('"'! visible)*
-nobquotes = ("`"! visible)*
-noangles = ('>'! visible)*
+nodquote = '"'! visible
+noangle = '>'! visible
 endline = 13? 10
+
 ==========
 -- Single rule
 x = y
@@ -82,17 +66,6 @@ x = y
 id x
 id y
 rule
-==========
--- Inclusion
-"other.txt"
-x = y
-----------
-string "other.txt"
-include
-id x
-id y
-rule
-list
 ==========
 -- Choice
 x = y / z
@@ -279,7 +252,7 @@ Error on line 2: expecting dot
 x = 0.
       ^
 ==========
--- Discard action
+-- Drop input and output items.
 x = @3
 ----------
 id x
@@ -297,13 +270,6 @@ id x
 id Ndx
 rule
 list
-==========
--- Definition of category
-Nd = "x"
-----------
-Error on line 2: expecting id, newline
-Nd = "x"
-^
 ==========
 -- Tag
 x = %x
@@ -437,13 +403,6 @@ range 'a..z'
 rule
 list
 ==========
--- Backquote id
-`x` = "abc"
-----------
-id `x`
-string "abc"
-rule
-==========
 -- Error marker
 assignment = left #equals "=" right
 ----------
@@ -468,7 +427,6 @@ z / /
 -- Actions, tests, codes and errors
 x = %x @0x @1x @ @x
 y = 0 1 2 10 12 123
-z = 0ffff 01ABCDEF23 0FG
 u = #err ''
 ----------
 id x
@@ -495,15 +453,6 @@ and
 and
 and
 rule
-id z
-code 0ffff
-code 01ABCDEF23
-code 0F
-id G
-and
-and
-and
-rule
 id u
 mark #err
 set ''
@@ -511,31 +460,10 @@ and
 rule
 list
 list
-list
 ==========
--- Unicode letters and digits in identifiers, maximum codes
-x = abc\960
-y = d123\1636
-z = 1114111 / 0ffff
-----------
-id x
-id abc\960
-rule
-id y
-id d123\1636
-rule
-id z
-code 1114111
-code 0ffff
-or
-rule
-list
-list
-==========
--- Strings, character sets, unicode
+-- Strings, character sets
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
-pi = "\960"
 ----------
 id x
 string "abc"
@@ -547,10 +475,6 @@ set 'abc'
 set ' !#$%^&*()_-=+[]`{};:"@#~'
 and
 rule
-id pi
-string "\960"
-rule
-list
 list
 ==========
 -- Brackets and operators
@@ -607,12 +531,12 @@ list
 list
 ==========
 -- Dividers
-keyword = <do> keyword1 / keyword2
+keyword = <..de> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 ----------
 id keyword
-split <do>
+split <..de>
 id keyword1
 and
 id keyword2

@@ -49,7 +49,9 @@ class Source {
         int startRow = row(start);
         int endRow = row(end);
         if (! message.equals("")) message = " " + message;
-        String line = text.substring(rows[startRow], rows[startRow + 1] - 1);
+        int startLine = rows[startRow], endLine = startLine;
+        if (startRow < rows.length - 1) endLine = rows[startRow + 1] - 1;
+        String line = text.substring(startLine, endLine);
         int col = start - rows[startRow];
         String s1;
         if (fileName != null) s1 = "Error in " + fileName + ", ";
@@ -72,23 +74,22 @@ class Source {
 
     // Find the positions where lines start
     private void findRows() {
-        int count = 1;
-        for (int i = 0; i < text.length() - 1; i++) {
+        int count = 0;
+        for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '\n') count++;
         }
         rows = new int[count + 1];
         count = 0;
         rows[count++] = 0;
-        for (int i = 0; i < text.length() - 1; i++) {
+        for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '\n') rows[count++] = i + 1;
         }
-        rows[count] = text.length();
     }
 
     // Find the row number of the line containing a given position.
     private int row(int p) {
         int row = 0;
-        while (rows[row] <= p) row++;
+        while (row < rows.length && rows[row] <= p) row++;
         return row - 1;
     }
 
@@ -109,11 +110,22 @@ class Source {
             "Line one...\n" +
             "     ^^^";
         assert(s.error(5,16,"message").equals(out));
-        s.fileName = null;
+        s = new Source("Line one\nLine two\n", null, 1);
         out =
             "Error on line 2: message\n" +
             "Line two\n" +
             "     ^^^";
         assert(s.error(14,17,"message").equals(out));
+        out =
+            "Error on line 3: message\n" +
+            "\n" +
+            "^";
+        assert(s.error(18,18,"message").equals(out));
+        s = new Source("", null, 1);
+        out =
+            "Error on line 1: message\n" +
+            "\n" +
+            "^";
+        assert(s.error(0,0,"message").equals(out));
     }
 }

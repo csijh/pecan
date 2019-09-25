@@ -182,7 +182,7 @@ class Node {
 
     // Return a node tree as text, with the given indent for each line. Avoid
     // following cross references. Include the range of text covered by the
-    // node, and any note attached by one of the passes. Indent a chain of Rule
+    // node, and any note attached by one of the passes. Indent a list of Rule
     // nodes, or subnodes of a chain of And or Or nodes, by the same amount.
     private String toString(String indent) {
         if (op == Error) return note();
@@ -195,7 +195,7 @@ class Node {
         }
         if (note().length() > 0) s += " " + note();
         indent += "  ";
-        if (left != null && (op == And || op == Or)) {
+        if (left != null && (op == List || op == And || op == Or)) {
             s += "\n" + left.toString(indent);
             Node x = right;
             while (x.op == op) {
@@ -206,7 +206,6 @@ class Node {
             return s;
         }
         if (left != null) s += "\n" + left.toString(indent);
-        if (op == Rule) indent = indent.substring(2);
         if (left != null && right != null) s += "\n" + right.toString(indent);
         return s;
     }
