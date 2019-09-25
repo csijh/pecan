@@ -16,7 +16,7 @@ class Node {
 
     public static void main(String[] args) {
         Source s = new Source("127", "file", 1);
-        Node n = new Node(Number, s, 0, 3);
+        Node n = new Node(Code, s, 0, 3);
         n.set(Flag.Char);
         assert(n.name().equals("127"));
         assert(n.charCode() == 127);
@@ -113,7 +113,7 @@ class Node {
             int i = start + 1;
             while (Character.isDigit(source.charAt(i))) i++;
             return source.substring(i, end);
-        case String: case Set: case Divider:
+        case String: case Set: case Split:
             return source.substring(start+1, end-1);
         }
         return text();
@@ -125,7 +125,7 @@ class Node {
         String name = name();
         int ch = -1;
         switch(op) {
-        case Number:
+        case Code:
             if (name.charAt(0) != '0') ch = Integer.parseInt(name);
             else ch = Integer.parseInt(name, 16);
             break;

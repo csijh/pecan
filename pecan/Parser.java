@@ -7,116 +7,47 @@ import static pecan.Category.*;
 import static pecan.Op.*;
 import static pecan.Parser.Marker.*;
 
-/* Parse a Pecan source text, assumed to be in UTF8 format, producing a tree.
+/* Parse a Pecan source text, assumed to be in UTF-8 format, producing a tree.
 
-The parser has been hand-translated from the pecan grammar in the comments, to
-make this class self-contained. The grammar (a) has no left-hand alternative
-starting with an action and (b) has no lookahead construct containing error
-markers or actions. That means actions don't need to be delayed.
+The parser is translated from the grammar rules in the comments. The grammar (a)
+has repetitions lifted to the top level as separate rules, (b) has no left-hand
+alternative starting with an action and (b) has no try construct containing
+error markers or actions. That means one rule corresponds to one function, and
+actions don't need to be delayed, just switched off during lookahead. The
+functions can be hand-maintained to keep this class self-contained and avoid
+bootstrap problems.
 
-Each parser method returns success or failure. The translations used are:
-
-    x y    ->  x() && y()
-    x / y  ->  either(n) && x() || or(n) && y()
-    x?     ->  either(n) && x() || or(n)
-    [x]    ->  maybe(n, look(n) && x())
-    x&     ->  has(n, look(n) && x())
-    x!     ->  not(n, look(n) && x())
-
-Here, n is the nesting depth of the expression, to ensure that expressions which
-are under way simultaneously are distinguihed. */
+Brackets and bracketed subexpressions have explicit nodes created for them. This
+is so that the text extent of a node can always be found by combining the text
+extents of its children, e.g. in expressions such as (x)y. Note that increasing
+the text extent of x to (x) wouldn't work when x is an identifier, because then
+the node's text would not be the name of the id. Bracket nodes are removed
+later, after parsing. */
 
 class Parser implements Testable {
     private Source source;
     private Node[] output;
     private int start, in, out, lookahead, marked;
     private Set<Marker> markers = EnumSet.noneOf(Marker.class);
-    private int[] save = new int[10];
+    private int[] save;
+    private int top;
     private Set<String> cats;
 
     public static void main(String[] args) {
         Test.run(new Parser(), args);
     }
 
-    // Error markers, in alphabetical order.
-    enum Marker {
-        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, LETTER, NEWLINE, QUOTE, TAG
-    }
-
-    public String test(String g) {
-        return run(new Source(g, null, 1)).toString();
-    }
-
-    // Record an error marker for the current input position.
-    private boolean mark(Marker m) {
-        if (lookahead > 0) return true;
-        if (marked > in) throw new Error("marked " + marked + " in " + in);
-        if (marked < in) {
-            markers.clear();
-            marked = in;
-        }
-        markers.add(m);
-        return true;
-    }
-
-    // Produce an error message from the markers at the current input position.
-    private String message() {
-        String s = "";
-        if (marked < in) markers.clear();
-        for (Marker m : markers) {
-            if (s.length() > 0) s = s + ", ";
-            s = s + m.toString().toLowerCase();
-        }
-        return s;
-    }
-
-    // Prepare for a choice by recording the input position. The number n is the
-    // nesting depth of the choice construct in the grammar.
-    private boolean either(int n) {
-        save[n] = in;
-        return true;
-    }
-
-    // Check whether progress has already been made before continuing with the
-    // second or subsequent alternative of a choice.
-    private boolean or(int n) {
-        return in == save[n];
-    }
-
-    // Start a lookahead. Save the input position. Assume that lookahead
-    // expressions don't include error markers or actions.
-    private boolean look(int n) {
-        save[n] = in;
-        return true;
-    }
-
-    // Implement [x] as maybe(n, look(n) && x())
-    private boolean maybe(int n, boolean b) {
-        if (! b) in = save[n];
-        return b;
-    }
-
-    // Implement x& as has(n, look(n) && x())
-    private boolean has(int n, boolean b) {
-        in = save[n];
-        return b;
-    }
-
-    // Implement x! as not(n, look(n) && x())
-    private boolean not(int n, boolean b) {
-        in = save[n];
-        return ! b;
-    }
-
     // Parse the grammar, returning a node (possibly an error node).
-    Node run(Source s) {
+    public Node run(Source s) {
         source = s;
         if (output == null) output = new Node[1];
         start = in = out = lookahead = marked = 0;
         markers.clear();
         cats = new HashSet<String>();
+        save = new int[10];
+        top = 0;
         for (Category cat : Category.values()) cats.add(cat.toString());
-        boolean ok = pecan();
+        boolean ok = grammar();
         if (! ok) {
             Node err = new Node(Error, s, in, in);
             err.note(s.error(in, in, "expecting " + message()));
@@ -125,347 +56,288 @@ class Parser implements Testable {
         return prune(output[0]);
     }
 
-    // pecan = skip rules end
-    private boolean pecan() {
-        return skip() && rules() && end();
+    // Error markers, in alphabetical order.
+    enum Marker {
+        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, GREATER_THEN_SIGN, ID, LETTER,
+        NEWLINE, OPERATOR, QUOTE, TAG
     }
 
-    // rules = rule (rules @2list)?
+    // ---------- Generated by <pecan> from the grammar ------------------------
+
+    // grammar = skip rules #end <>
+    private boolean grammar() {
+        return skip() && rules() && MARK(END_OF_TEXT) && END();
+    }
+
+    // rules = (inclusion / rule) (rules @2list)?
     private boolean rules() {
-        return rule() && (
-            either(0) && rules() && doList() ||
-            or(0)
+        return (
+            ALT(GO() && inclusion() || OR() && rule()) &&
+            OPT(GO() && rules() && ACT2(List))
         );
-    }
-
-    // rule = inclusion / id equals expression endline skip @2rule
-    private boolean rule() {
-        return either(0) && inclusion() ||
-        or(0) && id() && equals() && exp() && endline() && skip() && doRule();
     }
 
     // inclusion = string endline skip @1include
     private boolean inclusion() {
-        return string() && endline() && skip() && doInclude();
+        return string() && endline() && skip() && ACT1(Include);
+    }
+
+    // rule = #id (id / backquote) equals expression newline skip @2rule
+    private boolean rule() {
+        return MARK(ID) && ALT(
+            GO() && id() ||
+            OR() && backquote()
+        ) && equals() && exp() && newline() && skip() && ACT2(Rule);
     }
 
     // expression = term (slash expression @2or)?
     private boolean exp() {
-        return term() && (
-            either(0) && infix('/') && exp() && doInfix(Or) ||
-            or(0)
+        return term() && OPT(
+            GO() && slash() && exp() && ACT2(Or)
         );
     }
 
     // term = factor (term @2and)?
     private boolean term() {
-        return factor() && (
-            either(0) && term() && doInfix(And) ||
-            or(0)
-        );
+        return factor() && OPT(GO() && term() && ACT2(And));
     }
 
-    // factor = atom postop*
-    // Changed postop* to postops
+    // factor = #atom atom postops
     private boolean factor() {
-        return atom() && postops();
+        return MARK(ATOM) && atom() && postops();
     }
 
     // postops = (postop postops)?
-    // Extra rule for postop*
     private boolean postops() {
-        do { either(0); } while (postop());
-        return or(0);
+        return OPT(GO() && postop() && postops());
     }
 
     // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
     private boolean postop() {
-        return (
-            postfix('?', Opt) ||
-            postfix('*', Any) ||
-            postfix('+', Some) ||
-            postfix('&', Has) ||
-            postfix('!', Not)
-        );
+        switch (NEXT()) {
+            case '?': return (opt() && ACT1(Opt));
+            case '*': return (any() && ACT1(Any));
+            case '+': return (some() && ACT1(Some));
+            case '&': return (has() && ACT1(Has));
+            case '!': return (not() && ACT1(Not));
+            default: return false;
+        }
     }
 
-    // atom = text / id / action / marker / tag / try / bracket
+    // atom = bracket / try / id / backquote / act / mark / tag /
+    //     codes / code / range / set / string / split / category
     private boolean atom() {
-        return (
-            either(0) && text() ||
-            or(0) && id() ||
-            or(0) && action() ||
-            or(0) && marker() ||
-            or(0) && tag() ||
-            or(0) && try_() ||
-            or(0) && bracket()
-        );
+        switch (NEXT()) {
+            case '(': return bracket();
+            case '[': return try_();
+            case '`': return backquote();
+            case '@': return act();
+            case '#': return mark();
+            case '<': return split();
+            case '%': return tag();
+            case '\'': return ALT(GO() && range() || OR() && set());
+            case '"': return string();
+            default: return ALT(
+                GO() && category() ||
+                OR() && id() ||
+                OR() && codes() ||
+                OR() && code()
+            );
+        }
     }
 
-    // text = string / set / number / divider / category
-    private boolean atom() {
-        return (
-            either(0) && string() ||
-            or(0) && set() ||
-            or(0) && number() ||
-            or(0) && divider() ||
-            or(0) && category()
-        );
+    // bracket = open expression close @3bracket
+    private boolean bracket() {
+        return open() && exp() && close() && ACT3(Bracketed);
     }
 
-    // category = [cat alpha!] @category gap
-    private boolean category() {
-        return maybe(0, look(0) &&
-            cat() && not(1, look(1) && alpha())
-        ) && doCategory() && gap();
+    // try = sopen expression sclose @3try
+    private boolean try_() {
+        return sopen() && exp() && sclose() && ACT3(Try);
     }
 
-    // id = #atom (cat alpha!)! letter alpha* @id gap / backquote
-    // Changed alpha* to alphas
+    // id = (cat alpha!)! letter alphas @id blank
     private boolean id() {
-        return either(0) && (
-            mark(ATOM) && not(1, look(1) &&
-                cat() && not(2, look(2) && alpha())) &&
-            letter() && alphas && doName(Id) && gap();
-        ) ||
-        or(0) && backquote();
+        return NOT(
+            GO() && cat() && NOT(GO() && alpha())
+        ) && letter() && alphas() && ACT(Id) && blank();
     }
 
-    // alpha* = (alpha alphas)?
-    // Extra rule for postop*
-    private boolean alphas() {
-        do { either(0); } while (alpha());
-        return or();
-    }
-
-    // backquote = "`" ("`"! visible)* #quote "`" @id gap
-    // Changed  ("`"! visible)*  to bqvisibles
+    // backquote = "`" nobquotes #quote "`" @id blank
     private boolean backquote() {
-        return accept('`') && bqvisibles && mark(QUOTE) && accept('`') &&
-        doName(Id) && gap();
-    }
-
-    // bqvisibles* = ("`"! visible bqvisibles)?
-    // Extra rule for ("`"! visible)*
-    private boolean bqvisibles() {
-        do { either(0); } while (! next('`') && visible());
-        return or();
-    }
-
-    // action = '@' (decimal* #letter letter alpha* @act / @drop) gap
-    // Changed decimal* to decimals and alpha* to alphas
-    private boolean action() {
-        accept('@') && (
-            either(0) && decimal() && mark(LETTER) && alphas() && doName(Act) ||
-            or(0) && doName(Drop)
-        ) && gap();
-    }
-
-    // decimals* = (decimal decimals)?
-    // Extra rule for decimal*
-    private boolean decimals() {
-        do { either(0); } while (decimal());
-        return or();
-    }
-
-    // marker = "#" #letter letter alpha* @mark gap
-    // Changed alpha* to alphas
-    private boolean marker() {
-        return accept('#') && mark(LETTER) && letter() && alphas() &&
-        doName(Mark) && gap();
-    }
-
-    // tag = "%" #letter letter alpha* @tag gap
-    // Changed alpha* to alphas
-    private boolean tag() {
-        return accept('%') && mark(LETTER) && letter() && alphas() &&
-        doName(Tag) && gap();
-    }
-
-    // divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
-    // changed  ('>'! visible)+  to  visible dvisibles
-    private boolean divider() {
-        return accept('<') && (
-            either(0) && accept('>') && doName(End) ||
-            or(0) && visible() && dvisibles() && accept('>') && doName(Divider)
-        ) && gap();
-    }
-
-    // dvisibles* = ('>'! visible dvisibles)?
-    // Extra rule for ('>'! visible)*
-    private boolean dvisibles() {
-        do { either(0); } while (! next('>') && visible());
-        return or();
-    }
-
-    // set = range / "'" ("'"! visible)* #quote "'" @set gap
-    // Changed  ("'"! visible)*  to sqvisible
-    private boolean set() {
-        return either(0) && range() ||
-        or(0) && (
-            accept('\'') && sqvisible() && mark(QUOTE) && accept('\'') &&
-            doName(Set) && gap()
+        return (
+            CHAR('`') && nobquotes() && MARK(QUOTE) && CHAR('`') &&
+            ACT(Id) && blank()
         );
     }
 
-    // range = numbers / ["'" ("'"! visible) ".."] ("'"! visible) "'" @range gap
-    private boolean range() {
-
+    // act = '@' decimals alphas @act blank
+    private boolean act() {
+        return CHAR('@') && decimals() && alphas() && ACT(Act) && blank();
     }
 
-    // numbers = [digits '.'] #dot '.' digits @range gap
-    // string = '"' ('"'! visible)* #quote '"' @string gap
-    // number = digits @number gap
-    // try = sb expression se @3try
-    // bracket = rb expression re @3bracket
+    // mark = "#" initial alphas @mark blank
+    private boolean mark() {
+        return CHAR('#') && initial() && alphas() && ACT(Mark) && blank();
+    }
 
-    // dots = '.' #dot '.' skip @
-    // equals = #equals "=" skip @
-    // slash = #op "/" skip @
-    // has = #op "&" gap @
-    // not = #op "!" gap @
-    // opt = #op "?" gap @
-    // any = #op "*" gap @
-    // some = #op "+" gap @
-    // rb = "(" @token skip @
-    // sb = "[" @token skip @
-    // re = #bracket ")" @token gap @
-    // se = #bracket "]" @token gap @
+    // tag = "%" initial alphas @tag blank
+    private boolean tag() {
+        return CHAR('%') && initial() && alphas() && ACT(Tag) && blank();
+    }
 
-    // skip = (space / comment / newline)*
-    // gap = space* comment? continuation @
-    // space = ' '
-    // continuation = [newline skip '=/)]'&]?
-    // newline = #newline 13? 10 @
-    // comment = ["//"] visible* newline
-    // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
-    // alpha = letter / Nd / '_' / '-'
-    // letter = Lu / Ll / Lt / Lm / Lo
-    // decimal = '0..9'
-    // hex = decimal / 'ABCDEFabcdef'
-    // digits = ('1..9' decimal*) / '0' hex*
-    // code = "Uc" / "Cc" / ...
-    // end = #end <>
+    // codes = [digits '.'] #dot '.' digits @range blank
+    private boolean codes() {
+        return TRY(
+            GO() && digits() && CHAR('.')
+        ) && MARK(DOT) && CHAR('.') && digits() && ACT(Range) && blank();
+    }
 
+    // code = digits @code blank
+    private boolean code() {
+        return digits() && ACT(Code) && blank();
+    }
+
+    // range = ["'" noquote ".."] noquote "'" @range blank
+    private boolean range() {
+        return TRY(GO() && CHAR('\'') && STRING("..")) && noquote() && CHAR('\'') && ACT(Range) && blank();
+    }
+
+    // set = "'" noquotes #quote "'" @set blank
+    private boolean set() {
+        return (
+            CHAR('\'') && noquotes() && MARK(QUOTE) &&
+            CHAR('\'') && ACT(Set) && blank()
+        );
+    }
+
+    // string = '"' nodquotes #quote '"' @string blank
+    private boolean string() {
+        return (
+            CHAR('"') && nodquotes() && MARK(QUOTE) &&
+            CHAR('"') && ACT(String) && blank()
+        );
+    }
+
+    // split = '<' noangles #gt '>' @split) blank
+    private boolean split() {
+        return (
+            CHAR('<') && noangles() && MARK(GREATER_THEN_SIGN) &&
+            ACT(Split) && blank()
+        );
+    }
+
+    // equals = #equals "=" gap
+    private boolean equals() {
+        return MARK(EQUALS) && CHAR('=') && gap();
+    }
+
+    // slash = #op "/" gap
+    private boolean slash() {
+        return MARK(OPERATOR) && CHAR('/') && gap();
+    }
+
+    // has = "&" blank
+    private boolean has() {
+        return CHAR('&') && blank();
+    }
+
+    // not = "!" blank
+    private boolean not() {
+        return CHAR('!') && blank();
+    }
+
+    // opt = "?" blank
+    private boolean opt() {
+        return CHAR('?') && blank();
+    }
+
+    // any = "*" blank
+    private boolean any() {
+        return CHAR('*') && blank();
+    }
+
+    // some = "+" blank
+    private boolean some() {
+        return CHAR('+') && blank();
+    }
+
+    // open = "(" @bracket gap
+    private boolean open() {
+        return CHAR('(') && ACT(Bracket) && gap();
+    }
+
+    // sopen = "[" @bracket gap
+    private boolean sopen() {
+        return CHAR('[') && ACT(Bracket) && gap();
+    }
+
+    // close = ")" @bracket blank
+    private boolean close() {
+        return MARK(BRACKET) && CHAR(')') && ACT(Bracket) && blank();
+    }
+
+    // sclose = "]" @bracket blank
+    private boolean sclose() {
+        return MARK(BRACKET) && CHAR(']') && ACT(Bracket) && blank();
+    }
+
+    // category = [cat alpha!] @cat blank
+    private boolean category() {
+        return TRY(cat() && NOT(GO() && alpha())) && ACT(Cat) && blank();
+    }
+
+    // cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" /
+    //    "Lt" / "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" /
+    //    "Pe" / "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" /
+    //    "Zp" / "Zs"
     // Hand optimised.
     private boolean cat() {
         if (in >= source.length() - 2) return false;
-        return cats.contains(source.substring(in, in + 2));
+        boolean ok = cats.contains(source.substring(in, in + 2));
+        if (ok) in = in + 2;
+        return ok;
     }
 
-
-
-    // range = number (dots number @2range)?
-    private boolean range() {
-        if (! number()) return false;
-        int in0 = in;
-        return dots() && number() && doInfix(Range) || in == in0;
+    // blank = spaces [endline spaces '=/)]' &]? @
+    private boolean blank() {
+        return spaces() && TRY(
+            GO() && endline() && spaces() && HAS(GO() && SET("=/)]"))
+        ) && ACT();
     }
 
-    // try = sb expression se @3try
-    private boolean try_() {
-        return open('[') && exp() && close(']') && doTry();
-    }
-
-    // bracket = rb expression re @3bracket
-    private boolean bracket() {
-        return open('(') && exp() && close(')') && doBracket();
-    }
-
-    // number = (('1..9') decimal* / "0" hex*) @number gap
-    private boolean number() {
-        if (! decimal()) return false;
-        boolean isHex = source.charAt(in-1) == '0';
-        if (isHex) while (hex()) { }
-        else while (decimal()) { }
-        return doName(Number) && gap();
-    }
-
-
-    // string = '"' ('"'! visible)* #quote '"' @string gap
-    private boolean string() {
-        if (! accept('"')) return false;
-        while (! next('"') && visible()) { }
-        return mark(QUOTE) && accept('"') && doName(String) && gap();
-    }
-
-    // dots = '.' #dot '.' skip @
-    private boolean dots() {
-        return accept('.') && mark(DOT) && accept('.') && skip() && drop();
-    }
-
-    // equals = #equals "=" skip @
-    private boolean equals() {
-        return mark(EQUALS) && accept('=') && skip() && drop();
-    }
-
-    // slash = "/" skip @
-    private boolean infix(char c) {
-        return accept(c) && skip() && drop();
-    }
-
-    // rb = "(" @token skip @
-    // sb = "[" @token skip @
-    private boolean open(char c) {
-        return accept(c) && doToken() && skip() && drop();
-    }
-
-    // re = #bracket ")" @token gap @
-    // se = #bracket "]" @token gap @
-    private boolean close(char c) {
-        return mark(BRACKET) && accept(c) && doToken() && gap() && drop();
-    }
-
-    // has = "&" @1has gap @
-    // not = "!" @1not gap @
-    // opt = "?" @1opt gap @
-    // any = "*" @1any gap @
-    // some = "+" @1some gap @
-    private boolean postfix(char c, Op op) {
-        return accept(c) && doPostfix(op) && gap() && drop();
-    }
-
-    // skip = (space / comment / newline)*
-    private boolean skip() {
-        int in0 = in;
-        while (accept(' ') || comment() || in == in0 && newline()) { in0 = in; }
-        return in == in0;
-    }
-
-    // gap = space* comment? continuation @
+    // gap = spaces (newline spaces)? @
     private boolean gap() {
-        while (accept(' ')) { }
-        int in0 = in;
-        comment();
-        if (in != in0) return false;
-        return continuation() && drop();
+        return spaces() && OPT(GO() && newline() && spaces()) && ACT();
     }
 
-    // continuation = [newline skip '=/)]'&]?
-    private boolean continuation() {
-        int in0 = in;
-        lookahead++;
-        boolean t = newline() && skip() && (
-            next('=') || next('/') || next(')') || next(']')
+    // skip = ((space / comment / newline) @ skip)?
+    private boolean skip() {
+        return OPT(
+            GO() && ALT(
+                GO() && space() || OR() && comment() || OR() && newline()
+            ) && ACT() && skip()
         );
-        lookahead--;
-        if (! t) in = in0;
-        return true;
     }
 
-    // newline = #newline 13? 10 @
-    private boolean newline() {
-        mark(NEWLINE);
-        return (accept('\r') || true) && accept('\n') && drop();
-    }
-
-    // comment = "//" visible* newline
+    // comment = "--" visibles newline
     private boolean comment() {
-        if (! next("//")) return false;
-        accept('/');
-        accept('/');
-        while (visible()) { }
-        return newline();
+        return STRING("--") && visibles() && newline();
+    }
+
+    // newline = #newline endline @
+    private boolean newline() {
+        return MARK(NEWLINE) && endline() && ACT();
+    }
+
+    // space = ' '
+    private boolean space() {
+        return CHAR(' ');
+    }
+
+    // spaces = space*
+    private boolean spaces() {
+        return OPT(GO() && space() && spaces());
     }
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
@@ -479,25 +351,19 @@ class Parser implements Testable {
         return true;
     }
 
-    // @
-    private boolean drop() {
-        start = in;
-        return true;
+    // visibles = visible*
+    private boolean visibles() {
+        return OPT(GO() && visible() && visibles());
     }
 
-    // alpha = letter / digit / '_' / '-'
+    // alpha = letter / Nd / '_' / '-'
     private boolean alpha() {
-        return letter() || digit() || accept('_') || accept('-');
+        return letter() || CAT(Nd) || CHAR('_') || CHAR('-');
     }
 
-    // hex = decimal / 'ABCDEFabcdef'
-    private boolean hex() {
-        return decimal() || accept('A', 'F') || accept('a', 'f');
-    }
-
-    // decimal = '0..9'
-    private boolean decimal() {
-        return accept('0', '9');
+    // alphas = alpha*
+    private boolean alphas() {
+        return OPT(GO() && alpha() && alphas());
     }
 
     // letter = Lu / Ll / Lt / Lm / Lo
@@ -512,13 +378,142 @@ class Parser implements Testable {
         return ok;
     }
 
-    // end = #end <>
-    private boolean end() {
-        return in >= source.length();
+    // initial = #letter letter
+    private boolean initial() {
+        return MARK(LETTER) && letter();
+    }
+
+    // decimal = '0..9'
+    private boolean decimal() {
+        return RANGE('0', '9');
+    }
+
+    // decimals = decimal*
+    private boolean decimals() {
+        return OPT(GO() && decimal() && decimals());
+    }
+
+    // hex = decimal / 'ABCDEFabcdef'
+    private boolean hex() {
+        return ALT(GO() && decimal() || OR() && SET("ABCDEFabcdef"));
+    }
+
+    // hexes = hex*
+    private boolean hexes() {
+        return OPT(GO() && hex() && hexes());
+    }
+
+    // digits = ('1..9' decimals) / '0' hexes
+    private boolean digits() {
+        return ALT(
+            GO() && RANGE('1','9') && decimals() || OR() && CHAR('0') && hexes()
+        );
+    }
+
+    // noquote = "'"! visible
+    private boolean noquote() {
+        return NOT(GO() && CHAR('\'')) && visible();
+    }
+
+    // noquotes = ("'"! visible)*
+    private boolean noquotes() {
+        return OPT(NOT(GO() && CHAR('\'')) && visible() && noquotes());
+    }
+
+    // nodquotes = ('"'! visible)*
+    private boolean nodquotes() {
+        return OPT(NOT(GO() && CHAR('"')) && visible() && nodquotes());
+    }
+
+    // nobquotes = ("`"! visible)*
+    private boolean nobquotes() {
+        return OPT(NOT(GO() && CHAR('`')) && visible() && nobquotes());
+    }
+
+    // noangles = ('>'! visible)*
+    private boolean noangles() {
+        return OPT(NOT(GO() && CHAR('>')) && visible() && noangles());
+    }
+
+    // endline = 13? 10
+    private boolean endline() {
+        return (CHAR('\r') || true) && CHAR('\n');
+    }
+
+    // ---------- Support functions --------------------------------------------
+
+    // Prepare for a choice or lookahead by recording the input position.
+    private boolean GO() {
+        save[top++] = in;
+        return true;
+    }
+
+    // Check an alternative to see whether to try the next one.
+    private boolean OR() {
+        return in == save[top-1];
+    }
+
+    // Check the result of a choice and pop the saved position.
+    private boolean ALT(boolean b) {
+        --top;
+        return b;
+    }
+
+    // Check a result, make it success if no progress, and pop saved position.
+    private boolean OPT(boolean b) {
+        b = b || in == save[--top];
+        return b;
+    }
+
+    // Backtrack to saved position and return true.
+    private boolean HAS(boolean b) {
+        in = save[--top];
+        return true;
+    }
+
+    // Backtrack to saved position and return false.
+    private boolean NOT(boolean b) {
+        in = save[--top];
+        return false;
+    }
+
+    // Backtrack on failure.
+    private boolean TRY(boolean b) {
+        if (b) --top;
+        else in = save[--top];
+        return b;
+    }
+
+    // Record an error marker for the current input position.
+    private boolean MARK(Marker m) {
+        if (lookahead > 0) return true;
+        if (marked > in) throw new Error("marked " + marked + " in " + in);
+        if (marked < in) {
+            markers.clear();
+            marked = in;
+        }
+        markers.add(m);
+        return true;
+    }
+
+    // Nd
+    private boolean CAT(Category c) {
+        if (in >= source.length()) return false;
+        int ch = source.codePointAt(in);
+        Category cat = Category.get(ch);
+        if (cat != c) return false;
+        in += Character.charCount(ch);
+        return true;
+    }
+
+    // @
+    private boolean ACT() {
+        start = in;
+        return true;
     }
 
     // Check if a character (ascii) appears next in the input.
-    private boolean accept(char ch) {
+    private boolean CHAR(char ch) {
         if (in >= source.length()) return false;
         if (source.charAt(in) != ch) return false;
         in++;
@@ -526,21 +521,15 @@ class Parser implements Testable {
     }
 
     // Check if a character (ascii) in a given range appears next in the input.
-    private boolean accept(char first, char last) {
+    private boolean RANGE(char first, char last) {
         if (in >= source.length()) return false;
         if (source.charAt(in) < first || source.charAt(in) > last) return false;
         in++;
         return true;
     }
 
-    // Check for the given (ascii) character next in the input.
-    private boolean look(char c) {
-        if (in >= source.length()) return false;
-        return source.charAt(in) == c;
-    }
-
     // Check for the given (ascii) string next in the input.
-    private boolean look(String s) {
+    private boolean STRING(String s) {
         if (in + s.length() > source.length()) return false;
         for (int i = 0; i < s.length(); i++) {
             if (source.charAt(in + i) != s.charAt(i)) return false;
@@ -548,22 +537,31 @@ class Parser implements Testable {
         return true;
     }
 
-    // In general, each node building function takes a number of previous nodes,
-    // say x, y, z, and uses the start of x's text range and the end of z's
-    // text range to form the text range of the new node.
-
-    // @token (temporary token, used to get the right text range)
-    private boolean doToken() {
-        if (out >= output.length) {
-            output = Arrays.copyOf(output, output.length * 2);
+    // Check if a character (ascii) in a given range appears next in the input.
+    private boolean SET(String s) {
+        if (in >= source.length()) return false;
+        char ch = source.charAt(in);
+        boolean found = false;
+        for (int i = 0; i < s.length() && ! found; i++) {
+            if (ch == s.charAt(i)) found = true;
         }
-        output[out++] = new Node(null, source, start, in);
-        start = in;
-        return true;
+        if (found) in++;
+        return found;
     }
 
-    // Name: one of @id, @drop, @action, @tag, @err, @end
-    private boolean doName(Op op) {
+    // Return the next character in the input.
+    private char NEXT() {
+        if (in >= source.length()) return '\0';
+        return source.charAt(in);
+    }
+
+    private boolean END() {
+        return in >= source.length();
+    }
+
+
+    // @...
+    private boolean ACT(Op op) {
         if (out >= output.length) {
             output = Arrays.copyOf(output, output.length * 2);
         }
@@ -572,27 +570,16 @@ class Parser implements Testable {
         return true;
     }
 
-    // @2rule
-    // A rule's text is the name, and its left subnode is the RHS
-    private boolean doRule() {
-        Node rhs = output[--out];
-        Node lhs = output[--out];
-        Node eq = new Node(Rule, rhs, source, lhs.start(), lhs.end());
-        output[out++] = eq;
+    // @1...
+    private boolean ACT1(Op op) {
+        Node x = output[--out];
+        Node y = new Node(op, x, source, x.start(), in);
+        output[out++] = y;
         return true;
     }
 
-    // @2add
-    private boolean doAdd() {
-        Node defs = output[--out];
-        Node def = output[--out];
-        def.right(defs);
-        output[out++] = def;
-        return true;
-    }
-
-    // Infix operator: one of @2or, @2and, @2range
-    private boolean doInfix(Op op) {
+    // @2...
+    private boolean ACT2(Op op) {
         Node y = output[--out];
         Node x = output[--out];
         Node r = new Node(op, x, y, source, x.start(), y.end());
@@ -600,39 +587,25 @@ class Parser implements Testable {
         return true;
     }
 
-    // Do postfix operator: one of @1opt, @1any, @1some, ...
-    private boolean doPostfix(Op op) {
+    // @3... used for bracketed subexpressions (x) or [x], discarding brackets.
+    private boolean ACT3(Op op) {
+        Node close = output[--out];
         Node x = output[--out];
-        Node y = new Node(op, x, source, x.start(), in);
+        Node open = output[--out];
+        Node y = new Node(op, x, source, open.start(), close.end());
         output[out++] = y;
         return true;
     }
 
-    // Convert "[" x "]" into Try x
-    private boolean doTry() {
-        Node close = output[--out];
-        Node x = output[--out];
-        Node open = output[--out];
-        Node r = new Node(Try, x, source, open.start(), close.end());
-        output[out++] = r;
-        return true;
-    }
-
-    // Bracketed subexpressions have explicit nodes to represent them. This is
-    // so that the text extent of a node can always be found by combining the
-    // text extents of its children, e.g. in expressions such as (x)y. Note that
-    // increasing the text extent of x to (x) wouldn't work when x is an
-    // identifier, because then the node's text would not be the name of the id.
-    // Bracket nodes are removed later, after parsing.
-
-    // Create a bracket node for ( x ).
-    private boolean doBracket() {
-        Node close = output[--out];
-        Node x = output[--out];
-        Node open = output[--out];
-        Node r = new Node(Bracket, x, source, open.start(), close.end());
-        output[out++] = r;
-        return true;
+    // Produce an error message from the markers at the current input position.
+    private String message() {
+        String s = "";
+        if (marked < in) markers.clear();
+        for (Marker m : markers) {
+            if (s.length() > 0) s = s + ", ";
+            s = s + m.toString().toLowerCase();
+        }
+        return s;
     }
 
     // Remove bracket nodes from a subtree.
@@ -640,7 +613,7 @@ class Parser implements Testable {
         if (r == null) return null;
         r.left(prune(r.left()));
         r.right(prune(r.right()));
-        if (r.op() == Bracket) return r.left();
+        if (r.op() == Bracketed) return r.left();
         return r;
     }
 }

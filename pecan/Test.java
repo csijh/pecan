@@ -140,7 +140,7 @@ public class Test {
         int passed = 0;
         for (Test test : tests) {
             if (line > 0 && test.input.firstLine() != line) continue;
-            Object obj = object.test(test.input);
+            Object obj = object.run(test.input);
             String out = obj.toString();
             String message = test.check(out);
             if (message == null) { passed++; continue; }

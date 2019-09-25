@@ -33,9 +33,11 @@ class Source {
     void trace(boolean b) { trace = b; }
 
     // Delegate string methods to the text.
+    int length() { return text.length(); }
     String substring(int start, int end) { return text.substring(start, end); }
-    char charAt(int n) { return text.charAt(n); }
     int indexOf(char ch, int p) { return text.indexOf(ch, p); }
+    char charAt(int n) { return text.charAt(n); }
+    int codePointAt(int n) { return text.codePointAt(n); }
 
     // Get the line number for a given text position.
     int lineNumber(int p) {
@@ -86,13 +88,18 @@ class Source {
     // Find the row number of the line containing a given position.
     private int row(int p) {
         int row = 0;
-        while (rows[row] < p) row++;
+        while (rows[row] <= p) row++;
         return row - 1;
     }
 
     public static void main(String[] args) {
         Source s = new Source("Line one\nLine two\n", "file", 1);
         String out =
+            "Error in file, line 1: message\n" +
+            "Line one\n" +
+            "^";
+        assert(s.error(0,0,"message").equals(out));
+        out =
             "Error in file, line 2: message\n" +
             "Line two\n" +
             "     ^^^";

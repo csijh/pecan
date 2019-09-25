@@ -85,10 +85,10 @@ recognised but is followed by more letters:</p>
 </pre>
 
 <p>Once the keyword strings are together, the implicit linear sequence of tests
-can be replaced by a binary search using dividers. The strings are ordered, and
-then a divider placed between the first half and second half:</p>
+can be replaced by a binary search using splitters. The strings are ordered, and
+then a splitter placed between the first half and second half:</p>
 
-<pre>key = &lt;do> key1 / key2
+<pre>key = &lt;df> key1 / key2
 key1 = "break" / "case" / "catch" / "continue" / "default"
 key2 = "do" / "else" / "for" / "if" / "switch" / "while"
 </pre>
@@ -97,7 +97,7 @@ key2 = "do" / "else" / "for" / "if" / "switch" / "while"
 necessary.</p>
 
 <p>Conventional parser generators translate long sequences of alternatives using
-switches. Pecan doesn't do this. Instead, dividers allow most of the efficiency
+switches. Pecan doesn't do this. Instead, splitters allow most of the efficiency
 gain to be obtained in a way which can be expressed directly as a
 transformation on the grammar that can be applied by the programmer. If greater
 efficiency is really needed, keyword recognition can be moved out of the grammar

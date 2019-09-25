@@ -90,7 +90,7 @@ class Stacker implements Testable {
         if (x != null) { net(x); xNet = x.NET(); }
         if (y != null) { net(y); yNet = y.NET(); }
         switch(node.op()) {
-        case Drop: case String: case Set: case Divider: case Range: case Cat:
+        case Drop: case String: case Set: case Splitter: case Range: case Cat:
         case Tag: case Some: case Any: case Opt: case Has: case Not:
         case Number: case Mark: case End:
             nNet = 0;   break;
@@ -159,8 +159,8 @@ class Stacker implements Testable {
         if (x != null) { low(x); xLow = x.LOW(); }
         if (y != null) { low(y); yLow = y.LOW(); }
         switch(node.op()) {
-        case Drop: case String: case Set: case Number: case Divider: case Range:
-        case Cat: case Tag: case Mark: case End:
+        case Drop: case String: case Set: case Number: case Splitter:
+        case Range: case Cat: case Tag: case Mark: case End:
             break;
         case Act:
             int arity = node.arity();

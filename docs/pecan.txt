@@ -1,77 +1,89 @@
 // A Pecan grammar for the Pecan language itself, with tests.
 
 // A grammar is a sequence of rules, possibly with inclusions.
-pecan = skip rules end
-rules = rule (rules @2list)?
-rule = inclusion / id equals expression newline skip @2rule
+pecan = skip rules #end <>
+rules = (inclusion / rule) (rules @2list)?
 inclusion = string newline skip @1include
+rule = #id (id / backquote) equals expression newline skip @2rule
 
 // An expression breaks down into terms, factors and atoms.
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
-factor = atom postop*
+factor = #atom atom postops
+postops = postop*
 postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
-atom = text / id / action / marker / tag / try / bracket
-text = string / set / number / divider / category
+atom = bracketed / try / id / backquote / act / mark / tag /
+    codes / code / range / set / string / split / category
 
-// The atoms mostly start with different characters. As this parser includes
-// scanning, categories and ids are made mutually exclusive.
-category = [cat alpha!] @category gap
-id = #atom (cat alpha!)! letter alpha* @id gap / backquote
-backquote = "`" ("`"! visible)* #quote "`" @id gap
-action = '@' (decimal* #letter letter alpha* @act / @drop) gap
-marker = "#" #letter letter alpha* @mark gap
-tag = "%" #letter letter alpha*? @tag gap
-divider = '<' ('>' @end / ('>'! visible)+ '>' @divider) gap
-set = range / "'" ("'"! visible)* #quote "'" @set gap
-range = numbers / ["'" ("'"! visible) ".."] ("'"! visible) "'" @range gap
-numbers = [digits '.'] #dot '.' digits @range gap
-string = '"' ('"'! visible)* #quote '"' @string gap
-number = digits @number gap
-try = sb expression se @3try
-bracket = rb expression re @3bracket
-
-// Operator and punctuation symbols include error markers.
+// Atoms. Categories and ids are made mutually exclusive.
 // Brackets produce output items, to help with text ranges of parse tree nodes.
-dots = '.' #dot '.' skip @
-equals = #equals "=" skip @
-slash = #op "/" skip @
-has = #op "&" gap @
-not = #op "!" gap @
-opt = #op "?" gap @
-any = #op "*" gap @
-some = #op "+" gap @
-rb = "(" @token skip @
-sb = "[" @token skip @
-re = #bracket ")" @token gap @
-se = #bracket "]" @token gap @
-
-// Rules for white space, comments, layout, character sets and category codes.
-skip = (space / comment / newline)*
-gap = space* comment? continuation @
-space = ' '
-continuation = [newline skip '=/)]'&]?
-newline = #newline 13? 10 @
-comment = "//" visible* newline
-visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
-alpha = letter / Nd / '_' / '-'
-letter = Lu / Ll / Lt / Lm / Lo
-decimal = '0..9'
-hex = decimal / 'ABCDEFabcdef'
-digits = ('1..9' decimal*) / '0' hex*
+bracketed = open expression close @3bracketed
+try = sopen expression sclose @3try
+id = (cat alpha!)! letter alphas @id blank
+backquote = "`" nobquotes #quote "`" @id blank
+act = '@' decimals alphas @act blank
+mark = "#" initial alphas @mark blank
+tag = "%" initial alphas @tag blank
+codes = [digits '.'] #dot '.' digits @range blank
+code = digits @code blank
+range = ["'" noquote ".."] noquote "'" @range blank
+set = "'" noquotes #quote "'" @set blank
+string = '"' nodquotes #quote '"' @string blank
+split = '<' noangles #gt '>' @split blank
+equals = #equals "=" gap
+slash = #op "/" gap
+has = "&" blank
+not = "!" blank
+opt = "?" blank
+any = "*" blank
+some = "+" blank
+open = "(" @bracket gap
+sopen = "[" @bracket gap
+close = #bracket ")" @bracket blank
+sclose = #bracket "]" @bracket blank
+category = [cat alpha!] @cat blank
 cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
     "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
     "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
-end = #end <>
+
+// Rules for white space and continuations. A blank is after =/([ and a gap is
+// after atom or &!?*+)] and a skip is after a rule.
+blank = spaces [endline spaces '=/)]' &]? @
+gap = spaces (newline spaces)? @
+skip = ((space / comment / newline) @)*
+comment = "--" visibles newline
+newline = #newline endline @
+
+// Rules for character sets.
+space = ' '
+spaces = space*
+visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+visibles = visible*
+alpha = letter / Nd / '_' / '-'
+alphas = alpha*
+letter = Lu / Ll / Lt / Lm / Lo
+initial = #letter letter
+
+decimal = '0..9'
+decimals = decimal*
+hex = decimal / 'ABCDEFabcdef'
+hexes = hex*
+digits = ('1..9' decimals) / '0' hexes
+noquote = "'"! visible
+noquotes = ("'"! visible)*
+nodquotes = ('"'! visible)*
+nobquotes = ("`"! visible)*
+noangles = ('>'! visible)*
+endline = 13? 10
 ==========
-// Single rule
+-- Single rule
 x = y
 ----------
 id x
 id y
 rule
 ==========
-// Inclusion
+-- Inclusion
 "other.txt"
 x = y
 ----------
@@ -82,7 +94,7 @@ id y
 rule
 list
 ==========
-// Choice
+-- Choice
 x = y / z
 ----------
 id x
@@ -91,32 +103,32 @@ id z
 or
 rule
 ==========
-// Bracket
+-- Bracket
 x = (y / z)
 ----------
 id x
-token (
+bracket (
 id y
 id z
 or
-token )
-bracket
+bracket )
+bracketed
 rule
 ==========
-// Empty grammar
+-- Empty grammar
 ----------
-Error on line 2: expecting atom, newline
+Error on line 2: expecting id, newline
 
 ^
 ==========
-// Expecting =
+-- Expecting =
 x
 ----------
 Error on line 2: expecting equals
 x
  ^
 ==========
-// Two rules, normal \n line endings
+-- Two rules, normal \n line endings
 x = x
 y = y
 ---------
@@ -128,7 +140,7 @@ id y
 rule
 list
 ==========
-// Windows \r\n line endings
+-- Windows \r\n line endings
 x=x\13\10\
 y=y\13\10\
 ----------
@@ -140,7 +152,8 @@ id y
 rule
 list
 ==========
-// Blank line
+-- Blank lines
+
 
 x = x
 ----------
@@ -148,7 +161,7 @@ id x
 id x
 rule
 ==========
-// Trailing spaces
+-- Trailing spaces
 x = x    \10
          \10
 y = y    \10
@@ -161,20 +174,7 @@ id y
 rule
 list
 ==========
-// Trailing blank line
-x = x
-y = y
-
-----------
-id x
-id x
-rule
-id y
-id y
-rule
-list
-==========
-// Trailing blank lines
+-- Trailing blank lines
 x = x
 y = y
 
@@ -188,7 +188,7 @@ id y
 rule
 list
 ==========
-// No final newline
+-- No final newline
 x = x
 y = y\
 ----------
@@ -196,23 +196,23 @@ Error on line 3: expecting atom, newline, op
 y = y
      ^
 ==========
-// No final newline
+-- No final newline
 x = x
-// comment\
+-- comment\
 ----------
 Error on line 3: expecting newline
-// comment
+-- comment
           ^
 ==========
-// Varied comments and empty lines
-// initial comment
+-- Varied comments and empty lines
+-- initial comment
 
 x = y
 
-// middle comment
+-- middle comment
 y = z
 
-// end comment
+-- end comment
 ----------
 id x
 id y
@@ -222,35 +222,42 @@ id z
 rule
 list
 ==========
-// Unexpected character
+-- Illegal end of line comment
+x = y -- comment
+----------
+Error on line 2: expecting atom, newline, op
+x = y -- comment
+      ^
+==========
+-- Unexpected character
 x = |y|
 ----------
 Error on line 2: expecting atom, newline
 x = |y|
     ^
 ==========
-// Incomplete string
+-- Incomplete string
 x = "abc
 ----------
 Error on line 2: expecting quote
 x = "abc
         ^
 ==========
-// Incomplete set
+-- Incomplete set
 x = 'abc
 ----------
 Error on line 2: expecting quote
 x = 'abc
         ^
 ==========
-// Expecting atom
+-- Expecting atom
 x = /
 ----------
 Error on line 2: expecting atom, newline
 x = /
     ^
 ==========
-// Missing close bracket
+-- Missing close bracket
 x = (y
 y = z
 ----------
@@ -258,92 +265,97 @@ Error on line 2: expecting atom, bracket, op
 x = (y
       ^
 ==========
-// Dot in the wrong place
+-- Dot in the wrong place
 x = .
 ----------
 Error on line 2: expecting atom, newline
 x = .
     ^
 ==========
-// Incomplete dot dot
+-- Incomplete dot dot
 x = 0.
 ----------
 Error on line 2: expecting dot
 x = 0.
       ^
 ==========
-// Incomplete action
+-- Discard action
 x = @3
 ----------
-Error on line 2: expecting letter
-x = @3
-      ^
+id x
+act @3
+rule
 ==========
-// Id extending category name
+-- Long id and id extending category name
+longIdentifier = longIdentifier
 x = Ndx
 ----------
+id longIdentifier
+id longIdentifier
+rule
 id x
 id Ndx
 rule
+list
 ==========
-// Definition of category
+-- Definition of category
 Nd = "x"
 ----------
-Error on line 2: expecting atom, newline
+Error on line 2: expecting id, newline
 Nd = "x"
 ^
 ==========
-// Tag
+-- Tag
 x = %x
 ----------
 id x
 tag %x
 rule
 ==========
-// Bad tag
+-- Bad tag
 x = %
 ----------
 Error on line 2: expecting letter
 x = %
      ^
 ==========
-// Marker
+-- Marker
 x = #m
 ----------
 id x
 mark #m
 rule
 ==========
-// Bad marker
+-- Bad marker
 x = 'x' #3
 ----------
 Error on line 2: expecting letter
 x = 'x' #3
          ^
 ==========
-// Brackets
+-- Brackets
 exp = (exp) end
 exp = [exp] end
 ----------
 id exp
-token (
+bracket (
 id exp
-token )
-bracket
+bracket )
+bracketed
 id end
 and
 rule
 id exp
-token [
+bracket [
 id exp
-token ]
+bracket ]
 try
 id end
 and
 rule
 list
 ==========
-// Continuation lines
+-- Continuation lines
 x =
 y /
 z
@@ -365,13 +377,13 @@ id z
 or
 rule
 id x
-token (
+bracket (
 id a
-token )
-bracket
-token [
+bracket )
+bracketed
+bracket [
 id c
-token ]
+bracket ]
 try
 and
 rule
@@ -382,13 +394,13 @@ or
 rule
 id x
 id y
-token (
+bracket (
 id a
-token )
-bracket
-token [
+bracket )
+bracketed
+bracket [
 id c
-token ]
+bracket ]
 try
 and
 and
@@ -397,7 +409,7 @@ list
 list
 list
 ==========
-// The + * ? postfix operators
+-- The + * ? postfix operators
 exp = exp* exp+ exp? end
 ----------
 id exp
@@ -413,7 +425,7 @@ and
 and
 rule
 ==========
-// Ranges
+-- Ranges
 r1 = 0..127
 r2 = 'a..z'
 ----------
@@ -425,14 +437,14 @@ range 'a..z'
 rule
 list
 ==========
-// Backquote id
+-- Backquote id
 `x` = "abc"
 ----------
 id `x`
 string "abc"
 rule
 ==========
-// Error marker
+-- Error marker
 assignment = left #equals "=" right
 ----------
 id assignment
@@ -445,7 +457,7 @@ and
 and
 rule
 ==========
-// Error on line 3
+-- Double operator
 x = y /
 z / /
 ----------
@@ -453,7 +465,7 @@ Error on line 3: expecting atom, newline
 z / /
     ^
 ==========
-// Actions, tests, numbers and errors
+-- Actions, tests, codes and errors
 x = %x @0x @1x @ @x
 y = 0 1 2 10 12 123
 z = 0ffff 01ABCDEF23 0FG
@@ -463,7 +475,7 @@ id x
 tag %x
 act @0x
 act @1x
-drop @
+act @
 act @x
 and
 and
@@ -471,12 +483,12 @@ and
 and
 rule
 id y
-number 0
-number 1
-number 2
-number 10
-number 12
-number 123
+code 0
+code 1
+code 2
+code 10
+code 12
+code 123
 and
 and
 and
@@ -484,9 +496,9 @@ and
 and
 rule
 id z
-number 0ffff
-number 01ABCDEF23
-number 0F
+code 0ffff
+code 01ABCDEF23
+code 0F
 id G
 and
 and
@@ -501,7 +513,7 @@ list
 list
 list
 ==========
-// Unicode letters and digits in identifiers, maximum numbers
+-- Unicode letters and digits in identifiers, maximum codes
 x = abc\960
 y = d123\1636
 z = 1114111 / 0ffff
@@ -513,14 +525,14 @@ id y
 id d123\1636
 rule
 id z
-number 1114111
-number 0ffff
+code 1114111
+code 0ffff
 or
 rule
 list
 list
 ==========
-// Strings, character sets, unicode
+-- Strings, character sets, unicode
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
 pi = "\960"
@@ -541,30 +553,30 @@ rule
 list
 list
 ==========
-// Brackets and operators
+-- Brackets and operators
 x = (y / z) / y?
 x = (y/z)+ / y*
 x = y z w ! / y
 x = [y z] / w
 ----------
 id x
-token (
+bracket (
 id y
 id z
 or
-token )
-bracket
+bracket )
+bracketed
 id y
 opt
 or
 rule
 id x
-token (
+bracket (
 id y
 id z
 or
-token )
-bracket
+bracket )
+bracketed
 some
 id y
 any
@@ -581,11 +593,11 @@ id y
 or
 rule
 id x
-token [
+bracket [
 id y
 id z
 and
-token ]
+bracket ]
 try
 id w
 or
@@ -594,37 +606,13 @@ list
 list
 list
 ==========
-// Comments before and after continuation lines
-x =
- // comment
- y /
- // comment
- z
-x
- // Comment
-= y
- // Comment
-/ z
-----------
-id x
-id y
-id z
-or
-rule
-id x
-id y
-id z
-or
-rule
-list
-==========
-// Dividers
+-- Dividers
 keyword = <do> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 ----------
 id keyword
-divider <do>
+split <do>
 id keyword1
 and
 id keyword2
@@ -657,30 +645,30 @@ rule
 list
 list
 ==========
-// End of input
+-- End of input
 end = #end <>
 ----------
 id end
 mark #end
-end <>
+split <>
 and
 rule
 ==========
-// Underscore
+-- Underscore
 a_b = xy_
 ----------
 id a_b
 id xy_
 rule
 ==========
-// Hyphen
+-- Hyphen
 a-b = xy-
 ----------
 id a-b
 id xy-
 rule
 ==========
-// Single backslash in quotes (escaped using test file conventions)
+-- Single backslash in quotes (escaped using test file conventions)
 bs = '\\n' "\\n"
 ----------
 id bs

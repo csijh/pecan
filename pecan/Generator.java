@@ -74,7 +74,7 @@ class Generator implements Testable {
             case Cat:       encodeCat(node);        break;
             case String:    encodeString(node);     break;
             case Range:     encodeRange(node);      break;
-            case Divider:   encodeDivider(node);    break;
+            case Splitter:  encodeSplitter(node);   break;
             case Set:       encodeSet(node);        break;
             case End:       encodeEnd(node);        break;
         }
@@ -207,7 +207,7 @@ class Generator implements Testable {
 
     // {<a>}  =  LESS(1), 97
     // {<ab>}  =  LESS(2), 97, 98
-    private void encodeDivider(Node node) {
+    private void encodeSplitter(Node node) {
         add(LESS, bytes(node.name()));
     }
 

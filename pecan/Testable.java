@@ -10,5 +10,5 @@ interface Testable {
     // filename and start line number for error messages. If the grammar flag is
     // set on the input, it is a default grammar to be used for subsequent
     // tests. The output is a string, or has a meaningful toString value.
-    Object test(Source in);
+    Object run(Source in);
 }

@@ -185,6 +185,7 @@ public class Evaluator implements Testable {
     private void parseAny(Node node) {
         int saveIn = in;
         int saveOut = out;
+        ok = true;
         while (ok) {
             saveIn = in;
             saveOut = out;

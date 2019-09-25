@@ -80,7 +80,7 @@ class Binder implements Testable {
         case Id: bindId(node); break;
         case Number: bindNumber(node); break;
         case String: bindString(node); break;
-        case Divider: bindDivider(node); break;
+        case Splitter: bindSplitter(node); break;
         case Set: bindSet(node); break;
         case Range: bindRange(node); break;
         case Act: bindAct(node); break;
@@ -143,7 +143,7 @@ class Binder implements Testable {
     }
 
     // Set the TextInput flag on the root node.
-    private void bindDivider(Node node) throws Exception {
+    private void bindSplitter(Node node) throws Exception {
         int n = node.name().length();
         if (n != 0) root.set(TextInput);
     }

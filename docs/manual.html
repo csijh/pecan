@@ -331,10 +331,10 @@ separate rule to be tried on the remaining input.</p>
 
 <h3 id="comments">Comments</h3>
 
-<p>Comments start with <code>//</code> and extend to the end of the line. For
+<p>Comments start with <code>--</code> and extend to the end of the line. For
 example:</p>
 
-<pre>// A number is a sequence of one or more digits.
+<pre>-- A number is a sequence of one or more digits.
 number = '0123456789'+
 </pre>
 
@@ -611,33 +611,31 @@ character. The rule for <code>visible</code> excludes character code points
 which are unassigned, private, surrogate, controls, or line or paragraph
 separators.</p>
 
-<p>A divider is a string in angle brackets instead of double quotes
-<code>&lt;...></code> which represents a two-way check. An expression such as
-<code>&lt;abc></code> does not match any input characters, but is a lookahead
-construct which succeeds if the remaining input, regarded as a string, is
-lexicographically less than <code>"abc"</code>. For example:</p>
+<p>A splitter is a string in angle brackets such as <code>&lt;abc></code> which
+represents a lookahead. It does not match any input characters, but succeeds if
+the remaining input, regarded as a string, is lexicographically less than or
+equal to <code>"abc"</code>. For example:</p>
 
-<pre>keyword = &lt;do> keyword1 / keyword2
+<pre>keyword = &lt;df> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 </pre>
 
-<p>Here, some keywords are listed in alphabetical order, and a divider is used
-to speed up their recognition by separating the keywords before
-<code>"do"</code> from the keywords from <code>"do"</code> onwards. The initial
-less than sign can be thought of as a mnemonic for the meaning of the
-divider.</p>
+<p>Here, some keywords are listed in alphabetical order, and a splitter is used
+to speed up their recognition by separating the keywords up to
+<code>"default"</code> from the keywords from <code>"do"</code> onwards. Note
+that <code>&lt;default></code> should not be used as the splitter in this
+example, because if <code>"default"</code> is next in the input, the input
+continues after that and is therefore lexicographically greater than it.</p>
 
-<p>The empty string <code>""</code> always succeeds, and the empty set
-<code>''</code> always fails. These can occasionally be useful, e.g. in
-transformations. The empty divider <code>&lt;></code> is reserved as a special
-symbol to detect the end of the input.</p>
+<p>The empty string <code>""</code> always succeeds, the empty set
+<code>''</code> always fails, and the empty splitter succeeds only at the end of
+the input:</p>
 
 <pre>succeed = ""
 fail = ''
 end = &lt;>
 </pre>
-
 
 <h3 id="tokens">Tokens</h3>
 
@@ -1007,7 +1005,7 @@ no rule name clashes with a category name.</p>
 
 <p>A grammar is checked to see if it represents a text parser or a token parser.
 A text parser must contain no tags. A token parser must not contain text
-matchers, i.e. strings, dividers, sets, ranges or numbers, with the
+matchers, i.e. strings, splitters, sets, ranges or numbers, with the
 exception of <code>""</code> or <code>''</code> or <code>&lt;></code>.</p>
 
 <p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
@@ -1585,7 +1583,7 @@ same output effect and error handling properties as the original.</p>
 <li>actions are now allowed at the start of a left hand choice</li>
 <li>actions are delayed in case they need to be discarded</li>
 <li>error markers are no longer postfix</li>
-<li>the divider notation <code>&lt;abc></code> and end notation
+<li>the splitter notation <code>&lt;abc></code> and end notation
     <code>&lt;></code> have been added</li>
 <li>backquoted tags have been replaced by backquoted ids</li>
 <li>separate grammar and test files are supported</li>
