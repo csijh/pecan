@@ -17,12 +17,13 @@ actions don't need to be delayed, just switched off during lookahead. The
 functions can be hand-maintained to keep this class self-contained and avoid
 bootstrap problems.
 
-Brackets and bracketed subexpressions have explicit nodes created for them. This
-is so that the text extent of a node can always be found by combining the text
-extents of its children, e.g. in expressions such as (x)y. Note that increasing
-the text extent of x to (x) wouldn't work when x is an identifier, because then
-the node's text would not be the name of the id. Bracket nodes are removed
-later, after parsing. */
+The grammar is concrete, i.e. it creates extra nodes for postfix operator
+symbols, brackets, and bracketed subexpressions, and then removes them at the
+end. This allows the text extent of a node to be found uniformly by combining
+the text extents of its children. For example, given an expression (x)y, the
+combination of two nodes with extents "x" and "y" is "(x)y" and not "x)y". An
+alternative, to increase the  extent "x" to "(x)" wouldn't work when x is an
+identifier, because then the node's text would not be the name of the id. */
 
 class Parser implements Testable {
     private Source source;
@@ -58,7 +59,7 @@ class Parser implements Testable {
 
     // Error markers, in alphabetical order.
     enum Marker {
-        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, GREATER_THEN_SIGN, ID, LETTER,
+        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, GREATER_THAN_SIGN, ID, LETTER,
         NEWLINE, OPERATOR, QUOTE, TAG
     }
 
@@ -115,11 +116,11 @@ class Parser implements Testable {
     // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
     private boolean postop() {
         switch (NEXT()) {
-            case '?': return (opt() && ACT1(Opt));
-            case '*': return (any() && ACT1(Any));
-            case '+': return (some() && ACT1(Some));
-            case '&': return (has() && ACT1(Has));
-            case '!': return (not() && ACT1(Not));
+            case '?': return (opt() && ACT2(Opt));
+            case '*': return (any() && ACT2(Any));
+            case '+': return (some() && ACT2(Some));
+            case '&': return (has() && ACT2(Has));
+            case '!': return (not() && ACT2(Not));
             default: return false;
         }
     }
@@ -200,7 +201,9 @@ class Parser implements Testable {
 
     // range = ["'" noquote ".."] noquote "'" @range blank
     private boolean range() {
-        return TRY(GO() && CHAR('\'') && STRING("..")) && noquote() && CHAR('\'') && ACT(Range) && blank();
+        return TRY(
+            GO() && CHAR('\'') && noquote() && STRING("..")
+        ) && noquote() && CHAR('\'') && ACT(Range) && blank();
     }
 
     // set = "'" noquotes #quote "'" @set blank
@@ -222,7 +225,7 @@ class Parser implements Testable {
     // split = '<' noangles #gt '>' @split) blank
     private boolean split() {
         return (
-            CHAR('<') && noangles() && MARK(GREATER_THEN_SIGN) &&
+            CHAR('<') && noangles() && MARK(GREATER_THAN_SIGN) && CHAR('>') &&
             ACT(Split) && blank()
         );
     }
@@ -237,29 +240,29 @@ class Parser implements Testable {
         return MARK(OPERATOR) && CHAR('/') && gap();
     }
 
-    // has = "&" blank
+    // has = "&" @op blank
     private boolean has() {
-        return CHAR('&') && blank();
+        return CHAR('&') && ACT(Op) && blank();
     }
 
-    // not = "!" blank
+    // not = "!" @op blank
     private boolean not() {
-        return CHAR('!') && blank();
+        return CHAR('!') && ACT(Op) && blank();
     }
 
-    // opt = "?" blank
+    // opt = "?" @op blank
     private boolean opt() {
-        return CHAR('?') && blank();
+        return CHAR('?') && ACT(Op) && blank();
     }
 
-    // any = "*" blank
+    // any = "*" @op blank
     private boolean any() {
-        return CHAR('*') && blank();
+        return CHAR('*') && ACT(Op) && blank();
     }
 
-    // some = "+" blank
+    // some = "+" @op blank
     private boolean some() {
-        return CHAR('+') && blank();
+        return CHAR('+') && ACT(Op) && blank();
     }
 
     // open = "(" @bracket gap
@@ -463,8 +466,8 @@ class Parser implements Testable {
 
     // Check a result, make it success if no progress, and pop saved position.
     private boolean OPT(boolean b) {
-        b = b || in == save[--top];
-        return b;
+        --top;
+        return b || in == save[top];
     }
 
     // Backtrack to saved position.
@@ -536,6 +539,7 @@ class Parser implements Testable {
         for (int i = 0; i < s.length(); i++) {
             if (source.charAt(in + i) != s.charAt(i)) return false;
         }
+        in += s.length();
         return true;
     }
 
@@ -575,7 +579,7 @@ class Parser implements Testable {
     // @1...
     private boolean ACT1(Op op) {
         Node x = output[--out];
-        Node y = new Node(op, x, source, x.start(), in);
+        Node y = new Node(op, x, source, x.start(), x.end());
         output[out++] = y;
         return true;
     }
@@ -610,12 +614,16 @@ class Parser implements Testable {
         return s;
     }
 
-    // Remove bracket nodes from a subtree.
+    // Remove postfix operator, bracket, and bracketed expression nodes.
     private Node prune(Node r) {
         if (r == null) return null;
+        Op op = r.op();
         r.left(prune(r.left()));
-        r.right(prune(r.right()));
-        if (r.op() == Bracketed) return r.left();
+        if (op == Opt || op == Any || op == Some || op == Has || op == Not) {
+            r.right(null);
+        }
+        else r.right(prune(r.right()));
+        if (op == Bracketed) return r.left();
         return r;
     }
 }

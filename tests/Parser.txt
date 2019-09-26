@@ -79,17 +79,554 @@ x = x    \10\
          \10\
 y = y    \10\
 ----------
-Rule x
-  Id x
-Rule y
-  Id y
+List x = x    ...
+  Rule x = x
+    Id x
+    Id x
+  Rule y = y
+    Id y
+    Id y
 ==========
 -- Trailing blank line
 x = x
 y = y
 
 ----------
-Rule x
+List x = x...
+  Rule x = x
+    Id x
+    Id x
+  Rule y = y
+    Id y
+    Id y
+==========
+-- Trailing blank lines
+x = x
+y = y
+
+
+----------
+List x = x...
+  Rule x = x
+    Id x
+    Id x
+  Rule y = y
+    Id y
+    Id y
+==========
+-- No final newline
+x = x
+y = y\
+----------
+List x = x...
+  Rule x = x
+    Id x
+    Id x
+  Rule y = y
+    Id y
+    Id y
+==========
+-- No final newline
+x = x
+-- comment\
+----------
+Rule x = x
   Id x
-Rule y
-  Id y
+  Id x
+==========
+-- Varied comments and empty lines
+-- initial comment
+
+x = y
+
+-- middle comment
+y = z
+
+-- end comment
+----------
+List x = y...
+  Rule x = y
+    Id x
+    Id y
+  Rule y = z
+    Id y
+    Id z
+==========
+-- Scanner error
+x = |y|
+----------
+Error in tests/Parser.txt, line 156: expecting atom, newline
+x = |y|
+    ^
+==========
+-- Incomplete string
+x = "abc
+----------
+Error in tests/Parser.txt, line 163: expecting quote
+x = "abc
+        ^
+==========
+-- Incomplete set
+x = 'abc
+----------
+Error in tests/Parser.txt, line 170: expecting quote
+x = 'abc
+        ^
+==========
+-- One rule
+x = "a"
+----------
+Rule x = "a"
+  Id x
+  String "a"
+==========
+-- Two rules
+x = "a"
+y = "b"
+----------
+List x = "a"...
+  Rule x = "a"
+    Id x
+    String "a"
+  Rule y = "b"
+    Id y
+    String "b"
+==========
+-- Expecting equals
+x
+----------
+Error in tests/Parser.txt, line 196: expecting equals
+x
+ ^
+==========
+-- Expecting atom
+x = /
+----------
+Error in tests/Parser.txt, line 203: expecting atom, newline
+x = /
+    ^
+==========
+-- Missing close bracket
+x = (y
+y = z
+----------
+Error in tests/Parser.txt, line 210: expecting atom, bracket, operator
+x = (y
+      ^
+==========
+-- Dot in the wrong place
+x = .
+----------
+Error in tests/Parser.txt, line 218: expecting atom, newline
+x = .
+    ^
+==========
+-- Incomplete dot dot
+x = 0.
+----------
+Error in tests/Parser.txt, line 225: expecting dot
+x = 0.
+      ^
+==========
+-- Drop action
+x = @3
+----------
+Rule x = @3
+  Id x
+  Act @3
+==========
+-- Tag
+x = %x
+----------
+Rule x = %x
+  Id x
+  Tag %x
+==========
+-- Bad marker
+x = 'x' #3
+----------
+Error in tests/Parser.txt, line 246: expecting letter
+x = 'x' #3
+         ^
+==========
+-- Continuation lines
+x =
+y /
+z
+x =
+(
+a) [
+c]
+x
+= y
+/ z
+x
+= y (a
+) [c
+]
+----------
+List x =...
+  Rule x =...
+    Id x
+    Or y /...
+      Id y
+      Id z
+  Rule x =...
+    Id x
+    And (...
+      Id a
+      Try [...
+        Id c
+  Rule x...
+    Id x
+    Or y...
+      Id y
+      Id z
+  Rule x...
+    Id x
+    And y (a...
+      Id y
+      Id a
+      Try [c...
+        Id c
+==========
+-- Brackets
+exp = (exp) end
+exp = [exp] end
+----------
+List exp = (exp) end...
+  Rule exp = (exp) end
+    Id exp
+    And (exp) end
+      Id exp
+      Id end
+  Rule exp = [exp] end
+    Id exp
+    And [exp] end
+      Try [exp]
+        Id exp
+      Id end
+==========
+-- The + * ? postfix operators
+exp = exp* exp+ exp? end
+----------
+Rule exp = exp* exp+ exp? end
+  Id exp
+  And exp* exp+ exp? end
+    Any exp*
+      Id exp
+    Some exp+
+      Id exp
+    Opt exp?
+      Id exp
+    Id end
+==========
+-- Ranges
+r1 = 0..127
+r2 = 'a..z'
+----------
+List r1 = 0..127...
+  Rule r1 = 0..127
+    Id r1
+    Range 0..127
+  Rule r2 = 'a..z'
+    Id r2
+    Range 'a..z'
+==========
+-- Illegal spaces in code range
+r = 0 .. 127
+----------
+Error in tests/Parser.txt, line 337: expecting atom, newline, operator
+r = 0 .. 127
+      ^
+==========
+-- Backquote id
+`x` = "abc"
+----------
+Rule `x` = "abc"
+  Id `x`
+  String "abc"
+==========
+-- Complete scan-parser grammar for sums
+exp = term ("+" term @2add / "-" term @2sub)* <>
+term = factor ("*" factor @2mul / "/" factor @2div)*
+factor = primary ("^" factor @2pow)?
+primary = number / "(" exp ")"
+number = digit+ @number
+digit = '0123456789'
+----------
+List exp = term ("+" term @2add / "-" term @2sub)* <>...
+  Rule exp = term ("+" term @2add / "-" term @2sub)* <>
+    Id exp
+    And term ("+" term @2add / "-" term @2sub)* <>
+      Id term
+      Any ("+" term @2add / "-" term @2sub)*
+        Or "+" term @2add / "-" term @2sub
+          And "+" term @2add
+            String "+"
+            Id term
+            Act @2add
+          And "-" term @2sub
+            String "-"
+            Id term
+            Act @2sub
+      Split <>
+  Rule term = factor ("*" factor @2mul / "/" factor @2div)*
+    Id term
+    And factor ("*" factor @2mul / "/" factor @2div)*
+      Id factor
+      Any ("*" factor @2mul / "/" factor @2div)*
+        Or "*" factor @2mul / "/" factor @2div
+          And "*" factor @2mul
+            String "*"
+            Id factor
+            Act @2mul
+          And "/" factor @2div
+            String "/"
+            Id factor
+            Act @2div
+  Rule factor = primary ("^" factor @2pow)?
+    Id factor
+    And primary ("^" factor @2pow)?
+      Id primary
+      Opt ("^" factor @2pow)?
+        And "^" factor @2pow
+          String "^"
+          Id factor
+          Act @2pow
+  Rule primary = number / "(" exp ")"
+    Id primary
+    Or number / "(" exp ")"
+      Id number
+      And "(" exp ")"
+        String "("
+        Id exp
+        String ")"
+  Rule number = digit+ @number
+    Id number
+    And digit+ @number
+      Some digit+
+        Id digit
+      Act @number
+  Rule digit = '0123456789'
+    Id digit
+    Set '0123456789'
+==========
+-- Error markers
+assignment = left #equals "=" right
+----------
+Rule assignment = left #equals "=" right
+  Id assignment
+  And left #equals "=" right
+    Id left
+    Mark #equals
+    String "="
+    Id right
+==========
+-- Error on line 3
+x = y /
+z / /
+----------
+Error in tests/Parser.txt, line 428: expecting atom, newline
+z / /
+    ^
+==========
+-- Unicode letters and digits and numbers (using test file escape conventions)
+x = abc\960\1636
+z = 1114111 / 0ffff
+----------
+List x = abc\960\ \1636...
+  Rule x = abc\960\ \1636
+    Id x
+    Id abc\960\ \1636
+  Rule z = 1114111 / 0ffff
+    Id z
+    Or 1114111 / 0ffff
+      Code 1114111
+      Code 0ffff
+==========
+-- Strings, character sets, unicode
+x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+pi = "\960"
+----------
+List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
+  Rule x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+    Id x
+    And "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+      String "abc"
+      String " !#$%^&*()_-=+[]`{};:'@#~"
+  Rule y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+    Id y
+    And 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+      Set 'abc'
+      Set ' !#$%^&*()_-=+[]`{};:"@#~'
+  Rule pi = "\960"
+    Id pi
+    String "\960"
+==========
+-- Actions, tests, numbers and errors
+x = %x @0x @1x @ @x
+y = 0 1 2 10 12 123
+z = 0ffff 01ABCDEF23 0FG
+u = #err ''
+----------
+List x = %x @0x @1x @ @x...
+  Rule x = %x @0x @1x @ @x
+    Id x
+    And %x @0x @1x @ @x
+      Tag %x
+      Act @0x
+      Act @1x
+      Act @
+      Act @x
+  Rule y = 0 1 2 10 12 123
+    Id y
+    And 0 1 2 10 12 123
+      Code 0
+      Code 1
+      Code 2
+      Code 10
+      Code 12
+      Code 123
+  Rule z = 0ffff 01ABCDEF23 0FG
+    Id z
+    And 0ffff 01ABCDEF23 0FG
+      Code 0ffff
+      Code 01ABCDEF23
+      Code 0F
+      Id G
+  Rule u = #err ''
+    Id u
+    And #err ''
+      Mark #err
+      Set ''
+==========
+-- Brackets and operators
+x = (y / z) / y?
+x = (y/z)+ / y*
+x = y z w ! / y
+x = [y z] / w
+----------
+List x = (y / z) / y?...
+  Rule x = (y / z) / y?
+    Id x
+    Or (y / z) / y?
+      Or y / z
+        Id y
+        Id z
+      Opt y?
+        Id y
+  Rule x = (y/z)+ / y*
+    Id x
+    Or (y/z)+ / y*
+      Some (y/z)+
+        Or y/z
+          Id y
+          Id z
+      Any y*
+        Id y
+  Rule x = y z w ! / y
+    Id x
+    Or y z w ! / y
+      And y z w !
+        Id y
+        Id z
+        Not w !
+          Id w
+      Id y
+  Rule x = [y z] / w
+    Id x
+    Or [y z] / w
+      Try [y z]
+        And y z
+          Id y
+          Id z
+      Id w
+==========
+-- Comment before continuation
+x =
+ -- comment
+ y
+----------
+Error in tests/Parser.txt, line 549: expecting atom
+ -- comment
+ ^
+==========
+-- String with supplementary unicode character 195101 (=2fa1d, last letter)
+-- Represented as two chars, upper/lower surrogates.
+range = "\55422\56861" / '\55422\56861'
+----------
+Rule range = "\195101" / '\195101'
+  Id range
+  Or "\195101" / '\195101'
+    String "\195101"
+    Set '\195101'
+==========
+-- Angle brackets now used for dividers
+keyword = <df> keyword1 / keyword2
+keyword1 = "break" / "case" / "catch" / "continue" / "default"
+keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
+----------
+List keyword = <df> keyword1 / keyword2...
+  Rule keyword = <df> keyword1 / keyword2
+    Id keyword
+    Or <df> keyword1 / keyword2
+      And <df> keyword1
+        Split <df>
+        Id keyword1
+      Id keyword2
+  Rule keyword1 = "break" / "case" / "catch" / "continue" / "default"
+    Id keyword1
+    Or "break" / "case" / "catch" / "continue" / "default"
+      String "break"
+      String "case"
+      String "catch"
+      String "continue"
+      String "default"
+  Rule keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
+    Id keyword2
+    Or "do" / "else" / "for" / "if" / "switch" / "while"
+      String "do"
+      String "else"
+      String "for"
+      String "if"
+      String "switch"
+      String "while"
+==========
+-- End-of-file
+end = #end <>
+----------
+Rule end = #end <>
+  Id end
+  And #end <>
+    Mark #end
+    Split <>
+==========
+-- Underscore
+a_b = xy_
+----------
+Rule a_b = xy_
+  Id a_b
+  Id xy_
+==========
+-- Hyphen
+a-b = xy-
+----------
+Rule a-b = xy-
+  Id a-b
+  Id xy-
+==========
+-- Backslash in quotes (using test file escape conventions)
+bs = '\\'
+----------
+Rule bs = '\\'
+  Id bs
+  Set '\\'
+==========
+-- Empty tag name
+x = y %
+----------
+Error in tests/Parser.txt, line 628: expecting letter
+x = y %
+       ^

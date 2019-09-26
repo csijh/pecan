@@ -15,8 +15,9 @@ class Source {
     private boolean grammar, trace;
     private int[] rows;
 
-    // Create a source object. The filename can be null.
+    // Create a source object. Add missing final newline. Filename can be null.
     Source(String t, String f, int n) {
+        if (t.length() > 0 && ! t.endsWith("\n")) t += "\n";
         text = t;
         fileName = f;
         firstLine = n;

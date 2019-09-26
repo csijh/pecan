@@ -11,7 +11,7 @@ expression = term (slash expression @2or)?
 term = factor (term @2and)?
 factor = #atom atom postops
 postops = postop*
-postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
+postop = opt @2opt / any @2any / some @2some / has @2has / not @2not
 atom = bracketed / try / id / backquote / act / mark / tag /
     codes / code / range / set / string / split / category
 
@@ -31,12 +31,12 @@ set = "'" noquotes #quote "'" @set blank
 string = '"' nodquotes #quote '"' @string blank
 split = '<' noangles #gt '>' @split blank
 equals = #equals "=" gap
-slash = #op "/" gap
-has = "&" blank
-not = "!" blank
-opt = "?" blank
-any = "*" blank
-some = "+" blank
+slash = #operator "/" gap
+has = "&" @op blank
+not = "!" @op blank
+opt = "?" @op blank
+any = "*" @op blank
+some = "+" @op blank
 open = "(" @bracket gap
 sopen = "[" @bracket gap
 close = #bracket ")" @bracket blank
@@ -192,7 +192,7 @@ list
 x = x
 y = y\
 ----------
-Error on line 3: expecting atom, newline, op
+Error on line 3: expecting atom, newline, operator
 y = y
      ^
 ==========
@@ -225,7 +225,7 @@ list
 -- Illegal end of line comment
 x = y -- comment
 ----------
-Error on line 2: expecting atom, newline, op
+Error on line 2: expecting atom, newline, operator
 x = y -- comment
       ^
 ==========
@@ -261,7 +261,7 @@ x = /
 x = (y
 y = z
 ----------
-Error on line 2: expecting atom, bracket, op
+Error on line 2: expecting atom, bracket, operator
 x = (y
       ^
 ==========
@@ -414,10 +414,13 @@ exp = exp* exp+ exp? end
 ----------
 id exp
 id exp
+op *
 any
 id exp
+op +
 some
 id exp
+op ?
 opt
 id end
 and
@@ -567,6 +570,7 @@ or
 bracket )
 bracketed
 id y
+op ?
 opt
 or
 rule
@@ -577,8 +581,10 @@ id z
 or
 bracket )
 bracketed
+op +
 some
 id y
+op *
 any
 or
 rule
@@ -586,6 +592,7 @@ id x
 id y
 id z
 id w
+op !
 not
 and
 and
