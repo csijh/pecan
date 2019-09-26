@@ -6,12 +6,9 @@ package pecan;
 nodes. */
 
 public enum Op {
-    Bracketed, // Bracketed subexpression (temporary node during parsing)
-    Bracket,   // Bracket (temporary node during parsing)
-    Postop,    // Postfix operator (temporary node during parsing)
     Error,     // Parse error, with message in note field
+    Temp,      // Temporary node used during parsing
     Include,   // Temporary node representing a file inclusion
-    Empty,     // An empty linked list of rules, or end of list.
     List,      // Linked list of rules
     Rule,      // Definition, name = rhs
     Id,        // Identifier, with cross-reference to its definition

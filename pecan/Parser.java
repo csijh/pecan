@@ -32,6 +32,7 @@ class Parser implements Testable {
     private int[] saves;
     private Set<String> cats;
     private int start, in, out, look, marked, save;
+    private Op Postop = Temp, Bracket = Temp, Bracketed = Temp;
 
     public static void main(String[] args) {
         Test.run(new Parser(), args);
@@ -634,11 +635,9 @@ class Parser implements Testable {
         if (r == null) return null;
         Op op = r.op();
         r.left(prune(r.left()));
-        if (op == Opt || op == Any || op == Some || op == Has || op == Not) {
-            r.right(null);
-        }
-        else r.right(prune(r.right()));
-        if (op == Bracketed) return r.left();
+        r.right(prune(r.right()));
+        if (r.right() != null && r.right().op() == Temp) r.right(null);
+        if (op == Temp) return r.left();
         return r;
     }
 }
