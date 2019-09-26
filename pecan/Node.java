@@ -15,24 +15,25 @@ handles them. */
 class Node {
 
     public static void main(String[] args) {
-        Source s = new Source("127", "file", 1);
+        Source s = new Source("127 'a' @add @2add 'a..z' 0..127", "file", 1);
         Node n = new Node(Code, s, 0, 3);
-        n.set(Flag.Char);
         assert(n.name().equals("127"));
         assert(n.charCode() == 127);
-        s = new Source("'a'", "file", 1);
-        n = new Node(Set, s, 0, 3);
-        n.set(Flag.Char);
+        n = new Node(Char, s, 4, 7);
         assert(n.name().equals("a"));
         assert(n.charCode() == 97);
-        s = new Source("@add", "file", 1);
-        n = new Node(Act, s, 0, 4);
+        n = new Node(Act, s, 8, 12);
         assert(n.name().equals("add"));
         assert(n.arity() == 0);
-        s = new Source("@2add", "file", 1);
-        n = new Node(Act, s, 0, 5);
+        n = new Node(Act, s, 13, 18);
         assert(n.name().equals("add"));
         assert(n.arity() == 2);
+        n = new Node(Range, s, 19, 25);
+        assert(n.low() == 97);
+        assert(n.high() == 97+25);
+        n = new Node(Codes, s, 26, 32);
+        assert(n.low() == 0);
+        assert(n.high() == 127);
     }
 
 // ---------- The annotation fields and methods -------------------------------
@@ -43,7 +44,7 @@ class Node {
 
     // Flag constants. See the relevant analysis classes.
     public static enum Flag {
-        TextInput, TokenInput, Char, SN, FN, SP, FP, WF, AA, AB, BP;
+        TextInput, TokenInput, SN, FN, SP, FP, WF, AA, AB, BP;
         int bit() { return 1 << ordinal(); }
     }
 
@@ -103,17 +104,18 @@ class Node {
     void start(int s) { start = s; }
     void end(int e) { end = e; }
 
-    // The name is the text, without decoration, i.e. #x -> x, %x -> x,
-    // @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab
+    // The name is the text, without decoration, i.e. x = e -> x, #x -> x,
+    // %x -> x, @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab, 'a..z' -> a..z
     String name() {
         switch (op) {
+        case Rule: return left().name();
         case Mark: return source.substring(start+1, end);
         case Tag: return source.substring(start+1, end);
         case Act:
             int i = start + 1;
             while (Character.isDigit(source.charAt(i))) i++;
             return source.substring(i, end);
-        case String: case Set: case Split:
+        case String: case Set: case Split: case Char: case Range:
             return source.substring(start+1, end-1);
         }
         return text();
@@ -121,22 +123,41 @@ class Node {
 
     // For a character, extract the value, i.e. Unicode code point.
     int charCode() {
-        if (! has(Flag.Char)) return -1;
-        String name = name();
-        int ch = -1;
         switch(op) {
+        case Char:
+            return name().codePointAt(0);
         case Code:
-            if (name.charAt(0) != '0') ch = Integer.parseInt(name);
-            else ch = Integer.parseInt(name, 16);
-            break;
-        case Set: case String:
-            ch = name.codePointAt(0);
-            break;
-        case Id: case Rule:
-            ch = left().charCode();
-            break;
+            if (name().charAt(0) != '0') return Integer.parseInt(name());
+            else return Integer.parseInt(name(), 16);
+        case Id:
+            return ref().charCode();
+        case Rule:
+            return left().ref().charCode();
         }
-        return ch;
+        return -1;
+    }
+
+    // For a range, extract the low end.
+    int low() {
+        switch(op) {
+        case Range:
+            return name().codePointAt(0);
+        case Codes:
+            return Integer.parseInt(text().substring(0,text().indexOf('.')));
+        }
+        return -1;
+    }
+
+    // For a range, extract the high end.
+    int high() {
+        switch(op) {
+        case Range:
+            int n = Character.charCount(name().codePointAt(0));
+            return name().substring(n+2).codePointAt(0);
+        case Codes:
+            return Integer.parseInt(text().substring(text().indexOf("..")+2));
+        }
+        return -1;
     }
 
     // For an action, extract the arity.

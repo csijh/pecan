@@ -8,10 +8,11 @@ nodes. */
 public enum Op {
     Bracketed, // Bracketed subexpression (temporary node during parsing)
     Bracket,   // Bracket (temporary node during parsing)
-    Op,        // Postfix operator (temporary node during parsing)
+    Postop,    // Postfix operator (temporary node during parsing)
     Error,     // Parse error, with message in note field
     Include,   // Temporary node representing a file inclusion
-    List,      // Linked list of rules (RHS is rule or list)
+    Empty,     // An empty linked list of rules, or end of list.
+    List,      // Linked list of rules
     Rule,      // Definition, name = rhs
     Id,        // Identifier, with cross-reference to its definition
     Or,        // Choice, x / y, right associative
@@ -23,15 +24,19 @@ public enum Op {
     Has,       // Positive lookahead, e&
     Not,       // Negative lookahead, e!
     Mark,      // Error annotation, x #e
-    Code,      // Character code
-    String,    // Character sequence, "..."
-    Set,       // Choice of characters, '...'
+    Code,      // Character code, 127
+    String,    // Character sequence, "abc"
+    Set,       // Choice of characters, 'abc'
     Split,     // Lookahead for text less than or equal to string, <...>
+    Char,      // Single character, "a" or 'a'
+    Success,   // Always succeed, ""
+    Fail,      // Always fail, ''
     End,       // End of input, <>
-    Range,     // Character range, x..y
+    Range,     // Character range, 'x..y'
+    Codes,     // Code range, 0..127
     Cat,       // Unicode category, e.g. Lu
     Tag,       // Match a type of token.
-    Drop,      // Drop unused matched characters, @
+    Drop,      // Drop unused matched characters, @ or @3
     Act;       // Carry out an action, e.g. @2add
 
     public static void main(String[] args) { }

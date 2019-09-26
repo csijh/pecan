@@ -24,19 +24,19 @@ backquote = "`" nobquotes #quote "`" @id blank
 act = '@' decimals alphas @act blank
 mark = "#" initial alphas @mark blank
 tag = "%" initial alphas @tag blank
-codes = [digits '.'] #dot '.' digits @range blank
+codes = [digits '.'] #dot '.' digits @codes blank
 code = digits @code blank
-range = ["'" noquote ".."] noquote "'" @range blank
+range = ["'" noquote ".."] noquote #quote "'" @range blank
 set = "'" noquotes #quote "'" @set blank
 string = '"' nodquotes #quote '"' @string blank
 split = '<' noangles #gt '>' @split blank
 equals = #equals "=" gap
 slash = #operator "/" gap
-has = "&" @op blank
-not = "!" @op blank
-opt = "?" @op blank
-any = "*" @op blank
-some = "+" @op blank
+has = "&" @postop blank
+not = "!" @postop blank
+opt = "?" @postop blank
+any = "*" @postop blank
+some = "+" @postop blank
 open = "(" @bracket gap
 sopen = "[" @bracket gap
 close = #bracket ")" @bracket blank
@@ -414,13 +414,13 @@ exp = exp* exp+ exp? end
 ----------
 id exp
 id exp
-op *
+postop *
 any
 id exp
-op +
+postop +
 some
 id exp
-op ?
+postop ?
 opt
 id end
 and
@@ -433,7 +433,7 @@ r1 = 0..127
 r2 = 'a..z'
 ----------
 id r1
-range 0..127
+codes 0..127
 rule
 id r2
 range 'a..z'
@@ -570,7 +570,7 @@ or
 bracket )
 bracketed
 id y
-op ?
+postop ?
 opt
 or
 rule
@@ -581,10 +581,10 @@ id z
 or
 bracket )
 bracketed
-op +
+postop +
 some
 id y
-op *
+postop *
 any
 or
 rule
@@ -592,7 +592,7 @@ id x
 id y
 id z
 id w
-op !
+postop !
 not
 and
 and

@@ -26,13 +26,12 @@ alternative, to increase the  extent "x" to "(x)" wouldn't work when x is an
 identifier, because then the node's text would not be the name of the id. */
 
 class Parser implements Testable {
-    private Source source;
+    private Source input;
     private Node[] output;
-    private int start, in, out, lookahead, marked;
-    private Set<Marker> markers = EnumSet.noneOf(Marker.class);
-    private int[] save;
-    private int top;
+    private Set<Marker> markers;
+    private int[] saves;
     private Set<String> cats;
+    private int start, in, out, look, marked, save;
 
     public static void main(String[] args) {
         Test.run(new Parser(), args);
@@ -40,24 +39,28 @@ class Parser implements Testable {
 
     // Parse the grammar, returning a node (possibly an error node).
     public Node run(Source s) {
-        source = s;
+        input = s;
         if (output == null) output = new Node[1];
-        start = in = out = lookahead = marked = 0;
+        if (markers == null) markers = EnumSet.noneOf(Marker.class);
         markers.clear();
+        saves = new int[100];
         cats = new HashSet<String>();
-        save = new int[100];
-        top = 0;
         for (Category cat : Category.values()) cats.add(cat.toString());
+        start = in = out = look = marked = save = 0;
         boolean ok = grammar();
         if (! ok) {
             Node err = new Node(Error, s, in, in);
-            err.note(s.error(in, in, "expecting " + message()));
+            if (marked < in) markers.clear();
+            err.note(s.error(in, in, message()));
             return err;
         }
+        assert(save == 0);
+        assert(out == 1);
         return prune(output[0]);
     }
 
-    // Error markers, in alphabetical order.
+    // Error markers, in alphabetical order. In messages, names are made lower
+    // case and underscores are replaced with spaces.
     enum Marker {
         ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, GREATER_THAN_SIGN, ID, LETTER,
         NEWLINE, OPERATOR, QUOTE, TAG
@@ -187,11 +190,11 @@ class Parser implements Testable {
         return CHAR('%') && initial() && alphas() && ACT(Tag) && blank();
     }
 
-    // codes = [digits '.'] #dot '.' digits @range blank
+    // codes = [digits '.'] #dot '.' digits @codes blank
     private boolean codes() {
         return TRY(
             GO() && digits() && CHAR('.')
-        ) && MARK(DOT) && CHAR('.') && digits() && ACT(Range) && blank();
+        ) && MARK(DOT) && CHAR('.') && digits() && ACT(Codes) && blank();
     }
 
     // code = digits @code blank
@@ -199,11 +202,11 @@ class Parser implements Testable {
         return digits() && ACT(Code) && blank();
     }
 
-    // range = ["'" noquote ".."] noquote "'" @range blank
+    // range = ["'" noquote ".."] noquote #quote "'" @range blank
     private boolean range() {
         return TRY(
             GO() && CHAR('\'') && noquote() && STRING("..")
-        ) && noquote() && CHAR('\'') && ACT(Range) && blank();
+        ) && noquote() && MARK(QUOTE) && CHAR('\'') && ACT(Range) && blank();
     }
 
     // set = "'" noquotes #quote "'" @set blank
@@ -240,29 +243,29 @@ class Parser implements Testable {
         return MARK(OPERATOR) && CHAR('/') && gap();
     }
 
-    // has = "&" @op blank
+    // has = "&" @postop blank
     private boolean has() {
-        return CHAR('&') && ACT(Op) && blank();
+        return CHAR('&') && ACT(Postop) && blank();
     }
 
-    // not = "!" @op blank
+    // not = "!" @postop blank
     private boolean not() {
-        return CHAR('!') && ACT(Op) && blank();
+        return CHAR('!') && ACT(Postop) && blank();
     }
 
-    // opt = "?" @op blank
+    // opt = "?" @postop blank
     private boolean opt() {
-        return CHAR('?') && ACT(Op) && blank();
+        return CHAR('?') && ACT(Postop) && blank();
     }
 
-    // any = "*" @op blank
+    // any = "*" @postop blank
     private boolean any() {
-        return CHAR('*') && ACT(Op) && blank();
+        return CHAR('*') && ACT(Postop) && blank();
     }
 
-    // some = "+" @op blank
+    // some = "+" @postop blank
     private boolean some() {
-        return CHAR('+') && ACT(Op) && blank();
+        return CHAR('+') && ACT(Postop) && blank();
     }
 
     // open = "(" @bracket gap
@@ -298,8 +301,8 @@ class Parser implements Testable {
     //    "Zp" / "Zs"
     // Hand optimised.
     private boolean cat() {
-        if (in >= source.length() - 2) return false;
-        boolean ok = cats.contains(source.substring(in, in + 2));
+        if (in >= input.length() - 2) return false;
+        boolean ok = cats.contains(input.substring(in, in + 2));
         if (ok) in = in + 2;
         return ok;
     }
@@ -347,8 +350,8 @@ class Parser implements Testable {
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
     private boolean visible() {
-        if (in >= source.length()) return false;
-        int ch = source.codePointAt(in);
+        if (in >= input.length()) return false;
+        int ch = input.codePointAt(in);
         Category cat = Category.get(ch);
         if (cat == Cn || cat == Cc || cat == Co) return false;
         if (cat == Cs || cat == Zl || cat == Zp) return false;
@@ -373,8 +376,8 @@ class Parser implements Testable {
 
     // letter = Lu / Ll / Lt / Lm / Lo
     private boolean letter() {
-        if (in >= source.length()) return false;
-        int ch = source.codePointAt(in);
+        if (in >= input.length()) return false;
+        int ch = input.codePointAt(in);
         Category cat = Category.get(ch);
         boolean ok = (
             cat == Lu || cat == Ll || cat == Lt || cat == Lm || cat == Lo
@@ -449,49 +452,52 @@ class Parser implements Testable {
 
     // Prepare for a choice or lookahead by recording the input position.
     private boolean GO() {
-        save[top++] = in;
+        if (save >= saves.length) {
+            saves = Arrays.copyOf(saves, saves.length * 2);
+        }
+        saves[save++] = in;
         return true;
     }
 
     // Check an alternative to see whether to try the next one.
     private boolean OR() {
-        return in == save[top-1];
+        return in == saves[save-1];
     }
 
     // Check the result of a choice and pop the saved position.
     private boolean ALT(boolean b) {
-        --top;
+        --save;
         return b;
     }
 
-    // Check a result, make it success if no progress, and pop saved position.
+    // Pop saved position, make the result success if fail with no progress
     private boolean OPT(boolean b) {
-        --top;
-        return b || in == save[top];
+        --save;
+        return b || in == saves[save];
     }
 
     // Backtrack to saved position.
     private boolean HAS(boolean b) {
-        in = save[--top];
+        in = saves[--save];
         return b;
     }
 
     // Backtrack to saved position and negate result.
     private boolean NOT(boolean b) {
-        in = save[--top];
+        in = saves[--save];
         return !b;
     }
 
     // Backtrack on failure.
     private boolean TRY(boolean b) {
-        if (b) --top;
-        else in = save[--top];
+        if (b) --save;
+        else in = saves[--save];
         return b;
     }
 
     // Record an error marker for the current input position.
     private boolean MARK(Marker m) {
-        if (lookahead > 0) return true;
+        if (look > 0) return true;
         if (marked > in) throw new Error("marked " + marked + " in " + in);
         if (marked < in) {
             markers.clear();
@@ -503,41 +509,35 @@ class Parser implements Testable {
 
     // Nd
     private boolean CAT(Category c) {
-        if (in >= source.length()) return false;
-        int ch = source.codePointAt(in);
+        if (in >= input.length()) return false;
+        int ch = input.codePointAt(in);
         Category cat = Category.get(ch);
         if (cat != c) return false;
         in += Character.charCount(ch);
         return true;
     }
 
-    // @
-    private boolean ACT() {
-        start = in;
-        return true;
-    }
-
     // Check if a character (ascii) appears next in the input.
     private boolean CHAR(char ch) {
-        if (in >= source.length()) return false;
-        if (source.charAt(in) != ch) return false;
+        if (in >= input.length()) return false;
+        if (input.charAt(in) != ch) return false;
         in++;
         return true;
     }
 
     // Check if a character (ascii) in a given range appears next in the input.
     private boolean RANGE(char first, char last) {
-        if (in >= source.length()) return false;
-        if (source.charAt(in) < first || source.charAt(in) > last) return false;
+        if (in >= input.length()) return false;
+        if (input.charAt(in) < first || input.charAt(in) > last) return false;
         in++;
         return true;
     }
 
     // Check for the given (ascii) string next in the input.
     private boolean STRING(String s) {
-        if (in + s.length() > source.length()) return false;
+        if (in + s.length() > input.length()) return false;
         for (int i = 0; i < s.length(); i++) {
-            if (source.charAt(in + i) != s.charAt(i)) return false;
+            if (input.charAt(in + i) != s.charAt(i)) return false;
         }
         in += s.length();
         return true;
@@ -545,8 +545,8 @@ class Parser implements Testable {
 
     // Check if a character (ascii) in a given range appears next in the input.
     private boolean SET(String s) {
-        if (in >= source.length()) return false;
-        char ch = source.charAt(in);
+        if (in >= input.length()) return false;
+        char ch = input.charAt(in);
         boolean found = false;
         for (int i = 0; i < s.length() && ! found; i++) {
             if (ch == s.charAt(i)) found = true;
@@ -557,59 +557,74 @@ class Parser implements Testable {
 
     // Return the next character in the input.
     private char NEXT() {
-        if (in >= source.length()) return '\0';
-        return source.charAt(in);
+        if (in >= input.length()) return '\0';
+        return input.charAt(in);
     }
 
     private boolean END() {
-        return in >= source.length();
+        return in >= input.length();
     }
 
-
-    // @...
-    private boolean ACT(Op op) {
-        if (out >= output.length) {
-            output = Arrays.copyOf(output, output.length * 2);
-        }
-        output[out++] = new Node(op, source, start, in);
+    // @
+    private boolean ACT() {
+        if (look > 0) return true;
         start = in;
         return true;
     }
 
-    // @1...
+    // @a
+    private boolean ACT(Op op) {
+        if (look > 0) return true;
+        if (out >= output.length) {
+            output = Arrays.copyOf(output, output.length * 2);
+        }
+        output[out++] = new Node(op, input, start, in);
+        start = in;
+        return true;
+    }
+
+    // @1a
     private boolean ACT1(Op op) {
+        if (look > 0) return true;
+        start = in;
         Node x = output[--out];
-        Node y = new Node(op, x, source, x.start(), x.end());
+        Node y = new Node(op, x, input, x.start(), x.end());
         output[out++] = y;
         return true;
     }
 
-    // @2...
+    // @2a
     private boolean ACT2(Op op) {
+        if (look > 0) return true;
+        start = in;
         Node y = output[--out];
         Node x = output[--out];
-        Node r = new Node(op, x, y, source, x.start(), y.end());
+        Node r = new Node(op, x, y, input, x.start(), y.end());
         output[out++] = r;
         return true;
     }
 
-    // @3... used for bracketed subexpressions (x) or [x], discarding brackets.
+    // @3a used for bracketed subexpressions (x) or [x], discarding brackets.
     private boolean ACT3(Op op) {
+        if (look > 0) return true;
+        start = in;
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];
-        Node y = new Node(op, x, source, open.start(), close.end());
+        Node y = new Node(op, x, input, open.start(), close.end());
         output[out++] = y;
         return true;
     }
 
     // Produce an error message from the markers at the current input position.
     private String message() {
-        String s = "";
-        if (marked < in) markers.clear();
+        if (markers.size() == 0) return "";
+        String s = "expecting ";
+        boolean first = true;
         for (Marker m : markers) {
-            if (s.length() > 0) s = s + ", ";
-            s = s + m.toString().toLowerCase();
+            if (! first) s = s + ", ";
+            first = false;
+            s = s + m.toString().toLowerCase().replaceAll("_"," ");
         }
         return s;
     }

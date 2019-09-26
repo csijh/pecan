@@ -1,152 +1,159 @@
-// One rule
+-- One rule
 x = "a"
 ----------
-Rule x
-  String "a"
+Rule x = "a"
+  Id x
+  Char "a"
 ==========
-// One call action
+-- One action
 x = "x" @1act
 ----------
-Rule x
+Rule x = "x" @1act
+  Id x
   And "x" @1act
-    String "x"
+    Char "x"
     Act @1act
 ==========
-// A divider
+-- A splitter
 x = <abc> "y" / "z"
 ----------
-Rule x
+Rule x = <abc> "y" / "z"
+  Id x
   Or <abc> "y" / "z"
     And <abc> "y"
-      Divider <abc>
-      String "y"
-    String "z"
+      Split <abc>
+      Char "y"
+    Char "z"
 ==========
-// A token parser
+-- A tag
 x = %t
 ----------
-Rule x
+Rule x = %t
+  Id x
   Tag %t
 ==========
-// Brackets
+-- Some brackets
 exp = (exp) END
 END = 10
 ----------
-Rule exp
-  And (exp) END
+List exp = (exp) END...
+  Rule exp = (exp) END
     Id exp
+    And (exp) END
+      Id exp
+      Id END
+  Rule END = 10
     Id END
-Rule END
-  Number 10
+    Code 10
 ==========
-// Set with duplicate character
+-- Set with duplicate character
 s = 'abcdefcghi'
 ----------
-Error on line 2: set contains duplicate character
+Error in tests/Binder.txt, line 50: set contains duplicate character
 s = 'abcdefcghi'
     ^^^^^^^^^^^^
 ==========
-// Number too big
+-- Number too big
 m = 1114111
 n = 1114112
 ----------
-Error on line 3: number too big
+Error in tests/Binder.txt, line 58: code too big
 n = 1114112
     ^^^^^^^
 ==========
-// Number too big
+-- Number too big
 m = 010ffff
 n = 0110000
 ----------
-Error on line 3: number too big
+Error in tests/Binder.txt, line 66: code too big
 n = 0110000
     ^^^^^^^
 ==========
-// Unicode supplementary characters (beyond 16 bits), 195101 = last letter.
+-- Unicode supplementary characters (beyond 16 bits), 195101 = last letter.
 char = "\195101"
 x = "x"
 ----------
-Rule char
-  String "\195101"
-Rule x
-  String "x"
+List char = "\195101"...
+  Rule char = "\195101"
+    Id char
+    Char "\195101"
+  Rule x = "x"
+    Id x
+    Char "x"
 ==========
-// Bad range
+-- Bad range
 s = 'ab..c'
 ----------
-Error on line 2: range must have one character at each end
+Error in tests/Binder.txt, line 85: set contains duplicate character
 s = 'ab..c'
     ^^^^^^^
 ==========
-// Bad range
+-- Bad range
 s = 'a..bc'
 ----------
-Error on line 2: range must have one character at each end
+Error in tests/Binder.txt, line 92: expecting quote
 s = 'a..bc'
-    ^^^^^^^
+         ^
 ==========
-// Bad range
+-- Bad range
 s = '..a'
 ----------
-Error on line 2: range must have one character at each end
+Error in tests/Binder.txt, line 99: set contains duplicate character
 s = '..a'
     ^^^^^
 ==========
-// Bad range
+-- Bad range
 s = 'a..'
 ----------
-Error on line 2: range must have one character at each end
+Error in tests/Binder.txt, line 106:
 s = 'a..'
-    ^^^^^
+        ^
 ==========
-// Bad range
+-- Bad range
 s = 'b..a'
 ----------
-Error on line 2: empty range
+Error in tests/Binder.txt, line 113: empty range
 s = 'b..a'
     ^^^^^^
 ==========
-// Bad range
+-- Bad range
 s = 33..32
 ----------
-Error on line 2: empty range
+Error in tests/Binder.txt, line 120: empty range
 s = 33..32
     ^^^^^^
 ==========
-// Just OK range
+-- Just OK range
 s = 33..33
 ----------
-Rule s
-  Range 33..33
-    Number 33
-    Number 33
+Rule s = 33..33
+  Id s
+  Codes 33..33
 ==========
-// Ranges with three dots
+-- Ranges with three dots
 s1 = '.../'
 s2 = '-...'
 s3 = '....'
 ----------
-Rule s1
-  Range '.../'
-    Set '..
-    Set ./'
-Rule s2
-  Range '-...'
-    Set '-.
-    Set ..'
-Rule s3
-  Range '....'
-    Set '..
-    Set ..'
+List s1 = '.../'...
+  Rule s1 = '.../'
+    Id s1
+    Range '.../'
+  Rule s2 = '-...'
+    Id s2
+    Range '-...'
+  Rule s3 = '....'
+    Id s3
+    Range '....'
 ==========
-// Name clash
+-- Name clash
 x = @2add @3add
 ----------
-Error on line 2: clashes with @2add
+Error in tests/Binder.txt, line 150: clashes with @2add
 x = @2add @3add
           ^^^^^
 ==========
-// Complete scanner/parser grammar for sums
+-- Complete scanner/parser grammar for sums
 exp = term ("+" term @2add / "-" term @2sub)* ''
 term = factor ("*" factor @2mul / "/" factor @2div)*
 factor = primary ("^" factor @2pow)?
@@ -154,381 +161,151 @@ primary = number / "(" exp ")"
 number = digit+ @number
 digit = '0123456789'
 ----------
-Rule exp
-  And term ("+" term @2add / "-" term @2sub)* ''
+List exp = term ("+" term @2add / "-" term @2sub)* ''...
+  Rule exp = term ("+" term @2add / "-" term @2sub)* ''
+    Id exp
+    And term ("+" term @2add / "-" term @2sub)* ''
+      Id term
+      Any ("+" term @2add / "-" term @2sub)*
+        Or "+" term @2add / "-" term @2sub
+          And "+" term @2add
+            Char "+"
+            Id term
+            Act @2add
+          And "-" term @2sub
+            Char "-"
+            Id term
+            Act @2sub
+      Set ''
+  Rule term = factor ("*" factor @2mul / "/" factor @2div)*
     Id term
-    Any ("+" term @2add / "-" term @2sub)*
-      Or "+" term @2add / "-" term @2sub
-        And "+" term @2add
-          String "+"
-          Id term
-          Act @2add
-        And "-" term @2sub
-          String "-"
-          Id term
-          Act @2sub
-    Set ''
-Rule term
-  And factor ("*" factor @2mul / "/" factor @2div)*
+    And factor ("*" factor @2mul / "/" factor @2div)*
+      Id factor
+      Any ("*" factor @2mul / "/" factor @2div)*
+        Or "*" factor @2mul / "/" factor @2div
+          And "*" factor @2mul
+            Char "*"
+            Id factor
+            Act @2mul
+          And "/" factor @2div
+            Char "/"
+            Id factor
+            Act @2div
+  Rule factor = primary ("^" factor @2pow)?
     Id factor
-    Any ("*" factor @2mul / "/" factor @2div)*
-      Or "*" factor @2mul / "/" factor @2div
-        And "*" factor @2mul
-          String "*"
+    And primary ("^" factor @2pow)?
+      Id primary
+      Opt ("^" factor @2pow)?
+        And "^" factor @2pow
+          Char "^"
           Id factor
-          Act @2mul
-        And "/" factor @2div
-          String "/"
-          Id factor
-          Act @2div
-Rule factor
-  And primary ("^" factor @2pow)?
+          Act @2pow
+  Rule primary = number / "(" exp ")"
     Id primary
-    Opt ("^" factor @2pow)?
-      And "^" factor @2pow
-        String "^"
-        Id factor
-        Act @2pow
-Rule primary
-  Or number / "(" exp ")"
+    Or number / "(" exp ")"
+      Id number
+      And "(" exp ")"
+        Char "("
+        Id exp
+        Char ")"
+  Rule number = digit+ @number
     Id number
-    And "(" exp ")"
-      String "("
-      Id exp
-      String ")"
-Rule number
-  And digit+ @number
-    Some digit+
-      Id digit
-    Act @number
-Rule digit
-  Set '0123456789'
+    And digit+ @number
+      Some digit+
+        Id digit
+      Act @number
+  Rule digit = '0123456789'
+    Id digit
+    Set '0123456789'
 ==========
-// Unknown rule name
+-- Unknown rule name
 x = z
 y = "a"
 ----------
-Error on line 2: unknown name
+Error in tests/Binder.txt, line 222: unknown name
 x = z
     ^
 ==========
-// Duplicate rule names
+-- Duplicate rule name
 x = "x"
 y = "y"
 x = "z"
 ----------
-Error on line 4: x is already defined
+Error in tests/Binder.txt, line 232: x is already defined
 x = "z"
 ^
 ==========
-// Example sum3.pecan
-sum = number / number "+" number @2add
-number = ('0123456789')+ @read
-----------
-Rule sum
-  Or number / number "+" number @2add
-    Id number
-    And number "+" number @2add
-      Id number
-      String "+"
-      Id number
-      Act @2add
-Rule number
-  And ('0123456789')+ @read
-    Some ('0123456789')+
-      Set '0123456789'
-    Act @read
-==========
-// Error handling
+-- Error markers
 string = '"' visible* #badstring '"'
 visible = "x"
 ----------
-Rule string
-  And '"' visible* #badstring '"'
-    Set '"'
-    Any visible*
-      Id visible
-    Mark #badstring
-    Set '"'
-Rule visible
-  String "x"
+List string = '"' visible* #badstring '"'...
+  Rule string = '"' visible* #badstring '"'
+    Id string
+    And '"' visible* #badstring '"'
+      Char '"'
+      Any visible*
+        Id visible
+      Mark #badstring
+      Char '"'
+  Rule visible = "x"
+    Id visible
+    Char "x"
 ==========
-// Unicode category
+-- Unicode category
 upper = Lu
 ----------
-Rule upper
+Rule upper = Lu
+  Id upper
   Cat Lu
 ==========
-// Attempt to redefine category
+-- Attempt to redefine category
 Lu = 'x'
 ----------
-Error on line 2: Lu is a unicode id
+Error in tests/Binder.txt, line 263: expecting id, newline
 Lu = 'x'
-^^
+^
 ==========
-// Number too big
+-- Number too big
 big = 1114112
 ----------
-Error on line 2: number too big
+Error in tests/Binder.txt, line 270: code too big
 big = 1114112
       ^^^^^^^
 ==========
-// Complete scanner for pecan itself
-tokens = skip token*
-token = id / number / set / string / matcher / action / handler / key / bad
-id = name @Id skip1
-number = ('0' hex* / digit+) @Char skip1
-set = "'" ("'"! visible)* #BADSet "'" @Set skip1
-string = '"' ('"'! visible)* #BADString '"' @String skip1
-matcher = "%" name @MATCH skip1
-action = "@" (digit+ name @Act / name @READ / @Drop) skip1
-handler = "#" name @HAndLE skip1
-key = prefix skip2 / infix skip2 / postfix skip1
-prefix = "(" @RB / "[" @SB / "<" @AB
-infix = "=" @Id / "/" @SL / ".." @DD
-postfix = "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
-bad =  #BADSet Uc skip1
-skip = (space / comment / newline)* @
-skip1 = space @ (newline ([space (letter / newline)] @NL)? skip)?
-skip2 = space (newline space)? @
-name = letter alpha*
-hex = digit / 'A..F' / 'a..f'
-digit = '0..9'
-letter = 'A..Z' / 'a..z'
-alpha = letter / digit / '_-'
-newline = 10 / 133 / 8232 / 13 10 / 13 133 / 13
-visible = ' ..~'
-comment = "//" visible*
-space = " "*
+-- Empty string, set, splitter
+x = "" '' <>
 ----------
-Rule tokens
-  And skip token*
-    Id skip
-    Any token*
-      Id token
-Rule token
-  Or id / number / set / string / matcher / action / handler / key / bad
-    Id id
-    Id number
-    Id set
-    Id string
-    Id matcher
-    Id action
-    Id handler
-    Id key
-    Id bad
-Rule id
-  And name @Id skip1
-    Id name
-    Act @Id
-    Id skip1
-Rule number
-  And ('0' hex* / digit+) @Char skip1
-    Or '0' hex* / digit+
-      And '0' hex*
-        Set '0'
-        Any hex*
-          Id hex
-      Some digit+
-        Id digit
-    Act @Char
-    Id skip1
-Rule set
-  And "'" ("'"! visible)* #BADSet "'" @Set skip1
-    String "'"
-    Any ("'"! visible)*
-      And "'"! visible
-        Not "'"!
-          String "'"
-        Id visible
-    Mark #BADSet
-    String "'"
-    Act @Set
-    Id skip1
-Rule string
-  And '"' ('"'! visible)* #BADString '"' @String skip1
-    Set '"'
-    Any ('"'! visible)*
-      And '"'! visible
-        Not '"'!
-          Set '"'
-        Id visible
-    Mark #BADString
-    Set '"'
-    Act @String
-    Id skip1
-Rule matcher
-  And "%" name @MATCH skip1
-    String "%"
-    Id name
-    Act @MATCH
-    Id skip1
-Rule action
-  And "@" (digit+ name @Act / name @READ / @Drop) skip1
-    String "@"
-    Or digit+ name @Act / name @READ / @Drop
-      And digit+ name @Act
-        Some digit+
-          Id digit
-        Id name
-        Act @Act
-      And name @READ
-        Id name
-        Act @READ
-      Act @Drop
-    Id skip1
-Rule handler
-  And "#" name @HAndLE skip1
-    String "#"
-    Id name
-    Act @HAndLE
-    Id skip1
-Rule key
-  Or prefix skip2 / infix skip2 / postfix skip1
-    And prefix skip2
-      Id prefix
-      Id skip2
-    And infix skip2
-      Id infix
-      Id skip2
-    And postfix skip1
-      Id postfix
-      Id skip1
-Rule prefix
-  Or "(" @RB / "[" @SB / "<" @AB
-    And "(" @RB
-      String "("
-      Act @RB
-    And "[" @SB
-      String "["
-      Act @SB
-    And "<" @AB
-      String "<"
-      Act @AB
-Rule infix
-  Or "=" @Id / "/" @SL / ".." @DD
-    And "=" @Id
-      String "="
-      Act @Id
-    And "/" @SL
-      String "/"
-      Act @SL
-    And ".." @DD
-      String ".."
-      Act @DD
-Rule postfix
-  Or "!" @EM / "?" @QM / "+" @PL / "*" @ST / ")" @RE / "]" @SE / ">" @AE
-    And "!" @EM
-      String "!"
-      Act @EM
-    And "?" @QM
-      String "?"
-      Act @QM
-    And "+" @PL
-      String "+"
-      Act @PL
-    And "*" @ST
-      String "*"
-      Act @ST
-    And ")" @RE
-      String ")"
-      Act @RE
-    And "]" @SE
-      String "]"
-      Act @SE
-    And ">" @AE
-      String ">"
-      Act @AE
-Rule bad
-  And #BADSet Uc skip1
-    Mark #BADSet
-    Cat Uc
-    Id skip1
-Rule skip
-  And (space / comment / newline)* @
-    Any (space / comment / newline)*
-      Or space / comment / newline
-        Id space
-        Id comment
-        Id newline
-    Drop @
-Rule skip1
-  And space @ (newline ([space (letter / newline)] @NL)? skip)?
-    Id space
-    Drop @
-    Opt (newline ([space (letter / newline)] @NL)? skip)?
-      And newline ([space (letter / newline)] @NL)? skip
-        Id newline
-        Opt ([space (letter / newline)] @NL)?
-          And [space (letter / newline)] @NL
-            Try [space (letter / newline)]
-              And space (letter / newline)
-                Id space
-                Or letter / newline
-                  Id letter
-                  Id newline
-            Act @NL
-        Id skip
-Rule skip2
-  And space (newline space)? @
-    Id space
-    Opt (newline space)?
-      And newline space
-        Id newline
-        Id space
-    Drop @
-Rule name
-  And letter alpha*
-    Id letter
-    Any alpha*
-      Id alpha
-Rule hex
-  Or digit / 'A..F' / 'a..f'
-    Id digit
-    Range 'A..F'
-      Set 'A.
-      Set .F'
-    Range 'a..f'
-      Set 'a.
-      Set .f'
-Rule digit
-  Range '0..9'
-    Set '0.
-    Set .9'
-Rule letter
-  Or 'A..Z' / 'a..z'
-    Range 'A..Z'
-      Set 'A.
-      Set .Z'
-    Range 'a..z'
-      Set 'a.
-      Set .z'
-Rule alpha
-  Or letter / digit / '_-'
-    Id letter
-    Id digit
-    Set '_-'
-Rule newline
-  Or 10 / 133 / 8232 / 13 10 / 13 133 / 13
-    Number 10
-    Number 133
-    Number 8232
-    And 13 10
-      Number 13
-      Number 10
-    And 13 133
-      Number 13
-      Number 133
-    Number 13
-Rule visible
-  Range ' ..~'
-    Set ' .
-    Set .~'
-Rule comment
-  And "//" visible*
-    String "//"
-    Any visible*
-      Id visible
-Rule space
-  Any " "*
-    String " "
+Rule x = "" '' <>
+  Id x
+  And "" '' <>
+    Success ""
+    Set ''
+    End <>
+==========
+-- Singleton string or set becomes Char
+x = "a" 'b'
+----------
+Rule x = "a" 'b'
+  Id x
+  And "a" 'b'
+    Char "a"
+    Char 'b'
+==========
+-- Unnamed action becomes Drop
+x = @ @1 @2 @3
+----------
+Rule x = @ @1 @2 @3
+  Id x
+  And @ @1 @2 @3
+    Act @
+    Act @1
+    Act @2
+    Act @3
+==========
+-- Text and tokens
+x = "a" %b
+----------
+Error in tests/Binder.txt, line 307: there is both text and token input
+x = "a" %b
+^^^^^^^^^^

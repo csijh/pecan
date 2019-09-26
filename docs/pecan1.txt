@@ -2,7 +2,7 @@
 // Made suitable for pecan-paper.
 
 // Pecan grammar for Pecan grammars: rules
-pecan = skip rules #end <>
+grammar = skip rules #end <>
 rules = rule (rules @2list)?
 rule = #id id equals expression newline @2rule skip
 
@@ -22,9 +22,9 @@ id = letter alpha* @id blank
 act = '@' digits? alpha* @act blank
 mark = "#" initial alpha* @mark blank
 tag = "%" initial alpha* @tag blank
-codes = [digits '.'] #dot '.' digits @range blank
+codes = [digits '.'] #dot '.' digits @codes blank
 code = digits @code blank
-range = ["'" noquote ".."] noquote "'" @range blank
+range = ["'" noquote ".."] noquote #quote "'" @range blank
 set = "'" noquote* #quote "'" @set blank
 string = '"' nodquote* #quote '"' @string blank
 split = '<' noangle* #gt '>' @split blank
@@ -399,7 +399,7 @@ r1 = 0..127
 r2 = 'a..z'
 ----------
 id r1
-range 0..127
+codes 0..127
 rule
 id r2
 range 'a..z'

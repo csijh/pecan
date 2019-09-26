@@ -328,7 +328,7 @@ r2 = 'a..z'
 List r1 = 0..127...
   Rule r1 = 0..127
     Id r1
-    Range 0..127
+    Codes 0..127
   Rule r2 = 'a..z'
     Id r2
     Range 'a..z'
@@ -603,6 +603,32 @@ Rule end = #end <>
     Mark #end
     Split <>
 ==========
+-- Expecting end-of-file
+x = y
+?
+----------
+Error in tests/Parser.txt, line 608: expecting end of text, id, newline
+?
+^
+==========
+-- Splitters
+x = <abc> y / z
+----------
+Rule x = <abc> y / z
+  Id x
+  Or <abc> y / z
+    And <abc> y
+      Split <abc>
+      Id y
+    Id z
+==========
+-- Incomplete splitter
+x = <abc
+----------
+Error in tests/Parser.txt, line 626: expecting greater than sign
+x = <abc
+        ^
+==========
 -- Underscore
 a_b = xy_
 ----------
@@ -627,6 +653,6 @@ Rule bs = '\\'
 -- Empty tag name
 x = y %
 ----------
-Error in tests/Parser.txt, line 628: expecting letter
+Error in tests/Parser.txt, line 654: expecting letter
 x = y %
        ^

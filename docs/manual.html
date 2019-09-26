@@ -521,8 +521,8 @@ deciding which alternative to take.</p>
 
 <p>Text notations are used to match input characters. Single quotes indicate
 individual characters, e.g. <code>'x'</code> matches the letter <code>x</code>.
-Several characters in single quotes indicate a set of
-alternatives, any one of which can be matched.  For example:</p>
+Several characters in single quotes indicate a set of distinct alternatives, any
+one of which can be matched.  For example:</p>
 
 <pre>op = '+-*/'
 digit = '0123456789'
@@ -561,10 +561,12 @@ is used. If it contains two code points, writing it as <code>"é"</code> is more
 likely to convey the intended meaning. Similarly, <code>'éè'</code> is probably
 better written as <code>"é" / "è"</code>.
 
-<p>There is no escape convention within single or double quotes. To represent
-control characters, or to represent Unicode characters using plain text,
-integers are used. An integer on its own represents a single character, using
-its decimal character code. For example:</p>
+<p>There is no escape convention within single or double quotes, because common
+escape conventions, apart from being unnecessarily complicated and error prone,
+can't support variable-length character codes, as is desirable if they are
+decimal. Instead, to represent control characters, or to represent Unicode
+characters using plain text, integers are used. An integer on its own represents
+a single character, using its decimal character code. For example:</p>
 
 <pre>pi = 960
 newline = 13? 10
@@ -586,7 +588,8 @@ ascii = 0..127
 
 <p>The first is a variation of the set notation, with a single character either
 side of two dots. The second is a dot-dot operator between two numerical
-character codes.</p>
+character codes. They are atomic tokens, so there are no spaces either side of
+the dots.</p>
 
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
