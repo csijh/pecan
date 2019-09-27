@@ -1,73 +1,83 @@
-// Flags shown are SN,SP,FN,FP: can succeed/fail without/with progressing.
-// Empty string: succeeds without progressing
+-- Empty string: succeeds without progressing
 x = ""
 ----------
-Rule x 1000
-  String "" 1000
+Rule x = "" CI,SN
+  Id x SN
+  Success "" SN
 ==========
-// Empty set: fails without progressing
+-- Empty set: fails without progressing
 x = ''
 ----------
-Rule x 0010
-  Set '' 0010
+Rule x = '' CI,FN
+  Id x FN
+  Fail '' FN
 ==========
-// Numerical character: succeeds and progresses or fails without progressing
+-- Character code: succeeds and progresses or fails without progressing
 x = 42
 ----------
-Rule x 0110
-  Number 42 0110
+Rule x = 42 CI,FN,SP
+  Id x FN,SP
+  Code 42 FN,SP
 ==========
-// String: SP or FN
-x = "a"
+-- Strings: FN,SP
+x = "a" "ab"
 ----------
-Rule x 0110
-  String "a" 0110
+Rule x = "a" "ab" CI,FN,SP,FP
+  Id x FN,SP,FP
+  And "a" "ab" FN,SP,FP
+    Char "a" FN,SP
+    String "ab" FN,SP
 ==========
-// Set: SP or FN
-x = 'a'
+-- Sets: SP or FN
+x = 'a' 'ab'
 ----------
-Rule x 0110
-  Set 'a' 0110
+Rule x = 'a' 'ab' CI,FN,SP,FP
+  Id x FN,SP,FP
+  And 'a' 'ab' FN,SP,FP
+    Char 'a' FN,SP
+    Set 'ab' FN,SP
 ==========
-// Empty string then empty string: SN
+-- Empty string then empty string: SN
 x = "" ""
 ----------
-Rule x 1000
-  And "" "" 1000
-    String "" 1000
-    String "" 1000
+Rule x = "" "" CI,SN
+  Id x SN
+  And "" "" SN
+    Success "" SN
+    Success "" SN
 ==========
-// Normal rule without recursion
+-- Normal rule without recursion
 x = 'a'
 ----------
-Rule x 0110
-  Set 'a' 0110
+Rule x = 'a' CI,FN,SP
+  Id x FN,SP
+  Char 'a' FN,SP
 ==========
-// Simple left recursive rule
+-- Simple left recursive rule
 x = x 'a'
 ----------
-Error on line 2: potential infinite loop
+Error in tests/Checker.txt, line 57: potential infinite loop
 x = x 'a'
-    ^
+^
 ==========
-// Mutual recursion
+-- Mutual recursion
 x = y "abc"
 z = "123"
 y = x "ABC"
 ----------
-Error on line 2: potential infinite loop
+Error in tests/Checker.txt, line 64: potential infinite loop
 x = y "abc"
-    ^
+^
 ==========
-// Mutual recursion masked by optional expression
+-- Mutual recursion masked by optional expression
 x = "a" ? y
 y = "A" ? x "ABC"
 ----------
-Error on line 2: potential infinite loop
+Error in tests/Checker.txt, line 73: potential infinite loop
 x = "a" ? y
-          ^
+^
 ==========
-// Mutual recursion masked by remote optional expression
+-- Mutual recursion masked by remote optional expression
 x = a y
 z = "123"
 y = "A" ? x "ABC"
@@ -75,108 +85,117 @@ a = b
 b = c
 c = "a" ?
 ----------
-Error on line 2: potential infinite loop
+Error in tests/Checker.txt, line 81: potential infinite loop
 x = a y
-      ^
-==========
-// Text input and token input
-x = [%a] 'b'
-----------
-Error on line 2: there is both text and token input
-x = [%a] 'b'
 ^
 ==========
-// Try: SP or FN or FP
+-- Text input and token input
+x = [%a] 'b'
+----------
+Error in tests/Checker.txt, line 93: there is both text and token input
+x = [%a] 'b'
+^^^^^^^^^^^^
+==========
+-- Try: FN,SP,FP
 x = [%a] %b
 ----------
-Rule x 0111
-  And [%a] %b 0111
-    Try [%a] 0110
-      Tag %a 0110
-    Tag %b 0110
+Rule x = [%a] %b TI,FN,SP,FP
+  Id x FN,SP,FP
+  And [%a] %b FN,SP,FP
+    Try [%a] FN,SP
+      Tag %a FN,SP
+    Tag %b FN,SP
 ==========
-// Positive lookahead: SP or FN
+-- Positive lookahead: SN,FN
 x = (%a)& %b
 ----------
-Rule x 0110
-  And (%a)& %b 0110
-    Has (%a)& 1010
-      Tag %a 0110
-    Tag %b 0110
+Rule x = (%a)& %b TI,FN,SP
+  Id x FN,SP
+  And (%a)& %b FN,SP
+    Has (%a)& SN,FN
+      Tag %a FN,SP
+    Tag %b FN,SP
 ==========
-// Negative lookahead: SP or FN
+-- Negative lookahead: SN,FN
 x = (%a)! %b
 ----------
-Rule x 0110
-  And (%a)! %b 0110
-    Not (%a)! 1010
-      Tag %a 0110
-    Tag %b 0110
+Rule x = (%a)! %b TI,FN,SP
+  Id x FN,SP
+  And (%a)! %b FN,SP
+    Not (%a)! SN,FN
+      Tag %a FN,SP
+    Tag %b FN,SP
 ==========
-// Action on left of choice (legal in Pecan 5)
+-- Action on left of choice (legal in Pecan 5, warning when compiling)
 x = @a 'a' / 'b'
 ----------
-Rule x 0110
-  Or @a 'a' / 'b' 0110
-    And @a 'a' 0110
-      Act @a 1000
-      Set 'a' 0110
-    Set 'b' 0110
+Rule x = @a 'a' / 'b' CI,FN,SP,AA,AB
+  Id x FN,SP,AA,AB
+  Or @a 'a' / 'b' FN,SP,AA,AB
+    And @a 'a' FN,SP,AA,AB
+      Act @a SN,AA,AB
+      Char 'a' FN,SP
+    Char 'b' FN,SP
 ==========
-// Expression which succeeds without progressing, repeated in an infinite loop
+-- Expression which succeeds without progressing, repeated in an infinite loop
 x = (@a @2b)*
 ----------
-Error on line 2: potential infinite loop
+Error in tests/Checker.txt, line 141: potential infinite loop
 x = (@a @2b)*
-    ^^^^^^^^^
+^
 ==========
-// Expressions
+-- Expressions
 exp = term ('+' term @2add / '-' term @2sub)* 'eof'
 term = factor ('*' factor @2mul / '/' factor @2div)*
 factor = primary ('^' factor @2pow)?
 primary = 'number' @number / '(' exp ')'
 ----------
-Rule exp 0111
-  And term ('+' term @2add / '-' term @2sub)* 'eof' 0111
-    Id term 0111
-    Any ('+' term @2add / '-' term @2sub)* 1101
-      Or '+' term @2add / '-' term @2sub 0111
-        And '+' term @2add 0111
-          Set '+' 0110
-          Id term 0111
-          Act @2add 1000
-        And '-' term @2sub 0111
-          Set '-' 0110
-          Id term 0111
-          Act @2sub 1000
-    Set 'eof' 0110
-Rule term 0111
-  And factor ('*' factor @2mul / '/' factor @2div)* 0111
-    Id factor 0111
-    Any ('*' factor @2mul / '/' factor @2div)* 1101
-      Or '*' factor @2mul / '/' factor @2div 0111
-        And '*' factor @2mul 0111
-          Set '*' 0110
-          Id factor 0111
-          Act @2mul 1000
-        And '/' factor @2div 0111
-          Set '/' 0110
-          Id factor 0111
-          Act @2div 1000
-Rule factor 0111
-  And primary ('^' factor @2pow)? 0111
-    Id primary 0111
-    Opt ('^' factor @2pow)? 1101
-      And '^' factor @2pow 0111
-        Set '^' 0110
-        Id factor 0111
-        Act @2pow 1000
-Rule primary 0111
-  Or 'number' @number / '(' exp ')' 0111
-    And 'number' @number 0110
-      Set 'number' 0110
-      Act @number 1000
-    And '(' exp ')' 0111
-      Set '(' 0110
-      Id exp 0111
-      Set ')' 0110
+List exp = term ('+' term @2add / '-' term @2sub)* 'eof'... CI
+  Rule exp = term ('+' term @2add / '-' term @2sub)* 'eof' FN,SP,FP,AA
+    Id exp FN,SP,FP,AA
+    And term ('+' term @2add / '-' term @2sub)* 'eof' FN,SP,FP,AA
+      Id term FN,SP,FP,AA
+      Any ('+' term @2add / '-' term @2sub)* SN,SP,FP,AA
+        Or '+' term @2add / '-' term @2sub FN,SP,FP,AA
+          And '+' term @2add FN,SP,FP,AA
+            Char '+' FN,SP
+            Id term FN,SP,FP,AA
+            Act @2add SN,AA,AB
+          And '-' term @2sub FN,SP,FP,AA
+            Char '-' FN,SP
+            Id term FN,SP,FP,AA
+            Act @2sub SN,AA,AB
+      Set 'eof' FN,SP
+  Rule term = factor ('*' factor @2mul / '/' factor @2div)* FN,SP,FP,AA
+    Id term FN,SP,FP,AA
+    And factor ('*' factor @2mul / '/' factor @2div)* FN,SP,FP,AA
+      Id factor FN,SP,FP,AA
+      Any ('*' factor @2mul / '/' factor @2div)* SN,SP,FP,AA
+        Or '*' factor @2mul / '/' factor @2div FN,SP,FP,AA
+          And '*' factor @2mul FN,SP,FP,AA
+            Char '*' FN,SP
+            Id factor FN,SP,FP,AA
+            Act @2mul SN,AA,AB
+          And '/' factor @2div FN,SP,FP,AA
+            Char '/' FN,SP
+            Id factor FN,SP,FP,AA
+            Act @2div SN,AA,AB
+  Rule factor = primary ('^' factor @2pow)? FN,SP,FP,AA
+    Id factor FN,SP,FP,AA
+    And primary ('^' factor @2pow)? FN,SP,FP,AA
+      Id primary FN,SP,FP,AA
+      Opt ('^' factor @2pow)? SN,SP,FP,AA
+        And '^' factor @2pow FN,SP,FP,AA
+          Char '^' FN,SP
+          Id factor FN,SP,FP,AA
+          Act @2pow SN,AA,AB
+  Rule primary = 'number' @number / '(' exp ')' FN,SP,FP,AA
+    Id primary FN,SP,FP,AA
+    Or 'number' @number / '(' exp ')' FN,SP,FP,AA
+      And 'number' @number FN,SP,AA
+        Set 'number' FN,SP
+        Act @number SN,AA,AB
+      And '(' exp ')' FN,SP,FP,AA
+        Char '(' FN,SP
+        Id exp FN,SP,FP,AA
+        Char ')' FN,SP

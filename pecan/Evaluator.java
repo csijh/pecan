@@ -36,7 +36,7 @@ x y where x is an action (or SN and action) and y is FN
 public class Evaluator implements Testable {
     private boolean tracing = false, skipTrace = false;
     private String grammar;
-    private boolean textInput, ok;
+    private boolean charInput, ok;
     private String input;
     private String[] tokens;
     private Node root;
@@ -66,7 +66,7 @@ public class Evaluator implements Testable {
             grammar = input.substring(9);
             Stacker stacker = new Stacker();
             root = stacker.run(grammar);
-            textInput = root.has(TextInput);
+            charInput = root.has(CI);
             if (root.op() == Error) return root.note();
             else return null;
         }
@@ -79,7 +79,7 @@ public class Evaluator implements Testable {
     // Get the Evaluator ready to run, with the given input.
     private void prepare(String text) {
         input = text;
-        if (root.has(TokenInput)) tokens = text.split("\\s+");
+        if (root.has(TI)) tokens = text.split("\\s+");
         ok = true;
         start = in = out = marked = lookahead = 0;
         failures = new TreeSet<>();
@@ -103,7 +103,7 @@ public class Evaluator implements Testable {
                 else s += ", ";
                 s += mark;
             }
-            if (textInput) output.append(Node.err(input, in, in, s));
+            if (charInput) output.append(Node.err(input, in, in, s));
             else {
                 output.append("Error at token " + in);
                 if (s.length() > 0) output.append(": " + s);
@@ -419,7 +419,7 @@ public class Evaluator implements Testable {
         if (node.op() == Drop) { start = oldIn; return; }
         if (node.op() != Act) throw new Error("Expecting Act");
         output.append(node.name());
-        if (textInput && oldIn > start) {
+        if (charInput && oldIn > start) {
             output.append(" " + input.substring(start, oldIn));
         }
         output.append("\n");

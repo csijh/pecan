@@ -42,16 +42,26 @@ class Node {
     private int NET, LOW, PC, LEN;
     private String note = "";
 
-    // Flag constants. See the relevant analysis classes.
+    // Flag constants (char input, token input, success or fail without or with
+    // progress, well formed, has actions, ends with errors, has actions at the
+    // beginning). See the relevant analysis classes.
     public static enum Flag {
-        TextInput, TokenInput, SN, FN, SP, FP, WF, AA, AB, BP;
+        Changed, CI, TI, SN, FN, SP, FP, WF, AA, EE, AB;
         int bit() { return 1 << ordinal(); }
     }
 
-    // Get, set or unset a flag.
-    boolean has(Flag f) { return (flags & f.bit()) != 0; }
-    void set(Flag f) { flags |= f.bit(); }
-    void unset(Flag f) { flags &= ~f.bit(); }
+    // Get, set or unset a flag. Set Changed if any other flag changes.
+    boolean has(Flag f) {
+        return (flags & f.bit()) != 0;
+    }
+    void set(Flag f) {
+        if (! has(f)) flags = flags | Flag.Changed.bit() | f.bit();
+    }
+    void unset(Flag f) {
+        if (! has(f)) return;
+        flags = flags & ~f.bit();
+        if (f != Flag.Changed) flags = flags | Flag.Changed.bit();
+    }
 
     // Get/set counts and get bitsets.
     int NET() { return NET; }

@@ -17,7 +17,7 @@ progress". Nodes are annotated with the flags:
   FP   =   can fail with progress
   WF   =   well-formed
 
-Validity WF(x) is calculated by iterating to a fixed point, using:
+These, and validity WF(x), are calculated by iterating to a fixed point, using:
 
   WF(x y) = WF(x) & (SN(x) => WF(y))
   WF(x/y) = WF(x) & WF(y)
@@ -26,247 +26,353 @@ Validity WF(x) is calculated by iterating to a fixed point, using:
   WF(x+) = WF(xx*) = WF(x) & ~SN(x)
   WF(x!) = WF(x)
 
-A minor change from version 0.4 is that if a left hand alternative can't fail
-with no progress, so that the right hand alternative is inaccessible, it is no
-longer reported as an error (so that transformations remain valid).
+A change from version 0.4 is that some errors are now deferred and given as
+warnings just before compiling. This is for uniformity and consistency,
+especially where transformations are concerned.  Specifically, if a left hand
+alternative always progresses when it fails, so that the right hand alternative
+is inaccessible, that becomes a late warning. If there is an action at the start
+of the left hand item in a choice, as in (@a x / y), that also becomes a late
+warning. There are some further flag annotations:
 
-A major change from version 0.4 is that actions are now allowed at the start of
-the left hand item in a choice, as in (@a x / y). This is for uniformity and
-consistency, especially where transformations are concerned. To obtain the
-effect of undoing the action if the left choice mismatches, actions are delayed
-until progress is made in the input. There are two further flag annotations:
+  EE   =   can end in an error marker
+  AA   =   can act (or discard)
+  AB   =   can act (or discard) before progressing
 
-  AA   =   involves at least one action (or discard)
-  AB   =   can act (or discard) before consuming any input
-
-These are used, or can potentially be used in the future, for optimisations. */
+ The first two are to check whether [x] needs to be translated to x& x. The
+ third is to check for @a x / y. These are conservative checks, e.g. AA and AB
+ could be tracked more tightly by tracking AFN, ASN, AFP, ASP.  */
 
 class Checker implements Testable {
-    private String source;
+    private boolean switchTest;
+    private Source source;
+    private Node root;
     private boolean changed;
 
+    // Do unit testing on the Binder class, then check the switches are
+    // complete, then run the Checker unit tests.
     public static void main(String[] args) {
         if (args.length == 0) Binder.main(args);
-        if (args.length == 0) Test.run(new Checker());
-        else Test.run(new Parser(), Integer.parseInt(args[0]));
+        Checker checker = new Checker();
+        checker.switchTest = true;
+        for (Op op : Op.values()) {
+            Node node = new Node(op, null, 0, 1);
+            checker.scanNode(node);
+        }
+        checker.switchTest = false;
+        Test.run(new Checker(), args);
     }
 
-    public String test(String g) {
-        try { return "" + run(g); }
-        catch (Exception e) { return e.getMessage() + "\n"; }
-    }
-
-    // Run the checker on the given source text.
-    Node run(String text) {
+    // Run the checker on the given source text. Repeat scanning until no flags
+    // change. Check and report any problems.
+    public Node run(Source text) {
         source = text;
         Binder binder = new Binder();
-        Node root = binder.run(text);
+        root = binder.run(text);
         if (root.op() == Error) return root;
         changed = true;
-        while (changed) { changed = false; progress(root); }
-        changed = true;
-        while (changed) { changed = false; valid(root); }
-        changed = true;
-        while (changed) { changed = false; acting(root); }
-        try { check(root); }
-        catch (Exception e) {
-            Node err = new Node(Error, text, 0, 0);
-            err.note(e.getMessage());
-            return err;
-        }
+        while (changed) { changed = false; scan(root); }
+        check(root);
+        if (root.op() != Error) annotate(root);
         return root;
     }
 
-    // Check whether a node has the flags SN, SP, FN, FP
-    private void progress(Node node) {
-        boolean xSN = false, ySN = false, oSN = node.has(SN), nSN = false;
-        boolean xSP = false, ySP = false, oSP = node.has(SP), nSP = false;
-        boolean xFN = false, yFN = false, oFN = node.has(FN), nFN = false;
-        boolean xFP = false, yFP = false, oFP = node.has(FP), nFP = false;
-        Node x = node.left(), y = node.right();
-        if (x != null) {
-            progress(x);
-            xSN = x.has(SN); xSP = x.has(SP); xFN = x.has(FN); xFP = x.has(FP);
-        }
-        if (y != null) {
-            progress(y);
-            ySN = y.has(SN); ySP = y.has(SP); yFN = y.has(FN); yFP = y.has(FP);
-        }
-        switch (node.op()) {
-        case Id:
-            nSN = node.ref().has(SN);
-            nSP = node.ref().has(SP);
-            nFN = node.ref().has(FN);
-            nFP = node.ref().has(FP);
-            break;
-        case Drop: case Act: case Mark:
-            nSN = true;
-            break;
-        case Tag: case Number: case Range: case Cat: case End:
-            nSP = true;
-            nFN = true;
-            break;
-        // A string has implicit backtracking, e.g. "xy" == ['x' 'y']
-        case String:
-            boolean empty = node.text().equals("\"\"");
-            if (empty) { nSN = true; break; }
-            nSP = true;
-            nFN = true;
-            break;
-        case Set:
-            if (! node.text().equals("''")) nSP = true;
-            nFN = true;
-            break;
-        case Rule:
-            nSN = xSN;
-            nSP = xSP;
-            nFN = xFN;
-            nFP = xFP;
-            break;
-        case And:
-            nSN = xSN && ySN;
-            nSP = xSP && ySP || xSP && ySN || xSN && ySP;
-            nFN = xFN || xSN && yFN;
-            nFP = xFP || xSN && yFP || xSP && yFN || xSP && yFP;
-            break;
-        case Or:
-            nSN = xSN || xFN && ySN;
-            nSP = xSP || xFN && ySP;
-            nFN = xFN && yFN;
-            nFP = xFP || xFN && yFP;
-            break;
-        case Opt:
-            nSN = xFN || xSN;
-            nSP = xSP;
-            nFP = xFP;
-            break;
-        case Any:
-            nSN = xFN;
-            nSP = xSP && xFN;
-            nFP = xFP;
-            break;
-        case Some:
-            nSP = xSP && xFN;
-            nFN = xFN;
-            nFP = xFP;
-            break;
-        case Try:
-            nSN = xSN;
-            nSP = xSP;
-            nFN = xFN || xFP;
-            break;
-        case Has:
-            nSN = xSN || xSP;
-            nFN = xFN || xFP;
-            break;
-        case Not:
-            nSN = xFN || xFP;
-            nFN = xSN || xSP;
-            break;
-        case Error:
-            break;
-        default:
-            throw new Error("Type " + node.op() + " not implemented");
-        }
-        if (nSN != oSN || nSP != oSP || nFN != oFN || nFP != oFP) {
-            changed = true;
-        }
-        if (nSN) node.set(SN);
-        if (nSP) node.set(SP);
-        if (nFN) node.set(FN);
-        if (nFP) node.set(FP);
-        node.note(
-            (nSN ? "1" : "0") +
-            (nSP ? "1" : "0") +
-            (nFN ? "1" : "0") +
-            (nFP ? "1" : "0")
-        );
+    // Traverse the tree, bottom up, and check each node.
+    private void scan(Node node) {
+        if (node.left() != null) scan(node.left());
+        if (node.right() != null) scan(node.right());
+        scanNode(node);
     }
 
-    // Check whether a node is well-formed.
-    private void valid(Node node) {
-        boolean xWF = false, yWF = false, nWF = false, oWF = node.has(WF);
-        Node x = node.left(), y = node.right();
-        if (x != null) { valid(x); xWF = x.has(WF); }
-        if (y != null) { valid(y); yWF = y.has(WF); }
-        switch (node.op()) {
-        case Id:    nWF = node.ref().has(WF);           break;
-        case Rule: case Opt: case Try: case Has:
-        case Not:   nWF = xWF;                          break;
-        case Mark: case Number: case Range: case Cat:
-        case String: case Set: case Drop: case Act: case End:
-        case Tag:   nWF = true;                         break;
-        case And:   nWF = xWF && (yWF || ! x.has(SN));  break;
-        case Or:    nWF = xWF && yWF;                   break;
-        case Any:
-        case Some:  nWF = xWF && ! x.has(SN);           break;
-        case Error:                                     break;
-        default:
-            throw new Error("Type " + node.op() + " not implemented");
+    // The main switch. Check if any of the flags change.
+    private void scanNode(Node node) {
+        node.unset(Changed);
+        switch(node.op()) {
+        case Error: case Temp: case Include: break;
+        case List: scanList(node); break;
+        case Rule: scanRule(node); break;
+        case Id: scanId(node); break;
+        case Act: scanAct(node); break;
+        case Drop: scanAct(node); break;
+        case Mark: scanMark(node); break;
+        case And: scanAnd(node); break;
+        case Or: scanOr(node); break;
+        case Opt: scanOpt(node); break;
+        case Any: scanAny(node); break;
+        case Some: scanSome(node); break;
+        case Try: scanTry(node); break;
+        case Tag: case Char: case String: case Set: scanMatch(node); break;
+        case Cat: case Range: case Code: case Codes: scanMatch(node); break;
+        case Success: scanSuccess(node); break;
+        case Fail: scanFail(node); break;
+        case Split: case End: scanSplit(node); break;
+        case Has: scanHas(node); break;
+        case Not: scanNot(node); break;
+        default: assert false : "Unexpected node type " + node.op(); break;
         }
-        if (nWF && ! oWF) changed = true;
-        if (nWF) node.set(WF);
+        if (node.has(Changed)) changed = true;
+    }
+
+    private void scanList(Node node) {
+        if (switchTest) return;
+        node.set(WF);
+    }
+
+    private void scanRule(Node node) {
+        if (switchTest) return;
+        if (node.right().has(SN)) node.set(SN);
+        if (node.right().has(SP)) node.set(SP);
+        if (node.right().has(FN)) node.set(FN);
+        if (node.right().has(FP)) node.set(FP);
+        if (node.right().has(WF)) node.set(WF);
+        if (node.right().has(EE)) node.set(EE);
+        if (node.right().has(AA)) node.set(AA);
+        if (node.right().has(AB)) node.set(AB);
+    }
+
+    private void scanId(Node node) {
+        if (switchTest) return;
+        if (node.ref().has(SN)) node.set(SN);
+        if (node.ref().has(SP)) node.set(SP);
+        if (node.ref().has(FN)) node.set(FN);
+        if (node.ref().has(FP)) node.set(FP);
+        if (node.ref().has(WF)) node.set(WF);
+        if (node.ref().has(EE)) node.set(EE);
+        if (node.ref().has(AA)) node.set(AA);
+        if (node.ref().has(AB)) node.set(AB);
+    }
+
+    // Act or Drop.
+    private void scanAct(Node node) {
+        if (switchTest) return;
+        node.set(SN);
+        node.set(WF);
+        node.set(AA);
+        node.set(AB);
+    }
+
+    private void scanMark(Node node) {
+        if (switchTest) return;
+        node.set(SN);
+        node.set(WF);
+        node.set(EE);
+    }
+
+    // Split or End, a lookahead.
+    private void scanSplit(Node node) {
+        if (switchTest) return;
+        node.set(SN);
+        node.set(FN);
+        node.set(WF);
+    }
+
+    // Tag, Char, String, Set, Cat, Range, Code, Codes.
+    // A string has implicit backtracking, e.g. "xy" == ['x' 'y']
+    private void scanMatch(Node node) {
+        if (switchTest) return;
+        node.set(SP);
+        node.set(FN);
+        node.set(WF);
+    }
+
+    // Empty string ""
+    private void scanSuccess(Node node) {
+        if (switchTest) return;
+        node.set(SN);
+        node.set(WF);
+    }
+
+    // Empty set ''
+    private void scanFail(Node node) {
+        if (switchTest) return;
+        node.set(FN);
+        node.set(WF);
+    }
+
+    // x y
+    private void scanAnd(Node node) {
+        if (switchTest) return;
+        Node x = node.left(), y = node.right();
+        boolean xSN = x.has(SN), ySN = y.has(SN);
+        boolean xSP = x.has(SP), ySP = y.has(SP);
+        boolean xFN = x.has(FN), yFN = y.has(FN);
+        boolean xFP = x.has(FP), yFP = y.has(FP);
+        boolean xWF = x.has(WF), yWF = y.has(WF);
+        boolean xAA = x.has(AA), yAA = y.has(AA);
+        boolean xEE = x.has(EE), yEE = y.has(EE);
+        boolean xAB = x.has(AB), yAB = y.has(AB);
+        if (xSN && ySN) node.set(SN);
+        if (xSP && ySP || xSP && ySN || xSN && ySP) node.set(SP);
+        if (xFN || xSN && yFN) node.set(FN);
+        if (xFP || xSN && yFP || xSP && yFN || xSP && yFP) node.set(FP);
+        if (xWF && (yWF || ! xSN)) node.set(WF);
+        if (xEE && (ySN || yFN) || yEE) node.set(EE);
+        if (xAA || yAA) node.set(AA);
+        if (xAB || xSN && yAB) node.set(AB);
+    }
+
+    // x / y
+    private void scanOr(Node node) {
+        if (switchTest) return;
+        Node x = node.left(), y = node.right();
+        boolean xSN = x.has(SN), ySN = y.has(SN);
+        boolean xSP = x.has(SP), ySP = y.has(SP);
+        boolean xFN = x.has(FN), yFN = y.has(FN);
+        boolean xFP = x.has(FP), yFP = y.has(FP);
+        boolean xWF = x.has(WF), yWF = y.has(WF);
+        boolean xAA = x.has(AA), yAA = y.has(AA);
+        boolean xEE = x.has(EE), yEE = y.has(EE);
+        boolean xAB = x.has(AB), yAB = y.has(AB);
+        if (xSN || xFN && ySN) node.set(SN);
+        if (xSP || xFN && ySP) node.set(SP);
+        if (xFN && yFN) node.set(FN);
+        if (xFP || xFN && yFP) node.set(FP);
+        if (xWF && yWF) node.set(WF);
+        if (xEE || yEE) node.set(EE);
+        if (xAA || yAA) node.set(AA);
+        if (xAB || xFN && yAB) node.set(AB);
+    }
+
+    // x?
+    private void scanOpt(Node node) {
+        if (switchTest) return;
+        Node x = node.left();
+        boolean xSN = x.has(SN);
+        boolean xSP = x.has(SP);
+        boolean xFN = x.has(FN);
+        boolean xFP = x.has(FP);
+        boolean xWF = x.has(WF);
+        boolean xEE = x.has(EE);
+        boolean xAA = x.has(AA);
+        boolean xAB = x.has(AB);
+        if (xFN || xSN) node.set(SN);
+        if (xSP) node.set(SP);
+        if (xFP) node.set(FP);
+        if (xWF) node.set(WF);
+        if (xEE) node.set(EE);
+        if (xAA) node.set(AA);
+        if (xAB) node.set(AB);
+    }
+
+    // x*
+    private void scanAny(Node node) {
+        if (switchTest) return;
+        Node x = node.left();
+        boolean xSN = x.has(SN);
+        boolean xSP = x.has(SP);
+        boolean xFN = x.has(FN);
+        boolean xFP = x.has(FP);
+        boolean xWF = x.has(WF);
+        boolean xEE = x.has(EE);
+        boolean xAA = x.has(AA);
+        boolean xAB = x.has(AB);
+        if (xFN) node.set(SN);
+        if (xSP && xFN) node.set(SP);
+        if (xFP) node.set(FP);
+        if (xWF && ! xSN) node.set(WF);
+        if (xEE) node.set(EE);
+        if (xAA) node.set(AA);
+        if (xAB) node.set(AB);
+    }
+
+    // x+
+    private void scanSome(Node node) {
+        if (switchTest) return;
+        Node x = node.left();
+        boolean xSN = x.has(SN);
+        boolean xSP = x.has(SP);
+        boolean xFN = x.has(FN);
+        boolean xFP = x.has(FP);
+        boolean xWF = x.has(WF);
+        boolean xEE = x.has(EE);
+        boolean xAA = x.has(AA);
+        boolean xAB = x.has(AB);
+        if (xSP && xFN) node.set(SP);
+        if (xFN) node.set(FN);
+        if (xFP) node.set(FP);
+        if (xWF && ! xSN) node.set(WF);
+        if (xEE) node.set(EE);
+        if (xAA) node.set(AA);
+        if (xAB) node.set(AB);
+    }
+
+    // [x] = x& x
+    private void scanTry(Node node) {
+        if (switchTest) return;
+        Node x = node.left();
+        boolean xSN = x.has(SN);
+        boolean xSP = x.has(SP);
+        boolean xFP = x.has(FP);
+        boolean xFN = x.has(FN);
+        boolean xWF = x.has(WF);
+        boolean xEE = x.has(EE);
+        boolean xAA = x.has(AA);
+        boolean xAB = x.has(AB);
+        if (xSN) node.set(SN);
+        if (xSP) node.set(SP);
+        if (xFN || xFP) node.set(FN);
+        if (xWF) node.set(WF);
+        if (xEE) node.set(EE);
+        if (xAA) node.set(AA);
+        if (xAB) node.set(AB);
+    }
+
+    // x&  (actions and errors are switched off)
+    private void scanHas(Node node) {
+        if (switchTest) return;
+        Node x = node.left();
+        boolean xSN = x.has(SN);
+        boolean xSP = x.has(SP);
+        boolean xFP = x.has(FP);
+        boolean xFN = x.has(FN);
+        boolean xWF = x.has(WF);
+        if (xSN || xSP) node.set(SN);
+        if (xFN || xFP) node.set(FN);
+        if (xWF) node.set(WF);
+    }
+
+    // x!  (actions and errors are switched off)
+    private void scanNot(Node node) {
+        if (switchTest) return;
+        Node x = node.left();
+        boolean xSN = x.has(SN);
+        boolean xSP = x.has(SP);
+        boolean xFP = x.has(FP);
+        boolean xFN = x.has(FN);
+        boolean xWF = x.has(WF);
+        boolean xAA = x.has(AA);
+        if (xFN || xFP) node.set(SN);
+        if (xSN || xSP) node.set(FN);
+        if (xWF) node.set(WF);
     }
 
     // Find a lowest level invalid node to report.
-    private void check(Node node) throws Exception {
+    private void check(Node node) {
         if (node.left() != null) check(node.left());
         if (node.right() != null) check(node.right());
+        if (root.op() == Error) return;
         if (! node.has(WF)) err(node, "potential infinite loop");
     }
 
-    // Calculate AA and AB. No longer report errors.
-    private void acting(Node node) {
-        boolean xAA = false, yAA = false, nAA = false, oAA = node.has(AA);
-        boolean xAB = false, yAB = false, nAB = false, oAB = node.has(AB);
-        Node x = node.left(), y = node.right();
-        if (x != null) { acting(x); xAA = x.has(AA); xAB = x.has(AB); }
-        if (y != null) { acting(y); yAA = y.has(AA); yAB = y.has(AB); }
-        switch (node.op()) {
-            // Has and Not have actions switched off, so don't have AA or AB.
-        case Number: case Range: case Cat: case String: case Set: case Tag:
-        case Mark: case Has: case Not: case Error: case End:
-            break;
-        // If [x] succeeds, x is executed a second time with actions on.
-        case Try:
-            nAA = xAA;
-            nAB = xAB;
-            break;
-        case Act: case Drop:
-            nAA = true;
-            nAB = true;
-            break;
-        case Rule:
-            nAA = xAA;
-            nAB = xAB;
-            break;
-        case Id:
-            nAA = node.ref().has(AA);
-            nAB = node.ref().has(AB);
-            break;
-        case And:
-            nAA = xAA || yAA;
-            boolean xSN = node.left().has(SN);
-            nAB = xAB || xSN && yAB;
-            break;
-        case Or:
-            nAA = xAA || yAA;
-            nAB = yAB;
-            break;
-        case Opt: case Any: case Some:
-            nAA = xAA;
-            break;
-        default:
-            throw new Error("Type " + node.op() + " not implemented");
-        }
-        if (nAA && ! oAA) { changed = true; node.set(AA); }
-        if (nAB && ! oAB) { changed = true; node.set(AB); }
-    }
-
-    // Report an error and stop.
-    private void err(Node r, String m) throws Exception {
+    // Report an error.
+    private void err(Node r, String m) {
         int s = r.start();
         int e = r.end();
-        throw new Exception(Node.err(source, s, e, m));
+        root = new Node(Error, source, 0, 0);
+        root.note(source.error(s, e, m));
+    }
+
+    // Annotate each node with its flags.
+    private void annotate(Node node) {
+        if (node.left() != null) annotate(node.left());
+        if (node.right() != null) annotate(node.right());
+        String s = "";
+        for (Node.Flag f : Node.Flag.values()) {
+            if (f == Changed) continue;
+            if (f == WF) continue;
+            if (! node.has(f)) continue;
+            if (! s.equals("")) s += ",";
+            s = s + f;
+        }
+        node.note(s);
     }
 }

@@ -154,17 +154,17 @@ x = @2add @3add
           ^^^^^
 ==========
 -- Complete scanner/parser grammar for sums
-exp = term ("+" term @2add / "-" term @2sub)* ''
+exp = term ("+" term @2add / "-" term @2sub)* <>
 term = factor ("*" factor @2mul / "/" factor @2div)*
 factor = primary ("^" factor @2pow)?
 primary = number / "(" exp ")"
 number = digit+ @number
 digit = '0123456789'
 ----------
-List exp = term ("+" term @2add / "-" term @2sub)* ''...
-  Rule exp = term ("+" term @2add / "-" term @2sub)* ''
+List exp = term ("+" term @2add / "-" term @2sub)* <>...
+  Rule exp = term ("+" term @2add / "-" term @2sub)* <>
     Id exp
-    And term ("+" term @2add / "-" term @2sub)* ''
+    And term ("+" term @2add / "-" term @2sub)* <>
       Id term
       Any ("+" term @2add / "-" term @2sub)*
         Or "+" term @2add / "-" term @2sub
@@ -176,7 +176,7 @@ List exp = term ("+" term @2add / "-" term @2sub)* ''...
             Char "-"
             Id term
             Act @2sub
-      Set ''
+      End <>
   Rule term = factor ("*" factor @2mul / "/" factor @2div)*
     Id term
     And factor ("*" factor @2mul / "/" factor @2div)*
@@ -280,7 +280,7 @@ Rule x = "" '' <>
   Id x
   And "" '' <>
     Success ""
-    Set ''
+    Fail ''
     End <>
 ==========
 -- Singleton string or set becomes Char
