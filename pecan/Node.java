@@ -15,7 +15,7 @@ handles them. */
 class Node {
 
     public static void main(String[] args) {
-        Source s = new Source("127 'a' @add @2add 'a..z' 0..127", "file", 1);
+        Source s = new Source("127 'a' @add @2add 'a..z' 0..127", "file");
         Node n = new Node(Code, s, 0, 3);
         assert(n.name().equals("127"));
         assert(n.charCode() == 127);

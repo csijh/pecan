@@ -6,6 +6,9 @@ import java.util.*;
 import static pecan.Category.*;
 import static pecan.Op.*;
 import static pecan.Parser.Marker.*;
+import java.nio.*;
+import java.nio.file.*;
+import java.nio.charset.*;
 
 /* Parse a Pecan source text, assumed to be in UTF-8 format, producing a tree.
 
@@ -584,11 +587,21 @@ class Parser implements Testable {
         return true;
     }
 
-    // @1a
+    // @1a. Do inclusion of sub-grammar here.
     private boolean ACT1(Op op) {
         if (look > 0) return true;
         start = in;
         Node x = output[--out];
+        if (op == Include) {
+            String file = Source.relativeFile(input.fileName(), x.name());
+            String s = Source.readFile(file);
+            Source source2 = new Source(s, file);
+            Parser parser2 = new Parser();
+            Node g = parser2.run(source2);
+            Node include = new Node(Include, g, input, x.start(), x.end());
+            output[out++] = include;
+            return true;
+        }
         Node y = new Node(op, x, input, x.start(), x.end());
         output[out++] = y;
         return true;

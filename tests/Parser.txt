@@ -656,3 +656,16 @@ x = y %
 Error in tests/Parser.txt, line 654: expecting letter
 x = y %
        ^
+==========
+-- Inclusion
+x = 'a'
+"Parser2.txt"
+----------
+List x = 'a'...
+  Rule x = 'a'
+    Id x
+    Set 'a'
+  Include "Parser2.txt"
+    Rule y = 'b'
+      Id y
+      Set 'b'
