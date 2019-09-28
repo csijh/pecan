@@ -1,62 +1,76 @@
 -- Empty string: succeeds without progressing
 x = ""
 ----------
-Rule x = "" CI,SN
-  Id x SN
-  Success "" SN
+List x = ""... CI
+  Rule x = "" SN
+    Id x SN
+    Success "" SN
+  Empty
 ==========
 -- Empty set: fails without progressing
 x = ''
 ----------
-Rule x = '' CI,FN
-  Id x FN
-  Fail '' FN
+List x = ''... CI
+  Rule x = '' FN
+    Id x FN
+    Fail '' FN
+  Empty
 ==========
 -- Character code: succeeds and progresses or fails without progressing
 x = 42
 ----------
-Rule x = 42 CI,FN,SP
-  Id x FN,SP
-  Code 42 FN,SP
+List x = 42... CI
+  Rule x = 42 FN,SP
+    Id x FN,SP
+    Code 42 FN,SP
+  Empty
 ==========
 -- Strings: FN,SP
 x = "a" "ab"
 ----------
-Rule x = "a" "ab" CI,FN,SP,FP
-  Id x FN,SP,FP
-  And "a" "ab" FN,SP,FP
-    Char "a" FN,SP
-    String "ab" FN,SP
+List x = "a" "ab"... CI
+  Rule x = "a" "ab" FN,SP,FP
+    Id x FN,SP,FP
+    And "a" "ab" FN,SP,FP
+      Char "a" FN,SP
+      String "ab" FN,SP
+  Empty
 ==========
 -- Sets: SP or FN
 x = 'a' 'ab'
 ----------
-Rule x = 'a' 'ab' CI,FN,SP,FP
-  Id x FN,SP,FP
-  And 'a' 'ab' FN,SP,FP
-    Char 'a' FN,SP
-    Set 'ab' FN,SP
+List x = 'a' 'ab'... CI
+  Rule x = 'a' 'ab' FN,SP,FP
+    Id x FN,SP,FP
+    And 'a' 'ab' FN,SP,FP
+      Char 'a' FN,SP
+      Set 'ab' FN,SP
+  Empty
 ==========
 -- Empty string then empty string: SN
 x = "" ""
 ----------
-Rule x = "" "" CI,SN
-  Id x SN
-  And "" "" SN
-    Success "" SN
-    Success "" SN
+List x = "" ""... CI
+  Rule x = "" "" SN
+    Id x SN
+    And "" "" SN
+      Success "" SN
+      Success "" SN
+  Empty
 ==========
 -- Normal rule without recursion
 x = 'a'
 ----------
-Rule x = 'a' CI,FN,SP
-  Id x FN,SP
-  Char 'a' FN,SP
+List x = 'a'... CI
+  Rule x = 'a' FN,SP
+    Id x FN,SP
+    Char 'a' FN,SP
+  Empty
 ==========
 -- Simple left recursive rule
 x = x 'a'
 ----------
-Error in tests/Checker.txt, line 57: potential infinite loop
+Error in tests/Checker.txt, line 71: potential infinite loop
 x = x 'a'
 ^
 ==========
@@ -65,7 +79,7 @@ x = y "abc"
 z = "123"
 y = x "ABC"
 ----------
-Error in tests/Checker.txt, line 64: potential infinite loop
+Error in tests/Checker.txt, line 78: potential infinite loop
 x = y "abc"
 ^
 ==========
@@ -73,7 +87,7 @@ x = y "abc"
 x = "a" ? y
 y = "A" ? x "ABC"
 ----------
-Error in tests/Checker.txt, line 73: potential infinite loop
+Error in tests/Checker.txt, line 87: potential infinite loop
 x = "a" ? y
 ^
 ==========
@@ -85,62 +99,70 @@ a = b
 b = c
 c = "a" ?
 ----------
-Error in tests/Checker.txt, line 81: potential infinite loop
+Error in tests/Checker.txt, line 95: potential infinite loop
 x = a y
 ^
 ==========
 -- Text input and token input
 x = [%a] 'b'
 ----------
-Error in tests/Checker.txt, line 93: there is both text and token input
-x = [%a] 'b'
+Error in tests/Checker.txt, lines 107 to 108: there is both text and token input
+x = [%a] 'b'...
 ^^^^^^^^^^^^
 ==========
 -- Try: FN,SP,FP
 x = [%a] %b
 ----------
-Rule x = [%a] %b TI,FN,SP,FP
-  Id x FN,SP,FP
-  And [%a] %b FN,SP,FP
-    Try [%a] FN,SP
-      Tag %a FN,SP
-    Tag %b FN,SP
+List x = [%a] %b... TI
+  Rule x = [%a] %b FN,SP,FP
+    Id x FN,SP,FP
+    And [%a] %b FN,SP,FP
+      Try [%a] FN,SP
+        Tag %a FN,SP
+      Tag %b FN,SP
+  Empty
 ==========
 -- Positive lookahead: SN,FN
 x = (%a)& %b
 ----------
-Rule x = (%a)& %b TI,FN,SP
-  Id x FN,SP
-  And (%a)& %b FN,SP
-    Has (%a)& SN,FN
-      Tag %a FN,SP
-    Tag %b FN,SP
+List x = (%a)& %b... TI
+  Rule x = (%a)& %b FN,SP
+    Id x FN,SP
+    And (%a)& %b FN,SP
+      Has (%a)& SN,FN
+        Tag %a FN,SP
+      Tag %b FN,SP
+  Empty
 ==========
 -- Negative lookahead: SN,FN
 x = (%a)! %b
 ----------
-Rule x = (%a)! %b TI,FN,SP
-  Id x FN,SP
-  And (%a)! %b FN,SP
-    Not (%a)! SN,FN
-      Tag %a FN,SP
-    Tag %b FN,SP
+List x = (%a)! %b... TI
+  Rule x = (%a)! %b FN,SP
+    Id x FN,SP
+    And (%a)! %b FN,SP
+      Not (%a)! SN,FN
+        Tag %a FN,SP
+      Tag %b FN,SP
+  Empty
 ==========
 -- Action on left of choice (legal in Pecan 5, warning when compiling)
 x = @a 'a' / 'b'
 ----------
-Rule x = @a 'a' / 'b' CI,FN,SP,AA,AB
-  Id x FN,SP,AA,AB
-  Or @a 'a' / 'b' FN,SP,AA,AB
-    And @a 'a' FN,SP,AA,AB
-      Act @a SN,AA,AB
-      Char 'a' FN,SP
-    Char 'b' FN,SP
+List x = @a 'a' / 'b'... CI
+  Rule x = @a 'a' / 'b' FN,SP,AA,AB
+    Id x FN,SP,AA,AB
+    Or @a 'a' / 'b' FN,SP,AA,AB
+      And @a 'a' FN,SP,AA,AB
+        Act @a SN,AA,AB
+        Char 'a' FN,SP
+      Char 'b' FN,SP
+  Empty
 ==========
 -- Expression which succeeds without progressing, repeated in an infinite loop
 x = (@a @2b)*
 ----------
-Error in tests/Checker.txt, line 141: potential infinite loop
+Error in tests/Checker.txt, line 163: potential infinite loop
 x = (@a @2b)*
 ^
 ==========
@@ -199,3 +221,4 @@ List exp = term ('+' term @2add / '-' term @2sub)* 'eof'... CI
         Char '(' FN,SP
         Id exp FN,SP,FP,AA
         Char ')' FN,SP
+  Empty

@@ -88,7 +88,7 @@ class Checker implements Testable {
         node.unset(Changed);
         switch(node.op()) {
         case Error: case Temp: break;
-        case Include: case List: scanContainer(node); break;
+        case List: case Empty: scanList(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;
         case Act: scanAct(node); break;
@@ -113,7 +113,7 @@ class Checker implements Testable {
     }
 
     // Scan List or Include node.
-    private void scanContainer(Node node) {
+    private void scanList(Node node) {
         if (switchTest) return;
         node.set(WF);
     }
