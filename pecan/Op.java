@@ -8,8 +8,8 @@ nodes. */
 public enum Op {
     Error,     // Parse error, with message in note field
     Temp,      // Temporary node used during parsing
-    Include,   // Temporary node representing a file inclusion
     List,      // Linked list of rules
+    Empty,     // Empty linked list
     Rule,      // Definition, name = rhs
     Id,        // Identifier, with cross-reference to its definition
     Or,        // Choice, x / y, right associative

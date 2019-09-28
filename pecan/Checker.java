@@ -48,8 +48,8 @@ class Checker implements Testable {
     private Node root;
     private boolean changed;
 
-    // Do unit testing on the Binder class, then check the switches are
-    // complete, then run the Checker unit tests.
+    // Do unit testing on the Binder class, then check the switch is complete,
+    // then run the Checker unit tests.
     public static void main(String[] args) {
         if (args.length == 0) Binder.main(args);
         Checker checker = new Checker();

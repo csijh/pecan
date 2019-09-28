@@ -35,7 +35,7 @@ class Parser implements Testable {
     private int[] saves;
     private Set<String> cats;
     private int start, in, out, look, marked, save;
-    private Op Postop = Temp, Bracket = Temp, Bracketed = Temp;
+    private Op Postop = Temp, Bracket = Temp, Bracketed = Temp, Include = Temp;
 
     public static void main(String[] args) {
         Test.run(new Parser(), args);
@@ -60,7 +60,10 @@ class Parser implements Testable {
         }
         assert(save == 0);
         assert(out == 1);
-        return prune(output[0]);
+        Node root = output[0];
+        root = prune(root);
+        root = merge(root);
+        return root;
     }
 
     // Error markers, in alphabetical order. In messages, names are made lower
@@ -78,16 +81,18 @@ class Parser implements Testable {
     }
 
     // rules = (inclusion / rule) (rules @2list)?
+    // rules = (inclusion / rule) (rules / @empty) @2list
     private boolean rules() {
         return (
             ALT(GO() && inclusion() || OR() && rule()) &&
-            OPT(GO() && rules() && ACT2(List))
+            ALT(GO() && rules() || ACT(Empty)) &&
+            ACT2(List)
         );
     }
 
-    // inclusion = string endline @1include skip
+    // inclusion = include newline @include skip
     private boolean inclusion() {
-        return string() && endline() && ACT1(Include) && skip();
+        return include() && newline() && ACT1(Include) && skip();
     }
 
     // rule = #id (id / backquote) equals expression newline @2rule skip
@@ -235,6 +240,12 @@ class Parser implements Testable {
             CHAR('<') && noangles() && MARK(GREATER_THAN_SIGN) && CHAR('>') &&
             ACT(Split) && blank()
         );
+    }
+
+    // include = "{" nocurlies #bracket "}" @string blank
+    private boolean include() {
+        return CHAR('{') && nocurlies() && MARK(BRACKET) && CHAR('}') &&
+        ACT(String) && blank();
     }
 
     // equals = #equals "=" gap
@@ -447,6 +458,11 @@ class Parser implements Testable {
         return OPT(GO() && NOT(GO() && CHAR('>')) && visible() && noangles());
     }
 
+    // nocurlies = ('}'! visible)*
+    private boolean nocurlies() {
+        return OPT(GO() && NOT(GO() && CHAR('}')) && visible() && nocurlies());
+    }
+
     // endline = 13? 10
     private boolean endline() {
         return (CHAR('\r') || true) && CHAR('\n');
@@ -643,7 +659,7 @@ class Parser implements Testable {
         return s;
     }
 
-    // Remove postfix operator, bracket, and bracketed expression nodes.
+    // Remove temporary nodes (brackets, postix, inclusions)
     private Node prune(Node r) {
         if (r == null) return null;
         Op op = r.op();
@@ -651,6 +667,22 @@ class Parser implements Testable {
         r.right(prune(r.right()));
         if (r.right() != null && r.right().op() == Temp) r.right(null);
         if (op == Temp) return r.left();
+        return r;
+    }
+
+    // Merge lists caused by inclusions.
+    private Node merge(Node r) {
+        if (r.op() == Empty) return r;
+        assert(r.op() == List);
+        if (r.left().op() == Rule) { merge(r.right()); return r; }
+        Node n = r.left();
+        assert(n.op() == List);
+        r.left(n.left());
+        if (n.right().op() == Empty) return r;
+        n.left(n.right());
+        n.right(r.right());
+        r.right(n);
+        merge(r);
         return r;
     }
 }

@@ -2,8 +2,8 @@
 
 // A grammar is a sequence of rules, possibly with inclusions.
 pecan = skip rules #end <>
-rules = (inclusion / rule) (rules @2list)?
-inclusion = string newline @1include skip
+rules = (inclusion / rule) (rules / @empty) @2list
+inclusion = include newline @1include skip
 rule = #id (id / backquote) equals expression newline @2rule skip
 
 // An expression breaks down into terms, factors and atoms.
@@ -30,6 +30,7 @@ range = ["'" noquote ".."] noquote #quote "'" @range blank
 set = "'" noquotes #quote "'" @set blank
 string = '"' nodquotes #quote '"' @string blank
 split = '<' noangles #gt '>' @split blank
+include = "{" nocurlies #bracket "}" @string blank
 equals = #equals "=" gap
 slash = #operator "/" gap
 has = "&" @postop blank
@@ -74,6 +75,7 @@ noquotes = ("'"! visible)*
 nodquotes = ('"'! visible)*
 nobquotes = ("`"! visible)*
 noangles = ('>'! visible)*
+nocurlies = ('}'! visible)*
 endline = 13? 10
 ==========
 -- Single rule

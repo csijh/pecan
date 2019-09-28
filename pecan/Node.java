@@ -39,7 +39,7 @@ class Node {
 // ---------- The annotation fields and methods -------------------------------
 
     private int flags;
-    private int NET, LOW, PC, LEN;
+    private int NET = Integer.MIN_VALUE, NEED, PC, LEN;
     private String note = "";
 
     // Flag constants (char input, token input, success or fail without or with
@@ -63,11 +63,11 @@ class Node {
         if (f != Flag.Changed) flags = flags | Flag.Changed.bit();
     }
 
-    // Get/set counts and get bitsets.
+    // Get/set counts and get bitsets. Set changed as appropriate.
     int NET() { return NET; }
-    int LOW() { return LOW; }
-    void NET(int n) { NET = n; }
-    void LOW(int l) { LOW = l; }
+    int NEED() { return NEED; }
+    void NET(int n) { if (NET != n) set(Flag.Changed); NET = n; }
+    void NEED(int n) { if (NEED != n) set(Flag.Changed); NEED = n; }
 
     // Get/set the note.
     String note() { return note; }
@@ -125,7 +125,7 @@ class Node {
             int i = start + 1;
             while (Character.isDigit(source.charAt(i))) i++;
             return source.substring(i, end);
-        case String: case Set: case Split: case Char: case Range:
+        case String: case Set: case Split: case Char: case Range: case Temp:
             return source.substring(start+1, end-1);
         }
         return text();
@@ -217,8 +217,9 @@ class Node {
     // nodes, or subnodes of a chain of And or Or nodes, by the same amount.
     private String toString(String indent) {
         if (op == Error) return note();
-        String s = indent + op + " ";
+        String s = indent + op;
         String text = text();
+        if (text.length() > 0 || note().length() > 0) s += " ";
         if (! text.contains("\n")) s += text;
         else {
             int n = text.indexOf('\n');

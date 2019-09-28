@@ -1,43 +1,51 @@
 x = y
 ----------
-Rule x = y
-  Id x
-  Id y
+List x = y...
+  Rule x = y
+    Id x
+    Id y
+  Empty
 ==========
 -- One-liner with comment
 x = y
 ----------
-Rule x = y
-  Id x
-  Id y
+List x = y...
+  Rule x = y
+    Id x
+    Id y
+  Empty
 ==========
 -- Choice
 x = y / z
 ----------
-Rule x = y / z
-  Id x
-  Or y / z
-    Id y
-    Id z
+List x = y / z...
+  Rule x = y / z
+    Id x
+    Or y / z
+      Id y
+      Id z
+  Empty
 ==========
 -- Bracket
 x = (y / z)
 ----------
-Rule x = (y / z)
-  Id x
-  Or y / z
-    Id y
-    Id z
+List x = (y / z)...
+  Rule x = (y / z)
+    Id x
+    Or y / z
+      Id y
+      Id z
+  Empty
 ==========
 ----------
-Error in tests/Parser.txt, line 32: expecting id, newline
+Error in tests/Parser.txt, line 40: expecting id, newline
 
 ^
 ==========
 -- Expecting =
 x
 ----------
-Error in tests/Parser.txt, line 38: expecting equals
+Error in tests/Parser.txt, line 46: expecting equals
 x
  ^
 ==========
@@ -52,6 +60,7 @@ List x = x...
   Rule y = y
     Id y
     Id y
+  Empty
 ==========
 -- Windows \r\n line endings (using test file escape conventions)
 x=x\13\10\
@@ -64,15 +73,18 @@ List x=x\13...
   Rule y=y
     Id y
     Id y
+  Empty
 ==========
 -- Lines containing only spaces are comments
 
 
 x = x
 ----------
-Rule x = x
-  Id x
-  Id x
+List x = x...
+  Rule x = x
+    Id x
+    Id x
+  Empty
 ==========
 -- Trailing spaces (using test file escape conventions)
 x = x    \10\
@@ -86,6 +98,7 @@ List x = x    ...
   Rule y = y
     Id y
     Id y
+  Empty
 ==========
 -- Trailing blank line
 x = x
@@ -99,6 +112,7 @@ List x = x...
   Rule y = y
     Id y
     Id y
+  Empty
 ==========
 -- Trailing blank lines
 x = x
@@ -113,6 +127,7 @@ List x = x...
   Rule y = y
     Id y
     Id y
+  Empty
 ==========
 -- No final newline
 x = x
@@ -125,14 +140,17 @@ List x = x...
   Rule y = y
     Id y
     Id y
+  Empty
 ==========
 -- No final newline
 x = x
 -- comment\
 ----------
-Rule x = x
-  Id x
-  Id x
+List x = x...
+  Rule x = x
+    Id x
+    Id x
+  Empty
 ==========
 -- Varied comments and empty lines
 -- initial comment
@@ -151,34 +169,37 @@ List x = y...
   Rule y = z
     Id y
     Id z
+  Empty
 ==========
 -- Scanner error
 x = |y|
 ----------
-Error in tests/Parser.txt, line 156: expecting atom, newline
+Error in tests/Parser.txt, line 175: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
 ----------
-Error in tests/Parser.txt, line 163: expecting quote
+Error in tests/Parser.txt, line 182: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
 ----------
-Error in tests/Parser.txt, line 170: expecting quote
+Error in tests/Parser.txt, line 189: expecting quote
 x = 'abc
         ^
 ==========
 -- One rule
 x = "a"
 ----------
-Rule x = "a"
-  Id x
-  String "a"
+List x = "a"...
+  Rule x = "a"
+    Id x
+    String "a"
+  Empty
 ==========
 -- Two rules
 x = "a"
@@ -191,18 +212,19 @@ List x = "a"...
   Rule y = "b"
     Id y
     String "b"
+  Empty
 ==========
 -- Expecting equals
 x
 ----------
-Error in tests/Parser.txt, line 196: expecting equals
+Error in tests/Parser.txt, line 218: expecting equals
 x
  ^
 ==========
 -- Expecting atom
 x = /
 ----------
-Error in tests/Parser.txt, line 203: expecting atom, newline
+Error in tests/Parser.txt, line 225: expecting atom, newline
 x = /
     ^
 ==========
@@ -210,42 +232,46 @@ x = /
 x = (y
 y = z
 ----------
-Error in tests/Parser.txt, line 210: expecting atom, bracket, operator
+Error in tests/Parser.txt, line 232: expecting atom, bracket, operator
 x = (y
       ^
 ==========
 -- Dot in the wrong place
 x = .
 ----------
-Error in tests/Parser.txt, line 218: expecting atom, newline
+Error in tests/Parser.txt, line 240: expecting atom, newline
 x = .
     ^
 ==========
 -- Incomplete dot dot
 x = 0.
 ----------
-Error in tests/Parser.txt, line 225: expecting dot
+Error in tests/Parser.txt, line 247: expecting dot
 x = 0.
       ^
 ==========
 -- Drop action
 x = @3
 ----------
-Rule x = @3
-  Id x
-  Act @3
+List x = @3...
+  Rule x = @3
+    Id x
+    Act @3
+  Empty
 ==========
 -- Tag
 x = %x
 ----------
-Rule x = %x
-  Id x
-  Tag %x
+List x = %x...
+  Rule x = %x
+    Id x
+    Tag %x
+  Empty
 ==========
 -- Bad marker
 x = 'x' #3
 ----------
-Error in tests/Parser.txt, line 246: expecting letter
+Error in tests/Parser.txt, line 272: expecting letter
 x = 'x' #3
          ^
 ==========
@@ -289,6 +315,7 @@ List x =...
       Id a
       Try [c...
         Id c
+  Empty
 ==========
 -- Brackets
 exp = (exp) end
@@ -306,20 +333,23 @@ List exp = (exp) end...
       Try [exp]
         Id exp
       Id end
+  Empty
 ==========
 -- The + * ? postfix operators
 exp = exp* exp+ exp? end
 ----------
-Rule exp = exp* exp+ exp? end
-  Id exp
-  And exp* exp+ exp? end
-    Any exp*
-      Id exp
-    Some exp+
-      Id exp
-    Opt exp?
-      Id exp
-    Id end
+List exp = exp* exp+ exp? end...
+  Rule exp = exp* exp+ exp? end
+    Id exp
+    And exp* exp+ exp? end
+      Any exp*
+        Id exp
+      Some exp+
+        Id exp
+      Opt exp?
+        Id exp
+      Id end
+  Empty
 ==========
 -- Ranges
 r1 = 0..127
@@ -332,20 +362,23 @@ List r1 = 0..127...
   Rule r2 = 'a..z'
     Id r2
     Range 'a..z'
+  Empty
 ==========
 -- Illegal spaces in code range
 r = 0 .. 127
 ----------
-Error in tests/Parser.txt, line 337: expecting atom, newline, operator
+Error in tests/Parser.txt, line 368: expecting atom, newline, operator
 r = 0 .. 127
       ^
 ==========
 -- Backquote id
 `x` = "abc"
 ----------
-Rule `x` = "abc"
-  Id `x`
-  String "abc"
+List `x` = "abc"...
+  Rule `x` = "abc"
+    Id `x`
+    String "abc"
+  Empty
 ==========
 -- Complete scan-parser grammar for sums
 exp = term ("+" term @2add / "-" term @2sub)* <>
@@ -411,23 +444,26 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
   Rule digit = '0123456789'
     Id digit
     Set '0123456789'
+  Empty
 ==========
 -- Error markers
 assignment = left #equals "=" right
 ----------
-Rule assignment = left #equals "=" right
-  Id assignment
-  And left #equals "=" right
-    Id left
-    Mark #equals
-    String "="
-    Id right
+List assignment = left #equals "=" right...
+  Rule assignment = left #equals "=" right
+    Id assignment
+    And left #equals "=" right
+      Id left
+      Mark #equals
+      String "="
+      Id right
+  Empty
 ==========
 -- Error on line 3
 x = y /
 z / /
 ----------
-Error in tests/Parser.txt, line 428: expecting atom, newline
+Error in tests/Parser.txt, line 464: expecting atom, newline
 z / /
     ^
 ==========
@@ -444,6 +480,7 @@ List x = abc\960\ \1636...
     Or 1114111 / 0ffff
       Code 1114111
       Code 0ffff
+  Empty
 ==========
 -- Strings, character sets, unicode
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
@@ -464,6 +501,7 @@ List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
   Rule pi = "\960"
     Id pi
     String "\960"
+  Empty
 ==========
 -- Actions, tests, numbers and errors
 x = %x @0x @1x @ @x
@@ -501,6 +539,7 @@ List x = %x @0x @1x @ @x...
     And #err ''
       Mark #err
       Set ''
+  Empty
 ==========
 -- Brackets and operators
 x = (y / z) / y?
@@ -543,13 +582,14 @@ List x = (y / z) / y?...
           Id y
           Id z
       Id w
+  Empty
 ==========
 -- Comment before continuation
 x =
  -- comment
  y
 ----------
-Error in tests/Parser.txt, line 549: expecting atom
+Error in tests/Parser.txt, line 589: expecting atom
  -- comment
  ^
 ==========
@@ -557,11 +597,13 @@ Error in tests/Parser.txt, line 549: expecting atom
 -- Represented as two chars, upper/lower surrogates.
 range = "\55422\56861" / '\55422\56861'
 ----------
-Rule range = "\195101" / '\195101'
-  Id range
-  Or "\195101" / '\195101'
-    String "\195101"
-    Set '\195101'
+List range = "\195101" / '\195101'...
+  Rule range = "\195101" / '\195101'
+    Id range
+    Or "\195101" / '\195101'
+      String "\195101"
+      Set '\195101'
+  Empty
 ==========
 -- Angle brackets now used for dividers
 keyword = <df> keyword1 / keyword2
@@ -593,79 +635,97 @@ List keyword = <df> keyword1 / keyword2...
       String "if"
       String "switch"
       String "while"
+  Empty
 ==========
 -- End-of-file
 end = #end <>
 ----------
-Rule end = #end <>
-  Id end
-  And #end <>
-    Mark #end
-    Split <>
+List end = #end <>...
+  Rule end = #end <>
+    Id end
+    And #end <>
+      Mark #end
+      Split <>
+  Empty
 ==========
 -- Expecting end-of-file
 x = y
 ?
 ----------
-Error in tests/Parser.txt, line 608: expecting end of text, id, newline
+Error in tests/Parser.txt, line 653: expecting end of text, id, newline
 ?
 ^
 ==========
 -- Splitters
 x = <abc> y / z
 ----------
-Rule x = <abc> y / z
-  Id x
-  Or <abc> y / z
-    And <abc> y
-      Split <abc>
-      Id y
-    Id z
+List x = <abc> y / z...
+  Rule x = <abc> y / z
+    Id x
+    Or <abc> y / z
+      And <abc> y
+        Split <abc>
+        Id y
+      Id z
+  Empty
 ==========
 -- Incomplete splitter
 x = <abc
 ----------
-Error in tests/Parser.txt, line 626: expecting greater than sign
+Error in tests/Parser.txt, line 673: expecting greater than sign
 x = <abc
         ^
 ==========
 -- Underscore
 a_b = xy_
 ----------
-Rule a_b = xy_
-  Id a_b
-  Id xy_
+List a_b = xy_...
+  Rule a_b = xy_
+    Id a_b
+    Id xy_
+  Empty
 ==========
 -- Hyphen
 a-b = xy-
 ----------
-Rule a-b = xy-
-  Id a-b
-  Id xy-
+List a-b = xy-...
+  Rule a-b = xy-
+    Id a-b
+    Id xy-
+  Empty
 ==========
 -- Backslash in quotes (using test file escape conventions)
 bs = '\\'
 ----------
-Rule bs = '\\'
-  Id bs
-  Set '\\'
+List bs = '\\'...
+  Rule bs = '\\'
+    Id bs
+    Set '\\'
+  Empty
 ==========
 -- Empty tag name
 x = y %
 ----------
-Error in tests/Parser.txt, line 654: expecting letter
+Error in tests/Parser.txt, line 707: expecting letter
 x = y %
        ^
 ==========
 -- Inclusion
-x = 'a'
-"Parser2.txt"
+a = 'a'
+{Parser2.txt}
+d = 'd'
 ----------
-List x = 'a'...
-  Rule x = 'a'
-    Id x
+List a = 'a'...
+  Rule a = 'a'
+    Id a
     Set 'a'
-  Include "Parser2.txt"
-    Rule y = 'b'
-      Id y
-      Set 'b'
+  Rule b = 'b'
+    Id b
+    Set 'b'
+  Rule c = 'c'
+    Id c
+    Set 'c'
+  Rule d = 'd'
+    Id d
+    Set 'd'
+  Empty

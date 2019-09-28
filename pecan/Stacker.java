@@ -42,20 +42,23 @@ TODO: improve by better analysis. */
 
 class Stacker implements Testable {
     private String source;
-    private static final int UNKNOWN = Short.MIN_VALUE;
+    private static final int UNKNOWN = Integer.MIN_VALUE;
     private boolean changed;
 
+    // Do unit testing on the Checker class, then check the switch is complete,
+    // then run the Stacker unit tests.
     public static void main(String[] args) {
         if (args.length == 0) Checker.main(args);
-        if (args.length == 0) Test.run(new Stacker());
-        else Test.run(new Parser(), Integer.parseInt(args[0]));
+        stacker.switchTest = true;
+        for (Op op : Op.values()) {
+            Node node = new Node(op, null, 0, 1);
+            stacker.scanNode(node);
+        }
+        stacker.switchTest = false;
+        Test.run(new Stacker(), args);
     }
 
-    public String test(String g) {
-        return "" + run(g);
-    }
-
-    Node run(String text) {
+    public Node run(String text) {
         source = text;
         Checker checker = new Checker();
         Node root = checker.run(source);
@@ -83,6 +86,88 @@ class Stacker implements Testable {
         node.LOW(0);
     }
 
+    // Traverse the tree, bottom up, and check each node.
+    private void scan(Node node) {
+        if (node.left() != null) scan(node.left());
+        if (node.right() != null) scan(node.right());
+        scanNode(node);
+    }
+
+    // The main switch. Check if any of the values change.
+    private void scanNode() {
+        int oldNet = node.NET();
+        switch(node.op()) {
+        case Error: case Temp: break;
+        case Include: case List: scanZero(node); break;
+        case Mark: case Tag: case Char: case String: scanZero(); break;
+        case Set: case Cat: case Range: case Code: scanZero(); break;
+        case Codes: case Split: case End: case Has: scanZero(); break;
+        case Not: case Success: case Fail: scanZero(); break;
+        case Rule: scanRule(node); break;
+        case Id: scanId(node); break;
+        case Act: scanAct(node); break;
+        case Drop: scanAct(node); break;
+        case And: scanAnd(node); break;
+            /*
+        case Or: scanOr(node); break;
+        case Opt: scanOpt(node); break;
+        case Any: scanAny(node); break;
+        case Some: scanSome(node); break;
+        case Try: scanTry(node); break;
+        */
+        default: assert false : "Unexpected node type " + node.op(); break;
+        }
+        if (oldNet != UNKNOWN && node.NET() != oldNet) { err(node,
+            "inconsistent net number of output items produced");
+        }
+        if (node.NET() != oldNet) changed = true;
+
+    }
+
+    // Scan List or Include node.
+    private void scanZero(Node node) {
+        if (switchTest) return;
+        node.NET(0);
+        node.NEED(0);
+    }
+
+    private void scanRule(Node node) {
+        if (switchTest) return;
+        node.NET(node.right().NET());
+        node.NEED(node.right().NEED());
+    }
+
+    private void scanId(Node node) {
+        if (switchTest) return;
+        node.NET(node.ref().NET());
+        node.NEED(node.ref().NEED());
+    }
+
+    // @a, @1a, @2a, ...
+    private void scanAct(Node node) {
+        if (switchTest) return;
+        node.NET(1 - node.arity());
+        node.NEED(node.arity());
+    }
+
+    // @, @1, @2, ...
+    private void scanDrop(Node node) {
+        if (switchTest) return;
+        node.NET(- node.arity());
+        node.NEED(node.arity() - 1);
+    }
+
+    // x y
+    private void scanAnd(Node node) {
+        if (switchTest) return;
+        xNET = node.left().NET;
+        yNET = node.right().NET;
+        if (xNET != UNKNOWN && xNET != UNKNOWN) {
+            node.NET(xNET + yNET);
+            node.NEED(Math.max(xNEED, yNEED - xNET));
+        }
+    }
+
     // Calculate the NET value for a node.
     private void net(Node node) {
         int xNet = UNKNOWN, yNet = UNKNOWN, oNet = node.NET(), nNet = UNKNOWN;
@@ -90,22 +175,10 @@ class Stacker implements Testable {
         if (x != null) { net(x); xNet = x.NET(); }
         if (y != null) { net(y); yNet = y.NET(); }
         switch(node.op()) {
-        case Drop: case String: case Set: case Splitter: case Range: case Cat:
-        case Tag: case Some: case Any: case Opt: case Has: case Not:
-        case Number: case Mark: case End:
+        case Some: case Any: case Opt:
             nNet = 0;   break;
-        case Act:
-            int arity = node.arity();
-            nNet = 1-arity;
-            break;
-        case Id:
-            nNet = node.ref().NET();
-            break;
-        case Rule: case Try:
+        case Try:
             nNet = xNet;
-            break;
-        case And:
-            if (xNet != UNKNOWN && yNet != UNKNOWN) nNet = xNet + yNet;
             break;
         case Or:
             if (xNet != UNKNOWN) nNet = xNet;
@@ -159,27 +232,11 @@ class Stacker implements Testable {
         if (x != null) { low(x); xLow = x.LOW(); }
         if (y != null) { low(y); yLow = y.LOW(); }
         switch(node.op()) {
-        case Drop: case String: case Set: case Number: case Splitter:
-        case Range: case Cat: case Tag: case Mark: case End:
-            break;
-        case Act:
-            int arity = node.arity();
-            nLow = -arity;
-            break;
-        case Id:
-            nLow = node.ref().LOW();
-            break;
-        case Rule:
-            nLow = xLow;
-            break;
-        case And:
-            nLow = Math.min(xLow, x.NET() + yLow);
-            break;
         case Or:
             nLow = Math.min(xLow, yLow);
             break;
         case Some: case Any: case Opt:
-        case Try: case Has: case Not:
+        case Try:
             nLow = xLow;
             break;
         default: throw new Error("Type " + node.op() + " unimplemented");

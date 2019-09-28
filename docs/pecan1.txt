@@ -3,8 +3,8 @@
 
 // Pecan grammar for Pecan grammars: rules
 grammar = skip rules #end <>
-rules = rule (rules @2list)?
-rule = #id id equals expression newline @2rule skip
+rules = rule (rules / @empty) @2list
+rule = #id id equals expression @2rule newline skip
 
 // Expressions
 expression = term (slash expression @2or)?
