@@ -1,50 +1,55 @@
-// Numbers reported are NET effect on output stack and LOW water mark.
-// Simple case of one output item
+-- Simple case of one output item
 x = @Id @
 ----------
-Rule x 1,0
-  And @Id @ 1,0
-    Act @Id 1,0
-    Drop @ 0,0
+List x = @Id @...
+  Rule x = @Id @ NET=1
+    Id x NET=1
+    And @Id @ NET=1
+      Act @Id NET=1
+      Drop @
+  Empty
 ==========
-// Well-formed but 'non-terminating' grammar
+-- Well-formed but 'non-terminating' grammar
 x = 'a' x @b
 ----------
-Error on line 2: unable to calculate number of output items produced
+Error in tests/Stacker.txt, line 13: variable net output
 x = 'a' x @b
-        ^
+^
 ==========
-// Low water mark continually decreasing
+-- Low water mark continually decreasing
 x = 'a' / 'b' @2c x @d
 ----------
-Error on line 2: outputs may underflow
+Error in tests/Stacker.txt, line 20: outputs may underflow
 x = 'a' / 'b' @2c x @d
-    ^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 ==========
-// Choices disagree
+-- Choices disagree
 x = @1a / @2b
 ----------
-Error on line 2: choices produce unequal numbers of outputs
+Error in tests/Stacker.txt, line 27: alternatives have different net outputs
 x = @1a / @2b
     ^^^^^^^^^
 ==========
-// Choice
+-- Choice
 exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP
 ----------
-Rule exp 1,0
-  Or 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP 1,0
-    And 'a' @NUM 1,0
-      Set 'a' 0,0
-      Act @NUM 1,0
-    And "(" @OPEN exp ")" @CLOSE @3EXP 1,0
-      String "(" 0,0
-      Act @OPEN 1,0
-      Id exp 1,0
-      String ")" 0,0
-      Act @CLOSE 1,0
-      Act @3EXP -2,-3
+List exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP...
+  Rule exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP NET=1
+    Id exp NET=1
+    Or 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP NET=1
+      And 'a' @NUM NET=1
+        Char 'a'
+        Act @NUM NET=1
+      And "(" @OPEN exp ")" @CLOSE @3EXP NET=1
+        Char "("
+        Act @OPEN NET=1
+        Id exp NET=1
+        Char ")"
+        Act @CLOSE NET=1
+        Act @3EXP NEED=3,NET=-2
+  Empty
 ==========
-// Expressions
+-- Expressions
 sum = exp
 exp = term ("+" term @2add / "-" term @2sub)*
 term = factor ("*" factor @2mul / "/" factor @2div)*
@@ -53,55 +58,62 @@ primary = number / "(" exp ")"
 number = digit+ @number
 digit = '0..9'
 ----------
-Rule sum 1,0
-  Id exp 1,0
-Rule exp 1,0
-  And term ("+" term @2add / "-" term @2sub)* 1,0
-    Id term 1,0
-    Any ("+" term @2add / "-" term @2sub)* 0,-1
-      Or "+" term @2add / "-" term @2sub 0,-1
-        And "+" term @2add 0,-1
-          String "+" 0,0
-          Id term 1,0
-          Act @2add -1,-2
-        And "-" term @2sub 0,-1
-          String "-" 0,0
-          Id term 1,0
-          Act @2sub -1,-2
-Rule term 1,0
-  And factor ("*" factor @2mul / "/" factor @2div)* 1,0
-    Id factor 1,0
-    Any ("*" factor @2mul / "/" factor @2div)* 0,-1
-      Or "*" factor @2mul / "/" factor @2div 0,-1
-        And "*" factor @2mul 0,-1
-          String "*" 0,0
-          Id factor 1,0
-          Act @2mul -1,-2
-        And "/" factor @2div 0,-1
-          String "/" 0,0
-          Id factor 1,0
-          Act @2div -1,-2
-Rule factor 1,0
-  And primary ("^" factor @2pow)? 1,0
-    Id primary 1,0
-    Opt ("^" factor @2pow)? 0,-1
-      And "^" factor @2pow 0,-1
-        String "^" 0,0
-        Id factor 1,0
-        Act @2pow -1,-2
-Rule primary 1,0
-  Or number / "(" exp ")" 1,0
-    Id number 1,0
-    And "(" exp ")" 1,0
-      String "(" 0,0
-      Id exp 1,0
-      String ")" 0,0
-Rule number 1,0
-  And digit+ @number 1,0
-    Some digit+ 0,0
-      Id digit 0,0
-    Act @number 1,0
-Rule digit 0,0
-  Range '0..9' 0,0
-    Set '0. 0,0
-    Set .9' 0,0
+List sum = exp...
+  Rule sum = exp NET=1
+    Id sum NET=1
+    Id exp NET=1
+  Rule exp = term ("+" term @2add / "-" term @2sub)* NET=1
+    Id exp NET=1
+    And term ("+" term @2add / "-" term @2sub)* NET=1
+      Id term NET=1
+      Any ("+" term @2add / "-" term @2sub)* NEED=1
+        Or "+" term @2add / "-" term @2sub NEED=1
+          And "+" term @2add NEED=1
+            Char "+"
+            Id term NET=1
+            Act @2add NEED=2,NET=-1
+          And "-" term @2sub NEED=1
+            Char "-"
+            Id term NET=1
+            Act @2sub NEED=2,NET=-1
+  Rule term = factor ("*" factor @2mul / "/" factor @2div)* NET=1
+    Id term NET=1
+    And factor ("*" factor @2mul / "/" factor @2div)* NET=1
+      Id factor NET=1
+      Any ("*" factor @2mul / "/" factor @2div)* NEED=1
+        Or "*" factor @2mul / "/" factor @2div NEED=1
+          And "*" factor @2mul NEED=1
+            Char "*"
+            Id factor NET=1
+            Act @2mul NEED=2,NET=-1
+          And "/" factor @2div NEED=1
+            Char "/"
+            Id factor NET=1
+            Act @2div NEED=2,NET=-1
+  Rule factor = primary ("^" factor @2pow)? NET=1
+    Id factor NET=1
+    And primary ("^" factor @2pow)? NET=1
+      Id primary NET=1
+      Opt ("^" factor @2pow)? NEED=1
+        And "^" factor @2pow NEED=1
+          Char "^"
+          Id factor NET=1
+          Act @2pow NEED=2,NET=-1
+  Rule primary = number / "(" exp ")" NET=1
+    Id primary NET=1
+    Or number / "(" exp ")" NET=1
+      Id number NET=1
+      And "(" exp ")" NET=1
+        Char "("
+        Id exp NET=1
+        Char ")"
+  Rule number = digit+ @number NET=1
+    Id number NET=1
+    And digit+ @number NET=1
+      Some digit+
+        Id digit
+      Act @number NET=1
+  Rule digit = '0..9'
+    Id digit
+    Range '0..9'
+  Empty

@@ -22,7 +22,6 @@ Check whether the grammar has text or tokens as input. */
 
 class Binder implements Testable {
     private boolean switchTest;
-    private Source source;
     private Node root;
     private HashMap<String,Node> rules = new HashMap<String,Node>();
     private Map<String,Integer> arities = new HashMap<String,Integer>();
@@ -42,8 +41,7 @@ class Binder implements Testable {
     }
 
     // Run the binder on the given source, check type of input.
-    public Node run(Source s) {
-        source = s;
+    public Node run(Source source) {
         Parser parser = new Parser();
         root = parser.run(source);
         if (root.op() == Error) return root;
@@ -200,7 +198,7 @@ class Binder implements Testable {
     private void err(Node r, String m) {
         int s = r.start();
         int e = r.end();
-        root = new Node(Error, source, 0, 0);
-        root.note(source.error(s, e, m));
+        root = new Node(Error, r.source(), 0, 0);
+        root.note(r.source().error(s, e, m));
     }
 }

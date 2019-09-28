@@ -44,7 +44,6 @@ warning. There are some further flag annotations:
 
 class Checker implements Testable {
     private boolean switchTest;
-    private Source source;
     private Node root;
     private boolean changed;
 
@@ -64,10 +63,9 @@ class Checker implements Testable {
 
     // Run the checker on the given source text. Repeat scanning until no flags
     // change. Check and report any problems.
-    public Node run(Source text) {
-        source = text;
+    public Node run(Source source) {
         Binder binder = new Binder();
-        root = binder.run(text);
+        root = binder.run(source);
         if (root.op() == Error) return root;
         changed = true;
         while (changed) { changed = false; scan(root); }
@@ -358,8 +356,8 @@ class Checker implements Testable {
     private void err(Node r, String m) {
         int s = r.start();
         int e = r.end();
-        root = new Node(Error, source, 0, 0);
-        root.note(source.error(s, e, m));
+        root = new Node(Error, r.source(), 0, 0);
+        root.note(r.source().error(s, e, m));
     }
 
     // Annotate each node with its flags.
