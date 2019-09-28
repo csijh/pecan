@@ -58,7 +58,7 @@ class Checker implements Testable {
             checker.scanNode(node);
         }
         checker.switchTest = false;
-        Test.run(new Checker(), args);
+        Test.run(checker, args);
     }
 
     // Run the checker on the given source text. Repeat scanning until no flags

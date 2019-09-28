@@ -34,52 +34,56 @@ x y where x is an action (or SN and action) and y is FN
 */
 
 public class Evaluator implements Testable {
+    private boolean switchTest;
     private boolean tracing = false, skipTrace = false;
-    private String grammar;
+    private Node grammar;
     private boolean charInput, ok;
+    private Source source;
     private String input;
     private String[] tokens;
-    private Node root;
     private int start, in, out, marked, lookahead;
     private TreeSet<String> failures;
     private Node[] delay;
     private int[] delayIn;
     private StringBuffer output;
 
-    public Evaluator(boolean t) { tracing = t; }
-
+    // Do unit testing on the Stacker class, then check the switch is complete,
+    // then run the Evaluator unit tests.
     public static void main(String[] args) {
-        int line = 0;
-        Evaluator program = new Evaluator(false);
-        if (args != null) for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-trace")) program.tracing = true;
-            else if (args[i].equals("-t")) program.tracing = true;
-            else line = Integer.parseInt(args[i]);
-        }
         if (args.length == 0) Stacker.main(args);
-        Test.run(program, line);
+        Evaluator evaluator = new Evaluator();
+        evaluator.switchTest = true;
+        for (Op op : Op.values()) {
+            Node node = new Node(op, null, 0, 1);
+            evaluator.parse(node);
+        }
+        evaluator.switchTest = false;
+        Test.run(evaluator, args);
     }
 
-    // Carry out a test, or set up a grammar for subsequent tests
-    public String test(String input) {
-        if (input.startsWith("GRAMMAR:\n")) {
-            grammar = input.substring(9);
-            Stacker stacker = new Stacker();
-            root = stacker.run(grammar);
-            charInput = root.has(CI);
-            if (root.op() == Error) return root.note();
-            else return null;
-        }
+    // Set up a grammar from its source, or run it on the given source.
+    public String run(Source source) {
+        if (source.grammar()) return setup(source);
         else {
-            prepare(input);
-            return run();
+            prepare(source);
+            return runParser();
         }
+    }
+
+    // Set up a grammar for subsequent tests
+    private String setup(Source source) {
+        Stacker stacker = new Stacker();
+        grammar = stacker.run(source);
+        charInput = grammar.has(CI);
+        if (grammar.op() == Error) return grammar.note();
+        else return null;
     }
 
     // Get the Evaluator ready to run, with the given input.
-    private void prepare(String text) {
-        input = text;
-        if (root.has(TI)) tokens = text.split("\\s+");
+    private void prepare(Source s) {
+        source = s;
+        if (grammar.has(TI)) tokens = source.text().split("\\s+");
+        else input = source.text();
         ok = true;
         start = in = out = marked = lookahead = 0;
         failures = new TreeSet<>();
@@ -89,12 +93,11 @@ public class Evaluator implements Testable {
     }
 
     // Run the parser
-    private String run() {
+    private String runParser() {
         if (tracing) traceInput();
-        if (root.op() == Error) return root.note() + "\n";
-        parse(root.left());
+        if (grammar.op() == Error) return grammar.note() + "\n";
+        parse(grammar.left());
         if (in > marked) failures.clear();
-        takeActions();
         if (! ok) {
             output.setLength(0);
             String s = "";
@@ -103,7 +106,7 @@ public class Evaluator implements Testable {
                 else s += ", ";
                 s += mark;
             }
-            if (charInput) output.append(Node.err(input, in, in, s));
+            if (charInput) output.append(source.error(in, in, s));
             else {
                 output.append("Error at token " + in);
                 if (s.length() > 0) output.append(": " + s);
@@ -128,7 +131,7 @@ public class Evaluator implements Testable {
             case Try: parseTry(node); break;
             case Has: parseHas(node); break;
             case Not: parseNot(node); break;
-            case Number: parseNumber(node); break;
+            case Code: parseCode(node); break;
             case String: parseString(node); break;
             case Set: parseSet(node); break;
             case Range: parseRange(node); break;
@@ -144,17 +147,20 @@ public class Evaluator implements Testable {
 
     // Parse according to a rule node: parse the right hand side.
     private void parseRule(Node node) {
+        if (switchTest) return;
         parse(node.left());
     }
 
     // Parse the rule refered to by an id (without tracing).
     private void parseId(Node node) {
+        if (switchTest) return;
         skipTrace = true;
         parse(node.ref());
     }
 
     // Parse x / y. Parse x, and if it fails without progress, parse y instead.
     private void parseOr(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         parse(node.left());
@@ -165,6 +171,7 @@ public class Evaluator implements Testable {
 
     // Parse x y. If x succeeds, continue with y.
     private void parseAnd(Node node) {
+        if (switchTest) return;
         parse(node.left());
         if (!ok) return;
         parse(node.right());
@@ -172,6 +179,7 @@ public class Evaluator implements Testable {
 
     // Parse x?
     private void parseOpt(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         parse(node.left());
@@ -183,6 +191,7 @@ public class Evaluator implements Testable {
 
     // Parse x*
     private void parseAny(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         ok = true;
@@ -199,6 +208,7 @@ public class Evaluator implements Testable {
 
     // Parse x+  =  x x*
     private void parseSome(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         parse(node.left());
@@ -219,6 +229,7 @@ public class Evaluator implements Testable {
 
     // Parse [x]
     private void parseTry(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         lookahead++;
@@ -234,6 +245,7 @@ public class Evaluator implements Testable {
 
     // Parse x&
     private void parseHas(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         lookahead++;
@@ -246,6 +258,7 @@ public class Evaluator implements Testable {
 
     // Parse x!
     private void parseNot(Node node) {
+        if (switchTest) return;
         int saveIn = in;
         int saveOut = out;
         lookahead++;
@@ -258,7 +271,8 @@ public class Evaluator implements Testable {
     }
 
     // Parse 127
-    private void parseNumber(Node node) {
+    private void parseCode(Node node) {
+        if (switchTest) return;
         if (in >= input.length()) ok = false;
         else {
             int ch = input.codePointAt(in);
@@ -274,6 +288,7 @@ public class Evaluator implements Testable {
 
     // Parse "abc"
     private void parseString(Node node) {
+        if (switchTest) return;
         int length = node.text().length() - 2;
         String text = node.text().substring(1, length+1);
         ok = true;
@@ -290,6 +305,7 @@ public class Evaluator implements Testable {
 
     // Parse 'abc'
     private void parseSet(Node node) {
+        if (switchTest) return;
         int length = node.text().length() - 2;
         String text = node.text().substring(1, length+1);
         ok = false;
@@ -310,6 +326,7 @@ public class Evaluator implements Testable {
 
     // Parse 'a..z' or 0..127
     private void parseRange(Node node) {
+        if (switchTest) return;
         int low = node.left().charCode();
         int high = node.right().charCode();
         ok = false;
@@ -327,6 +344,7 @@ public class Evaluator implements Testable {
 
     // Parse Nd
     private void parseCat(Node node) {
+        if (switchTest) return;
         ok = false;
         Category cat = Category.valueOf(node.name());
         if (in < input.length()) {
@@ -343,6 +361,7 @@ public class Evaluator implements Testable {
 
     // Parse %t
     private void parseTag(Node node) {
+        if (switchTest) return;
         String tag;
         tag = node.text().substring(1);
         if (in < tokens.length) ok = tokens[in].equals(tag);
@@ -357,6 +376,7 @@ public class Evaluator implements Testable {
 
     // Parse #m
     private void parseMark(Node node) {
+        if (switchTest) return;
         ok = true;
         if (lookahead > 0) return;
         if (marked != in) { marked = in; failures.clear(); }
@@ -365,6 +385,7 @@ public class Evaluator implements Testable {
 
     // Parse @
     private void parseDrop(Node node) {
+        if (switchTest) return;
         ok = true;
         delay[out] = node;
         delayIn[out++] = in;
@@ -372,6 +393,7 @@ public class Evaluator implements Testable {
 
     // Parse @2add
     private void parseAct(Node node) {
+        if (switchTest) return;
         ok = true;
         delay[out] = node;
         delayIn[out++] = in;
@@ -379,6 +401,7 @@ public class Evaluator implements Testable {
 
     // Parse <>
     private void parseEnd(Node node) {
+        if (switchTest) return;
         ok = in == input.length();
     }
 

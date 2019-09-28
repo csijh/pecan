@@ -56,7 +56,7 @@ class Stacker implements Testable {
             stacker.scanNode(node);
         }
         stacker.switchTest = false;
-        Test.run(new Stacker(), args);
+        Test.run(stacker, args);
     }
 
     public Node run(Source source) {

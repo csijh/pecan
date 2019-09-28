@@ -18,33 +18,24 @@ class Source {
     private boolean grammar, trace;
     private int[] rows;
 
-    // Create a source object. Add missing final newline.
-    Source(String t, String container, String file, int n) {
+    // The default container is null.
+    Source(String t, String file, int n) {
         if (t.length() > 0 && ! t.endsWith("\n")) t += "\n";
         text = t;
-        path = relativePath(container, file);
+        path = Paths.get(file);
         firstLine = n;
         grammar = trace = false;
         findRows();
     }
 
-    // The default starting line number is 1.
-    Source(String t, String container, String file) {
-        this(t, container, file, 1);
-    }
-
-    // The default container is null.
-    Source(String t, String file, int n) {
-        this(t, null, file, n);
-    }
-
+    // The default first line is 1.
     Source(String t, String file) {
-        this(t, null, file, 1);
+        this(t, file, 1);
     }
 
     // The default file is null.
     Source(String t) {
-        this(t, null, null, 1);
+        this(t, null, 1);
     }
 
     // Find a file path, relative to a containing file, for inclusions.
@@ -67,18 +58,8 @@ class Source {
         } catch (Exception e) { throw new Error(e); }
     }
 
-    // Find a path, potentially relative to a containing file, for inclusions.
-    private Path relativePath(String container, String file) {
-        if (file == null) return null;
-        Path path = Paths.get(file);
-        if (path.isAbsolute()) return path;
-        if (container == null) return path;
-        Path p = Paths.get(container);
-        if (p.getNameCount() == 1) return path;
-        return Paths.get(p.getParent().toString(), path.toString());
-    }
-
     // Get or set the fields.
+    String text() { return text; }
     int firstLine() { return firstLine; }
     String fileName() { return path.toString(); }
     boolean grammar() { return grammar; }

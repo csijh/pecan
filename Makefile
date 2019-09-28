@@ -9,6 +9,7 @@ Binder = pecan/Binder.java $(Parser)
 Checker = pecan/Checker.java $(Binder)
 Stacker = pecan/Stacker.java $(Checker)
 Evaluator = pecan/Evaluator.java $(Stacker)
+Simplifier = pecan/Simplifier.java $(Stacker)
 Code = pecan/Code.java
 Generator = pecan/Generator.java $(Stacker)
 Run = pecan/Run.java $(Evaluator)

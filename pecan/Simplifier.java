@@ -6,9 +6,10 @@ import java.text.*;
 import static pecan.Op.*;
 import static pecan.Info.Flag.*;
 
-/* Simplify a grammar to make generating code simpler.
-If x has actions, replace [x] by (x& x) so it gets executed twice. In x&
-and x!, make a copy of x with no actions, if necessary. */
+/* Simplify a grammar to make interpreting, or generating code, simpler. If x
+has actions or ends with error markers, replace [x] by (x& x) so it gets
+executed twice, once without and once with actions and errors switched on. If
+requested, lift repetitions x* or x+ to the top level. */
 
 class Simplifier implements Test.Callable {
     private String source;
