@@ -61,17 +61,11 @@ class Binder implements Testable {
     // Collect the rules in a map. Ignore duplicates for now.
     private void collect() {
         Node node = root;
-        while (node != null) {
-            if (node.op() == List) {
-                String name = node.left().left().name();
-                if (rules.get(name) == null) rules.put(name, node.left());
-                node = node.right();
-            }
-            else {
-                String name = node.left().name();
-                if (rules.get(name) == null) rules.put(name, node);
-                node = null;
-            }
+        while (node.op() != Empty) {
+            assert(node.op() == List);
+            String name = node.left().left().name();
+            if (rules.get(name) == null) rules.put(name, node.left());
+            node = node.right();
         }
     }
 
@@ -85,9 +79,10 @@ class Binder implements Testable {
     // The main switch.
     private void scanNode(Node node) {
         switch(node.op()) {
-        case Error: case Temp: case Include: case Success: case Fail: break;
+        case Error: case Temp: case List: case Empty: case End: break;
         case And: case Or: case Opt: case Any: case Some: case Drop: break;
-        case Has: case Not: case Try: case Mark: case End: case List: break;
+        case Has: case Not: case Try: case Mark: break;
+        case Success: case Fail: break;
         case Cat: scanCat(node); break;
         case Tag: scanTag(node); break;
         case Rule: scanRule(node); break;
@@ -194,7 +189,7 @@ class Binder implements Testable {
         if (switchTest) return;
         String text = node.text();
         String name = node.name();
-        if (name.length() == 0) return;
+        if (name.length() == 0) { node.op(Drop); return; }
         int arity = node.arity();
         Integer old = arities.get(name);
         if (old == null) arities.put(name, arity);
