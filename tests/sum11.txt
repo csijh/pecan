@@ -1,4 +1,4 @@
-// Tutorial step 11: (some error reporting)
+-- Tutorial step 11: (some error reporting)
 sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = (#digit '0..9')+ @number
 end = #newline 13? 10 @
@@ -19,7 +19,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline
+Error in tests/sum11.txt, line 20: expecting digit, newline
 2+40%
     ^
 ==========
@@ -45,6 +45,6 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting digit
+Error in tests/sum11.txt, line 46: expecting digit
 2+
   ^

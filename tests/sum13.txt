@@ -1,4 +1,4 @@
-// Tutorial step 13 (add the other operators)
+-- Tutorial step 13 (add the other operators)
 sum = term (plus term @2add / minus term @2subtract)* end
 term = number (times number @2multiply / over number @2divide)*
 number = digit+ @number
@@ -25,7 +25,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline, operator
+Error in tests/sum13.txt, line 26: expecting digit, newline, operator
 2+40%
     ^
 ==========
@@ -51,7 +51,7 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting digit
+Error in tests/sum13.txt, line 52: expecting digit
 2+
   ^
 ==========

@@ -34,9 +34,9 @@ is inaccessible, that becomes a late warning. If there is an action at the start
 of the left hand item in a choice, as in (@a x / y), that also becomes a late
 warning. There are some further flag annotations:
 
-  EE   =   can end in an error marker
-  AA   =   can act (or discard)
-  AB   =   can act (or discard) before progressing
+  EE   =   contains marker
+  AA   =   contains action (or discard)
+  AB   =   contains action (or discard) before progressing
 
  The first two are to check whether [x] needs to be translated to x& x. The
  third is to check for @a x / y. These are conservative checks, e.g. AA and AB

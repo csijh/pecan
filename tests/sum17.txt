@@ -1,4 +1,4 @@
-// Tutorial step 17 (spaces, without reporting)
+-- Tutorial step 17 (spaces, without reporting)
 sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
@@ -30,7 +30,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline, operator
+Error in tests/sum17.txt, line 31: expecting digit, newline, operator
 2+40%
     ^
 ==========
@@ -56,7 +56,7 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting bracket, digit
+Error in tests/sum17.txt, line 57: expecting bracket, digit
 2+
   ^
 ==========

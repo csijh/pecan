@@ -166,6 +166,29 @@ Error in tests/Checker.txt, line 163: potential infinite loop
 x = (@a @2b)*
 ^
 ==========
+-- Check the EE flag
+x = #m
+y = #m 'a'
+z = ('a' #m 'b')&
+----------
+List x = #m... CI
+  Rule x = #m SN,EE
+    Id x SN,EE
+    Mark #m SN,EE
+  Rule y = #m 'a' FN,SP,EE
+    Id y FN,SP,EE
+    And #m 'a' FN,SP,EE
+      Mark #m SN,EE
+      Char 'a' FN,SP
+  Rule z = ('a' #m 'b')& SN,FN
+    Id z SN,FN
+    Has ('a' #m 'b')& SN,FN
+      And 'a' #m 'b' FN,SP,FP,EE
+        Char 'a' FN,SP
+        Mark #m SN,EE
+        Char 'b' FN,SP
+  Empty
+==========
 -- Expressions
 exp = term ('+' term @2add / '-' term @2sub)* 'eof'
 term = factor ('*' factor @2mul / '/' factor @2div)*

@@ -72,7 +72,7 @@ public class Test {
         boolean unitTest = file == null && line == 0;
         String name = object.getClass().getSimpleName();
         if (file == null) file = "tests/"+ name +".txt";
-        List<Test> tests = makeTests(file, readFile(file));
+        List<Test> tests = makeTests(file, readFile(file), trace);
         int n = runTests(object, tests, line);
         report(unitTest, name, line, n);
     }
@@ -99,18 +99,25 @@ public class Test {
     // Divide the lines from a file into sections, and the sections into test
     // objects. If a section is a single line inclusion, include another test
     // file, else convert it into a test.
-    private static List<Test> makeTests(String file, List<String> lines) {
+    private static List<Test> makeTests(
+        String file, List<String> lines, boolean trace
+    ) {
         List<Test> tests = new ArrayList<Test>();
         int start = 0;
         String grammar = null;
         for (int i = 0; i <= lines.size(); i++) {
             if (i < lines.size() && ! lines.get(i).matches("====*")) continue;
             String line = lines.get(start);
-            if (i == start + 1 && line.matches("\".*\"")) {
+            if (i == start + 1 && line.matches("\\{.*\\}")) {
                 String file2 = line.substring(1, line.length() - 1);
-                tests.addAll(makeTests(file2, readFile(file2)));
+                file2 = Source.relativeFile(file, file2);
+                tests.addAll(makeTests(file2, readFile(file2), trace));
             }
-            else tests.add(makeTest(file, lines, start, i));
+            else {
+                Test t = makeTest(file, lines, start, i);
+                if (trace) t.input.trace(true);
+                tests.add(t);
+            }
             start = i + 1;
         }
         return tests;

@@ -1,57 +1,57 @@
-sum1.txt
+{sum1.txt}
 ==========
-sum2.txt
+{sum2.txt}
 ==========
-sum3.txt
+{sum3.txt}
 ==========
-sum4.txt
+{sum4.txt}
 ==========
-sum5.txt
+{sum5.txt}
 ==========
-sum6.txt
+{sum6.txt}
 ==========
-sum7.txt
+{sum7.txt}
 ==========
-sum8.txt
+{sum8.txt}
 ==========
-sum9.txt
+{sum9.txt}
 ==========
-sum10.txt
+{sum10.txt}
 ==========
-sum11.txt
+{sum11.txt}
 ==========
-sum12.txt
+{sum12.txt}
 ==========
-sum13.txt
+{sum13.txt}
 ==========
-sum14.txt
+{sum14.txt}
 ==========
-sum15.txt
+{sum15.txt}
 ==========
-sum16.txt
+{sum16.txt}
 ==========
-sum17.txt
+{sum17.txt}
 ==========
-// Try succeeds
+-- Try succeeds
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
 ..
 ----------
 dots ..
 ==========
-// Try fails
+-- Try fails
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
 .3
 ----------
 num .3
 ==========
-// String has a built-in try
+-- String has a built-in try
 op = "<=" @le / "<" @lt
 ==========
 x
 ----------
-Error on line 1:
+Error in tests/Evaluator.txt, line 52:
 x
 ^
 ==========
@@ -63,7 +63,7 @@ le <=
 ----------
 lt <
 ==========
-// Error marker not reached
+-- Error marker not reached
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
@@ -78,7 +78,7 @@ add
 x x
 add
 ==========
-// Error marker reached, but no error
+-- Error marker reached, but no error
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
@@ -89,18 +89,18 @@ tokens
 z z
 add
 ==========
-// Error marker reached, and reported
+-- Error marker reached, and reported
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
 ==========
 
 ----------
-Error on line 1: expecting err
+Error in tests/Evaluator.txt, line 97: expecting err
 
 ^
 ==========
-// Category succeeds or fails
+-- Category succeeds or fails
 token = Ll @letter
 ==========
 x
@@ -109,11 +109,11 @@ letter x
 ==========
 X
 ----------
-Error on line 1:
+Error in tests/Evaluator.txt, line 110:
 X
 ^
 ==========
-// Scanner
+-- Scanner
 tokens = @tokens token+
 token = Ll @1lower / Lu @1upper
 ==========
@@ -124,7 +124,7 @@ lower x
 upper Y
 lower z
 ==========
-// Token parser using tags
+-- Token parser using tags
 sum = %num @num (%plus @ %num @num @2add)*
 ==========
 id
@@ -155,16 +155,18 @@ end = #end <>
 ==========
 x
 ----------
-Error on line 1: expecting end
+Error in tests/Evaluator.txt, line 156: expecting end
 x
  ^
 ==========
 x\
 ----------
-x x
+Error in tests/Evaluator.txt, line 162: expecting end
+x
+ ^
 ==========
-// Check that an action at the start of a left hand alternative is delayed so
-// that it happens only if the alternative is chosen.
+-- An action at the start of a left hand alternative happens whether the
+-- alternative is chosen or not
 test = @left "0" / @right "1"
 ==========
 0
@@ -173,9 +175,10 @@ left
 ==========
 1
 ----------
+left
 right
 ==========
-// Test category recognition
+-- Test category recognition
 ch = Ll @letter
 ==========
 x
@@ -184,11 +187,11 @@ letter x
 ==========
 9
 ----------
-Error on line 1:
+Error in tests/Evaluator.txt, line 188:
 9
 ^
 ==========
-// First rule not producing a single result (allowed during testing).
+-- First rule not producing a single result (allowed during testing).
 x = 'a' @one @two
 ==========
 a
@@ -196,7 +199,7 @@ a
 one a
 two
 ==========
-// First rule underflows the output stack (allowed during testing).
+-- First rule underflows the output stack (allowed during testing).
 x = 'a' @1one
 ==========
 a

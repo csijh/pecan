@@ -1,9 +1,9 @@
-// Tutorial step 4 (1st test fails: expecting plus or digit)
+-- Tutorial step 4 (1st test fails: expecting plus or digit)
 sum = number '+' number @2add / number
 number = ('0..9')+ @number
 ==========
 2
 ----------
-Error on line 1:
+Error in tests/sum4.txt, line 5:
 2
  ^

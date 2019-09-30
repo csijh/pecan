@@ -1,4 +1,4 @@
-// Tutorial step 14 (brackets; end of input makes last test fail)
+-- Tutorial step 14 (brackets; end of input makes last test fail)
 sum = term (plus term @2add / minus term @2subtract)* end
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open sum close
@@ -28,7 +28,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline, operator
+Error in tests/sum14.txt, line 29: expecting digit, newline, operator
 2+40%
     ^
 ==========
@@ -54,7 +54,7 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting bracket, digit
+Error in tests/sum14.txt, line 55: expecting bracket, digit
 2+
   ^
 ==========
@@ -70,6 +70,6 @@ add
 ==========
 2*(20+1)
 ----------
-Error on line 1: expecting digit, newline, operator
+Error in tests/sum14.txt, line 71: expecting digit, newline, operator
 2*(20+1)
        ^

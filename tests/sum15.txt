@@ -1,4 +1,4 @@
-// Tutorial step 15 (fix end of input)
+-- Tutorial step 15 (fix end of input)
 sum = expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
@@ -29,7 +29,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline, operator
+Error in tests/sum15.txt, line 30: expecting digit, newline, operator
 2+40%
     ^
 ==========
@@ -55,7 +55,7 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting bracket, digit
+Error in tests/sum15.txt, line 56: expecting bracket, digit
 2+
   ^
 ==========

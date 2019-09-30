@@ -1,4 +1,4 @@
-// Tutorial step 12 (full error reporting)
+-- Tutorial step 12 (full error reporting)
 sum = number (plus number @2add / minus number @2subtract)* end
 number = digit+ @number
 plus = #operator '+' @
@@ -22,7 +22,7 @@ add
 ==========
 2+40%
 ----------
-Error on line 1: expecting digit, newline, operator
+Error in tests/sum12.txt, line 23: expecting digit, newline, operator
 2+40%
     ^
 ==========
@@ -48,6 +48,6 @@ subtract
 ==========
 2+
 ----------
-Error on line 1: expecting digit
+Error in tests/sum12.txt, line 49: expecting digit
 2+
   ^
