@@ -84,8 +84,8 @@ class Parser implements Testable {
     // rules = (inclusion / rule) (rules / @empty) @2list
     private boolean rules() {
         return (
-            ALT(GO() && inclusion() || OR() && rule()) &&
-            ALT(GO() && rules() || ACT(Empty)) &&
+            ALT(DO() && inclusion() || OR() && rule()) &&
+            ALT(DO() && rules() || ACT(Empty)) &&
             ACT2(List)
         );
     }
@@ -98,7 +98,7 @@ class Parser implements Testable {
     // rule = #id (id / backquote) equals expression newline @2rule skip
     private boolean rule() {
         return MARK(ID) && ALT(
-            GO() && id() ||
+            DO() && id() ||
             OR() && backquote()
         ) && equals() && exp() && newline() && ACT2(Rule) && skip();
     }
@@ -106,13 +106,13 @@ class Parser implements Testable {
     // expression = term (slash expression @2or)?
     private boolean exp() {
         return term() && OPT(
-            GO() && slash() && exp() && ACT2(Or)
+            DO() && slash() && exp() && ACT2(Or)
         );
     }
 
     // term = factor (term @2and)?
     private boolean term() {
-        return factor() && OPT(GO() && term() && ACT2(And));
+        return factor() && OPT(DO() && term() && ACT2(And));
     }
 
     // factor = #atom atom postops
@@ -122,7 +122,7 @@ class Parser implements Testable {
 
     // postops = (postop postops)?
     private boolean postops() {
-        return OPT(GO() && postop() && postops());
+        return OPT(DO() && postop() && postops());
     }
 
     // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
@@ -148,10 +148,10 @@ class Parser implements Testable {
             case '#': return mark();
             case '<': return split();
             case '%': return tag();
-            case '\'': return ALT(GO() && range() || OR() && set());
+            case '\'': return ALT(DO() && range() || OR() && set());
             case '"': return string();
             default: return ALT(
-                GO() && category() ||
+                DO() && category() ||
                 OR() && id() ||
                 OR() && codes() ||
                 OR() && code()
@@ -172,7 +172,7 @@ class Parser implements Testable {
     // id = (cat alpha!)! letter alphas @id blank
     private boolean id() {
         return NOT(
-            GO() && cat() && NOT(GO() && alpha())
+            DO() && cat() && NOT(DO() && alpha())
         ) && letter() && alphas() && ACT(Id) && blank();
     }
 
@@ -202,7 +202,7 @@ class Parser implements Testable {
     // codes = [digits '.'] #dot '.' digits @codes blank
     private boolean codes() {
         return TRY(
-            GO() && digits() && CHAR('.')
+            DO() && digits() && CHAR('.')
         ) && MARK(DOT) && CHAR('.') && digits() && ACT(Codes) && blank();
     }
 
@@ -214,7 +214,7 @@ class Parser implements Testable {
     // range = ["'" noquote ".."] noquote #quote "'" @range blank
     private boolean range() {
         return TRY(
-            GO() && CHAR('\'') && noquote() && STRING("..")
+            DO() && CHAR('\'') && noquote() && STRING("..")
         ) && noquote() && MARK(QUOTE) && CHAR('\'') && ACT(Range) && blank();
     }
 
@@ -306,7 +306,7 @@ class Parser implements Testable {
     // category = [cat alpha!] @cat blank
     private boolean category() {
         return TRY(
-            GO() && cat() && NOT(GO() && alpha())
+            DO() && cat() && NOT(DO() && alpha())
         ) && ACT(Cat) && blank();
     }
 
@@ -324,20 +324,20 @@ class Parser implements Testable {
 
     // blank = spaces [endline spaces '=/)]' &]? @
     private boolean blank() {
-        return spaces() && OPT(GO() && TRY(
-            GO() && endline() && spaces() && HAS(GO() && SET("=/)]"))
+        return spaces() && OPT(DO() && TRY(
+            DO() && endline() && spaces() && HAS(DO() && SET("=/)]"))
         )) && ACT();
     }
 
     // gap = spaces (newline spaces)? @
     private boolean gap() {
-        return spaces() && OPT(GO() && newline() && spaces()) && ACT();
+        return spaces() && OPT(DO() && newline() && spaces()) && ACT();
     }
 
     // skip = ((space / comment / newline) @ skip)?
     private boolean skip() {
-        return OPT(GO() &&
-            ALT(GO() &&
+        return OPT(DO() &&
+            ALT(DO() &&
                 space() || OR() && comment() || OR() && newline()
             ) && ACT() && skip()
         );
@@ -360,7 +360,7 @@ class Parser implements Testable {
 
     // spaces = space*
     private boolean spaces() {
-        return OPT(GO() && space() && spaces());
+        return OPT(DO() && space() && spaces());
     }
 
     // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
@@ -376,7 +376,7 @@ class Parser implements Testable {
 
     // visibles = visible*
     private boolean visibles() {
-        return OPT(GO() && visible() && visibles());
+        return OPT(DO() && visible() && visibles());
     }
 
     // alpha = letter / Nd / '_' / '-'
@@ -386,7 +386,7 @@ class Parser implements Testable {
 
     // alphas = alpha*
     private boolean alphas() {
-        return OPT(GO() && alpha() && alphas());
+        return OPT(DO() && alpha() && alphas());
     }
 
     // letter = Lu / Ll / Lt / Lm / Lo
@@ -413,54 +413,54 @@ class Parser implements Testable {
 
     // decimals = decimal*
     private boolean decimals() {
-        return OPT(GO() && decimal() && decimals());
+        return OPT(DO() && decimal() && decimals());
     }
 
     // hex = decimal / 'ABCDEFabcdef'
     private boolean hex() {
-        return ALT(GO() && decimal() || OR() && SET("ABCDEFabcdef"));
+        return ALT(DO() && decimal() || OR() && SET("ABCDEFabcdef"));
     }
 
     // hexes = hex*
     private boolean hexes() {
-        return OPT(GO() && hex() && hexes());
+        return OPT(DO() && hex() && hexes());
     }
 
     // digits = ('1..9' decimals) / '0' hexes
     private boolean digits() {
         return ALT(
-            GO() && RANGE('1','9') && decimals() || OR() && CHAR('0') && hexes()
+            DO() && RANGE('1','9') && decimals() || OR() && CHAR('0') && hexes()
         );
     }
 
     // noquote = "'"! visible
     private boolean noquote() {
-        return NOT(GO() && CHAR('\'')) && visible();
+        return NOT(DO() && CHAR('\'')) && visible();
     }
 
     // noquotes = ("'"! visible)*
     private boolean noquotes() {
-        return OPT(GO() && NOT(GO() && CHAR('\'')) && visible() && noquotes());
+        return OPT(DO() && NOT(DO() && CHAR('\'')) && visible() && noquotes());
     }
 
     // nodquotes = ('"'! visible)*
     private boolean nodquotes() {
-        return OPT(GO() && NOT(GO() && CHAR('"')) && visible() && nodquotes());
+        return OPT(DO() && NOT(DO() && CHAR('"')) && visible() && nodquotes());
     }
 
     // nobquotes = ("`"! visible)*
     private boolean nobquotes() {
-        return OPT(GO() && NOT(GO() && CHAR('`')) && visible() && nobquotes());
+        return OPT(DO() && NOT(DO() && CHAR('`')) && visible() && nobquotes());
     }
 
     // noangles = ('>'! visible)*
     private boolean noangles() {
-        return OPT(GO() && NOT(GO() && CHAR('>')) && visible() && noangles());
+        return OPT(DO() && NOT(DO() && CHAR('>')) && visible() && noangles());
     }
 
     // nocurlies = ('}'! visible)*
     private boolean nocurlies() {
-        return OPT(GO() && NOT(GO() && CHAR('}')) && visible() && nocurlies());
+        return OPT(DO() && NOT(DO() && CHAR('}')) && visible() && nocurlies());
     }
 
     // endline = 13? 10
@@ -471,7 +471,7 @@ class Parser implements Testable {
     // ---------- Support functions --------------------------------------------
 
     // Prepare for a choice or lookahead by recording the input position.
-    private boolean GO() {
+    private boolean DO() {
         if (save >= saves.length) {
             saves = Arrays.copyOf(saves, saves.length * 2);
         }

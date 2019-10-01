@@ -48,12 +48,13 @@ class Run {
             else usage();
         }
         if (sourcefile == null) usage();
-        Evaluator e = new Evaluator(tracing);
-        Test.run(sourcefile, e, line);
+        Evaluator e = new Evaluator();
+        Test.run(e, args);
     }
 
     // pecan -o output grammar
     private void runCompile(String[] args) {
+        /*
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-o")) {
                 outfile = args[i+1];
@@ -82,6 +83,7 @@ class Run {
             System.exit(1);
         }
         insert(code);
+        */
     }
 
     // Insert the code into the output file.

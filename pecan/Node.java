@@ -66,8 +66,8 @@ class Node {
     // Get/set counts and get bitsets. Set changed as appropriate.
     int NET() { return NET; }
     int NEED() { return NEED; }
-    void NET(int n) { if (NET != n) set(Flag.Changed); NET = n; }
-    void NEED(int n) { if (NEED != n) set(Flag.Changed); NEED = n; }
+    void NET(int n) { NET = n; }
+    void NEED(int n) { NEED = n; }
 
     // Get/set the note.
     String note() { return note; }
@@ -77,7 +77,7 @@ class Node {
     int PC() { return PC; }
     void PC(int i) { PC = i; }
 
-    // Get/set LEN = number of bytes of bytecode.
+    // Get/set LEN = number of bytes of bytecode or characters of compiled code.
     int LEN() { return LEN; }
     void LEN(int n) { LEN = n; }
 
@@ -113,6 +113,7 @@ class Node {
     void op(Op o) { op = o; }
     void start(int s) { start = s; }
     void end(int e) { end = e; }
+    void source(Source s) { source = s; }
 
     // The name is the text, without decoration, i.e. x = e -> x, #x -> x,
     // %x -> x, @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab, 'a..z' -> a..z

@@ -119,7 +119,6 @@ public class Evaluator implements Testable {
             case Set: parseSet(node); break;
             case Range: parseRange(node); break;
             case Codes: parseRange(node); break;
-
             case Split: parseSplit(node); break;
             case Cat: parseCat(node); break;
             case Mark: parseMark(node); break;
@@ -352,12 +351,6 @@ public class Evaluator implements Testable {
         String rest = input.substring(in);
         ok = rest.compareTo(text) <= 0;
     }
-
-
-
-
-
-
 
     // Parse Nd
     private void parseCat(Node node) {

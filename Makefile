@@ -11,6 +11,7 @@ Stacker = pecan/Stacker.java $(Checker)
 Evaluator = pecan/Evaluator.java $(Stacker)
 Simplifier = pecan/Simplifier.java $(Stacker)
 Code = pecan/Code.java
+Compiler = pecan/Compiler.java $(Stacker)
 Generator = pecan/Generator.java $(Stacker)
 Run = pecan/Run.java $(Evaluator)
 # Analyser = pecan/Analyser.java $(Stacker)
@@ -20,8 +21,8 @@ Run = pecan/Run.java $(Evaluator)
 	javac $($@)
 	java -ea pecan.$@
 
-Run: pecan/Run.java
-	javac pecan/Run.java
+Run: pecan/Run.java $(Evaluator)
+	javac pecan/Run.java $(Evaluator)
 
 jar: pecan/Run.class
 	jar -cef pecan.Run pecan.jar pecan

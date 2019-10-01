@@ -22,7 +22,8 @@ class Source {
     Source(String t, String file, int n) {
         if (t.length() > 0 && ! t.endsWith("\n")) t += "\n";
         text = t;
-        path = Paths.get(file);
+        if (file != null) path = Paths.get(file);
+        else path = null;
         firstLine = n;
         grammar = trace = false;
         findRows();

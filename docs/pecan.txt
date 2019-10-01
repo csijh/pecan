@@ -1,12 +1,12 @@
-// A Pecan grammar for the Pecan language itself, with tests.
+-- A Pecan grammar for the Pecan language itself, with tests.
 
-// A grammar is a sequence of rules, possibly with inclusions.
+-- A grammar is a sequence of rules, possibly with inclusions.
 pecan = skip rules #end <>
 rules = (inclusion / rule) (rules / @empty) @2list
 inclusion = include newline @1include skip
 rule = #id (id / backquote) equals expression newline @2rule skip
 
-// An expression breaks down into terms, factors and atoms.
+-- An expression breaks down into terms, factors and atoms.
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
 factor = #atom atom postops
@@ -15,8 +15,8 @@ postop = opt @2opt / any @2any / some @2some / has @2has / not @2not
 atom = bracketed / try / id / backquote / act / mark / tag /
     codes / code / range / set / string / split / category
 
-// Atoms. Categories and ids are made mutually exclusive.
-// Brackets produce output items, to help with text ranges of parse tree nodes.
+-- Atoms. Categories and ids are made mutually exclusive.
+-- Brackets produce output items, to help with text ranges of parse tree nodes.
 bracketed = open expression close @3bracketed
 try = sopen expression sclose @3try
 id = (cat alpha!)! letter alphas @id blank
@@ -47,15 +47,15 @@ cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
     "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
     "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
 
-// Rules for white space and continuations. A blank is after =/([ and a gap is
-// after atom or &!?*+)] and a skip is after a rule.
+-- Rules for white space and continuations. A blank is after =/([ and a gap is
+-- after atom or &!?*+)] and a skip is after a rule.
 blank = spaces [endline spaces '=/)]' &]? @
 gap = spaces (newline spaces)? @
 skip = ((space / comment / newline) @)*
 comment = "--" visibles newline
 newline = #newline endline @
 
-// Rules for character sets.
+-- Rules for character sets.
 space = ' '
 spaces = space*
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
@@ -84,16 +84,20 @@ x = y
 id x
 id y
 rule
+empty
+list
 ==========
 -- Inclusion
-"other.txt"
+{other.txt}
 x = y
 ----------
-string "other.txt"
+string {other.txt}
 include
 id x
 id y
 rule
+empty
+list
 list
 ==========
 -- Choice
@@ -104,6 +108,8 @@ id y
 id z
 or
 rule
+empty
+list
 ==========
 -- Bracket
 x = (y / z)
@@ -116,17 +122,19 @@ or
 bracket )
 bracketed
 rule
+empty
+list
 ==========
 -- Empty grammar
 ----------
-Error on line 2: expecting id, newline
+Error in pecan.txt, line 129: expecting id, newline
 
 ^
 ==========
 -- Expecting =
 x
 ----------
-Error on line 2: expecting equals
+Error in pecan.txt, line 135: expecting equals
 x
  ^
 ==========
@@ -140,6 +148,8 @@ rule
 id y
 id y
 rule
+empty
+list
 list
 ==========
 -- Windows \r\n line endings
@@ -152,6 +162,8 @@ rule
 id y
 id y
 rule
+empty
+list
 list
 ==========
 -- Blank lines
@@ -162,6 +174,8 @@ x = x
 id x
 id x
 rule
+empty
+list
 ==========
 -- Trailing spaces
 x = x    \10
@@ -174,6 +188,8 @@ rule
 id y
 id y
 rule
+empty
+list
 list
 ==========
 -- Trailing blank lines
@@ -188,23 +204,33 @@ rule
 id y
 id y
 rule
+empty
+list
 list
 ==========
 -- No final newline
 x = x
 y = y\
 ----------
-Error on line 3: expecting atom, newline, operator
-y = y
-     ^
+id x
+id x
+rule
+id y
+id y
+rule
+empty
+list
+list
 ==========
 -- No final newline
 x = x
 -- comment\
 ----------
-Error on line 3: expecting newline
--- comment
-          ^
+id x
+id x
+rule
+empty
+list
 ==========
 -- Varied comments and empty lines
 -- initial comment
@@ -222,40 +248,42 @@ rule
 id y
 id z
 rule
+empty
+list
 list
 ==========
 -- Illegal end of line comment
 x = y -- comment
 ----------
-Error on line 2: expecting atom, newline, operator
+Error in pecan.txt, line 256: expecting atom, newline, operator
 x = y -- comment
       ^
 ==========
 -- Unexpected character
 x = |y|
 ----------
-Error on line 2: expecting atom, newline
+Error in pecan.txt, line 263: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
 ----------
-Error on line 2: expecting quote
+Error in pecan.txt, line 270: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
 ----------
-Error on line 2: expecting quote
+Error in pecan.txt, line 277: expecting quote
 x = 'abc
         ^
 ==========
 -- Expecting atom
 x = /
 ----------
-Error on line 2: expecting atom, newline
+Error in pecan.txt, line 284: expecting atom, newline
 x = /
     ^
 ==========
@@ -263,21 +291,21 @@ x = /
 x = (y
 y = z
 ----------
-Error on line 2: expecting atom, bracket, operator
+Error in pecan.txt, line 291: expecting atom, bracket, operator
 x = (y
       ^
 ==========
 -- Dot in the wrong place
 x = .
 ----------
-Error on line 2: expecting atom, newline
+Error in pecan.txt, line 299: expecting atom, newline
 x = .
     ^
 ==========
 -- Incomplete dot dot
 x = 0.
 ----------
-Error on line 2: expecting dot
+Error in pecan.txt, line 306: expecting dot
 x = 0.
       ^
 ==========
@@ -287,6 +315,8 @@ x = @3
 id x
 act @3
 rule
+empty
+list
 ==========
 -- Long id and id extending category name
 longIdentifier = longIdentifier
@@ -298,12 +328,14 @@ rule
 id x
 id Ndx
 rule
+empty
+list
 list
 ==========
 -- Definition of category
 Nd = "x"
 ----------
-Error on line 2: expecting id, newline
+Error in pecan.txt, line 336: expecting id, newline
 Nd = "x"
 ^
 ==========
@@ -313,11 +345,13 @@ x = %x
 id x
 tag %x
 rule
+empty
+list
 ==========
 -- Bad tag
 x = %
 ----------
-Error on line 2: expecting letter
+Error in pecan.txt, line 352: expecting letter
 x = %
      ^
 ==========
@@ -327,11 +361,13 @@ x = #m
 id x
 mark #m
 rule
+empty
+list
 ==========
 -- Bad marker
 x = 'x' #3
 ----------
-Error on line 2: expecting letter
+Error in pecan.txt, line 368: expecting letter
 x = 'x' #3
          ^
 ==========
@@ -355,6 +391,8 @@ try
 id end
 and
 rule
+empty
+list
 list
 ==========
 -- Continuation lines
@@ -407,6 +445,8 @@ try
 and
 and
 rule
+empty
+list
 list
 list
 list
@@ -429,6 +469,8 @@ and
 and
 and
 rule
+empty
+list
 ==========
 -- Ranges
 r1 = 0..127
@@ -440,6 +482,8 @@ rule
 id r2
 range 'a..z'
 rule
+empty
+list
 list
 ==========
 -- Backquote id
@@ -448,6 +492,8 @@ list
 id `x`
 string "abc"
 rule
+empty
+list
 ==========
 -- Error marker
 assignment = left #equals "=" right
@@ -461,12 +507,14 @@ and
 and
 and
 rule
+empty
+list
 ==========
 -- Double operator
 x = y /
 z / /
 ----------
-Error on line 3: expecting atom, newline
+Error in pecan.txt, line 515: expecting atom, newline
 z / /
     ^
 ==========
@@ -514,6 +562,8 @@ mark #err
 set ''
 and
 rule
+empty
+list
 list
 list
 list
@@ -534,6 +584,8 @@ code 1114111
 code 0ffff
 or
 rule
+empty
+list
 list
 list
 ==========
@@ -555,6 +607,8 @@ rule
 id pi
 string "\960"
 rule
+empty
+list
 list
 list
 ==========
@@ -611,6 +665,8 @@ try
 id w
 or
 rule
+empty
+list
 list
 list
 list
@@ -651,6 +707,8 @@ or
 or
 or
 rule
+empty
+list
 list
 list
 ==========
@@ -662,6 +720,8 @@ mark #end
 split <>
 and
 rule
+empty
+list
 ==========
 -- Underscore
 a_b = xy_
@@ -669,6 +729,8 @@ a_b = xy_
 id a_b
 id xy_
 rule
+empty
+list
 ==========
 -- Hyphen
 a-b = xy-
@@ -676,6 +738,8 @@ a-b = xy-
 id a-b
 id xy-
 rule
+empty
+list
 ==========
 -- Single backslash in quotes (escaped using test file conventions)
 bs = '\\n' "\\n"
@@ -685,3 +749,5 @@ set '\\n'
 string "\\n"
 and
 rule
+empty
+list

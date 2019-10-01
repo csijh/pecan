@@ -52,18 +52,18 @@ class Simplifier implements Test.Callable {
         node.note("");
     }
 
-    // Replace [x] by (x& x) if x contains actions.
+    // Replace [x] by (x& x) if x contains actions. Assume x is small enough to
+    // be repeated twice, rather than making a separate rule for it. Note this
+    // makes the tree into a DAG.
     private void expandTry(Node node) {
         if (node.left() != null) expandTry(node.left());
         if (node.right() != null) expandTry(node.right());
-        if (node.op() == TRY && node.has(AA)) {
+        if (node.op() == TRY && (node.has(AA) || node.has(EE)) {
             Node x = node.left();
-            Node xid = new Node(Id, source, x.start(), x.end());
-            xid.ref(x);
             node.op(And);
-            int s = node.start(), e = node.end();
+            int s = x.start(), e = x.end();
             node.left(new Node(HAS, x, source, s, e));
-            node.right(xid);
+            node.right(x);
         }
     }
 

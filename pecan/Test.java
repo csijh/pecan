@@ -90,7 +90,7 @@ public class Test {
         Path path = Paths.get(fileName);
         try { return Files.readAllLines(path, StandardCharsets.UTF_8); }
         catch (Exception e) {
-            System.err.println("Error: can't read " + fileName + e);
+            System.err.println("Error: can't read " + fileName + " " + e);
             System.exit(1);
             return null;
         }

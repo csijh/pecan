@@ -1,0 +1,117 @@
+-- Single matcher
+x = 'a'
+----------
+// x = 'a'
+bool x() { return CHAR('a'); }
+==========
+-- Sequence
+x = 'a' 'b'
+----------
+// x = 'a' 'b'
+bool x() { return CHAR('a') && CHAR('b'); }
+==========
+-- Simple choice (LHS doesn't have FP)
+x = 'a' / 'b'
+----------
+// x = 'a' / 'b'
+bool x() { return CHAR('a') || CHAR('b'); }
+==========
+-- General choice (LHS does have FP)
+x = 'a' 'b' / 'c'
+----------
+// x = 'a' 'b' / 'c'
+bool x() { return ALT(DO() && CHAR('a') && CHAR('b') || OR() && CHAR('c')); }
+==========
+-- Option
+x = 'a'?
+----------
+// x = 'a'?
+bool x() { return (CHAR('a') || true); }
+==========
+-- Long sequence
+x = 'a' 'b' 'c' 'd' 'e' 'f' 'g'
+----------
+// x = 'a' 'b' 'c' 'd' 'e' 'f' 'g'
+bool x() {
+    return CHAR('a') && CHAR('b') && CHAR('c') && CHAR('d') && CHAR('e') &&
+    CHAR('f') && CHAR('g');
+}
+==========
+-- Long choice
+x = 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / 'g'
+----------
+// x = 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / 'g'
+bool x() {
+    return CHAR('a') || CHAR('b') || CHAR('c') || CHAR('d') || CHAR('e') ||
+    CHAR('f') || CHAR('g');
+}
+==========
+-- Long complex choice
+x = 'a' '1' / 'b' / 'c' / 'd' / 'e' '2' / 'f' / 'g'
+----------
+// x = 'a' '1' / 'b' / 'c' / 'd' / 'e' '2' / 'f' / 'g'
+bool x() {
+    return ALT(
+        DO() && CHAR('a') && CHAR('1') ||
+        OR() && CHAR('b') ||
+        CHAR('c') ||
+        CHAR('d') ||
+        CHAR('e') && CHAR('2') ||
+        OR() && CHAR('f') ||
+        CHAR('g')
+    );
+}
+==========
+-- Multiline comment
+x = 'a' '1' / 'b' /
+    'c' / 'd' / 'e' '2' /
+    'f' / 'g'
+----------
+// x = 'a' '1' / 'b' /
+//     'c' / 'd' / 'e' '2' /
+//     'f' / 'g'
+bool x() {
+    return ALT(
+        DO() && CHAR('a') && CHAR('1') ||
+        OR() && CHAR('b') ||
+        CHAR('c') ||
+        CHAR('d') ||
+        CHAR('e') && CHAR('2') ||
+        OR() && CHAR('f') ||
+        CHAR('g')
+    );
+}
+==========
+-- Simple try
+x = ['a']
+----------
+// x = ['a']
+bool x() { return TRY(DO() && CHAR('a')); }
+==========
+-- Complex try
+x = ['a' @a]
+----------
+// x = ['a' @a]
+bool x() { return HAS(DO() && CHAR('a') && ACT(a)) && CHAR('a') && ACT(a); }
+==========
+-- Two rules
+x = 'a'
+y = 'b'
+----------
+// x = 'a'
+bool x() { return CHAR('a'); }
+
+// y = 'b'
+bool y() { return CHAR('b'); }
+==========
+-- Action
+x = 'a' @a
+----------
+// x = 'a' @a
+bool x() { return CHAR('a') && ACT(a); }
+==========
+-- Lift out loop
+x = 'a' 'b'*
+----------
+// x = ['a' @a]
+?
