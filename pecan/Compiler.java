@@ -40,8 +40,9 @@ public class Compiler implements Testable {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
         if (root.op() == Error) return "Error: " + root.note();
-        expandTry(root);
-        lift(root);
+        Transformer transformer = new Transformer();
+        transformer.expandTry(root);
+        transformer.lift(root);
         int old = margin;
         margin = Integer.MAX_VALUE;
         clear();
@@ -113,8 +114,8 @@ public class Compiler implements Testable {
     // Compile x = p
     private void compileRule(Node node) {
         if (switchTest) return;
-        if (node.right().op() == Any) { compileAny(node); return; }
-        if (node.right().op() == Some) { compileSome(node); return; }
+//        if (node.right().op() == Any) { compileAny(node); return; }
+//        if (node.right().op() == Some) { compileSome(node); return; }
         boolean fit = node.LEN() <= margin - cursor;
         print("bool ");
         print(node.left().name());
@@ -127,7 +128,7 @@ public class Compiler implements Testable {
         print(" }");
         newline(0);
     }
-
+/*
     // Compile a lifted rule xs = x* = (x xs)?
     private void compileAny(Node node) {
         boolean fit = node.LEN() <= margin - cursor;
@@ -144,7 +145,7 @@ public class Compiler implements Testable {
             print(" || true)");
         }
     }
-
+*/
     // Compile x
     private void compileId(Node node) {
         if (switchTest) return;
@@ -356,49 +357,6 @@ public class Compiler implements Testable {
         if (switchTest) return;
         String a = node.arity() == 0 ? "" : "" + node.arity();
         print("ACT" + a + "(" + node.name() + ")");
-    }
-
-    // Replace [x] by (x& x) if x contains actions or markers. Assume x is small
-    // enough to be repeated twice, rather than making a separate rule for it.
-    // Note this makes the tree into a DAG.
-    private void expandTry(Node node) {
-        if (node.left() != null) expandTry(node.left());
-        if (node.right() != null) expandTry(node.right());
-        if (node.op() == Try && (node.has(AA) || node.has(EE))) {
-            Node x = node.left();
-            node.op(And);
-            node.left(new Node(Has, x, x.source(), x.start(), x.end()));
-            node.right(x);
-        }
-    }
-
-    // Given a list node, lift a loop out into a separate preceding rule.
-    private void lift(Node node) {
-        Node loop = findLoop(node.left());
-        if (loop == null) return;
-        String name = node.left().left().name() + "1";
-        int s = loop.start(), e = loop.end();
-        String txt = name + " = " + loop.source().substring(s,e);
-        Source src = new Source(txt);
-        Node id = new Node(Id, src, 0, name.length());
-        Node rule = new Node(Rule, id, loop, src, 0, txt.length());
-        Node list2 = new Node(
-            List, node.left(), node.right(),
-            node.source(), node.start(), node.end()
-        );
-        node.left(rule);
-        node.right(list2);
-    }
-
-    // Find a loop node, or return null.
-    private Node findLoop(Node node) {
-        if (node.op() == Any || node.op() == Some) return node;
-        if (node.left() != null) {
-            Node loop = findLoop(node.left());
-            if (loop != null) return loop;
-        }
-        if (node.right() != null) return findLoop(node.right());
-        return null;
     }
 
 /*

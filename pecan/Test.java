@@ -18,10 +18,11 @@ dependencies on the other pecan classes, and therefore unit testing of a class
 can be done even when other classes are broken. For each test, the test method
 is called on the object, and its output is compared with the expected output.
 
-A file of tests is divided into sections, separated from each other by a line of
-three or more equal signs. Each section normally represents one test, and is
-separated into two parts by a line of three or more minus signs. The first part
-is an input string for the test, and the second part is the expected output.
+A file of tests is divided into sections, separated from each other by a line
+starting with four or more equal signs. Each section normally represents one
+test, and is separated into two parts by a line starting with four or more
+minus signs. The first part is an input string for the test, and the second part
+is the expected output.
 
 If a section contains only one part, then it represents a grammar to be used for
 subsequent tests. The grammar may contain inclusions. The grammar is a single
@@ -106,7 +107,7 @@ public class Test {
         int start = 0;
         String grammar = null;
         for (int i = 0; i <= lines.size(); i++) {
-            if (i < lines.size() && ! lines.get(i).matches("====*")) continue;
+            if (i < lines.size() && ! lines.get(i).startsWith("====")) continue;
             String line = lines.get(start);
             if (i == start + 1 && line.matches("\\{.*\\}")) {
                 String file2 = line.substring(1, line.length() - 1);
@@ -127,7 +128,7 @@ public class Test {
     private static Test makeTest(String f, List<String> lines, int s, int e) {
         int divider = -1;
         for (int i = s; i < e && divider < 0; i++) {
-            if (lines.get(i).matches("----*")) divider = i;
+            if (lines.get(i).startsWith("----")) divider = i;
         }
         if (divider < 0) divider = e;
         String in = "", out = "";
@@ -150,9 +151,11 @@ public class Test {
             Object obj = object.run(test.input);
             String out = obj.toString();
             String message = test.check(out);
-            if (message == null) { passed++; continue; }
-            System.err.print(message);
-            System.exit(1);
+            if (! test.input.grammar() && message == null) passed++;
+            if (message != null) {
+                System.err.println(message);
+                System.exit(1);
+            }
         }
         return passed;
     }
@@ -172,88 +175,6 @@ public class Test {
             "Pass " + n + " tests.");
     }
 
-/*
-    // Run tests from a given file on a given object. If line > 0, run just the
-    // one test that starts on that line. Return the number of tests passed.
-    private static int runTests(String file, Testable object, int line) {
-        List<Test> tests = extract(file);
-        int passed = 0;
-        for (Test test : tests) {
-            if (test.isGrammar()) {
-                String out = object.test("GRAMMAR:\n" + test.input());
-                if (out == null) out = "";
-                String message = test.check(out);
-                if (message == null) continue;
-                System.err.println(message);
-                System.exit(1);
-            }
-            else if (test.isSubfile()) {
-                File f = new File(file);
-                f = new File(f.getParentFile(), test.input());
-                String subfile = f.getPath();
-                passed += runTests(subfile, object, 0);
-                continue;
-            }
-            if (line > 0 && test.lineNo != line) continue;
-            String out = object.test(test.input());
-            String message = test.check(out);
-            if (message == null) { passed++; continue; }
-            System.err.print(message);
-            System.exit(1);
-        }
-        return passed;
-    }
-
-    // Divide the lines from a file into test objects.
-    private static List<Test> readTests(String file, List<String> lines) {
-        List<Test> tests = new ArrayList<Test>();
-        int start = 0;
-        String grammar = null;
-        for (int i=0; i<=lines.size(); i++) {
-            if (i < lines.size() && ! all(lines.get(i), '=')) continue;
-            readTest(tests, lines, start, i);
-            if (t != null) {
-                if (! t.isGrammar) t.input = unescape(t.input);
-                t.fileName = file;
-                tests.add(t);
-            }
-            start = i + 1;
-        }
-        return tests;
-    }
-
-    // Check whether a line consists of one repeated character.
-    private static boolean all(String line, char ch) {
-        if (line.length() < 3) return false;
-        for (int i=0; i<line.length(); i++) {
-            if (line.charAt(i) != ch) return false;
-        }
-        return true;
-    }
-
-    // Create a test object from a range of lines.
-    private static Test readTest(List<String> lines, int start, int end) {
-        int endi = -1;
-        for (int i=start; i<end; i++) if (all(lines.get(i), '-')) endi = i;
-        if (endi < 0) endi = end;
-        Test test = new Test();
-        test.input = test.output = "";
-        test.lineNo = start + 1;
-        for (int i=start; i<endi; i++) test.input += lines.get(i) + "\n";
-        for (int i=endi+1; i<end; i++) test.output += lines.get(i) + "\n";
-        if (end == start + 1) {
-            if (test.input.startsWith("//")) return null;
-            else if (test.input.indexOf('=') >= 0) test.isGrammar = true;
-            else if (test.input.indexOf('.') >= 0) test.isSubfile = true;
-            else test.isEntry = true;
-        }
-        if (test.isSubfile || test.isEntry) {
-            test.input = test.input.substring(0, test.input.length() - 1);
-        }
-        else if (endi == end) test.isGrammar = true;
-        return test;
-    }
-*/
     // Interpret escape characters in a string.
     static String unescape(String text) {
         String out = "";

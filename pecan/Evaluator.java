@@ -43,6 +43,10 @@ public class Evaluator implements Testable {
     public String run(Source source) {
         if (source.grammar()) return setup(source);
         else {
+            if (grammar == null) {
+                System.err.println("Error: No grammar has been set up");
+                System.exit(1);
+            }
             prepare(source);
             return runParser();
         }
@@ -61,6 +65,8 @@ public class Evaluator implements Testable {
     // Get the Evaluator ready to run, with the given input.
     private void prepare(Source s) {
         source = s;
+        if (s == null) System.out.println("PREPARE s null");
+        if (grammar == null) System.out.println("PREPARE g null");
         if (grammar.has(TI)) tokens = source.text().split("\\s+");
         else input = source.text();
         ok = true;

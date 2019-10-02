@@ -110,8 +110,16 @@ x = 'a' @a
 // x = 'a' @a
 bool x() { return CHAR('a') && ACT(a); }
 ==========
--- Lift out loop
+-- Lift out * loop
 x = 'a' 'b'*
 ----------
-// x = ['a' @a]
+// x1 = ('b' x1)?
+bool x1() { return (CHAR('b') && x1() || true); }
+
+// x = 'a' 'b'*
+bool x() { return CHAR('a') && x1(); }
+==========
+-- Lift out + loop
+x = 'a' 'b'+
+----------
 ?

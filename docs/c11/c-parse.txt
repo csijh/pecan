@@ -55,7 +55,7 @@ unary-expression  =
     `--` unary-expression /
     unary-operator cast-expression /
     `sizeof` (unary-expression / `(` type-name `)`) /
-    `alignof` `(` type-name `)`
+    ALIGNOF `(` type-name `)`
 
 unary-operator =
     `&` / `*` / `+` / `-` / `~` / `!`

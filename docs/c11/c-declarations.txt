@@ -18,7 +18,7 @@ string-literal = #atom %StringLiteral @StringLiteral
 typedef-name = #atom %TypedefName @TypedefName
 
 // Literal synonyms for keywords.
-`alignof` = %Alignof
+ALIGNOF = %Alignof
 `auto` = #type %Auto
 `break` = %Break
 `case` = #case %Case
@@ -158,7 +158,7 @@ unary-expression  =
     unary-operator cast-expression @2preOp /
     [`sizeof` `(` type-name `)`] @1typeSize /
     `sizeof` unary-expression @1varSize /
-    `alignof` `(` type-name `)` @1align
+    ALIGNOF `(` type-name `)` @1align
 
 unary-operator =
     `&` @address / `*` @star / `+` @pos / `-`@neg  / `~` @tilde / `!` @not

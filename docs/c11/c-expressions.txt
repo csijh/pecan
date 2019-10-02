@@ -1,24 +1,24 @@
-// An expression parser for C, after pre-processing and scanning, covering
-// section A.2.1 of the C11 standard.
+-- An expression parser for C, after pre-processing and scanning, covering
+-- section A.2.1 of the C11 standard.
 
-// Temporary definitions to make expressions self-contained.
+-- Temporary definitions to make expressions self-contained.
 start = expression
 type-name = %TypeName @typeName
 initializer-list = %InitializerList @initializerList
 
-// ---------- Tokens -----------------------------------------------------------
+-- Tokens -----------------------------------------------------------
 
-// Definition taken from lexical grammar.
+-- Definition taken from lexical grammar.
 enumeration-constant = identifier
 
-// Token types with variable spellings.
+-- Token types with variable spellings.
 identifier = #atom %Identifier @identifier
 constant = #atom %Constant @constant
 string-literal = #atom %StringLiteral @StringLiteral
 typedef-name = #atom %TypedefName @TypedefName
 
-// Literal synonyms for keywords.
-`alignof` = %Alignof
+-- Literal synonyms for keywords.
+ALIGNOF = %Alignof
 `auto` = #type %Auto
 `break` = %Break
 `case` = #case %Case
@@ -63,7 +63,7 @@ typedef-name = #atom %TypedefName @TypedefName
 `_Static_assert` = %StaticAssert
 `_Thread_local` = %ThreadLocal
 
-// Literal synonyms for punctuators.
+-- Literal synonyms for punctuators.
 `%:%:` = #op %PercentColonPercentColon
 `<<=` = #op %LessLessEquals
 `>>=` = #op %GreaterGreaterEquals
@@ -119,7 +119,7 @@ typedef-name = #atom %TypedefName @TypedefName
 `,` = #comma %Comma
 `#` = %Hash
 
-// ---------- Expressions ------------------------------------------------------
+-- Expressions ------------------------------------------------------
 
 primary-expression =
     identifier /
@@ -158,7 +158,7 @@ unary-expression  =
     unary-operator cast-expression @2preOp /
     [`sizeof` `(` type-name `)`] @1typeSize /
     `sizeof` unary-expression @1varSize /
-    `alignof` `(` type-name `)` @1align
+    ALIGNOF `(` type-name `)` @1align
 
 unary-operator =
     `&` @address / `*` @star / `+` @pos / `-`@neg  / `~` @tilde / `!` @not
@@ -232,9 +232,7 @@ expression =
 
 constant-expression = conditional-expression
 
-==========
-// Primary expressions
-==========
+=============== Primary expressions
 Identifier
 ----------
 identifier
@@ -261,9 +259,7 @@ identifier
 identifier
 defaultAssoc
 generic
-==========
-// Postfix expressions
-==========
+=============== Postfix expressions
 OpenR TypeName CloseR OpenC InitializerList CloseC
 ----------
 typeName
@@ -310,9 +306,7 @@ identifier
 identifier
 arrow
 postInc
-==========
-// Unary expressions
-==========
+=============== Unary expressions
 PlusPlus Identifier
 ----------
 identifier
@@ -348,17 +342,13 @@ Alignof OpenR TypeName CloseR
 ----------
 typeName
 align
-==========
-// Cast expressions
-==========
+=============== Cast expressions
 OpenR TypeName CloseR Identifier
 ----------
 typeName
 identifier
 cast
-==========
-// Multiplicative expressions
-==========
+=============== Multiplicative expressions
 Identifier Star Identifier
 ----------
 identifier
@@ -374,9 +364,7 @@ typeName
 identifier
 cast
 divide
-==========
-// Additive expressions
-==========
+=============== Additive expressions
 Identifier Star Identifier Plus Identifier Slash Identifier
 ----------
 identifier
@@ -386,18 +374,14 @@ identifier
 identifier
 divide
 add
-==========
-// Conditional expressions
-==========
+=============== Conditional expressions
 Identifier Query Identifier Colon Identifier
 ----------
 identifier
 identifier
 identifier
 ifExp
-==========
-// Assignment expressions
-==========
+=============== Assignment expressions
 Identifier Equals Identifier
 ----------
 identifier
@@ -413,9 +397,7 @@ identifier
 identifier
 add
 assign
-==========
-// Top level expressions
-==========
+=============== Top level expressions
 Identifier Comma Identifier
 ----------
 identifier

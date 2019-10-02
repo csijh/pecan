@@ -80,6 +80,25 @@ class Source {
         return firstLine + row(p);
     }
 
+    // Replace a substring of the source, to support transformations. Update all
+    // the nodes in the given tree, assuming the tree is e.g. a rule where all
+    // the nodes are guaranteed to be described by this source. Assume that
+    // node source positions inside the new text are ok.
+    void replace(int s, int e, String t, Node tree) {
+        text = text.substring(0, s) + t + text.substring(e);
+        replaceNode(e, s + t.length(), tree);
+    }
+
+    // Change the source extent of each node in a tree to match the new text.
+    void replaceNode(int e1, int e2, Node node) {
+        if (node.source() != this) throw new Error("Wrong source");
+        int ns = node.start(), ne = node.end();
+        if (ns >= e1) ns = ns + e2 - e1;
+        if (ne >= e1) ne = ne + e2 - e1;
+        if (node.left() != null) replaceNode(e1, e2, node.left());
+        if (node.right() != null) replaceNode(e1, e2, node.right());
+    }
+
     // Create an error message, based on a text range.
     String error(int start, int end, String message) {
         int startRow = row(start);
