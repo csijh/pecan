@@ -1,6 +1,6 @@
 // Try with no actions
 x = @x ['a'] 'b'
-----------
+..........
 RULE x
   AND @x ['a'] 'b'
     ACT @x
@@ -10,7 +10,7 @@ RULE x
 ==========
 // Try with actions
 x = ['a' @a] 'b'
-----------
+..........
 RULE x
   AND ['a' @a] 'b'
     AND ['a' @a]
@@ -21,7 +21,7 @@ RULE x
 ==========
 // Deactivate x& or x!: nothing to do
 x = ('a')& "ab" @x
-----------
+..........
 RULE x
   AND ('a')& "ab" @x
     HAS ('a')&
@@ -31,7 +31,7 @@ RULE x
 ==========
 // Deactivate: simple removal
 x = ('a' @y)& @x
-----------
+..........
 RULE x
   AND ('a' @y)& @x
     HAS ('a' @y)&
@@ -41,7 +41,7 @@ RULE x
 // Deactivate: removal from another rule
 x = y& @x
 y = 'a' @y
-----------
+..........
 RULE x
   AND y& @x
     HAS y&
@@ -57,7 +57,7 @@ RULE $y
 // Tutorial step 5 (3rd test doesn't discard "+")
 sum = [number "+"] number @2add / number
 number = ("0".."9")+ @number
-----------
+..........
 RULE sum
   OR [number "+"] number @2add / number
     AND [number "+"] number @2add

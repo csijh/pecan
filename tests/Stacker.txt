@@ -1,6 +1,6 @@
 -- Simple case of one output item
 x = @Id @
-----------
+..........
 List x = @Id @...
   Rule x = @Id @ NET=1
     Id x NET=1
@@ -11,28 +11,28 @@ List x = @Id @...
 ==========
 -- Well-formed but 'non-terminating' grammar
 x = 'a' x @b
-----------
+..........
 Error in tests/Stacker.txt, line 13: variable net output
 x = 'a' x @b
 ^
 ==========
 -- Low water mark continually decreasing
 x = 'a' / 'b' @2c x @d
-----------
+..........
 Error in tests/Stacker.txt, line 20: outputs may underflow
 x = 'a' / 'b' @2c x @d
 ^^^^^^^^^^^^^^^^^^^^^^
 ==========
 -- Choices disagree
 x = @1a / @2b
-----------
+..........
 Error in tests/Stacker.txt, line 27: alternatives have different net outputs
 x = @1a / @2b
     ^^^^^^^^^
 ==========
 -- Choice
 exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP
-----------
+..........
 List exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP...
   Rule exp = 'a' @NUM / "(" @OPEN exp ")" @CLOSE @3EXP NET=1
     Id exp NET=1
@@ -57,7 +57,7 @@ factor = primary ("^" factor @2pow)?
 primary = number / "(" exp ")"
 number = digit+ @number
 digit = '0..9'
-----------
+..........
 List sum = exp...
   Rule sum = exp NET=1
     Id sum NET=1

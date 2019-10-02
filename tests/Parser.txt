@@ -1,5 +1,5 @@
 x = y
-----------
+..........
 List x = y...
   Rule x = y
     Id x
@@ -8,7 +8,7 @@ List x = y...
 ==========
 -- One-liner with comment
 x = y
-----------
+..........
 List x = y...
   Rule x = y
     Id x
@@ -17,7 +17,7 @@ List x = y...
 ==========
 -- Choice
 x = y / z
-----------
+..........
 List x = y / z...
   Rule x = y / z
     Id x
@@ -28,7 +28,7 @@ List x = y / z...
 ==========
 -- Bracket
 x = (y / z)
-----------
+..........
 List x = (y / z)...
   Rule x = (y / z)
     Id x
@@ -37,14 +37,14 @@ List x = (y / z)...
       Id z
   Empty
 ==========
-----------
+..........
 Error in tests/Parser.txt, line 40: expecting id, newline
 
 ^
 ==========
 -- Expecting =
 x
-----------
+..........
 Error in tests/Parser.txt, line 46: expecting equals
 x
  ^
@@ -52,7 +52,7 @@ x
 -- Normal \n line endings
 x = x
 y = y
----------
+..........
 List x = x...
   Rule x = x
     Id x
@@ -65,7 +65,7 @@ List x = x...
 -- Windows \r\n line endings (using test file escape conventions)
 x=x\13\10\
 y=y\13\10\
-----------
+..........
 List x=x\13...
   Rule x=x
     Id x
@@ -79,7 +79,7 @@ List x=x\13...
 
 
 x = x
-----------
+..........
 List x = x...
   Rule x = x
     Id x
@@ -90,7 +90,7 @@ List x = x...
 x = x    \10\
          \10\
 y = y    \10\
-----------
+..........
 List x = x    ...
   Rule x = x
     Id x
@@ -104,7 +104,7 @@ List x = x    ...
 x = x
 y = y
 
-----------
+..........
 List x = x...
   Rule x = x
     Id x
@@ -119,7 +119,7 @@ x = x
 y = y
 
 
-----------
+..........
 List x = x...
   Rule x = x
     Id x
@@ -132,7 +132,7 @@ List x = x...
 -- No final newline
 x = x
 y = y\
-----------
+..........
 List x = x...
   Rule x = x
     Id x
@@ -145,7 +145,7 @@ List x = x...
 -- No final newline
 x = x
 -- comment\
-----------
+..........
 List x = x...
   Rule x = x
     Id x
@@ -161,7 +161,7 @@ x = y
 y = z
 
 -- end comment
-----------
+..........
 List x = y...
   Rule x = y
     Id x
@@ -173,28 +173,28 @@ List x = y...
 ==========
 -- Scanner error
 x = |y|
-----------
+..........
 Error in tests/Parser.txt, line 175: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
-----------
+..........
 Error in tests/Parser.txt, line 182: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
-----------
+..........
 Error in tests/Parser.txt, line 189: expecting quote
 x = 'abc
         ^
 ==========
 -- One rule
 x = "a"
-----------
+..........
 List x = "a"...
   Rule x = "a"
     Id x
@@ -204,7 +204,7 @@ List x = "a"...
 -- Two rules
 x = "a"
 y = "b"
-----------
+..........
 List x = "a"...
   Rule x = "a"
     Id x
@@ -216,14 +216,14 @@ List x = "a"...
 ==========
 -- Expecting equals
 x
-----------
+..........
 Error in tests/Parser.txt, line 218: expecting equals
 x
  ^
 ==========
 -- Expecting atom
 x = /
-----------
+..........
 Error in tests/Parser.txt, line 225: expecting atom, newline
 x = /
     ^
@@ -231,28 +231,28 @@ x = /
 -- Missing close bracket
 x = (y
 y = z
-----------
+..........
 Error in tests/Parser.txt, line 232: expecting atom, bracket, operator
 x = (y
       ^
 ==========
 -- Dot in the wrong place
 x = .
-----------
+..........
 Error in tests/Parser.txt, line 240: expecting atom, newline
 x = .
     ^
 ==========
 -- Incomplete dot dot
 x = 0.
-----------
+..........
 Error in tests/Parser.txt, line 247: expecting dot
 x = 0.
       ^
 ==========
 -- Drop action
 x = @3
-----------
+..........
 List x = @3...
   Rule x = @3
     Id x
@@ -261,7 +261,7 @@ List x = @3...
 ==========
 -- Tag
 x = %x
-----------
+..........
 List x = %x...
   Rule x = %x
     Id x
@@ -270,7 +270,7 @@ List x = %x...
 ==========
 -- Bad marker
 x = 'x' #3
-----------
+..........
 Error in tests/Parser.txt, line 272: expecting letter
 x = 'x' #3
          ^
@@ -290,7 +290,7 @@ x
 = y (a
 ) [c
 ]
-----------
+..........
 List x =...
   Rule x =...
     Id x
@@ -320,7 +320,7 @@ List x =...
 -- Brackets
 exp = (exp) end
 exp = [exp] end
-----------
+..........
 List exp = (exp) end...
   Rule exp = (exp) end
     Id exp
@@ -337,7 +337,7 @@ List exp = (exp) end...
 ==========
 -- The + * ? postfix operators
 exp = exp* exp+ exp? end
-----------
+..........
 List exp = exp* exp+ exp? end...
   Rule exp = exp* exp+ exp? end
     Id exp
@@ -354,7 +354,7 @@ List exp = exp* exp+ exp? end...
 -- Ranges
 r1 = 0..127
 r2 = 'a..z'
-----------
+..........
 List r1 = 0..127...
   Rule r1 = 0..127
     Id r1
@@ -366,14 +366,14 @@ List r1 = 0..127...
 ==========
 -- Illegal spaces in code range
 r = 0 .. 127
-----------
+..........
 Error in tests/Parser.txt, line 368: expecting atom, newline, operator
 r = 0 .. 127
       ^
 ==========
 -- Backquote id
 `x` = "abc"
-----------
+..........
 List `x` = "abc"...
   Rule `x` = "abc"
     Id `x`
@@ -387,7 +387,7 @@ factor = primary ("^" factor @2pow)?
 primary = number / "(" exp ")"
 number = digit+ @number
 digit = '0123456789'
-----------
+..........
 List exp = term ("+" term @2add / "-" term @2sub)* <>...
   Rule exp = term ("+" term @2add / "-" term @2sub)* <>
     Id exp
@@ -448,7 +448,7 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
 ==========
 -- Error markers
 assignment = left #equals "=" right
-----------
+..........
 List assignment = left #equals "=" right...
   Rule assignment = left #equals "=" right
     Id assignment
@@ -462,7 +462,7 @@ List assignment = left #equals "=" right...
 -- Error on line 3
 x = y /
 z / /
-----------
+..........
 Error in tests/Parser.txt, line 464: expecting atom, newline
 z / /
     ^
@@ -470,7 +470,7 @@ z / /
 -- Unicode letters and digits and numbers (using test file escape conventions)
 x = abc\960\1636
 z = 1114111 / 0ffff
-----------
+..........
 List x = abc\960\ \1636...
   Rule x = abc\960\ \1636
     Id x
@@ -486,7 +486,7 @@ List x = abc\960\ \1636...
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
 pi = "\960"
-----------
+..........
 List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
   Rule x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
     Id x
@@ -508,7 +508,7 @@ x = %x @0x @1x @ @x
 y = 0 1 2 10 12 123
 z = 0ffff 01ABCDEF23 0FG
 u = #err ''
-----------
+..........
 List x = %x @0x @1x @ @x...
   Rule x = %x @0x @1x @ @x
     Id x
@@ -546,7 +546,7 @@ x = (y / z) / y?
 x = (y/z)+ / y*
 x = y z w ! / y
 x = [y z] / w
-----------
+..........
 List x = (y / z) / y?...
   Rule x = (y / z) / y?
     Id x
@@ -588,7 +588,7 @@ List x = (y / z) / y?...
 x =
  -- comment
  y
-----------
+..........
 Error in tests/Parser.txt, line 589: expecting atom
  -- comment
  ^
@@ -596,7 +596,7 @@ Error in tests/Parser.txt, line 589: expecting atom
 -- String with supplementary unicode character 195101 (=2fa1d, last letter)
 -- Represented as two chars, upper/lower surrogates.
 range = "\55422\56861" / '\55422\56861'
-----------
+..........
 List range = "\195101" / '\195101'...
   Rule range = "\195101" / '\195101'
     Id range
@@ -609,7 +609,7 @@ List range = "\195101" / '\195101'...
 keyword = <df> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
-----------
+..........
 List keyword = <df> keyword1 / keyword2...
   Rule keyword = <df> keyword1 / keyword2
     Id keyword
@@ -639,7 +639,7 @@ List keyword = <df> keyword1 / keyword2...
 ==========
 -- End-of-file
 end = #end <>
-----------
+..........
 List end = #end <>...
   Rule end = #end <>
     Id end
@@ -651,14 +651,14 @@ List end = #end <>...
 -- Expecting end-of-file
 x = y
 ?
-----------
+..........
 Error in tests/Parser.txt, line 653: expecting end of text, id, newline
 ?
 ^
 ==========
 -- Splitters
 x = <abc> y / z
-----------
+..........
 List x = <abc> y / z...
   Rule x = <abc> y / z
     Id x
@@ -671,14 +671,14 @@ List x = <abc> y / z...
 ==========
 -- Incomplete splitter
 x = <abc
-----------
+..........
 Error in tests/Parser.txt, line 673: expecting greater than sign
 x = <abc
         ^
 ==========
 -- Underscore
 a_b = xy_
-----------
+..........
 List a_b = xy_...
   Rule a_b = xy_
     Id a_b
@@ -687,7 +687,7 @@ List a_b = xy_...
 ==========
 -- Hyphen
 a-b = xy-
-----------
+..........
 List a-b = xy-...
   Rule a-b = xy-
     Id a-b
@@ -696,7 +696,7 @@ List a-b = xy-...
 ==========
 -- Backslash in quotes (using test file escape conventions)
 bs = '\\'
-----------
+..........
 List bs = '\\'...
   Rule bs = '\\'
     Id bs
@@ -705,7 +705,7 @@ List bs = '\\'...
 ==========
 -- Empty tag name
 x = y %
-----------
+..........
 Error in tests/Parser.txt, line 707: expecting letter
 x = y %
        ^
@@ -714,7 +714,7 @@ x = y %
 a = 'a'
 {Parser2.txt}
 d = 'd'
-----------
+..........
 List a = 'a'...
   Rule a = 'a'
     Id a

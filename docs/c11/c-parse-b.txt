@@ -35,11 +35,11 @@ init-declarator-list = init-declarator (`,` init-declarator)*
 init-declarator = declarator (`=` initializer)?
 
 storage-class-specifier =
-    `typedef` / `extern` / `static` /
-    `_Thread_local` / `auto` / `register`
+    `typedef` / EXTERN / `static` /
+    `_Thread_local` / Auto / REGISTER
 
 type-specifier =
-    `void` / `char` / `short` / `int` / `long` / `float` / `double` /
+    `void` / CHAR / SHORT / INT / LONG / FLOAT / DOUBLE /
     `signed` / `unsigned` / `_Bool` / `_Complex` /
     atomic-type-specifier /
     struct-or-union-specifier / enum-specifier / typedef-name
@@ -47,9 +47,9 @@ type-specifier =
 atomic-type-specifier =
     `_Atomic` `(` type-name `)`
 
-type-qualifier = `const` / `restrict` / `volatile` / `_Atomic`
+type-qualifier = CONST / RESTRICT / `volatile` / `_Atomic`
 
-function-specifier = `inline` / `_Noreturn`
+function-specifier = INLINE / `_Noreturn`
 
 alignment-specifier =
     `_Alignas` `(` (type-name / constant-expression) `)`
@@ -75,7 +75,7 @@ struct-declarator =
     declarator (`:` constant-expression)? /
     `:` constant-expression
 
-enum-specifier = `enum` (
+enum-specifier = ENUM (
     identifier (`{` enumerator-list `,`? `}`)? /
     `{` enumerator-list `,`? `}`
 )
@@ -176,21 +176,21 @@ enumeration-constant = identifier
 string-literal = `"..."`
 ==========
 int;
-----------
+..........
 list
 declaration
 ==========
 int id;
-----------
+..........
 list
 declaration
 ==========
 int id();
-----------
+..........
 list
 declaration
 ==========
 int id() { }
-----------
+..........
 list
 definition

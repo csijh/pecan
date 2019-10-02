@@ -18,30 +18,30 @@ string-literal = #atom %StringLiteral @StringLiteral
 typedef-name = #atom %TypedefName @TypedefName
 
 // Literal synonyms for keywords.
-ALIGNOF = %Alignof
-`auto` = #type %Auto
-`break` = %Break
-`case` = #case %Case
-`char` = #type %Char
-`const` = #type %Const
-`continue` = %Continue
-`default` = %Default
-`do` = #do %Do
-`double` = #type %Double
-`else` = #else %Else
-`enum` = #type %Enum
-`extern` = #type %Extern
-`float` = #type %Float
-`for` = %For
-`goto` = %Goto
-`if` = %If
-`inline` = #type %Inline
-`int` = #type %Int
-`long` = #type %Long
-`register` = %Register
-`restrict` = %Restrict
-`return` = %Return
-`short` = #type %Short
+Alignof = %Alignof
+Auto = #type %Auto
+Break = %Break
+CASE = #case %Case
+CHAR = #type %Char
+CONST = #type %Const
+CONTINUE = %Continue
+DEFAULT = %Default
+DO = #do %Do
+DOUBLE = #type %Double
+ELSE = #else %Else
+ENUM = #type %Enum
+EXTERN = #type %Extern
+FLOAT = #type %Float
+FOR = %For
+GOTO = %Goto
+IF = %If
+INLINE = #type %Inline
+INT = #type %Int
+LONG = #type %Long
+REGISTER = %Register
+RESTRICT = %Restrict
+RETURN = %Return
+SHORT = #type %Short
 `signed` = #type %Signed
 `sizeof` = %Sizeof
 `static` = #type %Static
@@ -135,7 +135,7 @@ generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
     type-name `:` assignment-expression @2assoc /
-    `default` `:` assignment-expression @1defaultAssoc
+    DEFAULT `:` assignment-expression @1defaultAssoc
 
 postfix-expression =
     [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
@@ -158,7 +158,7 @@ unary-expression  =
     unary-operator cast-expression @2preOp /
     [`sizeof` `(` type-name `)`] @1typeSize /
     `sizeof` unary-expression @1varSize /
-    ALIGNOF `(` type-name `)` @1align
+    Alignof `(` type-name `)` @1align
 
 unary-operator =
     `&` @address / `*` @star / `+` @pos / `-`@neg  / `~` @tilde / `!` @not
@@ -243,5 +243,5 @@ declaration-specifiers = %ds @ds
 init-declarator-list = %idl @idl
 ==========
 Identifier
-----------
+..........
 identifier

@@ -4,27 +4,27 @@ number = (#digit '0..9')+ @number
 end = #newline 13? 10 @
 ==========
 2
-----------
+..........
 number 2
 ==========
 42
-----------
+..........
 number 42
 ==========
 2+40
-----------
+..........
 number 2
 number 40
 add
 ==========
 2+40%
-----------
+..........
 Error in tests/sum11.txt, line 20: expecting digit, newline
 2+40%
     ^
 ==========
 2+10+12+18
-----------
+..........
 number 2
 number 10
 add
@@ -34,7 +34,7 @@ number 18
 add
 ==========
 2-10+53-3
-----------
+..........
 number 2
 number 10
 subtract
@@ -44,7 +44,7 @@ number 3
 subtract
 ==========
 2+
-----------
+..........
 Error in tests/sum11.txt, line 46: expecting digit
 2+
   ^

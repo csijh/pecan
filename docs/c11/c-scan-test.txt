@@ -1,8 +1,8 @@
-c-scan.txt
+{c-scan.txt}
 ==========
 x // comment
 y
-----------
+..........
 Tokens
 Identifier x
 Identifier y
@@ -10,14 +10,14 @@ Identifier y
 x /*
 comment
 */ y
-----------
+..........
 Tokens
 Identifier x
 Identifier y
 ==========
 // String literals: note escaped backslashes in input and expected output
 "abc" L"abc" "\\"" "abc\\"xyz"
-----------
+..........
 Tokens
 StringLiteral "abc"
 StringLiteral L"abc"
@@ -26,35 +26,35 @@ StringLiteral "abc\\"xyz"
 ==========
 // Keywords and identifiers
 int x intx
-----------
+..........
 Tokens
-Int int
+Kint int
 Identifier x
 Identifier intx
 ==========
 // Punctuators
 [](){}+ ++ +++ < << <<< %:%:
-----------
+..........
 Tokens
-OpenS [
-CloseS ]
-OpenR (
-CloseR )
-OpenC {
-CloseC }
-Plus +
-PlusPlus ++
-PlusPlus ++
-Plus +
-Less <
-LessLess <<
-LessLess <<
-Less <
-PercentColonPercentColon %:%:
+SOpenS [
+SCloseS ]
+SOpenR (
+SCloseR )
+SOpenC {
+SCloseC }
+SPlus +
+SPlusPlus ++
+SPlusPlus ++
+SPlus +
+SLess <
+SLessLess <<
+SLessLess <<
+SLess <
+SPercentColonPercentColon %:%:
 ==========
 // Character constants
 'a' L'a' '\\''
-----------
+..........
 Tokens
 Constant 'a'
 Constant L'a'
@@ -63,7 +63,7 @@ Constant '\\''
 // Integer constants
 0 4 42 42u 42U 42l 42LL
 0123 0128 0x12abCD
-----------
+..........
 Tokens
 Constant 0
 Constant 4
@@ -80,7 +80,7 @@ Constant 0x12abCD
 // Floating constants
 0.0 0. .0 1e10 1E10 1.23e10 1e-10 e10
 0x0.0p10 0x0.p10 0x.0p10 0x1p10 0x1P10
-----------
+..........
 Tokens
 Constant 0.0
 Constant 0.

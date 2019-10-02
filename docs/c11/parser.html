@@ -122,7 +122,7 @@ generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
     type-name `:` assignment-expression @2assoc /
-    `default` `:` assignment-expression @1defaultAssoc
+    DEFAULT `:` assignment-expression @1defaultAssoc
 </pre>
 
 <p>The <code class="pecan">@2pair</code> action is a general purpose one for
@@ -341,9 +341,9 @@ factors gives:</p>
 <p>The original grammar rules for enumeration specifiers are:</p>
 
 <pre class="c11">enum-specifier =
-    `enum` identifier? `{` enumerator-list `}`
-    `enum` identifier? `{` enumerator-list `,` `}`
-    `enum` identifier
+    ENUM identifier? `{` enumerator-list `}`
+    ENUM identifier? `{` enumerator-list `,` `}`
+    ENUM identifier
 
 enumerator-list = enumerator (`,` enumerator)*
 </pre>
@@ -351,7 +351,7 @@ enumerator-list = enumerator (`,` enumerator)*
 <p>Perhaps the most obvious way to translate the first definition, expanding,
 rearranging and combining left factors as before, is:</p>
 
-<pre class="pecan">enum-specifier = `enum` (
+<pre class="pecan">enum-specifier = ENUM (
     identifier (`{` enumerator-list `,`? `}`)? /
     `{` enumerator-list `,`? `}`
 )
@@ -660,7 +660,7 @@ statement =
 labeled-statement =
     [identifier `:`] statement /
     `case` constant-expression `:` statement /
-    `default` `:` statement
+    DEFAULT `:` statement
 </pre>
 
 <p>The original rule for a compound statement is easily transformed directly
@@ -707,8 +707,8 @@ is:</p>
 <p>With selection statements, the original rule is:</p>
 
 <pre class="c11">selection-statement =
-    `if` `(` expression `)` statement |
-    `if` `(` expression `)` statement `else` statement |
+    IF `(` expression `)` statement |
+    IF `(` expression `)` statement ELSE statement |
     `switch` `(` expression `)` statement
 </pre>
 
@@ -723,7 +723,7 @@ goes away, if the obvious Pecan rule is written down. By the very nature of the
 attached to the closest <code>if</code> statement.</p>
 
 <pre class="pecan">selection-statement =
-    `if` `(` expression `)` statement (`else` statement)? /
+    IF `(` expression `)` statement (ELSE statement)? /
     `switch` `(` expression `)` statement
 </pre>
 
@@ -731,9 +731,9 @@ attached to the closest <code>if</code> statement.</p>
 
 <pre class="c11">iteration-statement =
     `while` `(` expression `)` statement |
-    `do` statement `while` `(` expression `)` `;` |
-    `for` `(` expression? `;` expression? `;` expression? `)` statement |
-    `for` `(` declaration expression? `;` expression? `)` statement
+    DO statement `while` `(` expression `)` `;` |
+    FOR `(` expression? `;` expression? `;` expression? `)` statement |
+    FOR `(` declaration expression? `;` expression? `)` statement
 </pre>
 
 <p>The only problem is with the last pair of alternatives concerning
@@ -745,8 +745,8 @@ be transformed to:</p>
 
 <pre class="pecan">iteration-statement =
     `while` `(` expression `)` statement /
-    `do` statement `while` `(` expression `)` `;` /
-    `for` `(` for-start expression? `;` expression? `)` statement
+    DO statement `while` `(` expression `)` `;` /
+    FOR `(` for-start expression? `;` expression? `)` statement
 
 for-start = declaration / expression? `;`
 </pre>
@@ -754,10 +754,10 @@ for-start = declaration / expression? `;`
 <p>The rule for jump statements can be transformed directly into:</p>
 
 <pre class="pecan">jump-statement =
-    `goto` identifier `;` /
+    GOTO identifier `;` /
     `continue` `;` /
     `break` `;` /
-    `return` expression? `;`
+    RETURN expression? `;`
 </pre>
 
 </body>

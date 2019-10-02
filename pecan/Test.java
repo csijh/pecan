@@ -20,12 +20,12 @@ is called on the object, and its output is compared with the expected output.
 
 A file of tests is divided into sections, separated from each other by a line
 starting with four or more equal signs. Each section normally represents one
-test, and is separated into two parts by a line starting with four or more
-minus signs. The first part is an input string for the test, and the second part
-is the expected output.
+test, and is separated into two parts by a line starting with four or more dots.
+The first part is an input string for the test, and the second part is the
+expected output.
 
 If a section contains only one part, then it represents a grammar to be used for
-subsequent tests. The grammar may contain inclusions. The grammar is a single
+subsequent tests. The grammar may contain inclusions. If the grammar is a single
 line consisting of just an inclusion, the target file may be another test file,
 rather than just a grammar.
 
@@ -128,7 +128,7 @@ public class Test {
     private static Test makeTest(String f, List<String> lines, int s, int e) {
         int divider = -1;
         for (int i = s; i < e && divider < 0; i++) {
-            if (lines.get(i).startsWith("----")) divider = i;
+            if (lines.get(i).startsWith("....")) divider = i;
         }
         if (divider < 0) divider = e;
         String in = "", out = "";

@@ -1,17 +1,17 @@
-parse.txt
+{parse.txt}
 ==========
 number
-----------
+..........
 value
 ==========
 number plus number
-----------
+..........
 value
 value
 add
 ==========
 number times number plus number
-----------
+..........
 value
 value
 multiply
@@ -19,7 +19,7 @@ value
 add
 ==========
 number plus number times number
-----------
+..........
 value
 value
 value
@@ -27,7 +27,7 @@ multiply
 add
 ==========
 number plus open number close plus number
-----------
+..........
 value
 value
 add
@@ -35,9 +35,9 @@ value
 add
 ==========
 number plus
-----------
+..........
 Error at token 2: expecting bracket, digit
 ==========
 number plus bad
-----------
+..........
 Error at token 2: expecting bracket, digit

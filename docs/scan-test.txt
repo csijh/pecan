@@ -1,24 +1,24 @@
-scan.txt
+{scan.txt}
 ==========
 2
-----------
+..........
 tokens
 number 2
 ==========
 42
-----------
+..........
 tokens
 number 42
 ==========
 2+40
-----------
+..........
 tokens
 number 2
 plus +
 number 40
 ==========
 2+40%
-----------
+..........
 tokens
 number 2
 plus +
@@ -26,7 +26,7 @@ number 40
 bad %
 ==========
 2+10+12+18
-----------
+..........
 tokens
 number 2
 plus +
@@ -37,7 +37,7 @@ plus +
 number 18
 ==========
 2-10+53-3
-----------
+..........
 tokens
 number 2
 minus -
@@ -48,13 +48,13 @@ minus -
 number 3
 ==========
 2+
-----------
+..........
 tokens
 number 2
 plus +
 ==========
 5*8+12/6
-----------
+..........
 tokens
 number 5
 times *
@@ -65,7 +65,7 @@ over /
 number 6
 ==========
 2*(20+1)
-----------
+..........
 tokens
 number 2
 times *
@@ -76,7 +76,7 @@ number 1
 close )
 ==========
  2 * ( 20 + 1 )
-----------
+..........
 tokens
 number 2
 times *

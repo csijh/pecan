@@ -3,7 +3,7 @@ sum = number '+' number @2add / number
 number = ('0..9')+ @number
 ==========
 2
-----------
+..........
 Error in tests/sum4.txt, line 5:
 2
  ^

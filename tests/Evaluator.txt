@@ -36,31 +36,31 @@
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
 ..
-----------
+..........
 dots ..
 ==========
 -- Try fails
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
 .3
-----------
+..........
 num .3
 ==========
 -- String has a built-in try
 op = "<=" @le / "<" @lt
 ==========
 x
-----------
+..........
 Error in tests/Evaluator.txt, line 52:
 x
 ^
 ==========
 <=
-----------
+..........
 le <=
 ==========
 <
-----------
+..........
 lt <
 ==========
 -- Error marker not reached
@@ -69,7 +69,7 @@ token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
 ==========
 xyx
-----------
+..........
 tokens
 x x
 add
@@ -84,7 +84,7 @@ token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
 ==========
 z
-----------
+..........
 tokens
 z z
 add
@@ -95,7 +95,7 @@ token = "x" @x / "y" @y / #err "z" @z
 end = #newline 13? 10 @
 ==========
 
-----------
+..........
 Error in tests/Evaluator.txt, line 97: expecting err
 
 ^
@@ -104,11 +104,11 @@ Error in tests/Evaluator.txt, line 97: expecting err
 token = Ll @letter
 ==========
 x
-----------
+..........
 letter x
 ==========
 X
-----------
+..........
 Error in tests/Evaluator.txt, line 110:
 X
 ^
@@ -118,7 +118,7 @@ tokens = @tokens token+
 token = Ll @1lower / Lu @1upper
 ==========
 xYz
-----------
+..........
 tokens
 lower x
 upper Y
@@ -128,11 +128,11 @@ lower z
 sum = %num @num (%plus @ %num @num @2add)*
 ==========
 id
-----------
+..........
 Error at token 0
 ==========
 num plus num
-----------
+..........
 num
 num
 add
@@ -145,7 +145,7 @@ number = ('0..9')+ @number
 end = 13? 10 @
 ==========
 2+2
-----------
+..........
 number 2
 number 2
 add
@@ -154,13 +154,13 @@ x = 'x' end @x
 end = #end <>
 ==========
 x
-----------
+..........
 Error in tests/Evaluator.txt, line 156: expecting end
 x
  ^
 ==========
 x\
-----------
+..........
 Error in tests/Evaluator.txt, line 162: expecting end
 x
  ^
@@ -170,11 +170,11 @@ x
 test = @left "0" / @right "1"
 ==========
 0
-----------
+..........
 left
 ==========
 1
-----------
+..........
 left
 right
 ==========
@@ -182,11 +182,11 @@ right
 ch = Ll @letter
 ==========
 x
-----------
+..........
 letter x
 ==========
 9
-----------
+..........
 Error in tests/Evaluator.txt, line 188:
 9
 ^
@@ -195,7 +195,7 @@ Error in tests/Evaluator.txt, line 188:
 x = 'a' @one @two
 ==========
 a
-----------
+..........
 one a
 two
 ==========
@@ -203,5 +203,5 @@ two
 x = 'a' @1one
 ==========
 a
-----------
+..........
 one a

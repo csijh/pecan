@@ -268,7 +268,8 @@ public class Evaluator implements Testable {
     // Parse <>
     private void parseEnd(Node node) {
         if (switchTest) return;
-        ok = in == input.length();
+        if (grammar.has(TI)) ok = in == tokens.length;
+        else ok = in == input.length();
     }
 
     private void parseChar(Node node) {

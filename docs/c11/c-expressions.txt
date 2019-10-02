@@ -2,361 +2,253 @@
 -- section A.2.1 of the C11 standard.
 
 -- Temporary definitions to make expressions self-contained.
-start = expression
+start = primary-expression
 type-name = %TypeName @typeName
 initializer-list = %InitializerList @initializerList
 
--- Tokens -----------------------------------------------------------
-
--- Definition taken from lexical grammar.
-enumeration-constant = identifier
-
--- Token types with variable spellings.
-identifier = #atom %Identifier @identifier
-constant = #atom %Constant @constant
-string-literal = #atom %StringLiteral @StringLiteral
-typedef-name = #atom %TypedefName @TypedefName
-
--- Literal synonyms for keywords.
-ALIGNOF = %Alignof
-`auto` = #type %Auto
-`break` = %Break
-`case` = #case %Case
-`char` = #type %Char
-`const` = #type %Const
-`continue` = %Continue
-`default` = %Default
-`do` = #do %Do
-`double` = #type %Double
-`else` = #else %Else
-`enum` = #type %Enum
-`extern` = #type %Extern
-`float` = #type %Float
-`for` = %For
-`goto` = %Goto
-`if` = %If
-`inline` = #type %Inline
-`int` = #type %Int
-`long` = #type %Long
-`register` = %Register
-`restrict` = %Restrict
-`return` = %Return
-`short` = #type %Short
-`signed` = #type %Signed
-`sizeof` = %Sizeof
-`static` = #type %Static
-`struct` = #type %Struct
-`switch` = %Switch
-`typedef` = #type %Typedef
-`union` = #type %Union
-`unsigned` = #type %Unsigned
-`void` = #type %Void
-`volatile` = #type %Volatile
-`while` = %While
-`_Alignas` = %Alignas
-`_Atomic` = #type %Atomic
-`_Bool` = #type %Bool
-`_Complex` = #type %Complex
-`_Generic` = #type %Generic
-`_Imaginary` = #type %Imaginary
-`_Noreturn` = %Noreturn
-`_Static_assert` = %StaticAssert
-`_Thread_local` = %ThreadLocal
-
--- Literal synonyms for punctuators.
-`%:%:` = #op %PercentColonPercentColon
-`<<=` = #op %LessLessEquals
-`>>=` = #op %GreaterGreaterEquals
-`...` = #op %DotDotDot
-`->` = #op %Arrow
-`++` = #op %PlusPlus
-`--` = #op %MinusMinus
-`<<` = #op %LessLess
-`>>` = #op %GreaterGreater
-`<=` = #op %LessEquals
-`>=` = #op %GreaterEquals
-`==` = #op %EqualsEquals
-`!=` = #op %NotEquals
-`&&` = #op %AndAnd
-`||` = #op %OrOr
-`*=` = #op %StarEquals
-`/=` = #op %SlashEquals
-`%=` = #op %PercentEquals
-`+=` = #op %PlusEquals
-`-=` = #op %MinusEquals
-`&=` = #op %AndEquals
-`^=` = #op %HatEquals
-`|=` = #op %OrEquals
-`##` = #op %HashHash
-`<:` = #op %LessColon
-`:>` = #op %ColonGreater
-`<%` = #op %LessPercent
-`%>` = #op %PercentGreater
-`%:` = #op %PercentColon
-`[` = #bracket %OpenS
-`]` = #close %CloseS
-`(` = #bracket %OpenR
-`)` = #close %CloseR
-`{` = #bracket %OpenC
-`}` = #close %CloseC
-`.` = #op %Dot
-`&` = #op %And
-`*` = #op %Star
-`+` = #op %Plus
-`-` = #op %Minus
-`~` = #op %Tilde
-`!` = #op %Not
-`/` = #op %Slash
-`%` = #op %Percent
-`<` = #op %Less
-`>` = #op %Greater
-`^` = #op %Hat
-`|` = #op %Or
-`?` = #op %Query
-`:` = #colon %Colon
-`;` = #semi %Semi
-`=` = #op %Equals
-`,` = #comma %Comma
-`#` = %Hash
-
--- Expressions ------------------------------------------------------
+-- Import the token definitions
+{c-tokens.txt}
 
 primary-expression =
     identifier /
     constant /
     string-literal /
-    `(` expression `)` /
+    OpenR expression CloseR /
     generic-selection
 
 generic-selection =
-    `_Generic` `(` assignment-expression `,` generic-assoc-list `)` @2generic
+    Generic OpenR (
+        assignment-expression Comma generic-assoc-list CloseR @2generic)
 
 generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
-    type-name `:` assignment-expression @2assoc /
-    `default` `:` assignment-expression @1defaultAssoc
+    type-name Colon assignment-expression @2assoc /
+    Default Colon assignment-expression @1defaultAssoc
 
 postfix-expression =
-    [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
+    [OpenR type-name CloseR OpenC] initializer-list Comma? CloseC @2compound /
     primary-expression (
-        `[` expression `]` @2index /
-        `(` (argument-expression-list / "" @missing) `)` @2apply /
-        `.` identifier @2field /
-        `->` identifier @2arrow /
-        `++` @1postInc /
-        `--` @1postDec
+        OpenS expression CloseS @2index /
+        OpenR (argument-expression-list / "" @missing) CloseR @2apply /
+        Dot identifier @2field /
+        Arrow identifier @2arrow /
+        PlusPlus @1postInc /
+        MinusMinus @1postDec
     )*
 
 argument-expression-list =
-    assignment-expression (`,` assignment-expression @2pair)*
+    assignment-expression (Comma assignment-expression @2pair)*
 
 unary-expression  =
     postfix-expression /
-    `++` unary-expression @1preInc /
-    `--` unary-expression @1preDec /
+    PlusPlus unary-expression @1preInc /
+    MinusMinus unary-expression @1preDec /
     unary-operator cast-expression @2preOp /
-    [`sizeof` `(` type-name `)`] @1typeSize /
-    `sizeof` unary-expression @1varSize /
-    ALIGNOF `(` type-name `)` @1align
+    [Sizeof OpenR type-name CloseR] @1typeSize /
+    Sizeof unary-expression @1varSize /
+    Alignof OpenR type-name CloseR @1align
 
 unary-operator =
-    `&` @address / `*` @star / `+` @pos / `-`@neg  / `~` @tilde / `!` @not
+    And @address / Star @star / Plus @pos / Minus @neg  / Tilde @tilde /
+    Not @not
 
 cast-expression =
-    [`(` type-name `)` `{`!] cast-expression @2cast /
+    [OpenR type-name CloseR OpenC!] cast-expression @2cast /
     unary-expression
 
 multiplicative-expression =
     cast-expression (
-        `*` cast-expression @2multiply /
-        `/` cast-expression @2divide /
-        `%` cast-expression @2remainder
+        Star cast-expression @2multiply /
+        Slash cast-expression @2divide /
+        Percent cast-expression @2remainder
     )*
 
 additive-expression =
     multiplicative-expression (
-        `+` multiplicative-expression @2add /
-        `-` multiplicative-expression @2subtract
+        Plus multiplicative-expression @2add /
+        Minus multiplicative-expression @2subtract
     )*
 
 shift-expression =
     additive-expression (
-        `<<` additive-expression @2shiftL /
-        `>>` additive-expression @2shiftR
+        LessLess additive-expression @2shiftL /
+        GreaterGreater additive-expression @2shiftR
     )*
 
 relational-expression =
     shift-expression (
-        `<` shift-expression @2lt /
-        `>` shift-expression @2gt /
-        `<=` shift-expression @2le /
-        `>=` shift-expression @2ge
+        Less shift-expression @2lt /
+        Greater shift-expression @2gt /
+        LessEq shift-expression @2le /
+        GreaterEq shift-expression @2ge
     )*
 
 equality-expression =
     relational-expression (
-        `==` relational-expression @2equals /
-        `!=` relational-expression @2notEquals
+        EqEq relational-expression @2equals /
+        NotEq relational-expression @2notEquals
     )*
 
 AND-expression =
-    equality-expression (`&` equality-expression @2bitAnd)*
+    equality-expression (And equality-expression @2bitAnd)*
 
 exclusive-OR-expression =
-    AND-expression (`^` AND-expression @2xor)*
+    AND-expression (Hat AND-expression @2xor)*
 
 inclusive-OR-expression =
-    exclusive-OR-expression (`|` exclusive-OR-expression @2bitOr)*
+    exclusive-OR-expression (Or exclusive-OR-expression @2bitOr)*
 
 logical-AND-expression =
-    inclusive-OR-expression (`&&` inclusive-OR-expression @2boolAnd)*
+    inclusive-OR-expression (AndAnd inclusive-OR-expression @2boolAnd)*
 
 logical-OR-expression =
-    logical-AND-expression (`||` logical-AND-expression @2boolOr)*
+    logical-AND-expression (OrOr logical-AND-expression @2boolOr)*
 
 conditional-expression =
-    logical-OR-expression (`?` expression `:` conditional-expression @3ifExp)?
+    logical-OR-expression (
+        Query expression Colon conditional-expression @3ifExp
+    )?
 
 assignment-expression =
     [unary-expression assignment-operator] assignment-expression @3assign /
     conditional-expression
 
 assignment-operator =
-    `=` @becomes / `*=` @mulEq / `/=` @divEq / `%=` @remEq / `+=` @PlusEq /
-    `-=` @minusEq / `<<=` @shiftLEq / `>>=` @shiftREq / `&=` @andEq /
-    `^=` @xorEq / `|=` @bitOrEq
+    Eq @becomes / StarEq @mulEq / SlashEq @divEq / PercentEq @remEq /
+    PlusEq @PlusEq / MinusEq @minusEq / LessLessEq @shiftLEq /
+    GreaterGreaterEq @shiftREq / AndEq @andEq / HatEq @xorEq / OrEq @bitOrEq
 
 expression =
-    assignment-expression (`,` assignment-expression @2comma)*
+    assignment-expression (Comma assignment-expression @2comma)*
 
 constant-expression = conditional-expression
 
 =============== Primary expressions
 Identifier
-----------
+..........
 identifier
 ==========
 Constant
-----------
+..........
 constant
 ==========
 StringLiteral
-----------
+..........
 StringLiteral
 ==========
 OpenR Identifier CloseR
-----------
+..........
 identifier
 ==========
 OpenR Identifier
-----------
+..........
 Error at token 2: expecting bracket, close, comma, op
 ==========
-Generic OpenR Identifier Comma Default Colon Identifier CloseR
-----------
+Kgeneric OpenR Identifier Comma Kdefault Colon Identifier CloseR
+..........
 identifier
 identifier
 defaultAssoc
 generic
 =============== Postfix expressions
 OpenR TypeName CloseR OpenC InitializerList CloseC
-----------
+..........
 typeName
 initializerList
 compound
 ==========
 Identifier OpenS Identifier CloseS
-----------
+..........
 identifier
 identifier
 index
 ==========
 Identifier OpenR Identifier CloseR
-----------
+..........
 identifier
 identifier
 apply
 ==========
 Identifier OpenR CloseR
-----------
+..........
 identifier
 missing
 apply
 ==========
 Identifier Arrow Identifier
-----------
+..........
 identifier
 identifier
 arrow
 ==========
 Identifier PlusPlus
-----------
+..........
 identifier
 postInc
 ==========
 Identifier MinusMinus
-----------
+..........
 identifier
 postDec
 ==========
 Identifier Arrow Identifier PlusPlus
-----------
+..........
 identifier
 identifier
 arrow
 postInc
 =============== Unary expressions
 PlusPlus Identifier
-----------
+..........
 identifier
 preInc
 ==========
 MinusMinus Identifier
-----------
+..........
 identifier
 preDec
 ==========
 And Identifier
-----------
+..........
 address
 identifier
 preOp
 ==========
-Sizeof OpenR TypeName CloseR
-----------
+Ksizeof OpenR TypeName CloseR
+..........
 typeName
 typeSize
 ==========
-Sizeof Identifier
-----------
+Ksizeof Identifier
+..........
 identifier
 varSize
 ==========
-Sizeof OpenR Identifier CloseR
-----------
+Ksizeof OpenR Identifier CloseR
+..........
 identifier
 varSize
 ==========
-Alignof OpenR TypeName CloseR
-----------
+Kalignof OpenR TypeName CloseR
+..........
 typeName
 align
 =============== Cast expressions
 OpenR TypeName CloseR Identifier
-----------
+..........
 typeName
 identifier
 cast
 =============== Multiplicative expressions
 Identifier Star Identifier
-----------
+..........
 identifier
 identifier
 multiply
 ==========
 OpenR TypeName CloseR Identifier Slash OpenR TypeName CloseR Identifier
-----------
+..........
 typeName
 identifier
 cast
@@ -366,7 +258,7 @@ cast
 divide
 =============== Additive expressions
 Identifier Star Identifier Plus Identifier Slash Identifier
-----------
+..........
 identifier
 identifier
 multiply
@@ -376,21 +268,21 @@ divide
 add
 =============== Conditional expressions
 Identifier Query Identifier Colon Identifier
-----------
+..........
 identifier
 identifier
 identifier
 ifExp
 =============== Assignment expressions
 Identifier Equals Identifier
-----------
+..........
 identifier
 becomes
 identifier
 assign
 ==========
 Identifier StarEquals Identifier Plus Identifier
-----------
+..........
 identifier
 mulEq
 identifier
@@ -399,7 +291,7 @@ add
 assign
 =============== Top level expressions
 Identifier Comma Identifier
-----------
+..........
 identifier
 identifier
 comma
