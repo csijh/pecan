@@ -114,7 +114,7 @@ public class Test {
                 file2 = Source.relativeFile(file, file2);
                 tests.addAll(makeTests(file2, readFile(file2), trace));
             }
-            else {
+            else if (i != start + 1 || ! line.startsWith("--")) {
                 Test t = makeTest(file, lines, start, i);
                 if (trace) t.input.trace(true);
                 tests.add(t);
@@ -147,7 +147,8 @@ public class Test {
     private static int runTests(Testable object, List<Test> tests, int line) {
         int passed = 0;
         for (Test test : tests) {
-            if (line > 0 && test.input.firstLine() != line) continue;
+            if (! test.input.grammar() &&
+                line > 0 && test.input.firstLine() != line) continue;
             Object obj = object.run(test.input);
             String out = obj.toString();
             String message = test.check(out);

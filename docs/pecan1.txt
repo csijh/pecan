@@ -1,5 +1,5 @@
 -- Pecan grammar for Pecan grammars.
--- Removed (a) categories (b) inclusions (c) backquotes (d) hex
+-- Removed (a) categories (b) inclusions (c) literal names (d) hex
 -- Made suitable for pecan-paper.
 
 -- Rules
@@ -20,9 +20,9 @@ atom = bracketed / try / id / act / mark / tag /
 bracketed = open expression close @3bracketed
 try = sopen expression sclose @3try
 id = letter alpha* @id blank
-act = '@' digits? alpha* @act blank
-mark = "#" initial alpha* @mark blank
-tag = "%" initial alpha* @tag blank
+act = '@' digits? name? @act blank
+mark = "#" #letter name @mark blank
+tag = "%" #letter name @tag blank
 codes = [digits '.'] #dot '.' digits @codes blank
 code = digits @code blank
 range = ["'" noquote ".."] noquote #quote "'" @range blank
@@ -48,12 +48,12 @@ skip = (space / comment / newline)* @
 comment = "--" visible* newline
 newline = #newline endline @
 
--- Character sets.
+-- Character sets and sequences
 space = ' '
 visible = ' ..~'
-alpha = letter / '0..9' / '_' / '-'
-initial = #letter letter
-letter = 'a..z' / 'A..Z'
+alpha = letter / '0..9' / '-'
+letter = 'a..z' / 'A..Z' / '_'
+name = letter alpha*
 digits = '0' / ('1..9' '0..9'*)
 noquote = "'"! visible
 nodquote = '"'! visible

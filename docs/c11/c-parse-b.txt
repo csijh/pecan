@@ -32,6 +32,7 @@ declaration-specifier =
     alignment-specifier
 
 init-declarator-list = init-declarator (`,` init-declarator)*
+
 init-declarator = declarator (`=` initializer)?
 
 storage-class-specifier =
@@ -44,8 +45,7 @@ type-specifier =
     atomic-type-specifier /
     struct-or-union-specifier / enum-specifier / typedef-name
 
-atomic-type-specifier =
-    `_Atomic` `(` type-name `)`
+atomic-type-specifier = `_Atomic` `(` type-name `)`
 
 type-qualifier = CONST / RESTRICT / `volatile` / `_Atomic`
 

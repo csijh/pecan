@@ -20,7 +20,6 @@ public class Evaluator implements Testable {
     private boolean charInput, ok;
     private Source source;
     private String input;
-    private String[] tokens;
     private int start, in, out, marked, lookahead;
     private TreeSet<String> failures;
     private StringBuffer output;
@@ -67,8 +66,7 @@ public class Evaluator implements Testable {
         source = s;
         if (s == null) System.out.println("PREPARE s null");
         if (grammar == null) System.out.println("PREPARE g null");
-        if (grammar.has(TI)) tokens = source.text().split("\\s+");
-        else input = source.text();
+        input = source.text();
         ok = true;
         start = in = out = marked = lookahead = 0;
         failures = new TreeSet<>();
@@ -89,11 +87,7 @@ public class Evaluator implements Testable {
                 else s += ", ";
                 s += mark;
             }
-            if (charInput) output.append(source.error(in, in, s));
-            else {
-                output.append("Error at token " + in);
-                if (s.length() > 0) output.append(": " + s);
-            }
+            output.append(source.error(in, in, s));
             output.append("\n");
         }
         return output.toString();
@@ -243,12 +237,14 @@ public class Evaluator implements Testable {
     // Parse %t
     private void parseTag(Node node) {
         if (switchTest) return;
-        String tag = node.text().substring(1);
-        if (in < tokens.length) ok = tokens[in].equals(tag);
-        else ok = false;
+        String tag = node.name();
+        ok = input.startsWith(tag, in);
         if (ok) {
             start = in;
-            in++;
+            in += tag.length();
+            while (input.startsWith(" ", in) || input.startsWith("\n", in)) {
+                in++;
+            }
             if (tracing) traceInput();
         }
     }
@@ -268,8 +264,7 @@ public class Evaluator implements Testable {
     // Parse <>
     private void parseEnd(Node node) {
         if (switchTest) return;
-        if (grammar.has(TI)) ok = in == tokens.length;
-        else ok = in == input.length();
+        ok = in == input.length();
     }
 
     private void parseChar(Node node) {

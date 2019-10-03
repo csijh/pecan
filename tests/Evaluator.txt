@@ -129,7 +129,9 @@ sum = %num @num (%plus @ %num @num @2add)*
 ==========
 id
 ..........
-Error at token 0
+Error in tests/Evaluator.txt, line 130:
+id
+^
 ==========
 num plus num
 ..........
@@ -155,13 +157,13 @@ end = #end <>
 ==========
 x
 ..........
-Error in tests/Evaluator.txt, line 156: expecting end
+Error in tests/Evaluator.txt, line 158: expecting end
 x
  ^
 ==========
 x\
 ..........
-Error in tests/Evaluator.txt, line 162: expecting end
+Error in tests/Evaluator.txt, line 164: expecting end
 x
  ^
 ==========
@@ -187,7 +189,7 @@ letter x
 ==========
 9
 ..........
-Error in tests/Evaluator.txt, line 188:
+Error in tests/Evaluator.txt, line 190:
 9
 ^
 ==========

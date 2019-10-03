@@ -74,6 +74,8 @@ class Source {
     int indexOf(char ch, int p) { return text.indexOf(ch, p); }
     char charAt(int n) { return text.charAt(n); }
     int codePointAt(int n) { return text.codePointAt(n); }
+    boolean startsWith(String s) { return text.startsWith(s); }
+    boolean startsWith(String s, int i) { return text.startsWith(s, i); }
 
     // Get the line number for a given text position.
     int lineNumber(int p) {

@@ -36,8 +36,12 @@ add
 ==========
 number plus
 ..........
-Error at token 2: expecting bracket, digit
+Error in parse-test.txt, line 38: expecting bracket, digit
+
+^
 ==========
 number plus bad
 ..........
-Error at token 2: expecting bracket, digit
+Error in parse-test.txt, line 43: expecting bracket, digit
+number plus bad
+            ^

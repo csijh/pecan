@@ -1,297 +1,117 @@
--- An expression parser for C, after pre-processing and scanning, covering
--- section A.2.1 of the C11 standard.
+-- A grammar fragment for C expressions, covering section A.2.1 of the C11
+-- standard.
 
--- Temporary definitions to make expressions self-contained.
-start = primary-expression
-type-name = %TypeName @typeName
-initializer-list = %InitializerList @initializerList
-
--- Import the token definitions
+-- Import the grammar fragment for C tokens
 {c-tokens.txt}
 
 primary-expression =
     identifier /
     constant /
     string-literal /
-    OpenR expression CloseR /
+    `(` expression `)` /
     generic-selection
 
 generic-selection =
-    Generic OpenR (
-        assignment-expression Comma generic-assoc-list CloseR @2generic)
+    `_Generic` `(` (assignment-expression `,` generic-assoc-list `)` @2generic)
 
 generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
-    type-name Colon assignment-expression @2assoc /
-    Default Colon assignment-expression @1defaultAssoc
+    type-name `:` assignment-expression @2assoc /
+    `default` `:` assignment-expression @1defaultAssoc
 
 postfix-expression =
-    [OpenR type-name CloseR OpenC] initializer-list Comma? CloseC @2compound /
+    [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
     primary-expression (
-        OpenS expression CloseS @2index /
-        OpenR (argument-expression-list / "" @missing) CloseR @2apply /
-        Dot identifier @2field /
-        Arrow identifier @2arrow /
-        PlusPlus @1postInc /
-        MinusMinus @1postDec
+        `[` expression `]` @2index /
+        `(` (argument-expression-list / "" @missing) `)` @2apply /
+        `.` identifier @2field /
+        `->` identifier @2arrow /
+        `++` @1postInc /
+        `--` @1postDec
     )*
 
 argument-expression-list =
-    assignment-expression (Comma assignment-expression @2pair)*
+    assignment-expression (`,` assignment-expression @2pair)*
 
 unary-expression  =
     postfix-expression /
-    PlusPlus unary-expression @1preInc /
-    MinusMinus unary-expression @1preDec /
+    `++` unary-expression @1preInc /
+    `--` unary-expression @1preDec /
     unary-operator cast-expression @2preOp /
-    [Sizeof OpenR type-name CloseR] @1typeSize /
-    Sizeof unary-expression @1varSize /
-    Alignof OpenR type-name CloseR @1align
+    [`sizeof` `(` type-name `)`] @1typeSize /
+    `sizeof` unary-expression @1varSize /
+    `alignof` `(` type-name `)` @1align
 
 unary-operator =
-    And @address / Star @star / Plus @pos / Minus @neg  / Tilde @tilde /
-    Not @not
+    `&` @address / `*` @star / `+` @pos / `-` @neg  / `~` @tilde /
+    `!` @not
 
 cast-expression =
-    [OpenR type-name CloseR OpenC!] cast-expression @2cast /
+    [`(` type-name `)` `{`!] cast-expression @2cast /
     unary-expression
 
 multiplicative-expression =
     cast-expression (
-        Star cast-expression @2multiply /
-        Slash cast-expression @2divide /
-        Percent cast-expression @2remainder
+        `*` cast-expression @2multiply /
+        `/` cast-expression @2divide /
+        `%` cast-expression @2remainder
     )*
 
 additive-expression =
     multiplicative-expression (
-        Plus multiplicative-expression @2add /
-        Minus multiplicative-expression @2subtract
+        `+` multiplicative-expression @2add /
+        `-` multiplicative-expression @2subtract
     )*
 
 shift-expression =
     additive-expression (
-        LessLess additive-expression @2shiftL /
-        GreaterGreater additive-expression @2shiftR
+        `<<` additive-expression @2shiftL /
+        `>>` additive-expression @2shiftR
     )*
 
 relational-expression =
     shift-expression (
-        Less shift-expression @2lt /
-        Greater shift-expression @2gt /
-        LessEq shift-expression @2le /
-        GreaterEq shift-expression @2ge
+        `<` shift-expression @2lt /
+        `>` shift-expression @2gt /
+        `<=` shift-expression @2le /
+        `>=` shift-expression @2ge
     )*
 
 equality-expression =
     relational-expression (
-        EqEq relational-expression @2equals /
-        NotEq relational-expression @2notEquals
+        `==` relational-expression @2equals /
+        `!=` relational-expression @2notEquals
     )*
 
 AND-expression =
-    equality-expression (And equality-expression @2bitAnd)*
+    equality-expression (`&` equality-expression @2bitAnd)*
 
 exclusive-OR-expression =
-    AND-expression (Hat AND-expression @2xor)*
+    AND-expression (`^` AND-expression @2xor)*
 
 inclusive-OR-expression =
-    exclusive-OR-expression (Or exclusive-OR-expression @2bitOr)*
+    exclusive-OR-expression (`|` exclusive-OR-expression @2bitOr)*
 
 logical-AND-expression =
-    inclusive-OR-expression (AndAnd inclusive-OR-expression @2boolAnd)*
+    inclusive-OR-expression (`&&` inclusive-OR-expression @2boolAnd)*
 
 logical-OR-expression =
-    logical-AND-expression (OrOr logical-AND-expression @2boolOr)*
+    logical-AND-expression (`||` logical-AND-expression @2boolOr)*
 
 conditional-expression =
-    logical-OR-expression (
-        Query expression Colon conditional-expression @3ifExp
-    )?
+    logical-OR-expression (`?` expression `:` conditional-expression @3ifExp)?
 
 assignment-expression =
     [unary-expression assignment-operator] assignment-expression @3assign /
     conditional-expression
 
 assignment-operator =
-    Eq @becomes / StarEq @mulEq / SlashEq @divEq / PercentEq @remEq /
-    PlusEq @PlusEq / MinusEq @minusEq / LessLessEq @shiftLEq /
-    GreaterGreaterEq @shiftREq / AndEq @andEq / HatEq @xorEq / OrEq @bitOrEq
+    `=` @becomes / `*=` @mulEq / `/=` @divEq / `%=` @remEq /
+    `+=` @PlusEq / `-=` @minusEq / `<<=` @shiftLEq /
+    `>>=` @shiftREq / `&=` @andEq / `^=` @xorEq / `|=` @orEq
 
 expression =
-    assignment-expression (Comma assignment-expression @2comma)*
+    assignment-expression (`,` assignment-expression @2comma)*
 
 constant-expression = conditional-expression
-
-=============== Primary expressions
-Identifier
-..........
-identifier
-==========
-Constant
-..........
-constant
-==========
-StringLiteral
-..........
-StringLiteral
-==========
-OpenR Identifier CloseR
-..........
-identifier
-==========
-OpenR Identifier
-..........
-Error at token 2: expecting bracket, close, comma, op
-==========
-Kgeneric OpenR Identifier Comma Kdefault Colon Identifier CloseR
-..........
-identifier
-identifier
-defaultAssoc
-generic
-=============== Postfix expressions
-OpenR TypeName CloseR OpenC InitializerList CloseC
-..........
-typeName
-initializerList
-compound
-==========
-Identifier OpenS Identifier CloseS
-..........
-identifier
-identifier
-index
-==========
-Identifier OpenR Identifier CloseR
-..........
-identifier
-identifier
-apply
-==========
-Identifier OpenR CloseR
-..........
-identifier
-missing
-apply
-==========
-Identifier Arrow Identifier
-..........
-identifier
-identifier
-arrow
-==========
-Identifier PlusPlus
-..........
-identifier
-postInc
-==========
-Identifier MinusMinus
-..........
-identifier
-postDec
-==========
-Identifier Arrow Identifier PlusPlus
-..........
-identifier
-identifier
-arrow
-postInc
-=============== Unary expressions
-PlusPlus Identifier
-..........
-identifier
-preInc
-==========
-MinusMinus Identifier
-..........
-identifier
-preDec
-==========
-And Identifier
-..........
-address
-identifier
-preOp
-==========
-Ksizeof OpenR TypeName CloseR
-..........
-typeName
-typeSize
-==========
-Ksizeof Identifier
-..........
-identifier
-varSize
-==========
-Ksizeof OpenR Identifier CloseR
-..........
-identifier
-varSize
-==========
-Kalignof OpenR TypeName CloseR
-..........
-typeName
-align
-=============== Cast expressions
-OpenR TypeName CloseR Identifier
-..........
-typeName
-identifier
-cast
-=============== Multiplicative expressions
-Identifier Star Identifier
-..........
-identifier
-identifier
-multiply
-==========
-OpenR TypeName CloseR Identifier Slash OpenR TypeName CloseR Identifier
-..........
-typeName
-identifier
-cast
-typeName
-identifier
-cast
-divide
-=============== Additive expressions
-Identifier Star Identifier Plus Identifier Slash Identifier
-..........
-identifier
-identifier
-multiply
-identifier
-identifier
-divide
-add
-=============== Conditional expressions
-Identifier Query Identifier Colon Identifier
-..........
-identifier
-identifier
-identifier
-ifExp
-=============== Assignment expressions
-Identifier Equals Identifier
-..........
-identifier
-becomes
-identifier
-assign
-==========
-Identifier StarEquals Identifier Plus Identifier
-..........
-identifier
-mulEq
-identifier
-identifier
-add
-assign
-=============== Top level expressions
-Identifier Comma Identifier
-..........
-identifier
-identifier
-comma

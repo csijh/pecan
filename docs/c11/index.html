@@ -23,23 +23,22 @@ manual grammar transformation as a way of developing parsers.</p>
 
 <p>The result is simply a literal translation of the official C11 grammar into
 the Pecan notation.  It does not take into account common extensions or other
-variations to the C11 language, or differing interpretations of the standard.
+variations to the C11 language such as implementation-defined aspects.
 Nor does it attempt to deal with the preprocessing phase or other practical
 issues that arise in real C compilers. It is not intended to be a compiler-grade
-parser, merely a reinterpretation of the official grammar, and it has also only
-been lightly tested.</p>
+parser, merely a reinterpretation of the official grammar.</p>
 
 <p>Infamously, parsing of C requires type names introduced using
-<code>typedef</code> to be differentiated from other identifiers.  This cannot
-be done during scanning.  Instead, token tags must be altered during parsing,
-which must include some form of symbol table construction. It is assumed that
-the external code associated with the parser when the grammar is compiled will
-do this.</p>
+<code>typedef</code> to be differentiated from other identifiers. This means
+that parsing cannot be entirely context-free. To deal with this, the grammar is
+separated into a scanner and a parser, and it is assumed that the external code
+associated with the parser includes some form of symbol table construction, and
+uses the information to provide suitable token tags during parsing.</p>
 
 <p>The development described here amounts to translating the C11 syntax into a
 nearly-recursive-descent form, which has been done before in various compilers.
-The difference is that a potentially reusable grammar has been produced rather
-than a one-off parser for a specific purpose.</p>
+The difference here is that a potentially reusable grammar has been produced
+rather than a one-off parser for a specific purpose.</p>
 
 <!-- <p>The development has been carried out in a number of stages:</p>-->
 

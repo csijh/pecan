@@ -13,9 +13,11 @@ child node. For more information about annotations, see the Pecan class which
 handles them. */
 
 class Node {
+    private static String[] charMap = new String[128];
+    static { fillCharMap(); }
 
     public static void main(String[] args) {
-        Source s = new Source("127 'a' @add @2add 'a..z' 0..127", "file");
+        Source s = new Source("127 'a' @add @2add 'a..z' 0..127 `<=`", "file");
         Node n = new Node(Code, s, 0, 3);
         assert(n.name().equals("127"));
         assert(n.charCode() == 127);
@@ -34,6 +36,8 @@ class Node {
         n = new Node(Codes, s, 26, 32);
         assert(n.low() == 0);
         assert(n.high() == 127);
+        n = new Node(Id, s, 33, 37);
+        assert(n.name().equals("<="));
     }
 
 // ---------- The annotation fields and methods -------------------------------
@@ -117,19 +121,41 @@ class Node {
 
     // The name is the text, without decoration, i.e. x = e -> x, #x -> x,
     // %x -> x, @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab, 'a..z' -> a..z
+    // `<=` -> <=
     String name() {
+        int s = start, e = end;
         switch (op) {
         case Rule: return left().name();
-        case Mark: return source.substring(start+1, end);
-        case Tag: return source.substring(start+1, end);
+        case Mark:
+            if (source.charAt(s + 1) != '`') return source.substring(s + 1, e);
+            else return source.substring(s + 2, e - 1);
+        case Tag:
+            if (source.charAt(s + 1) != '`') return source.substring(s + 1, e);
+            else return source.substring(s + 2, e - 1);
         case Act:
-            int i = start + 1;
-            while (Character.isDigit(source.charAt(i))) i++;
-            return source.substring(i, end);
+            int n = s + 1;
+            while (Character.isDigit(source.charAt(n))) n++;
+            if (source.charAt(s + 1) != '`') return source.substring(n, e);
+            else return source.substring(n + 1, e - 1);
         case String: case Set: case Split: case Char: case Range: case Temp:
-            return source.substring(start+1, end-1);
+            return source.substring(s + 1, e - 1);
+        case Id:
+            if (source.charAt(start) != '`') return text();
+            else return source.substring(s + 1, e - 1);
+        default: return text();
         }
-        return text();
+    }
+
+    // Translate the name of an id, tag, mark or action to make it suitable as a
+    // target language identifier. This includes translating hyphens in ordinary
+    // identifers as well as non-alpha characters in literal names.
+    String translate() {
+        String name = name();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            sb.append(charMap[name.charAt(i)]);
+        }
+        return sb.toString();
     }
 
     // For a character, extract the value, i.e. Unicode code point.
@@ -261,5 +287,47 @@ class Node {
         if (newline >= 0 && newline < end) pos = newline + 1;
         s += source.substring(pos, end);
         return s;
+    }
+
+    // For each visible ascii character, define how it is translated when it
+    // appears in a backquote identifier.
+    private static void fillCharMap() {
+        for (char ch = 'a'; ch <= 'z'; ch++) charMap[ch] = "" + ch;
+        for (char ch = 'A'; ch <= 'Z'; ch++) charMap[ch] = "" + ch;
+        for (char ch = '0'; ch <= '9'; ch++) charMap[ch] = "" + ch;
+        for (char ch = '!'; ch < '~'; ch++) switch (ch) {
+            case '!': charMap[ch] = "Em"; break;
+            case '"': charMap[ch] = "Dq"; break;
+            case '#': charMap[ch] = "Hs"; break;
+            case '$': charMap[ch] = "Dl"; break;
+            case '%': charMap[ch] = "Pc"; break;
+            case '&': charMap[ch] = "Am"; break;
+            case '\'': charMap[ch] = "Sq"; break;
+            case '(': charMap[ch] = "Ob"; break;
+            case ')': charMap[ch] = "Cb"; break;
+            case '*': charMap[ch] = "St"; break;
+            case '+': charMap[ch] = "Pl"; break;
+            case ',': charMap[ch] = "Cm"; break;
+            case '-': charMap[ch] = "Mi"; break;
+            case '.': charMap[ch] = "Dt"; break;
+            case '/': charMap[ch] = "Sl"; break;
+            case ':': charMap[ch] = "Cl"; break;
+            case ';': charMap[ch] = "Sc"; break;
+            case '<': charMap[ch] = "Lt"; break;
+            case '=': charMap[ch] = "Eq"; break;
+            case '>': charMap[ch] = "Gt"; break;
+            case '?': charMap[ch] = "Qm"; break;
+            case '@': charMap[ch] = "At"; break;
+            case '[': charMap[ch] = "Os"; break;
+            case '\\': charMap[ch] = "Bs"; break;
+            case ']': charMap[ch] = "Cs"; break;
+            case '^': charMap[ch] = "Ht"; break;
+            case '_': charMap[ch] = "Us"; break;
+            case '`': charMap[ch] = "Bq"; break;
+            case '{': charMap[ch] = "Oc"; break;
+            case '|': charMap[ch] = "Vb"; break;
+            case '}': charMap[ch] = "Cc"; break;
+            case '~': charMap[ch] = "Ti"; break;
+        }
     }
 }

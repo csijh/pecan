@@ -1,112 +1,112 @@
--- Tokens for C11, as produced by the scanner in c-scan.txt
+-- A grammar fragment for C tokens, as produced by the scanner in c-scan.txt
 
--- Definition taken from lexical grammar in A.1.1
+-- Definition taken from lexical grammar in A.1.1 of the C11 standard
 enumeration-constant = identifier
 
 -- Token types with variable spellings.
-identifier = #atom %Identifier @identifier
-constant = #atom %Constant @constant
-string-literal = #atom %StringLiteral @StringLiteral
-typedef-name = #atom %TypedefName @TypedefName
+identifier = #atom %identifier @identifier
+constant = #atom %constant @constant
+string-literal = #atom %string-literal @string-literal
+typedef-name = #atom %typedef-name @typedef-name
 
 -- Synonyms for keywords.
-Alignof = %Kalignof
-Auto = #type %Kauto
-Break = %Kbreak
-Case = #case %Kcase
-Char = #type %Kchar
-Const = #type %Kconst
-Continue = %Kcontinue
-Default = %Kdefault
-Do = #do %Kdo
-Double = #type %Kdouble
-Else = #else %Kelse
-Enum = #type %Kenum
-Extern = #type %Kextern
-Float = #type %Kfloat
-For = %Kfor
-Goto = %Kgoto
-If = %Kif
-Inline = #type %Kinline
-Int = #type %Kint
-Long = #type %Klong
-Register = %Kregister
-Restrict = %Krestrict
-Return = %Kreturn
-Short = #type %Kshort
-Signed = #type %Ksigned
-Sizeof = %Ksizeof
-Static = #type %Kstatic
-Struct = #type %Kstruct
-Switch = %Kswitch
-Typedef = #type %Ktypedef
-Union = #type %Kunion
-Unsigned = #type %Kunsigned
-Void = #type %Kvoid
-Volatile = #type %Kvolatile
-While = %Kwhile
-Alignas = %Kalignas
-Atomic = #type %Katomic
-Bool = #type %Kbool
-Complex = #type %Kcomplex
-Generic = #type %Kgeneric
-Imaginary = #type %Kimaginary
-Noreturn = %Knoreturn
-StaticAssert = %Kstaticassert
-ThreadLocal = %Kthreadlocal
+`alignof` = %alignof
+`auto` = #type %auto
+`break` = %break
+`case` = #case %case
+`char` = #type %char
+`const` = #type %const
+`continue` = %continue
+`default` = %default
+`do` = #do %do
+`double` = #type %double
+`else` = #else %else
+`enum` = #type %enum
+`extern` = #type %extern
+`float` = #type %float
+`for` = %for
+`goto` = %goto
+`if` = %if
+`inline` = #type %inline
+`int` = #type %int
+`long` = #type %long
+`register` = %register
+`restrict` = %restrict
+`return` = %return
+`short` = #type %short
+`signed` = #type %signed
+`sizeof` = %sizeof
+`static` = #type %static
+`struct` = #type %struct
+`switch` = %switch
+`typedef` = #type %typedef
+`union` = #type %union
+`unsigned` = #type %unsigned
+`void` = #type %void
+`volatile` = #type %volatile
+`while` = %vhile
+`_Alignas` = %_Alignas
+`_Atomic` = #type %_Atomic
+`_Bool` = #type %_Bool
+`_Complex` = #type %_Complex
+`_Generic` = #type %_Generic
+`_Imaginary` = #type %_Imaginary
+`_Noreturn` = %_Noreturn
+`_Static_assert` = %_Static_assert
+`_Thread_local` = %_Thread_local
 
 -- Literal synonyms for punctuators.
-PercentColonPercentColon = #op %SPercentColonPercentColon
-LessLessEq = #op %SLessLessEq
-GreaterGreaterEq = #op %SGreaterGreaterEq
-DotDotDot = #op %SDotDotDot
-Arrow = #op %SArrow
-PlusPlus = #op %SPlusPlus
-MinusMinus = #op %SMinusMinus
-LessLess = #op %SLessLess
-GreaterGreater = #op %SGreaterGreater
-LessEq = #op %SLessEq
-GreaterEq = #op %SGreaterEq
-EqEq = #op %SEqEq
-NotEq = #op %SNotEq
-AndAnd = #op %SAndAnd
-OrOr = #op %SOrOr
-StarEq = #op %SStarEq
-SlashEq = #op %SSlashEq
-PercentEq = #op %SPercentEq
-PlusEq = #op %SPlusEq
-MinusEq = #op %SMinusEq
-AndEq = #op %SAndEq
-HatEq = #op %SHatEq
-OrEq = #op %SOrEq
-HashHash = #op %SHashHash
-LessColon = #op %SLessColon
-ColonGreater = #op %SColonGreater
-LessPercent = #op %SLessPercent
-PercentGreater = #op %SPercentGreater
-PercentColon = #op %SPercentColon
-OpenS = #bracket %SOpenS
-CloseS = #close %SCloseS
-OpenR = #bracket %SOpenR
-CloseR = #close %SCloseR
-OpenC = #bracket %SOpenC
-CloseC = #close %SCloseC
-Dot = #op %SDot
-And = #op %SAnd
-Star = #op %SStar
-Plus = #op %SPlus
-Minus = #op %SMinus
-Tilde = #op %STilde
-Not = #op %SNot
-Slash = #op %SSlash
-Percent = #op %SPercent
-Less = #op %SLess
-Greater = #op %SGreater
-Hat = #op %SHat
-Or = #op %SOr
-Query = #op %SQuery
-Colon = #colon %SColon
-Semi = #semi %SSemi
-Eq = #op %SEq
-Comma = #comma %SComma
-Hash = %SHash
+`%:%:` = #op %`%:%:`
+`<<=` = #op %`<<=`
+`>>=` = #op %`>>=`
+`...` = #op %`...`
+`->` = #op %`->`
+`++` = #op %`++`
+`--` = #op %`--`
+`<<` = #op %`<<`
+`>>` = #op %`>>`
+`<=` = #op %`<=`
+`>=` = #op %`>=`
+`==` = #op %`==`
+`!=` = #op %`!=`
+`&&` = #op %`&&`
+`||` = #op %`||`
+`*=` = #op %`*=`
+`/=` = #op %`/=`
+`%=` = #op %`%=`
+`+=` = #op %`+=`
+`-=` = #op %`-=`
+`&=` = #op %`&=`
+`^=` = #op %`^=`
+`|=` = #op %`|=`
+`##` = #op %`##`
+`<:` = #op %`<:`
+`:>` = #op %`:>`
+`<%` = #op %`<%`
+`%>` = #op %`%>`
+`%:` = #op %`%:`
+`[` = #bracket %`[`
+`]` = #close %`]`
+`(` = #bracket %`(`
+`)` = #close %`)`
+`{` = #bracket %`{`
+`}` = #close %`}`
+`.` = #op %`.`
+`&` = #op %`&`
+`*` = #op %`*`
+`+` = #op %`+`
+`-` = #op %`-`
+`~` = #op %`~`
+`!` = #op %`!`
+`/` = #op %`/`
+`%` = #op %`%`
+`<` = #op %`<`
+`>` = #op %`>`
+`^` = #op %`^`
+`|` = #op %`|`
+`?` = #op %`?`
+`:` = #colon %`:`
+`;` = #semi %`;`
+`=` = #op %`=`
+`,` = #comma %`,`
+`#` = %`#`

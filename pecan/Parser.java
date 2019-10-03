@@ -95,12 +95,10 @@ class Parser implements Testable {
         return include() && newline() && ACT1(Include) && skip();
     }
 
-    // rule = #id (id / backquote) equals expression newline @2rule skip
+    // rule = #id id equals expression newline @2rule skip
     private boolean rule() {
-        return MARK(ID) && ALT(
-            DO() && id() ||
-            OR() && backquote()
-        ) && equals() && exp() && newline() && ACT2(Rule) && skip();
+        return MARK(ID) && id() && equals() && exp() && newline() &&
+        ACT2(Rule) && skip();
     }
 
     // expression = term (slash expression @2or)?
@@ -137,13 +135,12 @@ class Parser implements Testable {
         }
     }
 
-    // atom = bracket / try / id / backquote / act / mark / tag /
+    // atom = bracket / try / id / act / mark / tag /
     //     codes / code / range / set / string / split / category
     private boolean atom() {
         switch (NEXT()) {
             case '(': return bracket();
             case '[': return try_();
-            case '`': return backquote();
             case '@': return act();
             case '#': return mark();
             case '<': return split();
@@ -169,34 +166,27 @@ class Parser implements Testable {
         return sopen() && exp() && sclose() && ACT3(Try);
     }
 
-    // id = (cat alpha!)! letter alphas @id blank
+    // id = (cat alpha!)! name @id blank
     private boolean id() {
         return NOT(
             DO() && cat() && NOT(DO() && alpha())
-        ) && letter() && alphas() && ACT(Id) && blank();
+        ) && name() && ACT(Id) && blank();
     }
 
-    // backquote = "`" nobquotes #quote "`" @id blank
-    private boolean backquote() {
-        return (
-            CHAR('`') && nobquotes() && MARK(QUOTE) && CHAR('`') &&
-            ACT(Id) && blank()
-        );
-    }
-
-    // act = '@' decimals alphas @act blank
+    // act = '@' decimals name? @act blank
     private boolean act() {
-        return CHAR('@') && decimals() && alphas() && ACT(Act) && blank();
+        return CHAR('@') && decimals() && OPT(DO() && name()) && ACT(Act) &&
+        blank();
     }
 
-    // mark = "#" initial alphas @mark blank
+    // mark = "#" #letter name @mark blank
     private boolean mark() {
-        return CHAR('#') && initial() && alphas() && ACT(Mark) && blank();
+        return CHAR('#') && MARK(LETTER) && name() && ACT(Mark) && blank();
     }
 
-    // tag = "%" initial alphas @tag blank
+    // tag = "%" #letter name @tag blank
     private boolean tag() {
-        return CHAR('%') && initial() && alphas() && ACT(Tag) && blank();
+        return CHAR('%') && MARK(LETTER) && name() && ACT(Tag) && blank();
     }
 
     // codes = [digits '.'] #dot '.' digits @codes blank
@@ -379,9 +369,9 @@ class Parser implements Testable {
         return OPT(DO() && visible() && visibles());
     }
 
-    // alpha = letter / Nd / '_' / '-'
+    // alpha = letter / Nd / '-'
     private boolean alpha() {
-        return letter() || CAT(Nd) || CHAR('_') || CHAR('-');
+        return letter() || CAT(Nd) || CHAR('-');
     }
 
     // alphas = alpha*
@@ -389,9 +379,10 @@ class Parser implements Testable {
         return OPT(DO() && alpha() && alphas());
     }
 
-    // letter = Lu / Ll / Lt / Lm / Lo
+    // letter = Lu / Ll / Lt / Lm / Lo / '_'
     private boolean letter() {
         if (in >= input.length()) return false;
+        if (input.startsWith("_", in)) { in++; return true; }
         int ch = input.codePointAt(in);
         Category cat = Category.get(ch);
         boolean ok = (
@@ -399,6 +390,16 @@ class Parser implements Testable {
         );
         if (ok) in += Character.charCount(ch);
         return ok;
+    }
+
+    // name = letter alphas / literal
+    private boolean name() {
+        return letter() && alphas() || literal();
+    }
+
+    // literal = "`" nobquotes #quote "`"
+    private boolean literal() {
+        return CHAR('`') && nobquotes() && MARK(QUOTE) && CHAR('`');
     }
 
     // initial = #letter letter
@@ -448,9 +449,11 @@ class Parser implements Testable {
         return OPT(DO() && NOT(DO() && CHAR('"')) && visible() && nodquotes());
     }
 
-    // nobquotes = ("`"! visible)*
+    // nobquotes = ("`"! '!..~')*
     private boolean nobquotes() {
-        return OPT(DO() && NOT(DO() && CHAR('`')) && visible() && nobquotes());
+        return OPT(
+            DO() && NOT(DO() && CHAR('`')) && RANGE('!','~') && nobquotes()
+        );
     }
 
     // noangles = ('>'! visible)*

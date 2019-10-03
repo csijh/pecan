@@ -7,7 +7,7 @@
 
 -- A.1.1 Tokens ---------------
 
-tokens = @Tokens token* <>
+tokens = @tokens token* <>
 
 -- String-literals and constants and keywords must come before identifiers.
 token =
@@ -31,56 +31,56 @@ visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc / newline
 k = (identifier-nondigit / digit)!
 
 keyword
-= ["alignof" k] @1Kalignof
-/ ["auto" k] @1Kauto
-/ ["break" k] @1Kbreak
-/ ["case" k] @1Kcase
-/ ["char" k] @1Kchar
-/ ["const" k] @1Kconst
-/ ["continue" k] @1Kcontinue
-/ ["default" k] @1Kdefault
-/ ["do" k] @1Kdo
-/ ["double" k] @1Kdouble
-/ ["else" k] @1Kelse
-/ ["enum" k] @1Kenum
-/ ["extern" k] @1Kextern
-/ ["float" k] @1Kfloat
-/ ["for" k] @1Kfor
-/ ["goto" k] @1Kgoto
-/ ["if" k] @1Kif
-/ ["inline" k] @1Kinline
-/ ["int" k] @1Kint
-/ ["long" k] @1Klong
-/ ["register" k] @1Kregister
-/ ["restrict" k] @1Krestrict
-/ ["return" k] @1Kreturn
-/ ["short" k] @1Kshort
-/ ["signed" k] @1Ksigned
-/ ["sizeof" k] @1Ksizeof
-/ ["static" k] @1Kstatic
-/ ["struct" k] @1Kstruct
-/ ["switch" k] @1Kswitch
-/ ["typedef" k] @1Ktypedef
-/ ["union" k] @1Kunion
-/ ["unsigned" k] @1Kunsigned
-/ ["void" k] @1Kvoid
-/ ["volatile" k] @1Kvolatile
-/ ["while" k] @1Kwhile
-/ ["_Alignas" k] @1Kalignas
-/ ["_Atomic" k] @1Katomic
-/ ["_Bool" k] @1Kbool
-/ ["_Complex" k] @1Kcomplex
-/ ["_Generic" k] @1Kgeneric
-/ ["_Imaginary" k] @1Kimaginary
-/ ["_Noreturn" k] @1Knoreturn
-/ ["_Static_assert" k] @1Kstaticassert
-/ ["_Thread_local" k] @1Kthreadlocal
+= ["alignof" k] @1alignof
+/ ["auto" k] @1auto
+/ ["break" k] @1break
+/ ["case" k] @1case
+/ ["char" k] @1char
+/ ["const" k] @1const
+/ ["continue" k] @1continue
+/ ["default" k] @1default
+/ ["do" k] @1do
+/ ["double" k] @1double
+/ ["else" k] @1else
+/ ["enum" k] @1enum
+/ ["extern" k] @1extern
+/ ["float" k] @1float
+/ ["for" k] @1for
+/ ["goto" k] @1goto
+/ ["if" k] @1if
+/ ["inline" k] @1inline
+/ ["int" k] @1int
+/ ["long" k] @1long
+/ ["register" k] @1register
+/ ["restrict" k] @1restrict
+/ ["return" k] @1return
+/ ["short" k] @1short
+/ ["signed" k] @1signed
+/ ["sizeof" k] @1sizeof
+/ ["static" k] @1static
+/ ["struct" k] @1struct
+/ ["switch" k] @1switch
+/ ["typedef" k] @1typedef
+/ ["union" k] @1union
+/ ["unsigned" k] @1unsigned
+/ ["void" k] @1void
+/ ["volatile" k] @1volatile
+/ ["while" k] @1while
+/ ["_Alignas" k] @1_Alignas
+/ ["_Atomic" k] @1_Atomic
+/ ["_Bool" k] @1_Bool
+/ ["_Complex" k] @1_Complex
+/ ["_Generic" k] @1_Generic
+/ ["_Imaginary" k] @1_Imaginary
+/ ["_Noreturn" k] @1_Noreturn
+/ ["_Static_assert" k] @1_Static_assert
+/ ["_Thread_local" k] @1_Thread_local
 
 -- A.1.3 Identifiers ---------------
 
 -- Assume keywords have already been excluded. Include Unicode letters.
 identifier =
-    identifier-nondigit (identifier-nondigit / digit)* @1Identifier
+    identifier-nondigit (identifier-nondigit / digit)* @1identifier
 
 identifier-nondigit = nondigit / universal-character-name / other
 
@@ -101,9 +101,9 @@ hex-quad =
 
 -- Omit enumeration constants.
 constant =
-    character-constant @1Constant /
-    is-float! integer-constant @1Constant /
-    floating-constant @1Constant
+    is-float! integer-constant @1constant /
+    floating-constant @1constant /
+    character-constant @1constant
 
 -- Look ahead to see if a number is floating or not
 is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
@@ -194,8 +194,7 @@ hex-escape-sequence = "\x" hexadecimal-digit+
 -- A.1.6 String literals -----------------
 
 string-literal =
-    '"' s-char-sequence? '"' @1StringLiteral /
-    [encoding-prefix '"'] s-char-sequence? '"' @1StringLiteral
+    [encoding-prefix? '"'] s-char-sequence? '"' @1stringLiteral
 
 encoding-prefix = "u8" / "u" / "U" / "L"
 
@@ -206,57 +205,57 @@ s-char = ('"' / '\' / newline)! visible / escape-sequence
 -- A.1.7 Punctuators -----------------
 
 punctuator
-= "%:%:" @1SPercentColonPercentColon
-/ "<<=" @1SLessLessEq
-/ ">>=" @1SGreaterGreaterEq
-/ "..." @1SDotDotDot
-/ "->" @1SArrow
-/ "++" @1SPlusPlus
-/ "--" @1SMinusMinus
-/ "<<" @1SLessLess
-/ ">>" @1SGreaterGreater
-/ "<=" @1SLessEq
-/ ">=" @1SGreaterEq
-/ "==" @1SEqEq
-/ "!=" @1SNotEq
-/ "&&" @1SAndAnd
-/ "||" @1SOrOr
-/ "*=" @1SStarEq
-/ "/=" @1SSlashEq
-/ "%=" @1SPercentEq
-/ "+=" @1SPlusEq
-/ "-=" @1SMinusEq
-/ "&=" @1SAndEq
-/ "^=" @1SHatEq
-/ "|=" @1SOrEq
-/ "##" @1SHashHash
-/ "<:" @1SLessColon
-/ ":>" @1SColonGreater
-/ "<%" @1SLessPercent
-/ "%>" @1SPercentGreater
-/ "%:" @1SPercentColon
-/ "[" @1SOpenS
-/ "]" @1SCloseS
-/ "(" @1SOpenR
-/ ")" @1SCloseR
-/ "{" @1SOpenC
-/ "}" @1SCloseC
-/ "." @1SDot
-/ "&" @1SAnd
-/ "*" @1SStar
-/ "+" @1SPlus
-/ "-" @1SMinus
-/ "~" @1STilde
-/ "!" @1SNot
-/ "/" @1SSlash
-/ "%" @1SPercent
-/ "<" @1SLess
-/ ">" @1SGreater
-/ "^" @1SHat
-/ "|" @1SOr
-/ "?" @1SQuery
-/ ":" @1SColon
-/ ";" @1SSemi
-/ "=" @1SEq
-/ "," @1SComma
-/ "#" @1SHash
+= "%:%:" @1`%:%:`
+/ "<<=" @1`<<=`
+/ ">>=" @1`>>=`
+/ "..." @1`...`
+/ "->" @1`->`
+/ "++" @1`++`
+/ "--" @1`--`
+/ "<<" @1`<<`
+/ ">>" @1`>>`
+/ "<=" @1`<=`
+/ ">=" @1`>=`
+/ "==" @1`==`
+/ "!=" @1`!=`
+/ "&&" @1`&&`
+/ "||" @1`||`
+/ "*=" @1`*=`
+/ "/=" @1`/=`
+/ "%=" @1`%=`
+/ "+=" @1`+=`
+/ "-=" @1`-=`
+/ "&=" @1`&=`
+/ "^=" @1`^=`
+/ "|=" @1`|=`
+/ "##" @1`##`
+/ "<:" @1`<:`
+/ ":>" @1`:>`
+/ "<%" @1`<%`
+/ "%>" @1`%>`
+/ "%:" @1`%:`
+/ "[" @1`[`
+/ "]" @1`]`
+/ "(" @1`(`
+/ ")" @1`)`
+/ "{" @1`{`
+/ "}" @1`}`
+/ "." @1`.`
+/ "&" @1`&`
+/ "*" @1`*`
+/ "+" @1`+`
+/ "-" @1`-`
+/ "~" @1`~`
+/ "!" @1`!`
+/ "/" @1`/`
+/ "%" @1`%`
+/ "<" @1`<`
+/ ">" @1`>`
+/ "^" @1`^`
+/ "|" @1`|`
+/ "?" @1`?`
+/ ":" @1`:`
+/ ";" @1`;`
+/ "=" @1`=`
+/ "," @1`,`
+/ "#" @1`#`

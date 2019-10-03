@@ -18,75 +18,89 @@
 <h1>The C parser</h1>
 
 <p>The parser is defined separately, with tokens from the scanner as its input.
-The rules are presented in stages, in the order given in appendix A of the C11
-standard.</p>
+First, the relationship between the scanner and parser is established by
+defining the tokens to be used in the parser in terms of the token tags produced
+by the scanner. Then the rules are presented in stages, in the order given in
+appendix A of the C11 standard.</p>
 
-<h2>Expressions</h2>
+<h2>Tokens</h2>
 
-<p>A separate file is used to define and test C expressions, separately from the
-remainder of the grammar:</p>
+<p>The rules for tokens are gathered into a separate file, forming a grammar
+fragment to be included in later grammar files:</p>
 
-<p class="indent"><a href="c-expressions.txt">c-expressions.txt</a></p>
+<p class="indent"><a href="c-tokens.txt">c-tokens.txt</a></p>
 
-<p>The grammar begins with:</p>
-
-<pre class="pecan">start = expression
-type-name = %TypeName @typeName
-initializer-list = %InitializerList @initializerList
-</pre>
-
-<p>The <code class="pecan">start</code> rule allows the definitions to be
-presented in the order of the standard, with the <code
-class="pecan">expression</code> rule at the end. The other two rules temporarily
-cover forward references from the expression section of the standard to a later
-section, by defining them as if they were tokens.</p>
-
-<p>The input to the parser is an array of tokens produced by the scanner. The
-tag of a token is defined by the action used in the scanner to create it. It is
-assumed, however, that a tag <code class="pecan">%Identifier</code> is changed
-to <code class="pecan">%TypedefName</code> where appropriate by the parser's
-external code, in response to actions taken when parsing typedefs. In addition,
-since enumeration constants are not distinguished from identifiers in the
-scanner, this definition is included from the lexical grammar:</p>
-
-<pre class="pecan">enumeration-constant = identifier
-</pre>
-
-<p>Definitions are also introduced to recognize individual tokens, and establish
+<p>Definitions are introduced to recognize individual tokens, and establish
 error markers. These are intended to make the rest of the grammar more readable
 by making it more closely resemble the original C11 grammar. First there are
 definitions which deal with types of token with variable spellings:</p>
 
-<pre class="pecan">identifier = #atom %Identifier @identifier
-constant = #atom %Constant @constant
-string-literal = #atom %StringLiteral @StringLiteral
-typedef-name = #atom %TypedefName @TypedefName
+<pre class="pecan">enumeration-constant = identifier
+identifier = #atom %identifier @identifier
+constant = #atom %constant @constant
+string-literal = #atom %string-literal @string-literal
+typedef-name = #atom %typedef-name @typedef-name
 </pre>
 
-<p>The <code class="pecan">identifier</code> rule, for example, sets up an error
-marker, matches a token with tag <code class="pecan">%Identifier</code> and
-converts it into an output item. There is a group of rules for keywords:</p>
+<p>The rule for <code>enumeration-constant</code> has been taken from the
+original lexical rules. The <code class="pecan">identifier</code> rule is
+typical. It sets up an error marker, matches a token with tag <code
+class="pecan">identifier</code> and converts it into an output item. There is a
+group of rules for keywords:</p>
 
-<pre class="pecan">`alignof` = %Alignof
-`auto` = #type %Auto
+<pre class="pecan">`alignof` = %alignof
+`auto` = #type %auto
 ...
-`_Thread_local` = %ThreadLocal
+`_Thread_local` = %_Thread_local
 </pre>
 
-<p>These use backquote identifiers using the original spellings for the
-keywords. Keywords which have to do with types system are marked with the <code
-class="pecan">#type</code> marker. Also, keywords which continue a construct
-rather than start a new one are given error markers. There is a group of
-definitions for punctuators:</p>
+<p>Explicit keyword spellings such as <code class="c11">"alignof"</code> from
+the original grammar are translated into literal identifiers such as <code
+class="pecan">`alignof`</code> in the Pecan grammar. Keywords which have to do
+with types are marked with the <code class="pecan">#type</code> marker. Also,
+keywords which continue a construct rather than start a new one are given error
+markers. There is a group of definitions for punctuators:</p>
 
-<pre class="pecan">`%:%:` = #op %PercentColonPercentColon
-`<<=` = #op %LessLessEquals
+<pre class="pecan">`%:%:` = #op %`%:%:`
+`<<=` = #op %`<<=`
 ...
-`#` = #hash %Hash
+`#` = %`#`
 </pre>
 
-<p>Again, these use the original spelling in backquotes, to match the original
-grammar closely, and error markers are included.</p>
+<p>Again, explicit spellings such as <code class=c11>"%:%:"</code> are
+translated using literal names such as <code class="pecan">`%:%:`</code>, and
+various error markers are included.</p>
+
+<h2>Expressions</h2>
+
+<p>Separate files are used to define and test C expressions independently,
+before the remainder of the grammar is developed:</p>
+
+<p class="indent"><a href="c-expressions.txt">c-expressions.txt</a><br/>
+<a href="c-expressions-test.txt">c-expressions-test.txt</a></p>
+
+<p>The file <code>c-expressions.txt</code> is a grammar fragment which includes
+<code>c-tokens.txt</code> and which will itself be included in later grammar
+files. The test file contains:</p>
+
+<pre class="pecan">start = expression &lt;>
+type-name = %type-name @type-name
+initializer-list = %initializer-list @initializer-list
+{c-expressions.txt}
+</pre>
+
+<p>This adds three rules to the ones in <code>c-expressions.txt</code>. The
+first rule establishes the <code class="pecan">expression</code> rule as the
+entry point, and makes sure that it matches the whole of the input in each test.
+The other two rules cope with forward references from expressions to later parts
+of the C grammar. The two rules mentioned are temporarily defined as tokens,
+to make expressions self-contained for testing.</p>
+
+<p>The input to the parser is an array of tokens produced by the scanner. The
+tag of a token is defined by the action used in the scanner to create it. It is
+assumed, however, that a tag <code class="pecan">identifier</code> is changed
+to <code class="pecan">typedef-name</code> where appropriate by the parser's
+external code, in response to actions taken when parsing typedefs.</p>
 
 <p>Precedence and associativity are dealt with in the original grammar by
 defining hierarchically layered rules for expressions. The transformation into
@@ -94,10 +108,10 @@ Pecan follows the same style, and is reasonably straightforward. The original
 rule for primary expressions is:</p>
 
 <pre class="c11">primary-expression =
-    identifier |
-    constant |
-    string-literal |
-    '(' expression ')' |
+    identifier /
+    constant /
+    string-literal /
+    `(` expression `)` /
     generic-selection
 </pre>
 
@@ -116,17 +130,17 @@ different type of token:</p>
 problems:</p>
 
 <pre class="pecan">generic-selection =
-    `_Generic` `(` assignment-expression `,` generic-assoc-list `)` @2generic
+    `_Generic` `(` (assignment-expression `,` generic-assoc-list `)` @2generic)
 
 generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
     type-name `:` assignment-expression @2assoc /
-    DEFAULT `:` assignment-expression @1defaultAssoc
+    `default` `:` assignment-expression @1defaultAssoc
 </pre>
 
 <p>The <code class="pecan">@2pair</code> action is a general purpose one for
-building lists.</p>
+building lists and other compound structures.</p>
 
 <p>The original rule for postfix expressions is:</p>
 
@@ -174,10 +188,9 @@ the last two alternatives can be merged and put at the beginning:</p>
 </pre>
 
 <p>The rule for an initializer list will later need to be defined to exclude the
-optional final comma shown here.</p>
-
-<p>The next layer up in the expression hierarchy is unary expressions, with
-original rule:</p>
+optional final comma shown here. The rule for an argument expression list is
+easy to translate. The next layer up in the expression hierarchy is unary
+expressions, with original rule:</p>
 
 <pre class="c11">unary-expression  =
     postfix-expression |
@@ -203,7 +216,8 @@ this, the two alternatives can be reversed and a try expression applied:</p>
     `alignof` `(` type-name `)` @1align
 </pre>
 
-<p>The next layer up is cast expressions, with original rule:</p>
+<p>The rule for a unary operator is easy to translate. The next layer up is cast
+expressions, with original rule:</p>
 
 <pre class="c11">cast-expression =
     unary-expression |
@@ -238,7 +252,6 @@ expressions, defined by the original rule:</p>
         `/` cast-expression @2divide /
         `%` cast-expression @2remainder
     )*
-
 </pre>
 
 <p>The same approach can be taken to additive expressions, shift expressions,
@@ -280,7 +293,13 @@ alternative:</p>
     conditional-expression
 </pre>
 
-<p>At the top of the expression hierarchy is the expression rule:</p>
+<p>In a production compiler, to avoid the potentially expensive lookahead, it
+might be better to parse the left hand side of an assignment as a conditional
+expression instead of a unary expression, and then check the restriction to
+unary expression after parsing.</p>
+
+<p>The rule for an assignment operator is easy to translate. At the top of the
+expression hierarchy is the expression rule:</p>
 
 <pre class="c11">expression =
     assignment-expression |
@@ -297,20 +316,63 @@ alternative:</p>
 just a synonym which makes some of the later rules more readable. There is no
 harm in including it in the Pecan translation:</p>
 
-<pre class="pecan">constant-expression =
-    conditional-expression
+<pre class="pecan">constant-expression = conditional-expression
 </pre>
 
 <h2>Declarations</h2>
 
-<p>Here is a file which adds declaration rules to the expression rules developed
-so far, and which provides tests for these new rules:</p>
+<p>These files are used to define and test C declarations:</p>
 
-<p class="indent"><a href="c-declarations.txt">c-declarations.txt</a></p>
+<p class="indent"><a href="c-declarations.txt">c-declarations.txt</a><br/>
+<a href="c-declarations-test.txt">c-declarations-test.txt</a></p>
 
-declaration =
-    static_assert-declaration /
-    declaration-specifiers (init-declarator-list @2declare)? `;`
+<p>The original rule for declarations is:</p>
+
+<pre class="c11">declaration =
+    declaration-specifiers init-declarator-list? ";" |
+    static_assert-declaration
+</pre>
+
+<p>This can be translated directly as:</p>
+
+<pre class="pecan">declaration =
+    declaration-specifiers (init-declarator-list @2declaration)? `;` /
+    static_assert-declaration
+</pre>
+
+<p>The original rule for declaration specifiers is:</p>
+
+<pre class="c11">declaration-specifiers =
+    storage-class-specifier declaration-specifiers? |
+    type-specifier declaration-specifiers? |
+    type-qualifier declaration-specifiers? |
+    function-specifier declaration-specifiers? |
+    alignment-specifier declaration-specifiers?
+</pre>
+
+<p>In the translation, it seems cleaner to define a single declaration specifier
+separately:</p>
+
+<pre class="pecan">declaration-specifier =
+    storage-class-specifier /
+    type-specifier /
+    type-qualifier /
+    function-specifier /
+    alignment-specifier
+</pre>
+
+<p>Then the definition for a sequence of them can include an action to combine
+them:</p>
+
+<pre class="pecan">declaration-specifiers =
+    declaration-specifier (declaration-specifier @2declaration-specifiers)*
+</pre>
+
+<p>The rules for <code class="pecan">init-declarator-list</code>, <code
+class="pecan">init-declarator</code>, <code
+class="pecan">storage-class-specifier</code>, and <code
+class="pecan">type-specifier</code> are simple.</p>
+
 
 <hr/>
 

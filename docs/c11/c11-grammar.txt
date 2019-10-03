@@ -1,15 +1,15 @@
-// This is the C11 grammar from appendix sections A.1 and A.2 of the standard,
-// ignoring all preparation and preprocessor issues, and translated into Pecan
-// syntax, except for explicit CFG | choice operators. This is a starting point
-// for transformation into a recursive descent Pecan grammar, replacing the |
-// operator by the Pecan choice operator /.
+-- This is the C11 grammar from appendix sections A.1 and A.2 of the standard,
+-- ignoring all preparation and preprocessor issues, and translated into Pecan
+-- syntax, except for explicit CFG | choice operators. This is a starting point
+-- for transformation into a recursive descent Pecan grammar, replacing the |
+-- operator by the Pecan choice operator /.
 
-// A.1.1 Lexical elements
+-- A.1.1 Lexical elements
 
 token =
     keyword | identifier | constant | string-literal | punctuator
 
-// A.1.2 Keywords
+-- A.1.2 Keywords
 
 keyword =
     "alignof"    | "auto"       | "break"      | "case"       | "char"       |
@@ -22,7 +22,7 @@ keyword =
     "_Alignas"   | "_Atomic"    | "_Bool"      | "_Complex"   | "_Generic"   |
     "_Imaginary" | "_Noreturn"  | "_Static_assert"            | "_Thread_local"
 
-// A.1.3 Identifiers
+-- A.1.3 Identifiers
 
 identifier =
     identifier-nondigit |
@@ -40,7 +40,7 @@ nondigit =
 digit =
     '0123456789'
 
-// A.1.4 Universal character names
+-- A.1.4 Universal character names
 
 universal-character-name =
     "\u" hex-quad |
@@ -49,7 +49,7 @@ universal-character-name =
 hex-quad =
     hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
 
-// A.1.5 Constants
+-- A.1.5 Constants
 
 constant =
     integer-constant | floating-constant |
@@ -180,7 +180,7 @@ hexadecimal-escape-sequence =
     "\x" hexadecimal-digit |
     hexadecimal-escape-sequence hexadecimal-digit
 
-// A.1.6 String literals
+-- A.1.6 String literals
 
 string-literal =
     encoding-prefix? '"' s-char-sequence? '"'
@@ -196,7 +196,7 @@ s-char =
     ('"' / '\' / newline)! visible |
     escape-sequence
 
-// A.1.7 Punctuators
+-- A.1.7 Punctuators
 
 punctuator =
     "["  | "]"  | "("  | ")"   | "{"  | "}"  | "."  | "->" |
@@ -207,7 +207,7 @@ punctuator =
     ","  | "#"  | "##" |
     "<:" | ":>" | "<%" | "%>"  | "%:" | "%:%:"
 
-// A.2.1 Expressions
+-- A.2.1 Expressions
 
 primary-expression =
     identifier |
@@ -324,11 +324,11 @@ expression =
 constant-expression =
     conditional-expression
 
-// A.2.2 Declarations
+-- A.2.2 Declarations
 
 declaration =
     declaration-specifiers init-declarator-list? ";" |
-    static_assert-declaration |
+    static_assert-declaration
 
 declaration-specifiers =
     storage-class-specifier declaration-specifiers? |
@@ -509,7 +509,7 @@ designator =
 static_assert-declaration =
     "_Static_assert" "(" constant-expression "," string-literal ")" ";"
 
-// A.2.3 Statements
+-- A.2.3 Statements
 
 statement =
     labeled-statement |
@@ -555,7 +555,7 @@ jump-statement =
     "break" ";" |
     "return" expression? ";"
 
-// A.2.4 External definitions
+-- A.2.4 External definitions
 
 translation-unit =
     external-declaration |

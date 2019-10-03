@@ -1,0 +1,201 @@
+-- Test the grammar fragment in c-expressions.txt
+
+-- Add temporary definitions to make expressions a self-contained grammar.
+start = expression <>
+type-name = %type-name @type-name
+initializer-list = %initializer-list @initializer-list
+
+-- Import the main grammar file
+{c-expressions.txt}
+
+==========
+-- Tests for primary expressions
+==========
+identifier
+..........
+identifier
+==========
+constant
+..........
+constant
+==========
+string-literal
+..........
+string-literal
+==========
+( identifier )
+..........
+identifier
+==========
+( identifier
+..........
+Error in c-expressions-test.txt, line 31: expecting bracket, close, comma, op
+
+^
+==========
+_Generic ( identifier , default : identifier )
+..........
+identifier
+identifier
+defaultAssoc
+generic
+==========
+-- Tests for postfix expressions
+==========
+( type-name ) { initializer-list }
+..........
+type-name
+initializer-list
+compound
+==========
+identifier [ identifier ]
+..........
+identifier
+identifier
+index
+==========
+identifier ( identifier )
+..........
+identifier
+identifier
+apply
+==========
+identifier ( )
+..........
+identifier
+missing
+apply
+==========
+identifier -> identifier
+..........
+identifier
+identifier
+arrow
+==========
+identifier ++
+..........
+identifier
+postInc
+==========
+identifier --
+..........
+identifier
+postDec
+==========
+identifier -> identifier ++
+..........
+identifier
+identifier
+arrow
+postInc
+==========
+-- Tests for unary expressions
+==========
+++ identifier
+..........
+identifier
+preInc
+==========
+-- identifier
+..........
+identifier
+preDec
+==========
+& identifier
+..........
+address
+identifier
+preOp
+==========
+sizeof ( type-name )
+..........
+type-name
+typeSize
+==========
+sizeof identifier
+..........
+identifier
+varSize
+==========
+sizeof ( identifier )
+..........
+identifier
+varSize
+==========
+alignof ( type-name )
+..........
+type-name
+align
+==========
+-- Tests for cast expressions
+==========
+( type-name ) identifier
+..........
+type-name
+identifier
+cast
+==========
+-- Tests for multiplicative expressions
+==========
+identifier * identifier
+..........
+identifier
+identifier
+multiply
+==========
+( type-name ) identifier / ( type-name ) identifier
+..........
+type-name
+identifier
+cast
+type-name
+identifier
+cast
+divide
+==========
+-- Tests for additive expressions
+==========
+identifier * identifier + identifier / identifier
+..........
+identifier
+identifier
+multiply
+identifier
+identifier
+divide
+add
+==========
+-- Tests for conditional expressions
+==========
+identifier ? identifier : identifier
+..........
+identifier
+identifier
+identifier
+ifExp
+==========
+-- Tests for assignment expressions
+==========
+identifier = identifier
+..........
+identifier
+becomes
+identifier
+assign
+==========
+identifier *= identifier + identifier
+..........
+identifier
+mulEq
+identifier
+identifier
+add
+assign
+==========
+-- Top level expressions
+==========
+identifier , identifier
+..........
+identifier
+identifier
+comma
