@@ -4,21 +4,6 @@
 -- Include the grammar for expressions
 {c-expressions.txt}
 
--- Temporary definitions to make declarations self-contained.
-type-name = %TypeName @typeName
-initializer-list = %InitializerList @initializerList
-static_assert-declaration = %sad @sad
-declarator = %idl @idl
-initializer = %in @in
-alignment-specifier = %as @as
-function-specifier = %fs @fs
-type-qualifier = %tq @tq
-atomic-type-specifier = %ats @ats
-enumerator = %e @e
-parameter-type-list = %ptl @ptl
-identifier-list = %is @is
-type-qualifier-list = %tql @tql
-
 declaration =
     declaration-specifiers (init-declarator-list @2declaration)? `;` /
     static_assert-declaration
@@ -81,6 +66,21 @@ enum-specifier = `enum` (
 
 enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
 
+enumerator = enumeration-constant (`=` constant-expression @2define)?
+
+atomic-type-specifier = `_Atomic` `(` type-name `)` @1atomicType
+
+type-qualifier =
+    `const` @const / `restrict` @restrict /
+    `volatile` @volatile / `_Atomic` @atomic
+
+function-specifier = `inline` @inline / `_Noreturn` @noreturn
+
+alignment-specifier =
+    `_Alignas` `(` (type-name / constant-expression) `)` @1alignas
+
+declarator = (pointer / @nothing) direct-declarator @2declarator
+
 direct-declarator =
     (identifier / `(` declarator `)`) dd-bracket*
 
@@ -93,13 +93,82 @@ dd-parameters =
 
 dd-array-size =
     `*` @star /
-    `static` (type-qualifier-list / @nothing) assignment-expression @2staticSize /
+    `static` type-qualifiers assignment-expression @2pair @1staticSize /
     type-qualifier-list (dd-simple-array-size / @nothing) @2typeSize /
     assignment-expression @1size
 
 dd-simple-array-size =
     `*` @star /
-    `static` assignment-expression @1staticSize1 /
+    `static` assignment-expression @1staticSize /
     assignment-expression @1size
 
-pointer = (`*` ((type-qualifier-list / @nothing) @2pointer))+
+type-qualifiers = type-qualifier-list / @nothing
+
+pointer =
+    (`*` type-qualifiers @1pointer) (
+        `*` type-qualifiers @1pointer @2pair
+    )*
+
+type-qualifier-list = type-qualifier (type-qualifier @2pair)*
+
+parameter-type-list = parameter-list (`,` `...` @dots @2pair)?
+
+parameter-list =
+    parameter-declaration ((`,` `...`)! `,` parameter-declaration @2pair)*
+
+parameter-declaration = declaration-specifiers (
+    has-identifier declarator @2declarator /
+    (abstract-declarator @2abstract)?
+)
+
+has-identifier =
+    ((`*` / type-qualifier / `(`)* `identifier`) &
+
+identifier-list = identifier (`,` identifier @2pair)*
+
+type-name = specifier-qualifier-list (abstract-declarator @2typeName)?
+
+abstract-declarator =
+    pointer (direct-abstract-declarator @2pointerTo)? /
+    direct-abstract-declarator
+
+direct-abstract-declarator =
+    has-declarator `(` abstract-declarator `)` (dad-bracket @2dad)* /
+    dad-bracket (dad-bracket @2dad)*
+
+has-declarator = (`(` (`*` / `(` / `[`)) &
+
+dad-bracket =
+    `(` parameter-type-list / @nothing `)` @1parameters /
+    `[` dad-array-size / @nothing `]` @1arraySize
+
+dad-array-size =
+    `*` @star /
+    `static` type-qualifiers assignment-expression @2pair @1staticSize /
+    type-qualifier-list (dad-simple-array-size / @nothing) @2pair /
+    assignment-expression
+
+dad-simple-array-size =
+    assignment-expression / `static` assignment-expression @1staticSize
+
+initializer =
+    assignment-expression /
+    `{` initializer-list `,`? `}` @1list
+
+initializer-list =
+    (designation / @nothing) initializer @2init (
+    `,` (designation / @nothing) initializer @2init @2pair)*
+
+designation =
+    designator-list `=`
+
+designator-list =
+    designator (designator @2pair)*
+
+designator =
+    `[` constant-expression `]` @1arrayIndex /
+    `.` identifier @1fieldAccess
+
+static_assert-declaration =
+    `_Static_assert` `(` constant-expression `,` (
+    string-literal `)` @2staticAssert `;`)

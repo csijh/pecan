@@ -73,8 +73,9 @@ various error markers are included.</p>
 
 <h2>Expressions</h2>
 
-<p>Separate files are used to define and test C expressions independently,
-before the remainder of the grammar is developed:</p>
+<p>Expressions are covered in section A.2.1 of the C11 standard. Separate files
+are used to define and test C expressions independently, before the remainder of
+the grammar is developed:</p>
 
 <p class="indent"><a href="c-expressions.txt">c-expressions.txt</a><br/>
 <a href="c-expressions-test.txt">c-expressions-test.txt</a></p>
@@ -126,8 +127,7 @@ different type of token:</p>
     generic-selection
 </pre>
 
-<p>Generic selections are new in C11, but also cause no translation
-problems:</p>
+<p>Generic selections also cause no translation problems:</p>
 
 <pre class="pecan">generic-selection =
     `_Generic` `(` (assignment-expression `,` generic-assoc-list `)` @2generic)
@@ -139,11 +139,11 @@ generic-association =
     `default` @nothing `:` assignment-expression @2assoc
 </pre>
 
-<p>An action with non-zero arity can be thought of as creating a parse tree
-node, where the type of the node is given by the name of the action. The <code
-class="pecan">@2pair</code> action is a general purpose one for building lists
-and other compound structures. It is used often in this development whereas, in
-a practical project, more informative actions would be needed.</p>
+<p>Actions can be thought of as creating parse tree node, where the type of the
+node is given by the name of the action. The <code class="pecan">@2pair</code>
+action is a general purpose one for building lists and other compound
+structures. It is used often in this development whereas, in a practical
+project, more informative node types would be needed.</p>
 
 <p>The original rule for postfix expressions is:</p>
 
@@ -409,7 +409,7 @@ struct-or-union-body =
 
 <p>The rules for <code class="pecan">struct-declaration-list</code>, <code
 class="pecan">struct-declaration</code>, <code
-class="pecan">specifier-qualifier-list</code> <code
+class="pecan">specifier-qualifier-list</code>, <code
 class="pecan">struct-declarator-list</code> and <code
 class="pecan">struct-declarator</code> are easy to handle.</p>
 
@@ -439,7 +439,13 @@ being matched in the second rule:</p>
 <pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
 </pre>
 
-<p>The original rule for <code>direct-declarator</code> is:</p>
+<p>The <code class="pecan">enumerator</code>, <code
+class="pecan">atomic-type-specifier</code>, <code
+class="pecan">type-qualifier</code>, <code
+class="pecan">function-specifier</code>, <code
+class="pecan">alignment-specifier</code>, and <code
+class="pecan">declarator</code> rules are straightforward. The original rule for
+<code>direct-declarator</code> is:</p>
 
 <pre class="c11">direct-declarator:
     identifier |
@@ -470,7 +476,7 @@ dd-parameters =
 
 dd-array-size =
     `*` @star /
-    `static` (type-qualifier-list / @nothing) assignment-expression @2staticSize /
+    `static` type-qualifiers assignment-expression @2pair @1staticSize /
     type-qualifier-list (dd-simple-array-size / @nothing) @2typeSize /
     assignment-expression @1size
 
@@ -478,50 +484,15 @@ dd-simple-array-size =
     `*` @star /
     `static` assignment-expression @1staticSize1 /
     assignment-expression @1size
+
+type-qualifiers = type-qualifier-list / @nothing
 </pre>
 
 <p>The rules for <code class="pecan">pointer</code>, <code
 class="pecan">type-qualifier-list</code>, <code
-class="pecan">parameter-type-list</code>, <code
-class="pecan">parameter-list</code>, <code
-class="pecan">parameter-declaration</code>, <code
-class="pecan">identifier-list</code>, <code class="pecan">type-name</code>, and
-<code class="pecan">abstract-declarator</code> are simple. The original rule for
-<code>direct-abstract-declarator</code> is:</p>
-
-<pre class="c11">direct-abstract-declarator =
-    `(` abstract-declarator `)` |
-    direct-abstract-declarator? `[` type-qualifier-list? assignment-expression? `]` |
-    direct-abstract-declarator? `[` `static` type-qualifier-list? assignment-expression `]` |
-    direct-abstract-declarator? `[` type-qualifier-list `static` assignment-expression `]` |
-    direct-abstract-declarator? `[` `*` `]` |
-    direct-abstract-declarator? `(` parameter-type-list? `)`
-</pre>
-
-<p>Going through a similar sequence of small transformations yields:</p>
-
-<hr/>
-
-<p class="indent"><a href="c-parse-b.txt">c-parse-b.txt</a></p>
-
-
-<pre class="pecan">direct-abstract-declarator =
-    `(` abstract-declarator `)` dad-bracket* / dad-bracket+
-
-dad-bracket =
-    `(` parameter-type-list? `)` / `[` dad-array-size? `]`
-
-dad-array-size =
-    `*` /
-    `static` type-qualifier-list? assignment-expression /
-    type-qualifier-list dad-simple-array-size? /
-    assignment-expression
-
-dad-simple-array-size =
-    assignment-expression / `static` assignment-expression
-</pre>
-
-<p>The original rule for <code>parameter-declaration</code> is:</p>
+class="pecan">parameter-type-list</code>, and <code
+class="pecan">parameter-list</code> are simple. The original rule for
+<code>parameter-declaration</code> is:</p>
 
 <pre class="c11">parameter-declaration =
     declaration-specifiers declarator |
@@ -536,27 +507,95 @@ dad-simple-array-size =
 )
 </pre>
 
-<p>The approach taken earlier to combine alternatives by transformation to find
-their common prefixes doesn't work here, because recursion intervenes before the
-issue is resolved. So, it is better to use lookahead. However, it is worth
-finding a 'cheap' lookahead. The main difference between the alternatives is
-that <code>declarator</code> includes an identifier. Checking the
-possibilities, only <code>`*`</code> or <code>type-qualifier</code> or
-<code>`(`</code> tokens can occur before the identifier. On the other hand, in
-an <code>abstract-declarator</code>, a close bracket must appear before the end.
-This leads to:</p>
+<p>The two alternatives overlap. The approach of combining alternatives by
+transformation to find their common prefixes doesn't work here, because
+recursion intervenes before the issue is resolved. So, it is better to use
+lookahead. However, it is worth finding a 'cheap' lookahead. The main difference
+between the alternatives is that <code>declarator</code> includes an identifier.
+Checking the possibilities, only <code>`*`</code> or <code>type-qualifier</code>
+or <code>`(`</code> tokens can occur before the identifier. On the other hand,
+in an <code>abstract-declarator</code>, a close bracket must appear before the
+end. This leads to:</p>
 
 <pre class="pecan">parameter-declaration = declaration-specifiers (
-    has-identifier&amp; declarator /
-    abstract-declarator?
+    has-identifier declarator @2declarator /
+    (abstract-declarator @2abstract)?
 )
 
 has-identifier =
-    (`*` / type-qualifier / `(`)* `identifier`
+    ((`*` / type-qualifier / `(`)* `identifier`) &amp;
 </pre>
 
-<p>The transformation of the remainder of the declaration rules is relatively
-straightforward.</p>
+<p>The <code class="pecan">identifier-list</code>, <code
+class="pecan">type-name</code>, and <code
+class="pecan">abstract-declarator</code> rules are simple. The original rule for
+<code>direct-abstract-declarator</code> is:</p>
+
+<pre class="c11">direct-abstract-declarator =
+    `(` abstract-declarator `)` |
+    direct-abstract-declarator? `[` type-qualifier-list? assignment-expression? `]` |
+    direct-abstract-declarator? `[` `static` type-qualifier-list? assignment-expression `]` |
+    direct-abstract-declarator? `[` type-qualifier-list `static` assignment-expression `]` |
+    direct-abstract-declarator? `[` `*` `]` |
+    direct-abstract-declarator? `(` parameter-type-list? `)`
+</pre>
+
+<p>This defines a sequence of clauses which have round or square brackets. There
+is an overlap between the first and last alternatives, but it is a minor one
+because an abstract declarator begins with a <code>*</code> or a bracket,
+whereas a parameter type list begins with a keyword. That means the left
+recursion can be removed from the rule, with a cheap lookahead:</p>
+
+<pre class="pecan">direct-abstract-declarator =
+    has-declarator `(` abstract-declarator `)` (dad-bracket @2dad)* /
+    dad-bracket (dad-bracket @2dad)*
+
+has-declarator = (`(` (`*` / `(` / `[`)) &amp;
+</pre>
+
+<p>The <code class="pecan">dad-bracket</code> rule can handle the overlap of the
+square-bracket clauses simply by lifting out their contents into a separate
+rule:</p>
+
+<pre class="pecan">dad-bracket =
+    `(` parameter-type-list / @nothing `)` @1parameters /
+    `[` dad-array-size / @nothing `]` @1arraySize
+</pre>
+
+<p>Then <code class="pecan">dad-array-size</code> and <code
+class="pecan">dad-simple-array-size</code> are easy:</p>
+
+<pre class="pecan">dad-array-size =
+    `*` @star /
+    `static` type-qualifiers assignment-expression @2pair @1staticSize /
+    type-qualifier-list (dad-simple-array-size / @nothing) @2pair /
+    assignment-expression
+
+dad-simple-array-size =
+    assignment-expression / `static` assignment-expression @1staticSize
+</pre>
+
+<p>There is an original rule:</p>
+
+<pre class="c11">typedef-name = identifier
+</pre>
+
+<p>This needs to be removed, because the external code associated with the
+parser will distinguish between typedef names and identifiers by giving them
+different tags.</p>
+
+<p>The final rules for declarations are <code class="pecan">initializer</code>,
+<code class="pecan">initializer-list</code>, <code
+class="pecan">designation</code>, <code class="pecan">designator-list</code>,
+<code class="pecan">designator</code>, and <code
+class="pecan">static_assert-declaration</code>, are all straightforward.</p>
+
+<h2>Statements</h2>
+
+<p>The file of rules, and the file of tests, for statements are:</p>
+
+<p class="indent"><a href="c-statements.txt">c-statements.txt</a><br/>
+<a href="c-statements-test.txt">c-statements-test.txt</a></p>
 
 <hr/>
 <p><b>Development incomplete</b></p>

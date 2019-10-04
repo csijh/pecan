@@ -191,7 +191,10 @@ class Binder implements Testable {
         int arity = node.arity();
         Integer old = arities.get(name);
         if (old == null) arities.put(name, arity);
-        else if (arity != old) err(node, "clashes with @" + old + name);
+        else if (arity != old) {
+            if (old == 0) err(node, "clashes with @" + name);
+            else err(node, "clashes with @" + old + name);
+        }
     }
 
     // Report an error.

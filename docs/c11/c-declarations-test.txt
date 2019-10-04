@@ -1,13 +1,13 @@
 -- Test the grammar fragment in c-declarations.txt
 
--- Temporary definitions to make declarations self-contained.
+-- Temporary definition to make declarations self-contained.
 start = declaration <>
---type-name = %TypeName @typeName
---initializer-list = %InitializerList @initializerList
 
 {c-declarations.txt}
 
 ==========
-identifier
+_Static_assert ( constant , string-literal ) ;
 ..........
-identifier
+constant
+string-literal
+staticAssert

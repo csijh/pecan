@@ -8,12 +8,13 @@ import static pecan.Op.*;
 
 /* This pass checks that output handling is consistent, that a fixed number of
 output items is produced for any given node, and that a fixed number of output
-items is needed at the start of any node.
+items is needed at the start of any node. Nodes within & or ! lookaheads are
+excluded from the analysis, since actions ae switched off during them.
 
-As a change from version 0.4, if the first rule of a grammar doesn't produce one
-item, or needs output items and thus causes stack underflow, reporting is
-delayed until compilation so that, during development and testing, grammars with
-no actions, and arbitrary fragments of grammars, are legal.
+If the first rule of a grammar doesn't produce one item, or needs output items
+and thus causes stack underflow, reporting is delayed until compilation so that,
+during development and testing, grammars with no actions, and arbitrary
+fragments of grammars, are legal.
 
 A NET number is calculated for each node, representing the overall change in
 output stack size, positive or negative, as a result of parsing. The value for
@@ -81,9 +82,21 @@ class Stacker implements Testable {
 
     // Traverse the tree, bottom up, and check each node.
     private void scan(Node node) {
-        if (node.left() != null) scan(node.left());
-        if (node.right() != null) scan(node.right());
-        scanNode(node);
+        if (node.op() == Has || node.op() == Not) {
+            clearZero(node);
+        } else {
+            if (node.left() != null) scan(node.left());
+            if (node.right() != null) scan(node.right());
+            scanNode(node);
+        }
+    }
+
+    // Clear all to zero.
+    private void clearZero(Node node) {
+        if (node.left() != null) clearZero(node.left());
+        if (node.right() != null) clearZero(node.right());
+        node.NET(0);
+        node.NEED(0);
     }
 
     // The main switch. Check if any of the values change.

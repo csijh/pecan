@@ -28,3 +28,47 @@ These notes mostly relate to scanning and parsing, rather than execution.
 
 6.2.1 Scopes, 6.2.2 Linkage, 6.2.3 Name spaces, 6.2.4 Storage durations.
 6.2.5 Types, 6.2.6 Representations, 6.2.7 Compatibility
+
+dad =
+    "(" abstract-declarator ")" |
+    dad? "[" type-qualifier-list? assignment-expression? "]" |
+    dad? "[" static type-qualifier-list? assignment-expression "]" |
+    dad? "[" type-qualifier-list static assignment-expression "]" |
+    dad? "[" "*" "]" |
+    dad? "(" parameter-type-list? ")"
+
+-- gather square bracket clauses:
+
+dad =
+    "(" abstract-declarator ")" |
+    dad? dad-array |
+    dad? "(" parameter-type-list? ")"
+
+dad-array =
+    "[" type-qualifier-list? assignment-expression? "]" |
+    "[" static type-qualifier-list? assignment-expression "]" |
+    "[" type-qualifier-list static assignment-expression "]" |
+    "[" "*" "]" |
+
+-- expand options
+
+dad =
+    "(" abstract-declarator ")" |
+    dad dad-array |
+    dad-array |
+    dad "(" parameter-type-list? ")" |
+    "(" parameter-type-list? ")"
+
+-- Gather left-recursive options
+
+dad =
+    "(" abstract-declarator ")" |
+    dad-array |
+    "(" parameter-type-list? ")"
+    dad dad-array |
+    dad "(" parameter-type-list? ")" |
+
+dad =
+    "(" abstract-declarator ")" dad-bracket* | dad-bracket+
+
+dad-bracket = dad-array | "(" parameter-type-list? ")"
