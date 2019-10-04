@@ -50,12 +50,14 @@ class Source {
         return Paths.get(p.getParent().toString(), path.toString()).toString();
     }
 
-    // Read in a file as a string.
+    // Read in a file as a string. Use readAllLines, not readAllBytes, in order
+    // to normalize line endings,
     static String readFile(String file) {
         Path path = Paths.get(file);
         try {
-            byte[] bytes = Files.readAllBytes(path);
-            return new String(bytes, StandardCharsets.UTF_8);
+            List<String> lines =
+                Files.readAllLines(path, StandardCharsets.UTF_8);
+            return String.join("\n", lines) + "\n";
         } catch (Exception e) { throw new Error(e); }
     }
 

@@ -36,8 +36,9 @@ Error in c-expressions-test.txt, line 31: expecting bracket, close, comma, op
 _Generic ( identifier , default : identifier )
 ..........
 identifier
+nothing
 identifier
-defaultAssoc
+assoc
 generic
 ==========
 -- Tests for postfix expressions
@@ -63,7 +64,7 @@ apply
 identifier ( )
 ..........
 identifier
-missing
+nothing
 apply
 ==========
 identifier -> identifier
@@ -110,17 +111,17 @@ preOp
 sizeof ( type-name )
 ..........
 type-name
-typeSize
+sizeofType
 ==========
 sizeof identifier
 ..........
 identifier
-varSize
+sizeofVar
 ==========
 sizeof ( identifier )
 ..........
 identifier
-varSize
+sizeofVar
 ==========
 alignof ( type-name )
 ..........

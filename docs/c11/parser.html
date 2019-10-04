@@ -136,11 +136,14 @@ generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
     type-name `:` assignment-expression @2assoc /
-    `default` `:` assignment-expression @1defaultAssoc
+    `default` @nothing `:` assignment-expression @2assoc
 </pre>
 
-<p>The <code class="pecan">@2pair</code> action is a general purpose one for
-building lists and other compound structures.</p>
+<p>An action with non-zero arity can be thought of as creating a parse tree
+node, where the type of the node is given by the name of the action. The <code
+class="pecan">@2pair</code> action is a general purpose one for building lists
+and other compound structures. It is used often in this development whereas, in
+a practical project, more informative actions would be needed.</p>
 
 <p>The original rule for postfix expressions is:</p>
 
@@ -179,7 +182,7 @@ the last two alternatives can be merged and put at the beginning:</p>
     [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
     primary-expression (
         `[` expression `]` @2index /
-        `(` (argument-expression-list / "" @missing) `)` @2apply /
+        `(` (argument-expression-list / @nothing) `)` @2apply /
         `.` identifier @2field /
         `->` identifier @2arrow /
         `++` @1postInc /
@@ -211,8 +214,8 @@ this, the two alternatives can be reversed and a try expression applied:</p>
     `++` unary-expression @1preInc /
     `--` unary-expression @1preDec /
     unary-operator cast-expression @2preOp /
-    [`sizeof` `(` type-name `)`] @1typeSize /
-    `sizeof` unary-expression @1varSize /
+    [`sizeof` `(` type-name `)`] @1sizeofType /
+    `sizeof` unary-expression @1sizeofVar /
     `alignof` `(` type-name `)` @1align
 </pre>
 
@@ -371,51 +374,61 @@ them:</p>
 <p>The rules for <code class="pecan">init-declarator-list</code>, <code
 class="pecan">init-declarator</code>, <code
 class="pecan">storage-class-specifier</code>, and <code
-class="pecan">type-specifier</code> are simple.</p>
-
-
-<hr/>
-
-
-<p>A second prototype of the grammar, demonstrating the full range of
-declarations from appendix section A.2.2 of the C11 standard, is:</p>
-
-<p class="indent"><a href="c-parse-b.txt">c-parse-b.txt</a></p>
-
-<p>Most of the problems faced in parsing declarations are fairly easy. For
-example, the original grammar rule from the C11 standard (A.2.2) for a struct or
-union specifier is:</p>
+class="pecan">type-specifier</code> are simple. The original rules for a struct
+or union specifier are:</p>
 
 <pre class="c11">struct-or-union-specifier =
     struct-or-union identifier? `{` struct-declaration-list `}` |
     struct-or-union identifier
+
+struct-or-union = "struct" | "union"
 </pre>
 
-<p>Expanding the first alternative, then rearranging to remove the common left
-factors gives:</p>
+<p>Expanding the first alternative of the first rule, then rearranging to remove
+the common left factors gives:</p>
 
-<pre class="pecan">struct-or-union-specifier = struct-or-union (
+<pre class="c11">struct-or-union-specifier = struct-or-union (
     identifier (`{` struct-declaration-list `}`)? /
     `{` struct-declaration-list `}`
 )
+
+struct-or-union = `struct` / `union`
 </pre>
+
+<p>However, to add actions, it seems preferable to organize the rules
+differently, recognizing the main keywords first:</p>
+
+<pre class="pecan">struct-or-union-specifier =
+    `struct` struct-or-union-body @2struct /
+    `union` struct-or-union-body @2union
+
+struct-or-union-body =
+    identifier (`{` struct-declaration-list `}` / @nothing) /
+    @nothing `{` struct-declaration-list `}`
+</pre>
+
+<p>The rules for <code class="pecan">struct-declaration-list</code>, <code
+class="pecan">struct-declaration</code>, <code
+class="pecan">specifier-qualifier-list</code> <code
+class="pecan">struct-declarator-list</code> and <code
+class="pecan">struct-declarator</code> are easy to handle.</p>
 
 <p>The original grammar rules for enumeration specifiers are:</p>
 
 <pre class="c11">enum-specifier =
-    ENUM identifier? `{` enumerator-list `}`
-    ENUM identifier? `{` enumerator-list `,` `}`
-    ENUM identifier
+    `enum` identifier? "{" enumerator-list "}" |
+    `enum` identifier? "{" enumerator-list "," "}" |
+    `enum` identifier
 
-enumerator-list = enumerator (`,` enumerator)*
+enumerator-list = enumerator | enumerator-list "," enumerator
 </pre>
 
 <p>Perhaps the most obvious way to translate the first definition, expanding,
 rearranging and combining left factors as before, is:</p>
 
-<pre class="pecan">enum-specifier = ENUM (
-    identifier (`{` enumerator-list `,`? `}`)? /
-    `{` enumerator-list `,`? `}`
+<pre class="pecan">enum-specifier = `enum` (
+    identifier (`{` enumerator-list `,`? `}` / @nothing) @2enum /
+    @nothing `{` enumerator-list `,`? `}` @2enum
 )
 </pre>
 
@@ -423,7 +436,7 @@ rearranging and combining left factors as before, is:</p>
 curly bracket causes a problem. It means that care is needed to prevent it from
 being matched in the second rule:</p>
 
-<pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
+<pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
 </pre>
 
 <p>The original rule for <code>direct-declarator</code> is:</p>
@@ -449,24 +462,32 @@ tidying up, yields:</p>
     (identifier / `(` declarator `)`) dd-bracket*
 
 dd-bracket =
-    `(` dd-parameters? `)` / `[` dd-array-size? `]`
+    `(` (dd-parameters / @nothing) `)` @2function /
+    `[` (dd-array-size / @nothing) `]` @2array
 
 dd-parameters =
-    identifier&amp; identifier-list / parameter-type-list
+    identifier& identifier-list / parameter-type-list
 
 dd-array-size =
-    `*` /
-    `static` type-qualifier-list? assignment-expression /
-    type-qualifier-list dd-simple-array-size? /
-    assignment-expression
+    `*` @star /
+    `static` (type-qualifier-list / @nothing) assignment-expression @2staticSize /
+    type-qualifier-list (dd-simple-array-size / @nothing) @2typeSize /
+    assignment-expression @1size
 
 dd-simple-array-size =
-    `*` /
-    `static` assignment-expression /
-    assignment-expression
+    `*` @star /
+    `static` assignment-expression @1staticSize1 /
+    assignment-expression @1size
 </pre>
 
-<p>The original rule for <code>direct-abstract-declarator</code> is:</p>
+<p>The rules for <code class="pecan">pointer</code>, <code
+class="pecan">type-qualifier-list</code>, <code
+class="pecan">parameter-type-list</code>, <code
+class="pecan">parameter-list</code>, <code
+class="pecan">parameter-declaration</code>, <code
+class="pecan">identifier-list</code>, <code class="pecan">type-name</code>, and
+<code class="pecan">abstract-declarator</code> are simple. The original rule for
+<code>direct-abstract-declarator</code> is:</p>
 
 <pre class="c11">direct-abstract-declarator =
     `(` abstract-declarator `)` |
@@ -478,6 +499,11 @@ dd-simple-array-size =
 </pre>
 
 <p>Going through a similar sequence of small transformations yields:</p>
+
+<hr/>
+
+<p class="indent"><a href="c-parse-b.txt">c-parse-b.txt</a></p>
+
 
 <pre class="pecan">direct-abstract-declarator =
     `(` abstract-declarator `)` dad-bracket* / dad-bracket+

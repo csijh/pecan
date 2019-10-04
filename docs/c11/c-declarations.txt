@@ -13,9 +13,11 @@ initializer = %in @in
 alignment-specifier = %as @as
 function-specifier = %fs @fs
 type-qualifier = %tq @tq
-enum-specifier = %es @es
-struct-or-union-specifier = %sus @sus
 atomic-type-specifier = %ats @ats
+enumerator = %e @e
+parameter-type-list = %ptl @ptl
+identifier-list = %is @is
+type-qualifier-list = %tql @tql
 
 declaration =
     declaration-specifiers (init-declarator-list @2declaration)? `;` /
@@ -47,3 +49,57 @@ type-specifier =
     `unsigned` @unsigned / `_Bool` @bool / `_Complex` @complex /
     atomic-type-specifier / struct-or-union-specifier /
     enum-specifier / typedef-name
+
+struct-or-union-specifier =
+    `struct` struct-or-union-body @2struct /
+    `union` struct-or-union-body @2union
+
+struct-or-union-body =
+    identifier (`{` struct-declaration-list `}` / @nothing) /
+    @nothing `{` struct-declaration-list `}`
+
+struct-declaration-list = struct-declaration (struct-declaration @2pair)*
+
+struct-declaration =
+    specifier-qualifier-list (struct-declarator-list / @nothing) `;` @2pair /
+    static_assert-declaration
+
+specifier-qualifier-list = type-item (type-item @2pair)*
+
+type-item = type-specifier / type-qualifier
+
+struct-declarator-list = struct-declarator (`,` struct-declarator @2pair)*
+
+struct-declarator =
+    declarator (`:` constant-expression @2bitField)? /
+    @nothing `:` constant-expression @2bitField
+
+enum-specifier = `enum` (
+    identifier (`{` enumerator-list `,`? `}` / @nothing) @2enum /
+    @nothing `{` enumerator-list `,`? `}` @2enum
+)
+
+enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
+
+direct-declarator =
+    (identifier / `(` declarator `)`) dd-bracket*
+
+dd-bracket =
+    `(` (dd-parameters / @nothing) `)` @2function /
+    `[` (dd-array-size / @nothing) `]` @2array
+
+dd-parameters =
+    identifier& identifier-list / parameter-type-list
+
+dd-array-size =
+    `*` @star /
+    `static` (type-qualifier-list / @nothing) assignment-expression @2staticSize /
+    type-qualifier-list (dd-simple-array-size / @nothing) @2typeSize /
+    assignment-expression @1size
+
+dd-simple-array-size =
+    `*` @star /
+    `static` assignment-expression @1staticSize1 /
+    assignment-expression @1size
+
+pointer = (`*` ((type-qualifier-list / @nothing) @2pointer))+

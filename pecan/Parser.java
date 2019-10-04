@@ -617,6 +617,10 @@ class Parser implements Testable {
             Source source2 = new Source(s, file);
             Parser parser2 = new Parser();
             Node g = parser2.run(source2);
+            if (g.op() == Error) {
+                System.out.println(g.note());
+                System.exit(1);
+            }
             Node include = new Node(Include, g, input, x.start(), x.end());
             output[out++] = include;
             return true;
