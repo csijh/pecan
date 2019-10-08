@@ -1,0 +1,10 @@
+-- Test the full C grammar in c-externals.txt
+
+{c-externals.txt}
+
+==========
+_Static_assert ( constant , string-literal ) ;
+..........
+constant
+string-literal
+staticAssert

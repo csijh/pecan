@@ -1,5 +1,5 @@
--- A parser for C declarations, building on expressions, after pre-processing
--- and scanning, covering section A.2.2 of the C11 standard.
+-- A parser for C declarations, building on expressions, covering section A.2.2
+-- of the C11 standard.
 
 -- Include the grammar for expressions
 {c-expressions.txt}
@@ -40,13 +40,13 @@ struct-or-union-specifier =
     `union` struct-or-union-body @2union
 
 struct-or-union-body =
-    identifier (`{` struct-declaration-list `}` / @nothing) /
-    @nothing `{` struct-declaration-list `}`
+    identifier (`{` struct-declaration-list `}` / @nil) /
+    @nil `{` struct-declaration-list `}`
 
 struct-declaration-list = struct-declaration (struct-declaration @2pair)*
 
 struct-declaration =
-    specifier-qualifier-list (struct-declarator-list / @nothing) `;` @2pair /
+    specifier-qualifier-list (struct-declarator-list / @nil) `;` @2pair /
     static_assert-declaration
 
 specifier-qualifier-list = type-item (type-item @2pair)*
@@ -57,11 +57,11 @@ struct-declarator-list = struct-declarator (`,` struct-declarator @2pair)*
 
 struct-declarator =
     declarator (`:` constant-expression @2bitField)? /
-    @nothing `:` constant-expression @2bitField
+    @nil `:` constant-expression @2bitField
 
 enum-specifier = `enum` (
-    identifier (`{` enumerator-list `,`? `}` / @nothing) @2enum /
-    @nothing `{` enumerator-list `,`? `}` @2enum
+    identifier (`{` enumerator-list `,`? `}` / @nil) @2enum /
+    @nil `{` enumerator-list `,`? `}` @2enum
 )
 
 enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
@@ -79,14 +79,14 @@ function-specifier = `inline` @inline / `_Noreturn` @noreturn
 alignment-specifier =
     `_Alignas` `(` (type-name / constant-expression) `)` @1alignas
 
-declarator = (pointer / @nothing) direct-declarator @2declarator
+declarator = (pointer / @nil) direct-declarator @2declarator
 
 direct-declarator =
     (identifier / `(` declarator `)`) dd-bracket*
 
 dd-bracket =
-    `(` (dd-parameters / @nothing) `)` @2function /
-    `[` (dd-array-size / @nothing) `]` @2array
+    `(` (dd-parameters / @nil) `)` @2function /
+    `[` (dd-array-size / @nil) `]` @2array
 
 dd-parameters =
     identifier& identifier-list / parameter-type-list
@@ -94,7 +94,7 @@ dd-parameters =
 dd-array-size =
     `*` @star /
     `static` type-qualifiers assignment-expression @2pair @1staticSize /
-    type-qualifier-list (dd-simple-array-size / @nothing) @2typeSize /
+    type-qualifier-list (dd-simple-array-size / @nil) @2typeSize /
     assignment-expression @1size
 
 dd-simple-array-size =
@@ -102,7 +102,7 @@ dd-simple-array-size =
     `static` assignment-expression @1staticSize /
     assignment-expression @1size
 
-type-qualifiers = type-qualifier-list / @nothing
+type-qualifiers = type-qualifier-list / @nil
 
 pointer =
     (`*` type-qualifiers @1pointer) (
@@ -139,13 +139,13 @@ direct-abstract-declarator =
 has-declarator = (`(` (`*` / `(` / `[`)) &
 
 dad-bracket =
-    `(` parameter-type-list / @nothing `)` @1parameters /
-    `[` dad-array-size / @nothing `]` @1arraySize
+    `(` parameter-type-list / @nil `)` @1parameters /
+    `[` dad-array-size / @nil `]` @1arraySize
 
 dad-array-size =
     `*` @star /
     `static` type-qualifiers assignment-expression @2pair @1staticSize /
-    type-qualifier-list (dad-simple-array-size / @nothing) @2pair /
+    type-qualifier-list (dad-simple-array-size / @nil) @2pair /
     assignment-expression
 
 dad-simple-array-size =
@@ -153,11 +153,11 @@ dad-simple-array-size =
 
 initializer =
     assignment-expression /
-    `{` initializer-list `,`? `}` @1list
+    `{` initializer-list `,`? `}` @1initializer
 
 initializer-list =
-    (designation / @nothing) initializer @2init (
-    `,` (designation / @nothing) initializer @2init @2pair)*
+    (designation / @nil) initializer @2init (
+    `,` (designation / @nil) initializer @2init @2pair)*
 
 designation =
     designator-list `=`

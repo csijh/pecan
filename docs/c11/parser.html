@@ -17,6 +17,20 @@
 
 <h1>The C parser</h1>
 
+<p>The complete Pecan parser for C, and a small collection of tests, are in
+the files:</p>
+
+<p class="indent"><a href="c-tokens.txt">c-tokens.txt</a><br/>
+<a href="c-expressions.txt">c-expressions.txt</a><br/>
+<a href="c-expressions-test.txt">c-expressions-test.txt</a><br/>
+<a href="c-declarations.txt">c-declarations.txt</a><br/>
+<a href="c-declarations-test.txt">c-declarations-test.txt</a><br/>
+<a href="c-statements.txt">c-statements.txt</a><br/>
+<a href="c-statements-test.txt">c-statements-test.txt</a><br/>
+<a href="c-externals.txt">c-externals.txt</a><br/>
+<a href="c-externals-test.txt">c-externals-test.txt</a></p>
+
+
 <p>The parser is defined separately, with tokens from the scanner as its input.
 First, the relationship between the scanner and parser is established by
 defining the tokens to be used in the parser in terms of the token tags produced
@@ -42,7 +56,7 @@ string-literal = #atom %string-literal @string-literal
 typedef-name = #atom %typedef-name @typedef-name
 </pre>
 
-<p>The rule for <code>enumeration-constant</code> has been taken from the
+<p>The rule for <code class="pecan">enumeration-constant</code> has been taken from the
 original lexical rules. The <code class="pecan">identifier</code> rule is
 typical. It sets up an error marker, matches a token with tag <code
 class="pecan">identifier</code> and converts it into an output item. There is a
@@ -136,7 +150,7 @@ generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
     type-name `:` assignment-expression @2assoc /
-    `default` @nothing `:` assignment-expression @2assoc
+    `default` @nil `:` assignment-expression @2assoc
 </pre>
 
 <p>Actions can be thought of as creating parse tree node, where the type of the
@@ -160,10 +174,10 @@ project, more informative node types would be needed.</p>
 </pre>
 
 <p>There is a problem here because the first alternative can be a bracketed
-expression which begins with <code>'('</code>, and the last two alternatives
-also begin with <code>'('</code>. An expression and a type name begin with
-different tokens but, when bracketed, they require a two-token lookahead to
-distinguish them.</p>
+expression which begins with <code class="c11">'('</code>, and the last two
+alternatives also begin with <code class="c11">'('</code>. An expression and a
+type name begin with different tokens but, when bracketed, they require a
+two-token lookahead to distinguish them.</p>
 
 <p>In addition, the last two alternatives, which describe compound literals,
 will cause an overlap later in the grammar with cast expressions, which also
@@ -182,7 +196,7 @@ the last two alternatives can be merged and put at the beginning:</p>
     [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
     primary-expression (
         `[` expression `]` @2index /
-        `(` (argument-expression-list / @nothing) `)` @2apply /
+        `(` (argument-expression-list / @nil) `)` @2apply /
         `.` identifier @2field /
         `->` identifier @2arrow /
         `++` @1postInc /
@@ -324,7 +338,8 @@ harm in including it in the Pecan translation:</p>
 
 <h2>Declarations</h2>
 
-<p>These files are used to define and test C declarations:</p>
+<p>Declarations are covered in section A.2.2 of the C11 standard. These files
+are used to define and test C declarations:</p>
 
 <p class="indent"><a href="c-declarations.txt">c-declarations.txt</a><br/>
 <a href="c-declarations-test.txt">c-declarations-test.txt</a></p>
@@ -403,8 +418,8 @@ differently, recognizing the main keywords first:</p>
     `union` struct-or-union-body @2union
 
 struct-or-union-body =
-    identifier (`{` struct-declaration-list `}` / @nothing) /
-    @nothing `{` struct-declaration-list `}`
+    identifier (`{` struct-declaration-list `}` / @nil) /
+    @nil `{` struct-declaration-list `}`
 </pre>
 
 <p>The rules for <code class="pecan">struct-declaration-list</code>, <code
@@ -427,8 +442,8 @@ enumerator-list = enumerator | enumerator-list "," enumerator
 rearranging and combining left factors as before, is:</p>
 
 <pre class="pecan">enum-specifier = `enum` (
-    identifier (`{` enumerator-list `,`? `}` / @nothing) @2enum /
-    @nothing `{` enumerator-list `,`? `}` @2enum
+    identifier (`{` enumerator-list `,`? `}` / @nil) @2enum /
+    @nil `{` enumerator-list `,`? `}` @2enum
 )
 </pre>
 
@@ -445,7 +460,7 @@ class="pecan">type-qualifier</code>, <code
 class="pecan">function-specifier</code>, <code
 class="pecan">alignment-specifier</code>, and <code
 class="pecan">declarator</code> rules are straightforward. The original rule for
-<code>direct-declarator</code> is:</p>
+<code class="c11">direct-declarator</code> is:</p>
 
 <pre class="c11">direct-declarator:
     identifier |
@@ -459,17 +474,17 @@ class="pecan">declarator</code> rules are straightforward. The original rule for
 </pre>
 
 <p>Removing the left recursion, combining the contents of each kind of bracket,
-disambiguating alternatives <code>parameter-type-list</code> and
-<code>identifier-list</code> by reversing the alternatives and using lookahead
-to check for the first identifier, inventing extra rules for clarity, and
-tidying up, yields:</p>
+disambiguating alternatives <code class="c11">parameter-type-list</code> and
+<code class="c11">identifier-list</code> by reversing the alternatives and using
+lookahead to check for the first identifier, inventing extra rules for clarity,
+and tidying up, yields:</p>
 
 <pre class="pecan">direct-declarator =
     (identifier / `(` declarator `)`) dd-bracket*
 
 dd-bracket =
-    `(` (dd-parameters / @nothing) `)` @2function /
-    `[` (dd-array-size / @nothing) `]` @2array
+    `(` (dd-parameters / @nil) `)` @2function /
+    `[` (dd-array-size / @nil) `]` @2array
 
 dd-parameters =
     identifier& identifier-list / parameter-type-list
@@ -477,7 +492,7 @@ dd-parameters =
 dd-array-size =
     `*` @star /
     `static` type-qualifiers assignment-expression @2pair @1staticSize /
-    type-qualifier-list (dd-simple-array-size / @nothing) @2typeSize /
+    type-qualifier-list (dd-simple-array-size / @nil) @2typeSize /
     assignment-expression @1size
 
 dd-simple-array-size =
@@ -485,14 +500,14 @@ dd-simple-array-size =
     `static` assignment-expression @1staticSize1 /
     assignment-expression @1size
 
-type-qualifiers = type-qualifier-list / @nothing
+type-qualifiers = type-qualifier-list / @nil
 </pre>
 
 <p>The rules for <code class="pecan">pointer</code>, <code
 class="pecan">type-qualifier-list</code>, <code
 class="pecan">parameter-type-list</code>, and <code
 class="pecan">parameter-list</code> are simple. The original rule for
-<code>parameter-declaration</code> is:</p>
+<code class="c11">parameter-declaration</code> is:</p>
 
 <pre class="c11">parameter-declaration =
     declaration-specifiers declarator |
@@ -511,10 +526,11 @@ class="pecan">parameter-list</code> are simple. The original rule for
 transformation to find their common prefixes doesn't work here, because
 recursion intervenes before the issue is resolved. So, it is better to use
 lookahead. However, it is worth finding a 'cheap' lookahead. The main difference
-between the alternatives is that <code>declarator</code> includes an identifier.
-Checking the possibilities, only <code>`*`</code> or <code>type-qualifier</code>
-or <code>`(`</code> tokens can occur before the identifier. On the other hand,
-in an <code>abstract-declarator</code>, a close bracket must appear before the
+between the alternatives is that <code class="c11">declarator</code> includes an
+identifier. Checking the possibilities, only <code class="c11">`*`</code> or
+<code class="c11">type-qualifier</code> or <code class="c11">`(`</code> tokens
+can occur before the identifier. On the other hand, in an <code
+class="c11">abstract-declarator</code>, a close bracket must appear before the
 end. This leads to:</p>
 
 <pre class="pecan">parameter-declaration = declaration-specifiers (
@@ -529,7 +545,7 @@ has-identifier =
 <p>The <code class="pecan">identifier-list</code>, <code
 class="pecan">type-name</code>, and <code
 class="pecan">abstract-declarator</code> rules are simple. The original rule for
-<code>direct-abstract-declarator</code> is:</p>
+<code class="c11">direct-abstract-declarator</code> is:</p>
 
 <pre class="c11">direct-abstract-declarator =
     `(` abstract-declarator `)` |
@@ -542,7 +558,7 @@ class="pecan">abstract-declarator</code> rules are simple. The original rule for
 
 <p>This defines a sequence of clauses which have round or square brackets. There
 is an overlap between the first and last alternatives, but it is a minor one
-because an abstract declarator begins with a <code>*</code> or a bracket,
+because an abstract declarator begins with a <code class="c11">*</code> or a bracket,
 whereas a parameter type list begins with a keyword. That means the left
 recursion can be removed from the rule, with a cheap lookahead:</p>
 
@@ -558,8 +574,8 @@ square-bracket clauses simply by lifting out their contents into a separate
 rule:</p>
 
 <pre class="pecan">dad-bracket =
-    `(` parameter-type-list / @nothing `)` @1parameters /
-    `[` dad-array-size / @nothing `]` @1arraySize
+    `(` parameter-type-list / @nil `)` @1parameters /
+    `[` dad-array-size / @nil `]` @1arraySize
 </pre>
 
 <p>Then <code class="pecan">dad-array-size</code> and <code
@@ -568,7 +584,7 @@ class="pecan">dad-simple-array-size</code> are easy:</p>
 <pre class="pecan">dad-array-size =
     `*` @star /
     `static` type-qualifiers assignment-expression @2pair @1staticSize /
-    type-qualifier-list (dad-simple-array-size / @nothing) @2pair /
+    type-qualifier-list (dad-simple-array-size / @nil) @2pair /
     assignment-expression
 
 dad-simple-array-size =
@@ -592,35 +608,155 @@ class="pecan">static_assert-declaration</code>, are all straightforward.</p>
 
 <h2>Statements</h2>
 
-<p>The file of rules, and the file of tests, for statements are:</p>
+<p>Statements are covered in section A.2.3 of the C11 standard. The file of
+rules, and the file of tests, for statements are:</p>
 
 <p class="indent"><a href="c-statements.txt">c-statements.txt</a><br/>
 <a href="c-statements-test.txt">c-statements-test.txt</a></p>
 
-<hr/>
-<p><b>Development incomplete</b></p>
-<hr/>
+<p>The original main rules for statements and labeled statements are:</p>
+
+<pre class="c11">
+statement =
+    labeled-statement |
+    compound-statement |
+    expression-statement |
+    selection-statement |
+    iteration-statement |
+    jump-statement
+
+labeled-statement =
+    identifier ":" statement |
+    "case" constant-expression ":" statement |
+    "default" ":" statement
+</pre>
+
+<p>Most statements begin with a distinctive keyword. A simple check reveals that
+the only overlap of first tokens is that <code
+class="c11">labeled-statement</code> and <code
+class="c11">expression-statement</code> can both start with an identifier.
+However, only in the <code class="c11">labeled-statement</code> case is it
+immediately followed by a colon. Thus the above rule can be translated
+trivially, and <code class="c11">labeled-statement</code> can be given a simple
+two-token lookahead:</p>
+
+<pre class="pecan">statement =
+    labeled-statement /
+    compound-statement /
+    expression-statement /
+    selection-statement /
+    iteration-statement /
+    jump-statement
+
+labeled-statement =
+    [identifier `:`] statement @2label /
+    `case` constant-expression `:` statement @2case /
+    `default` `:` statement @1default
+</pre>
+
+<p>The original rule for a compound statement is easily transformed, adding
+actions to produce a list of statements:</p>
+
+<pre class="pecan">compound-statement = `{` @nil (block-item @2list)* `}` @1block
+</pre>
+
+<p>The original rule for a block item is:</p>
+
+<pre class="c11">block-item = declaration | statement
+</pre>
+
+<p>The only potential overlap between the first tokens of the two alternatives
+is that a declaration may start with an identifier which is a typedef name, and
+a statement may begin with an ordinary identifier. However, these two types of
+identifier are distinguished by the external parser functions, so there is no
+real overlap, and the rule becomes:</p>
+
+<pre class="pecan">block-item = declaration / statement
+</pre>
+
+<p>The rule in the original grammar for typedef names is removed, and replaced
+by a suitable rule in the <code>c-tokens.txt</code> file.</p>
+
+<p>The rule for expression statements is unproblematic:</p>
+
+<pre class="pecan">expression-statement = (expression / @nil) `;` @1statement
+</pre>
+
+<p>With selection statements, the original rule is:</p>
+
+<pre class="c11">selection-statement =
+    "if" "(" expression ")" statement |
+    "if" "(" expression ")" statement "else" statement |
+    "switch" "(" expression ")" statement
+</pre>
+
+<p>This suffers from the infamous <a
+href="https://en.wikipedia.org/wiki/Dangling_else">dangling else</a> ambiguity.
+There is a well-known technique for resolving the ambiguity by having separate
+rules for open and closed statements, but that technique only applies to CFG
+grammars. However, the problem simply goes away, if the obvious Pecan rule is
+written down. By the very nature of the 'greedy' <code class="pecan">/</code> operator, an
+<code class="pecan">else</code> clause will naturally be attached to the closest
+<code class="pecan">if</code> statement.</p>
+
+<pre class="pecan">selection-statement =
+    `if` `(` expression `)` statement (`else` statement / @nil) @3if /
+    `switch` `(` expression `)` statement @2switch
+</pre>
+
+<p>The rule for iteration statements starts out as:</p>
+
+<pre class="c11">iteration-statement =
+    "while" "(" expression ")" statement |
+    "do" statement "while" "(" expression ")" ";" |
+    "for" "(" expression? ";" expression? ";" expression? ")" statement |
+    "for" "(" declaration expression? ";" expression? ")" statement
+</pre>
+
+<p>The only problem is with the last pair of alternatives concerning <code
+class="c11">for</code> statements. The last alternative look slightly odd, as if
+it lacks a semicolon. That's because a declaration includes its terminating
+semicolon. Given the treatment of typedef names already described, declarations
+and expressions are easily distinguished by their first tokens, so the rule can
+be transformed to:</p>
+
+<pre class="pecan">iteration-statement =
+    `while` `(` expression `)` statement @2while /
+    `do` statement `while` `(` expression `)` `;` @2do /
+    `for` `(` for-start exp-opt `;` exp-opt `)` statement @4for
+
+exp-opt = expression / @nil
+
+for-start = declaration / (expression / @nil) `;`
+</pre>
+
+<p>The rule for jump statements can be transformed directly into:</p>
+
+<pre class="pecan">jump-statement =
+    `goto` identifier `;` @1goto /
+    `continue` `;` @continue /
+    `break` `;` @break /
+    `return` (expression / @nil) `;` @1return
+</pre>
 
 <h2>External definitions</h2>
 
-<p>The remainder of the C11 grammar covering the parser rules will be tackled in
-sections. A first prototype of the grammar, just demonstrating the handling of
-external definitions in section A.2.4 of the standard, is:</p>
+<p>External definitions are covered in section A.2.4 of the C11 standard. The
+file of rules, and the file of tests, for external definitions are:</p>
 
-<p class="indent"><a href="c-parse-a.txt">c-parse-a.txt</a></p>
+<p class="indent"><a href="c-externals.txt">c-externals.txt</a><br/>
+<a href="c-externals-test.txt">c-externals-test.txt</a></p>
 
-<p>With a few obvious cosmetic changes to the notation for compatibility with
-Pecan, the CFG-based grammar begins with:</p>
+<p>The original grammar begins with:</p>
 
 <pre class="c11">translation-unit =
     external-declaration | translation-unit external-declaration
 </pre>
 
-<p>Removing the left recursion, adding an action to initialize an empty list of
-external declarations, and adding end-of-file detection, this can be translated
-into:</p>
+<p>Removing the left recursion, adding actions, and adding end-of-file
+detection, this can be translated into:</p>
 
-<pre class="pecan">translation-unit = @0list external-declaration+ ``
+<pre class="pecan">translation-unit = @nil (external-declaration @2list) &lt;>
 </pre>
 
 <p>The original grammar continues with:</p>
@@ -628,10 +764,10 @@ into:</p>
 <pre class="c11">external-declaration = function-definition | declaration
 </pre>
 
-<p>The two alternatives are disjoint, because the grammar is unambiguous, but it
-isn't immediately clear how to distinguish them. If it is just assumed that
-there is no ambiguous overlap, then there is a direct translation into a Pecan
-grammar rule by using lookahead to try one alternative and then the other:</p>
+<p>It isn't immediately clear how to distinguish the two alternatives. If it is
+just assumed that there is no ambiguous overlap, then there is a direct
+translation into a Pecan grammar rule by using lookahead to try one alternative
+and then the other:</p>
 
 <pre class="c11">external-declaration = [function-definition] / declaration
 </pre>
@@ -647,245 +783,118 @@ transformation, with left recursion removed, are:</p>
     declaration-specifiers declarator declaration-list? compound-statement
 
 declaration =
-    declaration-specifiers init-declarator-list? `;` |
+    declaration-specifiers init-declarator-list? ";" |
     static_assert-declaration
 
-init-declarator-list = init-declarator (`,` init-declarator)*
+init-declarator-list = init-declarator ("," init-declarator)*
 
-init-declarator = declarator (`=` initializer)?
+init-declarator = declarator ("=" initializer)?
 </pre>
 
 <p>This allows us to transform the rule for external declarations by expanding
-<code>function-definition</code> and <code>declaration</code> to give:</p>
+<code class="c11">function-definition</code> and <code
+class="c11">declaration</code> to give:</p>
 
 <pre class="c11">external-declaration =
     declaration-specifiers declarator declaration-list? compound-statement |
-    declaration-specifiers init-declarator-list? `;` |
+    declaration-specifiers init-declarator-list? ";" |
     static_assert-declaration
 </pre>
 
-<p>The <code>static_assert-declaration</code> clause can be put first because it
-begins with a distinctive keyword, and the common left factor
-<code>declaration-specifiers</code> can be taken out, to yield:</p>
+<p>The <code class="c11">static_assert-declaration</code> clause causes no
+problem because it begins with a distinctive keyword. It can be put first for
+convenience. The common left factor <code
+class="cll">declaration-specifiers</code> of the other two clauses can be taken
+out, to yield:</p>
 
 <pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
-        init-declarator-list? `;`
+        init-declarator-list? ";"
     )
 </pre>
 
-<p>Expanding <code>init-declarator-list</code> gives:</p>
+<p>Expanding <code class="c11">init-declarator-list</code> gives:</p>
 
 <pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
-        (init-declarator (`,` init-declarator)*)? `;`
+        (init-declarator ("," init-declarator)*)? ";"
     )
 </pre>
 
-<p>Expanding the first <code>init-declarator</code> gives:</p>
+<p>Expanding the first <code class="c11">init-declarator</code> gives:</p>
 
 <pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
-        (declarator (`=` initializer)? (`,` init-declarator)*)? `;`
+        (declarator ("=" initializer)? ("," init-declarator)*)? ";"
     )
 </pre>
 
-<p>In order to get at the common left factor <code>declarator</code>, the second
-alternative, which has the form <code>(x)? `;`</code>, can be replaced by
-<code>x `;` / `;`</code> to give:</p>
+<p>In order to get at the common left factor <code
+class="c11">declarator</code>, the second alternative, which has the form <code
+class="c11">(x)? ";"</code>, can be replaced by <code class="c11">x ";" /
+";"</code> to give:</p>
 
 <pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator declaration-list? compound-statement |
-        declarator (`=` initializer)? (`,` init-declarator)* `;` |
-        `;`
+        declarator ("=" initializer)? ("," init-declarator)* ";" |
+        ";"
     )
 </pre>
 
-<p>Taking out the left factor <code>declarator</code> from the first two
-alternatives gives:</p>
+<p>Taking out the left factor <code class="c11">declarator</code> from the first
+two alternatives gives:</p>
 
 <pre class="c11">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
         declarator (
             declaration-list? compound-statement |
-            (`=` initializer)? (`,` init-declarator)* `;`
+            ("=" initializer)? ("," init-declarator)* ";"
         ) |
-        `;`
+        ";"
     )
 </pre>
 
 <p>Looking at the two innermost alternatives, the second can clearly only start
-with a token <code>`=`</code> or <code>`,`</code> or
-<code>`;`</code>. It is easy to check that the first alternative
+with a token <code class="c11">"="</code> or <code class="c11">","</code> or
+<code class="c11">";"</code>. It is easy to check that the first alternative
 cannot start with any of these, so no lookahead is necessary any more.</p>
 
 <p>Converting to Pecan notation, adding some actions, and rearranging a bit,
 gives:</p>
 
 <pre class="pecan">external-declaration =
-    static_assert-declaration @1declaration /
+    static_assert-declaration /
     declaration-specifiers (
-        `;` @1declaration /
+        `;` @nil @2declaration /
         declarator (
-            (`=` initializer)? (`,` init-declarator)* `;` @1declaration /
-            declaration-list? compound-statement @1definition
+            init? more* `;` @2declaration /
+            declaration-list-opt compound-statement @4definition
         )
     )
+
+init = `=` initializer @2eq
+
+more = `,` init-declarator @2comma
+
+declaration-list-opt = @nil (declaration @2list)*
 </pre>
 
 <p>It is worth pointing out that, since <code class="pecan">declarator</code>
 includes function declarators, this grammar does not preclude a declaration of
 the form <code>int f() = 3;</code>. A brief investigation of actual C compilers
-suggests that this error is normally detected after, rather than during,
+suggests that this problem is normally detected after, rather than during,
 parsing.</p>
 
-<p>The next stage is to deal with declarations</p>
-
-<h2>Statements</h2>
-
-<p>A third prototype, adding statement rules from A.2.3 of the standard, is</p>
-
-<p class="indent"><a href="c-parse-c.txt">c-parse-c.txt</a></p>
-
-<p>The original main rule for statements is:</p>
-
-<pre class="c11">
-statement =
-    labeled-statement |
-    compound-statement |
-    expression-statement |
-    selection-statement |
-    iteration-statement |
-    jump-statement
-</pre>
-
-<p>Most statements begin with a distinctive keyword. A simple check reveals that
-the only overlap of first tokens is that <code>labeled-statement</code> and
-<code>expression-statement</code> can both start with an identifier. However,
-only in the <code>labeled-statement</code> case is it immediately followed by a
-colon. Thus the above rule can be translated trivially, and
-<code>labeled-statement</code> can be given a simple two-token lookahead:</p>
-
-<pre class="pecan">
-statement =
-    labeled-statement /
-    compound-statement /
-    expression-statement /
-    selection-statement /
-    iteration-statement /
-    jump-statement
-
-labeled-statement =
-    [identifier `:`] statement /
-    `case` constant-expression `:` statement /
-    DEFAULT `:` statement
-</pre>
-
-<p>The original rule for a compound statement is easily transformed directly
-into:</p>
-
-<pre class="pecan">compound-statement = `{` block-item* `}`
-</pre>
-
-<p>The original rule for a block item is:</p>
-
-<pre class="c11">block-item = declaration | statement
-</pre>
-
-<p>The only overlap between the first tokens of the two alternatives is that a
-declaration may start with an identifier which is a typedef name, and a
-statement may begin with an identifier. Typedef names need to be recognised
-separately. That is done by adding an action to the grammar at the point where
-a typedef name is declared, as well as actions which keep track of scopes. The
-action causes the externally linked code to record the new typedef name in a
-symbol table. Thereafter, within the scope of the typedef name, tokens matching
-the typedef name are presented to the parser with a different token type. In
-addition, it is necessary to <em>remove</em> the rule from the grammar for
-typedef names:</p>
-
-<pre class="c11">typedef-name = identifier
-</pre>
-
-<p>It can be replaced by a rule which indicated that it is a token type:</p>
-
-<pre class="pecan">typedef-name = `typedef-name`
-</pre>
-
-<p>With this understanding, the rule for block items can be accepted as it
-is:</p>
-
-<pre class="pecan">block-item = declaration / statement
-</pre>
-
-<p>The rule for expression statements is unproblematic:</p>
-
-<pre class="pecan">expression-statement = expression? `;`
-</pre>
-
-<p>With selection statements, the original rule is:</p>
-
-<pre class="c11">selection-statement =
-    IF `(` expression `)` statement |
-    IF `(` expression `)` statement ELSE statement |
-    `switch` `(` expression `)` statement
-</pre>
-
-<p>This suffers from the infamous <a
-href="https://en.wikipedia.org/wiki/Dangling_else">dangling else</a> ambiguity.
-There is a well-known technique for resolving the ambiguity by having separate
-rules for open and closed statements. That technique only applies to CFG
-grammars, and doesn't directly help in transforming into Pecan (except perhaps
-to clarify the meaning of the original grammar). However, the problem simply
-goes away, if the obvious Pecan rule is written down. By the very nature of the
-'greedy' <code>/</code> operator, an <code>else</code> clause will naturally be
-attached to the closest <code>if</code> statement.</p>
-
-<pre class="pecan">selection-statement =
-    IF `(` expression `)` statement (ELSE statement)? /
-    `switch` `(` expression `)` statement
-</pre>
-
-<p>The rule for iteration statements starts out as:</p>
-
-<pre class="c11">iteration-statement =
-    `while` `(` expression `)` statement |
-    DO statement `while` `(` expression `)` `;` |
-    FOR `(` expression? `;` expression? `;` expression? `)` statement |
-    FOR `(` declaration expression? `;` expression? `)` statement
-</pre>
-
-<p>The only problem is with the last pair of alternatives concerning
-<code>for</code> statements. The last alternatives look slightly odd, as if it
-lacks a semicolon. That's because a declaration includes its terminating
-semicolon. Given the treatment of typedef names already described, declarations
-and expressions are easily distinguished by their first tokens, so the rule can
-be transformed to:</p>
-
-<pre class="pecan">iteration-statement =
-    `while` `(` expression `)` statement /
-    DO statement `while` `(` expression `)` `;` /
-    FOR `(` for-start expression? `;` expression? `)` statement
-
-for-start = declaration / expression? `;`
-</pre>
-
-<p>The rule for jump statements can be transformed directly into:</p>
-
-<pre class="pecan">jump-statement =
-    GOTO identifier `;` /
-    `continue` `;` /
-    `break` `;` /
-    RETURN expression? `;`
-</pre>
+<p>That completes the parser grammar for C.</p>
 
 </body>
 </html>

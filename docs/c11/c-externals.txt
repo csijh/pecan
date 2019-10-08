@@ -1,0 +1,24 @@
+-- A parser for C external definitions, building on statements, covering section
+-- A.2.4 of the C11 standard.
+
+start = translation-unit
+
+{c-statements.txt}
+
+translation-unit = @nil (external-declaration @2list) <>
+
+external-declaration =
+    static_assert-declaration /
+    declaration-specifiers (
+        `;` @nil @2declaration /
+        declarator (
+            init? more* `;` @2declaration /
+            declaration-list-opt compound-statement @4definition
+        )
+    )
+
+init = `=` initializer @2eq
+
+more = `,` init-declarator @2comma
+
+declaration-list-opt = @nil (declaration @2list)*

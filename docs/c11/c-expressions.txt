@@ -18,13 +18,13 @@ generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
     type-name `:` assignment-expression @2assoc /
-    `default` @nothing `:` assignment-expression @2assoc
+    `default` @nil `:` assignment-expression @2assoc
 
 postfix-expression =
     [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
     primary-expression (
         `[` expression `]` @2index /
-        `(` (argument-expression-list / @nothing) `)` @2apply /
+        `(` (argument-expression-list / @nil) `)` @2apply /
         `.` identifier @2field /
         `->` identifier @2arrow /
         `++` @1postInc /

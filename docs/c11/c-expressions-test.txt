@@ -36,7 +36,7 @@ Error in c-expressions-test.txt, line 31: expecting bracket, close, comma, op
 _Generic ( identifier , default : identifier )
 ..........
 identifier
-nothing
+nil
 identifier
 assoc
 generic
@@ -64,7 +64,7 @@ apply
 identifier ( )
 ..........
 identifier
-nothing
+nil
 apply
 ==========
 identifier -> identifier

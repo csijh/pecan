@@ -3,8 +3,7 @@
 -- Made suitable for pecan-paper.
 
 -- Rules
-grammar = skip rules #end <>
-rules = rule (rules / @empty) @2list
+grammar = skip @nil (rule @2list)+ #end <>
 rule = #id id equals expression @2rule newline skip
 
 -- Expressions
@@ -21,8 +20,8 @@ bracketed = open expression close @3bracketed
 try = sopen expression sclose @3try
 id = letter alpha* @id blank
 act = '@' digits? name? @act blank
-mark = "#" #letter name @mark blank
-tag = "%" #letter name @tag blank
+mark = "#" #name name @mark blank
+tag = "%" #name name @tag blank
 codes = [digits '.'] #dot '.' digits @codes blank
 code = digits @code blank
 range = ["'" noquote ".."] noquote #quote "'" @range blank
@@ -64,26 +63,27 @@ endline = 13? 10
 -- Single rule
 x = y
 ..........
+nil
 id x
 id y
 rule
-empty
 list
 ==========
 -- Choice
 x = y / z
 ..........
+nil
 id x
 id y
 id z
 or
 rule
-empty
 list
 ==========
 -- Bracket
 x = (y / z)
 ..........
+nil
 id x
 bracket (
 id y
@@ -92,19 +92,18 @@ or
 bracket )
 bracketed
 rule
-empty
 list
 ==========
 -- Empty grammar
 ..........
-Error in pecan1.txt, line 99: expecting id, newline
+Error in pecan1.txt, line 98: expecting id, newline
 
 ^
 ==========
 -- Expecting =
 x
 ..........
-Error in pecan1.txt, line 105: expecting equals
+Error in pecan1.txt, line 104: expecting equals
 x
  ^
 ==========
@@ -112,28 +111,28 @@ x
 x = x
 y = y
 ..........
+nil
 id x
 id x
 rule
-id y
-id y
-rule
-empty
 list
+id y
+id y
+rule
 list
 ==========
 -- Windows \r\n line endings
 x=x\13\10\
 y=y\13\10\
 ..........
+nil
 id x
 id x
 rule
-id y
-id y
-rule
-empty
 list
+id y
+id y
+rule
 list
 ==========
 -- Blank lines
@@ -141,10 +140,10 @@ list
 
 x = x
 ..........
+nil
 id x
 id x
 rule
-empty
 list
 ==========
 -- Trailing spaces
@@ -152,14 +151,14 @@ x = x    \10
          \10
 y = y    \10
 ..........
+nil
 id x
 id x
 rule
-id y
-id y
-rule
-empty
 list
+id y
+id y
+rule
 list
 ==========
 -- Trailing blank lines
@@ -168,41 +167,41 @@ y = y
 
 
 ..........
+nil
 id x
 id x
 rule
-id y
-id y
-rule
-empty
 list
+id y
+id y
+rule
 list
 ==========
 -- No final newline
 x = x
 y = y\
 ..........
+nil
 id x
 id x
 rule
-id y
-id y
-rule
-empty
 list
+id y
+id y
+rule
 list
 ==========
 -- No final newline
 x = x
 -- comment\
 ..........
+nil
 id x
 id x
 rule
-empty
 list
 ==========
--- Varied comments and empty lines
+-- Varied comments and nil lines
 -- initial comment
 
 x = y
@@ -212,48 +211,48 @@ y = z
 
 -- end comment
 ..........
+nil
 id x
 id y
 rule
+list
 id y
 id z
 rule
-empty
-list
 list
 ==========
 -- Illegal end of line comment
 x = y -- comment
 ..........
-Error in pecan1.txt, line 226: expecting atom, newline, operator
+Error in pecan1.txt, line 225: expecting atom, newline, operator
 x = y -- comment
       ^
 ==========
 -- Unexpected character
 x = |y|
 ..........
-Error in pecan1.txt, line 233: expecting atom, newline
+Error in pecan1.txt, line 232: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
 ..........
-Error in pecan1.txt, line 240: expecting quote
+Error in pecan1.txt, line 239: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
 ..........
-Error in pecan1.txt, line 247: expecting quote
+Error in pecan1.txt, line 246: expecting quote
 x = 'abc
         ^
 ==========
 -- Expecting atom
 x = /
 ..........
-Error in pecan1.txt, line 254: expecting atom, newline
+Error in pecan1.txt, line 253: expecting atom, newline
 x = /
     ^
 ==========
@@ -261,76 +260,76 @@ x = /
 x = (y
 y = z
 ..........
-Error in pecan1.txt, line 261: expecting atom, bracket, operator
+Error in pecan1.txt, line 260: expecting atom, bracket, operator
 x = (y
       ^
 ==========
 -- Dot in the wrong place
 x = .
 ..........
-Error in pecan1.txt, line 269: expecting atom, newline
+Error in pecan1.txt, line 268: expecting atom, newline
 x = .
     ^
 ==========
 -- Incomplete dot dot
 x = 0.
 ..........
-Error in pecan1.txt, line 276: expecting dot
+Error in pecan1.txt, line 275: expecting dot
 x = 0.
       ^
 ==========
 -- Drop input and output items.
 x = @3
 ..........
+nil
 id x
 act @3
 rule
-empty
 list
 ==========
 -- Long id and id extending category name
 longIdentifier = longIdentifier
 x = Ndx
 ..........
+nil
 id longIdentifier
 id longIdentifier
 rule
+list
 id x
 id Ndx
 rule
-empty
-list
 list
 ==========
 -- Tag
 x = %x
 ..........
+nil
 id x
 tag %x
 rule
-empty
 list
 ==========
 -- Bad tag
 x = %
 ..........
-Error in pecan1.txt, line 315: expecting letter
+Error in pecan1.txt, line 314: expecting name
 x = %
      ^
 ==========
 -- Marker
 x = #m
 ..........
+nil
 id x
 mark #m
 rule
-empty
 list
 ==========
 -- Bad marker
 x = 'x' #3
 ..........
-Error in pecan1.txt, line 331: expecting letter
+Error in pecan1.txt, line 330: expecting name
 x = 'x' #3
          ^
 ==========
@@ -338,6 +337,7 @@ x = 'x' #3
 exp = (exp) end
 exp = [exp] end
 ..........
+nil
 id exp
 bracket (
 id exp
@@ -346,6 +346,7 @@ bracketed
 id end
 and
 rule
+list
 id exp
 bracket [
 id exp
@@ -354,8 +355,6 @@ try
 id end
 and
 rule
-empty
-list
 list
 ==========
 -- Continuation lines
@@ -374,11 +373,13 @@ x
 ) [c
 ]
 ..........
+nil
 id x
 id y
 id z
 or
 rule
+list
 id x
 bracket (
 id a
@@ -390,11 +391,13 @@ bracket ]
 try
 and
 rule
+list
 id x
 id y
 id z
 or
 rule
+list
 id x
 id y
 bracket (
@@ -408,15 +411,12 @@ try
 and
 and
 rule
-empty
-list
-list
-list
 list
 ==========
 -- The + * ? postfix operators
 exp = exp* exp+ exp? end
 ..........
+nil
 id exp
 id exp
 op *
@@ -432,26 +432,26 @@ and
 and
 and
 rule
-empty
 list
 ==========
 -- Ranges
 r1 = 0..127
 r2 = 'a..z'
 ..........
+nil
 id r1
 codes 0..127
 rule
+list
 id r2
 range 'a..z'
 rule
-empty
-list
 list
 ==========
 -- Error marker
 assignment = left #equals "=" right
 ..........
+nil
 id assignment
 id left
 mark #equals
@@ -461,14 +461,13 @@ and
 and
 and
 rule
-empty
 list
 ==========
 -- Double operator
 x = y /
 z / /
 ..........
-Error in pecan1.txt, line 469: expecting atom, newline
+Error in pecan1.txt, line 468: expecting atom, newline
 z / /
     ^
 ==========
@@ -477,6 +476,7 @@ x = %x @0x @1x @ @x
 y = 0 1 2 10 12 123
 u = #err ''
 ..........
+nil
 id x
 tag %x
 act @0x
@@ -488,6 +488,7 @@ and
 and
 and
 rule
+list
 id y
 code 0
 code 1
@@ -501,32 +502,30 @@ and
 and
 and
 rule
+list
 id u
 mark #err
 set ''
 and
 rule
-empty
-list
-list
 list
 ==========
 -- Strings, character sets
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
 ..........
+nil
 id x
 string "abc"
 string " !#$%^&*()_-=+[]`{};:'@#~"
 and
 rule
+list
 id y
 set 'abc'
 set ' !#$%^&*()_-=+[]`{};:"@#~'
 and
 rule
-empty
-list
 list
 ==========
 -- Brackets and operators
@@ -535,6 +534,7 @@ x = (y/z)+ / y*
 x = y z w ! / y
 x = [y z] / w
 ..........
+nil
 id x
 bracket (
 id y
@@ -547,6 +547,7 @@ op ?
 opt
 or
 rule
+list
 id x
 bracket (
 id y
@@ -561,6 +562,7 @@ op *
 any
 or
 rule
+list
 id x
 id y
 id z
@@ -572,6 +574,7 @@ and
 id y
 or
 rule
+list
 id x
 bracket [
 id y
@@ -582,10 +585,6 @@ try
 id w
 or
 rule
-empty
-list
-list
-list
 list
 ==========
 -- Dividers
@@ -593,6 +592,7 @@ keyword = <df> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
 ..........
+nil
 id keyword
 split <df>
 id keyword1
@@ -600,6 +600,7 @@ and
 id keyword2
 or
 rule
+list
 id keyword1
 string "break"
 string "case"
@@ -611,6 +612,7 @@ or
 or
 or
 rule
+list
 id keyword2
 string "do"
 string "else"
@@ -624,47 +626,44 @@ or
 or
 or
 rule
-empty
-list
-list
 list
 ==========
 -- End of input
 end = #end <>
 ..........
+nil
 id end
 mark #end
 split <>
 and
 rule
-empty
 list
 ==========
 -- Underscore
 a_b = xy_
 ..........
+nil
 id a_b
 id xy_
 rule
-empty
 list
 ==========
 -- Hyphen
 a-b = xy-
 ..........
+nil
 id a-b
 id xy-
 rule
-empty
 list
 ==========
 -- Single backslash in quotes (escaped using test file conventions)
 bs = '\\n' "\\n"
 ..........
+nil
 id bs
 set '\\n'
 string "\\n"
 and
 rule
-empty
 list

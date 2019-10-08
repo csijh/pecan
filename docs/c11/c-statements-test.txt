@@ -1,0 +1,13 @@
+-- Test the grammar fragment in c-statements.txt
+
+-- Temporary definition to make statements self-contained.
+start = statement <>
+
+{c-statements.txt}
+
+==========
+_Static_assert ( constant , string-literal ) ;
+..........
+constant
+string-literal
+staticAssert

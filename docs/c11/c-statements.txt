@@ -1,0 +1,44 @@
+-- A parser for C statements, building on declarations, covering section A.2.3
+-- of the C11 standard.
+
+{c-declarations.txt}
+
+statement =
+    labeled-statement /
+    compound-statement /
+    expression-statement /
+    selection-statement /
+    iteration-statement /
+    jump-statement
+
+labeled-statement =
+    [identifier `:`] statement @2label /
+    `case` constant-expression `:` statement @2case /
+    `default` `:` statement @1default
+
+compound-statement = `{` block-items `}` @1block
+
+block-items = (block-item block-items @2list) / @nil
+
+block-item = declaration / statement
+
+expression-statement = (expression / @nil) `;` @1statement
+
+selection-statement =
+    `if` `(` expression `)` statement (`else` statement / @nil) @3if /
+    `switch` `(` expression `)` statement @2switch
+
+iteration-statement =
+    `while` `(` expression `)` statement @2while /
+    `do` statement `while` `(` expression `)` `;` @2do /
+    `for` `(` for-start exp-opt `;` exp-opt `)` statement @4for
+
+exp-opt = expression / @nil
+
+for-start = declaration / (expression / @nil) `;`
+
+jump-statement =
+    `goto` identifier `;` @1goto /
+    `continue` `;` @continue /
+    `break` `;` @break /
+    `return` (expression / @nil) `;` @1return
