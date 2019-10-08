@@ -271,7 +271,7 @@ List x = %x...
 -- Bad marker
 x = 'x' #3
 ..........
-Error in tests/Parser.txt, line 272: expecting letter
+Error in tests/Parser.txt, line 272: expecting name
 x = 'x' #3
          ^
 ==========
@@ -371,13 +371,13 @@ Error in tests/Parser.txt, line 368: expecting atom, newline, operator
 r = 0 .. 127
       ^
 ==========
--- Backquote id
-`x` = "abc"
+-- Literal id
+"x" = %x
 ..........
-List `x` = "abc"...
-  Rule `x` = "abc"
-    Id `x`
-    String "abc"
+List "x" = %x...
+  Rule "x" = %x
+    Id "x"
+    Tag %x
   Empty
 ==========
 -- Complete scan-parser grammar for sums
@@ -706,7 +706,7 @@ List bs = '\\'...
 -- Empty tag name
 x = y %
 ..........
-Error in tests/Parser.txt, line 707: expecting letter
+Error in tests/Parser.txt, line 707: expecting name
 x = y %
        ^
 ==========

@@ -300,10 +300,14 @@ the input. So an explicit test is often included, as here, to check that the end
 of the input has been reached. The notation <code>&lt;></code> which is a less
 than sign followed by a greater than sign, matches the end of the input.</p>
 
-<p>An identifier introduced by a rule starts with a letter or underscore and
-continues with letters, digits, hyphens or underscores. The text of a grammar is
-assumed to be encoded using UTF-8, so Unicode letters and digit characters can
-be included.</p>
+<p>An identifier introduced by a rule starts with a letter and continues with
+letters, digits, hyphens or underscores. The text of a grammar is assumed to be
+encoded using UTF-8, so Unicode letters and digit characters can be
+included.</p>
+
+<p>There is also a literal form of identifier, consisting of characters in
+single or double quotes, which is allowed only in token-based parsers and which
+is described further in the section on literals below.</p>
 
 <p>In place of a rule, an inclusion may be used:</p>
 
@@ -496,10 +500,9 @@ quote does not appear next in the input.</p>
 <p>Lookahead expressions are regarded only as ways to decide which alternative
 to take, so actions and error reporting are suspended. During has and not
 operations <code>x&amp;</code> or <code>x!</code>, actions and error markers are
-ignored. During a try operation <code>[x]</code>, actions are delayed by storing
-them symbolically. If <code>x</code> succeeds, the delayed actions are
-performed. If <code>x</code> fails, the delayed actions are discarded. Thus
-<code>[x]</code> behaves in exactly the same way as <code>x& x</code>.</p>
+ignored. A try operation <code>[x]</code> is equivalent to <code>x&amp;
+x</code>, so actions and error reporting are only performed if <code>x</code>
+succeeds.</p>
 
 <p>The fact that actions are not performed during speculative parsing restricts
 the possible context sensitive aspects of a language, which can only depend on
@@ -551,11 +554,11 @@ likely to convey the intended meaning. Similarly, <code>'éè'</code> is probabl
 better written as <code>"é" / "è"</code>.
 
 <p>There is no escape convention within single or double quotes, because common
-escape conventions, apart from being unnecessarily complicated and error prone,
-can't support variable-length character codes, as is desirable if they are
-decimal. Instead, to represent control characters, or to represent Unicode
-characters using plain text, integers are used. An integer on its own represents
-a single character, using its decimal character code. For example:</p>
+escape conventions, apart from being complicated and error prone, don't support
+decimal or variable-length character codes. Instead, to represent control
+characters, or to represent Unicode characters using plain text, integers are
+used. An integer on its own represents a single character, using its decimal
+character code. For example:</p>
 
 <pre>pi = 960
 newline = 13? 10
@@ -577,13 +580,13 @@ ascii = 0..127
 
 <p>The first is a variation of the set notation, with a single character either
 side of two dots. The second is a dot-dot operator between two numerical
-character codes. They are atomic tokens, so there are no spaces either side of
-the dots.</p>
+character codes. These are both atomic tokens, with no spaces either side of the
+dots.</p>
 
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
 No, Pc, Pd, Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided.
-The name <code>Uc</code> represents all Unicode characters (code points
+The name <code>Uc</code> represents all Unicode code points (equivalent to
 <code>0..1114111</code>), and the others are the standard two-letter
 abbreviations for the Unicode general categories which partition all the code
 points. For example:</p>
@@ -618,7 +621,9 @@ to speed up their recognition by separating the keywords up to
 <code>"default"</code> from the keywords from <code>"do"</code> onwards. Note
 that <code>&lt;default></code> should not be used as the splitter in this
 example, because if <code>"default"</code> is next in the input, the input
-continues after that and is therefore lexicographically greater than it.</p>
+continues after that and is therefore lexicographically greater. Nor should the
+splitter be <code>&lt;do></code>, just in case <code>do</code> is at the end of
+the input text.</p>
 
 <p>The empty string <code>""</code> always succeeds, the empty set
 <code>''</code> always fails, and the empty splitter succeeds only at the end of
@@ -632,9 +637,11 @@ end = &lt;>
 <h3 id="actions">Actions</h3>
 
 <p>Actions allow a parser to operate on values or data structures, using a
-stack, to produce an output. An action is a symbol which consists of
-the <code>@</code> character followed by a number followed by a name. If there
-is no number, it is assumed to be zero. For example:</p>
+stack, to produce an output. An action is a symbol which consists of the
+<code>@</code> character followed by a number followed by a name. If there is no
+number, it is assumed to be zero. The name follows the same rules as an
+identifier. In particular, it can be a literal name, as discussed in the section
+on literals. For example:</p>
 
 <pre>sum = term (plus term @2add)*
 </pre>
@@ -756,78 +763,6 @@ actions, it is normal to delay the action <code>@a</code> and perform it when
 <code>x</code> progresses, or discard it if <code>x</code> fails without
 progressing.</p>
 
-<h3 id="tokens">Tokens</h3>
-
-<p>Support is provided for parsers where the input consists of tokens produced
-by a separate scanner. The input is thought of as an array of tokens instead of
-an array of characters.</p>
-
-<p>A tag is represented as a symbol consisting of the <code>%</code> character
-followed by a name. Each tag represents a specific kind of token. For example, a
-token-based parser for a simple calculator with no brackets might look like
-this:</p>
-
-<pre>sum = term (%plus term @2add / %minus term @2subtract)* end
-term = number (%times number @2multiply / %over number @2divide)*
-number = %number @number
-end = &lt;>
-</pre>
-
-<p>In this case, the input is an array of tokens with tags <code>%number</code>,
-<code>%plus</code>, <code>%minus</code>, <code>%times</code> or
-<code>%over</code>.</p>
-
-<p>In token-based parsers, text matching notations are not allowed, except for
-<code>''</code>, <code>""</code> and <code>&lt;></code>. Similarly, tags are not
-allowed in text-based parsers.</p>
-
-<h3 id="literals">Literals</h3>
-
-<p>The names used in identifiers, actions, markers and tags normally consist of
-a letter or underscore followed by letters, digits, hyphens or underscores.
-Literal names can be used as an alternative. A literal name consists of
-arbitrary visible ASCII characters inside backquotes. This helps to make
-grammars more readable when a separate scanner and parser are being designed.
-For example, a scanner might contain:</p>
-
-<pre>int = "int" @1`int`
-arrow = "->" @1`->`
-</pre>
-
-<p>It is often convenient for the names of the actions in a scanner to be token
-tags, and separate tag names are usually needed for tokens which have fixed
-spellings, such as a keyword or an operator symbol. The literal name notation
-allows a tag name to be generated automatically.</p>
-
-<p>In a token-based parser, The tag name produced can be matched by a tag with
-the same literal name. For example:</p>
-
-<pre>int = %`int`
-arrow = %`->`
-</pre>
-
-<p>To make a Pecan parser more readable, e.g. so that it corresponds closely to
-a published grammar, it may also be convenient to use literal names for
-identifiers. For example:</p>
-
-<pre>bracketed-expression = `(` expression `)`
-...
-`(` = #open-bracket %`(`
-`)` = #close-bracket %`)`
-</pre>
-
-<p>A literal name is converted into an ordinary name by replacing each character
-which isn't a letter or digit by a fixed two-letter abbreviation. For example
-<code>`->`</code> becomes <code>MiGt</code>. An identifier <code>`int`</code> is
-equivalent to <code>int</code>, making the backquotes unnecessary, but using
-<code>`int`</code> may still be desirable to emphasize that the identifier
-stands for a literal keyword.</p>
-
-<p>When a grammar is compiled to produce a parser, a prefix can be specified for
-each different type of name, to prevent name clashes. If the same prefix is
-specified for actions in the scanner as for tags in the parser, the tag namnes
-can be made to correspond.</p>
-
 <h3 id="errors">Errors</h3>
 
 <p>By default, a parser produces an error message which points to the furthest
@@ -845,9 +780,10 @@ details. For example, suppose this rule is being parsed:</p>
 </pre>
 
 <p>Markers can be added to parser rules, to describe the items which would have
-allowed parsing to continue. A marker is a symbol consisting of
-the <code>#</code> character followed by a name. For
-example, suppose the rule above is changed to:</p>
+allowed parsing to continue. A marker is a symbol consisting of the
+<code>#</code> character followed by a name. The name has the same form as an
+identifier. In particular, it can be literal, as described in the literals
+section. For example, suppose the rule above is changed to:</p>
 
 <pre>sum = number (#plus "+" number / #minus "-" number)
 </pre>
@@ -904,6 +840,80 @@ says that an operator is expected. The fact that an extra digit on the preceding
 number, or a space, could also have allowed parsing to continue is not reported.
 That is because individual digits and spaces in the rules haven't been given
 markers.</p>
+
+<h3 id="tokens">Tokens</h3>
+
+<p>Support is provided for parsers where the input consists of tokens produced
+by a separate scanner. The input is thought of as an array of tokens instead of
+an array of characters.</p>
+
+<p>A tag is represented as a symbol consisting of the <code>%</code> character
+followed by a name. The name has the same form as an identifier. In particular,
+it can be literal, as described in the next section. Each tag represents a
+specific kind of token. For example, a token-based parser for a simple
+calculator with no brackets might look like this:</p>
+
+<pre>sum = term (%plus term @2add / %minus term @2subtract)* end
+term = number (%times number @2multiply / %over number @2divide)*
+number = %number @number
+end = &lt;>
+</pre>
+
+<p>In this case, the input is an array of tokens with tags <code>%number</code>,
+<code>%plus</code>, <code>%minus</code>, <code>%times</code> or
+<code>%over</code>.</p>
+
+<p>In token-based parsers, text matching notations are not allowed, except for
+<code>''</code>, <code>""</code> and <code>&lt;></code>. However, the set and
+string notations are reused for literal identifiers.</p>
+
+<h3 id="literals">Literals</h3>
+
+<p>The names used in identifiers, actions, markers and tags normally consist of
+a letter followed by letters, digits, hyphens or underscores. Literal names can
+be used as an alternative. A literal name consists of one or more characters
+inside double quotes, or inside single quotes, as with the string and set
+notations. This helps to make grammars more readable when a separate scanner and
+parser are being designed. For example, a scanner might contain:</p>
+
+<pre>ge = ">=" @1">="
+</pre>
+
+<p>The names of the actions are being used as token tags, so <code>@1">="</code>
+creates a token and sets its tag to <code>>=</code>. When compiling the scanner,
+each character in the literal name is converted to an alphanumeric form, e.g.
+<code>>=</code> becomes <code>GtEq</code>, so that it forms a valid identifier
+in the target programming language. The literal notation avoids the need to
+invent an identifier name for the tag for each token with a fixed spelling.</p>
+
+<p>In the corresponding token-based parser, the tag name produced can be matched
+by a tag with the same literal name. For example:</p>
+
+<pre>ge = #op %">="
+</pre>
+
+<p>The same translation to alphanumeric form is used so, in the compiled parser,
+the tag <code>%">="</code> becomes identifier <code>GtEq</code> and the parser
+matches up with the scanner.</p>
+
+<p>To improve the readability of a token-based parser further, e.g. so that it
+corresponds closely to a published grammar, literal names can also be used for
+for identifiers. For example:</p>
+
+<pre>comparison = expression ">=" expression
+...
+">=" = #op %">="
+</pre>
+
+<p>For an alphanumeric literal, the quotes have no effect, so <code>"int"</code>
+is equivalent to <code>int</code>, making the quotes unnecessary, but using
+<code>"int"</code> may still be desirable to emphasize that the identifier
+stands for a keyword token with a fixed spelling.</p>
+
+<p>When a grammar is compiled to produce a parser, a prefix can be specified for
+each different type of name, to prevent name clashes. The same prefix should be
+specified for actions in the scanner and for tags in the parser, so that the
+generated tag names correspond.</p>
 
 <h2 id="testing">Testing</h2>
 
@@ -1624,7 +1634,7 @@ same output effect and error handling properties as the original.</p>
 <li>error markers are no longer postfix</li>
 <li>the splitter notation <code>&lt;abc></code> and end notation
     <code>&lt;></code> have been added</li>
-<li>backquoted tags have been replaced by backquoted ids</li>
+<li>backquoted tags have been replaced by double quoted ids</li>
 <li>separate grammar and test files are supported</li>
 <li>one test file can be called from within another</li>
 <li>parser generation is via bytecode</li>

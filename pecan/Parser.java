@@ -69,7 +69,7 @@ class Parser implements Testable {
     // Error markers, in alphabetical order. In messages, names are made lower
     // case and underscores are replaced with spaces.
     enum Marker {
-        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, GREATER_THAN_SIGN, ID, LETTER,
+        ATOM, BRACKET, DOT, END_OF_TEXT, EQUALS, GREATER_THAN_SIGN, ID, NAME,
         NEWLINE, OPERATOR, QUOTE, TAG
     }
 
@@ -80,7 +80,6 @@ class Parser implements Testable {
         return skip() && rules() && MARK(END_OF_TEXT) && END();
     }
 
-    // rules = (inclusion / rule) (rules @2list)?
     // rules = (inclusion / rule) (rules / @empty) @2list
     private boolean rules() {
         return (
@@ -123,7 +122,7 @@ class Parser implements Testable {
         return OPT(DO() && postop() && postops());
     }
 
-    // postop = opt @1opt / any @1any / some @1some / has @1has / not @1not
+    // postop = opt @2opt / any @2any / some @2some / has @2has / not @2not
     private boolean postop() {
         switch (NEXT()) {
             case '?': return (opt() && ACT2(Opt));
@@ -135,29 +134,30 @@ class Parser implements Testable {
         }
     }
 
-    // atom = bracket / try / id / act / mark / tag /
-    //     codes / code / range / set / string / split / category
+    // atom = bracketed / try / act / mark / tag / split / range / set /
+    //     string / codes / code / category / id
     private boolean atom() {
         switch (NEXT()) {
-            case '(': return bracket();
+            case '(': return bracketed();
             case '[': return try_();
             case '@': return act();
             case '#': return mark();
-            case '<': return split();
             case '%': return tag();
+            case '<': return split();
+
             case '\'': return ALT(DO() && range() || OR() && set());
             case '"': return string();
             default: return ALT(
-                DO() && category() ||
-                OR() && id() ||
-                OR() && codes() ||
-                OR() && code()
+                DO() && codes() ||
+                OR() && code() ||
+                OR() && category() ||
+                OR() && id()
             );
         }
     }
 
-    // bracket = open expression close @3bracket
-    private boolean bracket() {
+    // bracketed = open expression close @3bracketed
+    private boolean bracketed() {
         return open() && exp() && close() && ACT3(Bracketed);
     }
 
@@ -179,14 +179,14 @@ class Parser implements Testable {
         blank();
     }
 
-    // mark = "#" #letter name @mark blank
+    // mark = "#" #name name @mark blank
     private boolean mark() {
-        return CHAR('#') && MARK(LETTER) && name() && ACT(Mark) && blank();
+        return CHAR('#') && MARK(NAME) && name() && ACT(Mark) && blank();
     }
 
-    // tag = "%" #letter name @tag blank
+    // tag = "%" #name name @tag blank
     private boolean tag() {
-        return CHAR('%') && MARK(LETTER) && name() && ACT(Tag) && blank();
+        return CHAR('%') && MARK(NAME) && name() && ACT(Tag) && blank();
     }
 
     // codes = [digits '.'] #dot '.' digits @codes blank
@@ -369,9 +369,9 @@ class Parser implements Testable {
         return OPT(DO() && visible() && visibles());
     }
 
-    // alpha = letter / Nd / '-'
+    // alpha = letter / Nd / '-' / '_'
     private boolean alpha() {
-        return letter() || CAT(Nd) || CHAR('-');
+        return letter() || CAT(Nd) || CHAR('-') || CHAR('_');
     }
 
     // alphas = alpha*
@@ -379,10 +379,9 @@ class Parser implements Testable {
         return OPT(DO() && alpha() && alphas());
     }
 
-    // letter = Lu / Ll / Lt / Lm / Lo / '_'
+    // letter = Lu / Ll / Lt / Lm / Lo
     private boolean letter() {
         if (in >= input.length()) return false;
-        if (input.startsWith("_", in)) { in++; return true; }
         int ch = input.codePointAt(in);
         Category cat = Category.get(ch);
         boolean ok = (
@@ -392,19 +391,13 @@ class Parser implements Testable {
         return ok;
     }
 
-    // name = letter alphas / literal
+    // name = letter alphas / '"' nodquotes #quote '"' / "'" noquotes #quote "'"
     private boolean name() {
-        return letter() && alphas() || literal();
-    }
-
-    // literal = "`" nobquotes #quote "`"
-    private boolean literal() {
-        return CHAR('`') && nobquotes() && MARK(QUOTE) && CHAR('`');
-    }
-
-    // initial = #letter letter
-    private boolean initial() {
-        return MARK(LETTER) && letter();
+        return (
+            letter() && alphas() ||
+            CHAR('"') && nodquotes() && MARK(QUOTE) && CHAR('"') ||
+            CHAR('\'') && noquotes() && MARK(QUOTE) && CHAR('\'')
+        );
     }
 
     // decimal = '0..9'
@@ -447,13 +440,6 @@ class Parser implements Testable {
     // nodquotes = ('"'! visible)*
     private boolean nodquotes() {
         return OPT(DO() && NOT(DO() && CHAR('"')) && visible() && nodquotes());
-    }
-
-    // nobquotes = ("`"! '!..~')*
-    private boolean nobquotes() {
-        return OPT(
-            DO() && NOT(DO() && CHAR('`')) && RANGE('!','~') && nobquotes()
-        );
     }
 
     // noangles = ('>'! visible)*

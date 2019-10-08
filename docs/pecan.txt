@@ -6,20 +6,21 @@ rules = (inclusion / rule) (rules / @empty) @2list
 inclusion = include newline @1include skip
 rule = #id id equals expression newline @2rule skip
 
--- An expression breaks down into terms, factors and atoms.
+-- An expression breaks down into terms, factors and atoms. Match set and
+-- string before id in case of literal identifiers.
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
 factor = #atom atom postops
 postops = postop*
 postop = opt @2opt / any @2any / some @2some / has @2has / not @2not
-atom = bracketed / try / id / act / mark / tag /
-    codes / code / range / set / string / split / category
+atom = bracketed / try / act / mark / tag / split / range / set /
+    string / codes / code / category / id
 
 -- Atoms. Categories and ids are made mutually exclusive.
 -- Brackets produce output items, to help with text ranges of parse tree nodes.
 bracketed = open expression close @3bracketed
 try = sopen expression sclose @3try
-id = ((cat alpha!)! letter alphas @id / string) blank
+id = (cat alpha!)! name @id blank
 act = '@' decimals name? @act blank
 mark = "#" #name name @mark blank
 tag = "%" #name name @tag blank
@@ -59,10 +60,10 @@ space = ' '
 spaces = space*
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
 visibles = visible*
-alpha = letter / Nd / '-'
+alpha = letter / Nd / '-' / '_'
 alphas = alpha*
-letter = Lu / Ll / Lt / Lm / Lo / '_'
-name = letter alphas / '"' nobquotes #quote '"'
+letter = Lu / Ll / Lt / Lm / Lo
+name = letter alphas / '"' nodquotes #quote '"' / "'" noquotes #quote "'"
 decimal = '0..9'
 decimals = decimal*
 hex = decimal / 'ABCDEFabcdef'
@@ -71,7 +72,6 @@ digits = ('1..9' decimals) / '0' hexes
 noquote = "'"! visible
 noquotes = ("'"! visible)*
 nodquotes = ('"'! visible)*
-nobquotes = ("`"! '!..~')*
 noangles = ('>'! visible)*
 nocurlies = ('}'! visible)*
 endline = 13? 10
@@ -487,7 +487,7 @@ list
 -- Literal id
 "->" = %arrow
 ..........
-string "->"
+id "->"
 tag %arrow
 rule
 empty
