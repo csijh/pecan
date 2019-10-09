@@ -50,7 +50,7 @@ class Node {
     // progress, well formed, has actions, ends with errors, has actions at the
     // beginning). See the relevant analysis classes.
     public static enum Flag {
-        Changed, CI, TI, SN, FN, SP, FP, WF, AA, EE, AB;
+        Changed, TokenInput, SN, FN, SP, FP, WF, AA, EE, AB;
         int bit() { return 1 << ordinal(); }
     }
 

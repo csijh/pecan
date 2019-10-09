@@ -10,6 +10,7 @@ import static java.lang.Character.*;
 
 /* Carry out binding:
 Replace empty String by Success, empty Set by Fail, empty Split by End.
+Replace String or Set by Id in a token-based parser
 Replace String or Set with single character by Char.
 Replace unnamed Act by Drop.
 Check for missing or duplicate definitions.
@@ -47,24 +48,21 @@ class Binder implements Testable {
         if (root.op() == Error) return root;
         rules.clear();
         arities.clear();
-        collect();
+        collect(root);
         scan(root);
-        if (root.has(CI) && root.has(TI)) {
-            err(root, "there is both text and token input");
-        }
-        if (! root.has(CI) && ! root.has(TI)) root.set(CI);
         return root;
     }
 
-    // Collect the rules in a map. Ignore duplicates for now.
-    private void collect() {
-        Node node = root;
-        while (node.op() != Empty) {
-            assert(node.op() == List);
-            String name = node.left().left().name();
-            if (rules.get(name) == null) rules.put(name, node.left());
-            node = node.right();
+    // Collect information. Put the rules in a map, ignoring duplicates for now.
+    // Check whether the parser is token-based or text-based.
+    private void collect(Node node) {
+        if (node.op() == Rule) {
+            String id = node.left().name();
+            if (rules.get(id) == null) rules.put(id, node);
         }
+        if (node.op() == Tag) root.set(TokenInput);
+        if (node.left() != null) collect(node.left());
+        if (node.right() != null) collect(node.right());
     }
 
     // Traverse the tree, top down, and check each node.
@@ -79,10 +77,9 @@ class Binder implements Testable {
         switch(node.op()) {
         case Error: case Temp: case List: case Empty: case End: break;
         case And: case Or: case Opt: case Any: case Some: case Drop: break;
-        case Has: case Not: case Try: case Mark: break;
+        case Has: case Not: case Try: case Mark: case Tag: break;
         case Success: case Fail: break;
         case Cat: scanCat(node); break;
-        case Tag: scanTag(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;
         case Code: scanCode(node); break;
@@ -96,22 +93,16 @@ class Binder implements Testable {
         }
     }
 
-    // Set the CI flag on the root node.
+    // Check not token input.
     private void scanCat(Node node) {
         if (switchTest) return;
-        root.set(CI);
-    }
-
-    // Set the TI flag on the root node.
-    private void scanTag(Node node) {
-        if (switchTest) return;
-        root.set(TI);
+        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
     }
 
     // Check that a rule name is not a duplicate.
     private void scanRule(Node node) {
         if (switchTest) return;
-        String name = node.name();
+        String name = node.left().name();
         Node first = rules.get(name);
         if (node != first) err(node.left(), name + " is already defined");
     }
@@ -121,47 +112,46 @@ class Binder implements Testable {
         if (switchTest) return;
         String name = node.name();
         Node rule = rules.get(name);
-        if (rule == null) err(node, "unknown name");
+        if (rule == null) err(node, "undefined identifier");
         node.ref(rule);
     }
 
     // Find the character code represented by a number, and check in range.
-    // Set the CI flag on the root node.
+    // Check not token input.
     private void scanCode(Node node) {
         if (switchTest) return;
         int ch = node.charCode();
         if (ch > 1114111) err(node, "code too big");
-        root.set(CI);
+        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
     }
 
-    // Set the CI flag on the root node.
-    // Set "" to Success and "x" to Char.
+    // Set "" to Success, "->" to Id if token input, "x" to Char.
     private void scanString(Node node) {
         if (switchTest) return;
         int n = node.name().codePointCount(0, node.name().length());
         if (n == 0) node.op(Success);
-        if (n == 1) node.op(Char);
-        if (n > 0) root.set(CI);
+        else if (root.has(TokenInput)) { node.op(Id); scanId(node); }
+        else if (n == 1) node.op(Char);
     }
 
-    // Set the CI flag on the root node. Set <> to End.
+    // Set <> to End. Check not token input.
     private void scanSplit(Node node) {
         if (switchTest) return;
         int n = node.name().length();
-        if (n == 0) node.op(End);
-        if (n > 0) root.set(CI);
+        if (n == 0) { node.op(End); return; }
+        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
     }
 
-    // Check that a set consists of distinct characters.
-    // Set the CI flag on the root node.
+    // Set '' to Fail, '->' to id if token input, 'x' to Char, and
+    // check that the set consists of distinct characters.
     private void scanSet(Node node) {
         if (switchTest) return;
         String name = node.name();
         int n = name.codePointCount(0, name.length());
         if (n == 0) node.op(Fail);
-        if (n == 1) node.op(Char);
-        if (n > 0) root.set(CI);
-        for (int i = 0; i<name.length(); ) {
+        else if (root.has(TokenInput)) { node.op(Id); scanId(node); }
+        else if (n == 1) node.op(Char);
+        else for (int i = 0; i<name.length(); ) {
             int c1 = name.codePointAt(i);
             i += Character.charCount(c1);
             for (int j=i; j<name.length(); ) {
@@ -173,16 +163,15 @@ class Binder implements Testable {
         }
     }
 
-    // Check that a range is non-empty.
-    // Set the CI flag on the root node.
+    // Check that a range is non-empty. Check not token input.
     private void scanRange(Node node) {
         if (switchTest) return;
-        root.set(CI);
+        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
         int low = node.low(), high = node.high();
         if (high < low) err(node, "empty range");
     }
 
-    // Check that actions with the same name have the same arities.
+    // Check that actions with the same name have the same arities?
     private void scanAct(Node node) {
         if (switchTest) return;
         String text = node.text();

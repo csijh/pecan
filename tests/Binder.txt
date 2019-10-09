@@ -236,7 +236,7 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
 x = z
 y = "a"
 ..........
-Error in tests/Binder.txt, line 236: unknown name
+Error in tests/Binder.txt, line 236: undefined identifier
 x = z
     ^
 ==========
@@ -329,6 +329,6 @@ List x = @ @1 @2 @3...
 -- Text and tokens
 x = "a" %b
 ..........
-Error in tests/Binder.txt, lines 330 to 331: there is both text and token input
-x = "a" %b...
-^^^^^^^^^^
+Error in tests/Binder.txt, line 330: undefined identifier
+x = "a" %b
+    ^^^
