@@ -7,11 +7,11 @@ start = translation-unit @translation-unit
 // It is assumed that keywords and punctuators are passed with types which match
 // their names, and that the remaining tokens are passed with these types.
 
-identifier = `identifier`
-constant = `constant`
-string-literal = `string-literal`
-typedef-name = `typedef-name`
-enumeration-constant = `identifier`
+identifier = "identifier"
+constant = "constant"
+string-literal = "string-literal"
+typedef-name = "typedef-name"
+enumeration-constant = "identifier"
 
 // ----- A.2.1 Expressions -----
 
@@ -19,92 +19,92 @@ primary-expression =
     identifier /
     constant /
     string-literal /
-    `(` expression `)` /
+    "(" expression ")" /
     generic-selection
 
 generic-selection =
-    `_Generic` `(` assignment-expression `,` generic-assoc-list `)`
+    "_Generic" "(" assignment-expression "," generic-assoc-list ")"
 
 generic-assoc-list = generic-association+
 
 generic-association =
-    type-name `:` assignment-expression /
-    DEFAULT `:` assignment-expression
+    type-name ":" assignment-expression /
+    DEFAULT ":" assignment-expression
 
 // Look ahead to the open curly bracket of a compound literal.
-is-compound-literal = `(`type-name `)` `{`
+is-compound-literal = "("type-name ")" "{"
 
 postfix-expression =
-    is-compound-literal& `(` type-name `)` `{` initializer-list `,`? `}` /
+    is-compound-literal& "(" type-name ")" "{" initializer-list ","? "}" /
     primary-expression pe-suffix*
 
 pe-suffix =
-    `[` expression `]` /
-    `(` argument-expression-list? `)` /
-    `.` identifier /
-    `->` identifier /
-    `++` /
-    `--`
+    "[" expression "]" /
+    "(" argument-expression-list? ")" /
+    "." identifier /
+    "->" identifier /
+    "++" /
+    "--"
 
 argument-expression-list =
-    assignment-expression (`,` assignment-expression)*
+    assignment-expression ("," assignment-expression)*
 
 unary-expression  =
     postfix-expression /
-    `++` unary-expression /
-    `--` unary-expression /
+    "++" unary-expression /
+    "--" unary-expression /
     unary-operator cast-expression /
-    `sizeof` (unary-expression / `(` type-name `)`) /
-    Alignof `(` type-name `)`
+    "sizeof" (unary-expression / "(" type-name ")") /
+    Alignof "(" type-name ")"
 
 unary-operator =
-    `&` / `*` / `+` / `-` / `~` / `!`
+    "&" / "*" / "+" / "-" / "~" / "!"
 
 cast-expression =
-    (is-compound-literal! `(` type-name `)`)* unary-expression
+    (is-compound-literal! "(" type-name ")")* unary-expression
 
 multiplicative-expression =
-    cast-expression ((`*` / `/` / `%`) cast-expression)*
+    cast-expression (("*" / "/" / "%") cast-expression)*
 
 additive-expression =
-    multiplicative-expression ((`+` / `-`) multiplicative-expression)*
+    multiplicative-expression (("+" / "-") multiplicative-expression)*
 
 shift-expression =
-    additive-expression ((`<<` / `>>`) additive-expression)*
+    additive-expression (("<<" / ">>") additive-expression)*
 
 relational-expression =
-    shift-expression ((`<` / `>` / `<=` / `>=`) shift-expression)*
+    shift-expression (("<" / ">" / "<=" / ">=") shift-expression)*
 
 equality-expression =
-    relational-expression ((`==` / `!=`) relational-expression)*
+    relational-expression (("==" / "!=") relational-expression)*
 
 AND-expression =
-    equality-expression (`&` equality-expression)*
+    equality-expression ("&" equality-expression)*
 
 exclusive-OR-expression =
-    AND-expression (`^` AND-expression)*
+    AND-expression ("^" AND-expression)*
 
 inclusive-OR-expression =
-    exclusive-OR-expression (`|` exclusive-OR-expression)*
+    exclusive-OR-expression ("|" exclusive-OR-expression)*
 
 logical-AND-expression =
-    inclusive-OR-expression (`&&` inclusive-OR-expression)*
+    inclusive-OR-expression ("&&" inclusive-OR-expression)*
 
 logical-OR-expression =
-    logical-AND-expression (`||` logical-AND-expression)*
+    logical-AND-expression ("||" logical-AND-expression)*
 
 conditional-expression =
-    logical-OR-expression (`?` expression `:` conditional-expression)?
+    logical-OR-expression ("?" expression ":" conditional-expression)?
 
 assignment-expression =
     [unary-expression assignment-operator] assignment-expression /
     conditional-expression
 
 assignment-operator =
-    `=` / `*=` / `/=` / `%=` / `+=` / `-=` / `<<=` / `>>=` / `&=` / `^=` / `|=`
+    "=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / "&=" / "^=" / "|="
 
 expression =
-    assignment-expression (`,` assignment-expression)*
+    assignment-expression ("," assignment-expression)*
 
 constant-expression =
     conditional-expression
@@ -113,7 +113,7 @@ constant-expression =
 
 declaration =
     static_assert-declaration /
-    declaration-specifiers init-declarator-list? `;`
+    declaration-specifiers init-declarator-list? ";"
 
 declaration-specifiers = declaration-specifier+
 
@@ -124,88 +124,88 @@ declaration-specifier =
     function-specifier /
     alignment-specifier
 
-init-declarator-list = init-declarator (`,` init-declarator)*
-init-declarator = declarator (`=` initializer)?
+init-declarator-list = init-declarator ("," init-declarator)*
+init-declarator = declarator ("=" initializer)?
 
 storage-class-specifier =
-    `typedef` / EXTERN / `static` /
-    `_Thread_local` / Auto / REGISTER
+    "typedef" / EXTERN / "static" /
+    "_Thread_local" / Auto / REGISTER
 
 type-specifier =
-    `void` / CHAR / SHORT / INT / LONG / FLOAT / DOUBLE /
-    `signed` / `unsigned` / `_Bool` / `_Complex` /
+    "void" / CHAR / SHORT / INT / LONG / FLOAT / DOUBLE /
+    "signed" / "unsigned" / "_Bool" / "_Complex" /
     atomic-type-specifier /
     struct-or-union-specifier / enum-specifier / typedef-name
 
 atomic-type-specifier =
-    `_Atomic` `(` type-name `)`
+    "_Atomic" "(" type-name ")"
 
-type-qualifier = CONST / RESTRICT / `volatile` / `_Atomic`
+type-qualifier = CONST / RESTRICT / "volatile" / "_Atomic"
 
-function-specifier = INLINE / `_Noreturn`
+function-specifier = INLINE / "_Noreturn"
 
 alignment-specifier =
-    `_Alignas` `(` (type-name / constant-expression) `)`
+    "_Alignas" "(" (type-name / constant-expression) ")"
 
 struct-or-union-specifier = struct-or-union (
-    identifier (`{` struct-declaration-list `}`)? /
-    `{` struct-declaration-list `}`
+    identifier ("{" struct-declaration-list "}")? /
+    "{" struct-declaration-list "}"
 )
 
-struct-or-union = `struct` / `union`
+struct-or-union = "struct" / "union"
 
 struct-declaration-list = struct-declaration+
 
 struct-declaration =
     static_assert-declaration /
-    specifier-qualifier-list struct-declarator-list? `;`
+    specifier-qualifier-list struct-declarator-list? ";"
 
 specifier-qualifier-list = (type-specifier / type-qualifier)+
 
-struct-declarator-list = struct-declarator (`,` struct-declarator)*
+struct-declarator-list = struct-declarator ("," struct-declarator)*
 
 struct-declarator =
-    declarator (`:` constant-expression)? /
-    `:` constant-expression
+    declarator (":" constant-expression)? /
+    ":" constant-expression
 
 enum-specifier = ENUM (
-    identifier (`{` enumerator-list `,`? `}`)? /
-    `{` enumerator-list `,`? `}`
+    identifier ("{" enumerator-list ","? "}")? /
+    "{" enumerator-list ","? "}"
 )
 
-enumerator-list = enumerator ((`,` `}`)! `,` enumerator)*
+enumerator-list = enumerator (("," "}")! "," enumerator)*
 
-enumerator = enumeration-constant (`=` constant-expression)?
+enumerator = enumeration-constant ("=" constant-expression)?
 
 declarator = pointer? direct-declarator
 
 direct-declarator =
-    (identifier / `(` declarator `)`) dd-bracket*
+    (identifier / "(" declarator ")") dd-bracket*
 
 dd-bracket =
-    `(` dd-parameters? `)` / `[` dd-array-size? `]`
+    "(" dd-parameters? ")" / "[" dd-array-size? "]"
 
 dd-parameters =
     identifier& identifier-list / parameter-type-list
 
 dd-array-size =
-    `*` /
-    `static` type-qualifier-list? assignment-expression /
+    "*" /
+    "static" type-qualifier-list? assignment-expression /
     type-qualifier-list dd-simple-array-size? /
     assignment-expression
 
 dd-simple-array-size =
-    `*` /
-    `static` assignment-expression /
+    "*" /
+    "static" assignment-expression /
     assignment-expression
 
-pointer = (`*` type-qualifier-list?)+
+pointer = ("*" type-qualifier-list?)+
 
 type-qualifier-list = type-qualifier+
 
-parameter-type-list = parameter-list (`,` `...`)?
+parameter-type-list = parameter-list ("," "...")?
 
-parameter-list = parameter-declaration ((`,` `...`)! `,` parameter-declaration)*
+parameter-list = parameter-declaration (("," "...")! "," parameter-declaration)*
 
 parameter-declaration = declaration-specifiers (
     has-identifier& declarator /
@@ -213,9 +213,9 @@ parameter-declaration = declaration-specifiers (
 )
 
 has-identifier =
-    (`*` / type-qualifier / `(`)* `identifier`
+    ("*" / type-qualifier / "(")* "identifier"
 
-identifier-list = identifier (`,` identifier)*
+identifier-list = identifier ("," identifier)*
 
 type-name = specifier-qualifier-list abstract-declarator?
 
@@ -224,39 +224,39 @@ abstract-declarator =
     direct-abstract-declarator
 
 direct-abstract-declarator =
-    `(` abstract-declarator `)` dad-bracket* / dad-bracket+
+    "(" abstract-declarator ")" dad-bracket* / dad-bracket+
 
 dad-bracket =
-    `(` parameter-type-list? `)` / `[` dad-array-size? `]`
+    "(" parameter-type-list? ")" / "[" dad-array-size? "]"
 
 dad-array-size =
-    `*` /
-    `static` type-qualifier-list? assignment-expression /
+    "*" /
+    "static" type-qualifier-list? assignment-expression /
     type-qualifier-list dad-simple-array-size? /
     assignment-expression
 
 dad-simple-array-size =
-    assignment-expression / `static` assignment-expression
+    assignment-expression / "static" assignment-expression
 
 initializer =
     assignment-expression /
-    `{` initializer-list `,`? `}`
+    "{" initializer-list ","? "}"
 
 initializer-list =
-    designation? initializer (`,` designation? initializer)*
+    designation? initializer ("," designation? initializer)*
 
 designation =
-    designator-list `=`
+    designator-list "="
 
 designator-list =
     designator +
 
 designator =
-    `[` constant-expression `]` /
-    `.` identifier
+    "[" constant-expression "]" /
+    "." identifier
 
 static_assert-declaration =
-    `_Static_assert` `(` constant-expression `,` string-literal `)` `;`
+    "_Static_assert" "(" constant-expression "," string-literal ")" ";"
 
 // ----- A.2.3 Statements -----
 
@@ -269,43 +269,43 @@ statement =
     jump-statement
 
 labeled-statement =
-    [identifier `:`] statement /
-    CASE constant-expression `:` statement /
-    DEFAULT `:` statement
+    [identifier ":"] statement /
+    CASE constant-expression ":" statement /
+    DEFAULT ":" statement
 
-compound-statement = `{` block-item* `}`
+compound-statement = "{" block-item* "}"
 
 block-item = declaration / statement
 
-expression-statement = expression? `;`
+expression-statement = expression? ";"
 
 // Note: the dangling else problem doesn't arise with the / operator
 selection-statement =
-    IF `(` expression `)` statement (ELSE statement)? /
-    `switch` `(` expression `)` statement
+    IF "(" expression ")" statement (ELSE statement)? /
+    "switch" "(" expression ")" statement
 
 iteration-statement =
-    `while` `(` expression `)` statement /
-    DO statement `while` `(` expression `)` `;` /
-    FOR `(` for-start expression? `;` expression? `)` statement
+    "while" "(" expression ")" statement /
+    DO statement "while" "(" expression ")" ";" /
+    FOR "(" for-start expression? ";" expression? ")" statement
 
-for-start = declaration / expression? `;`
+for-start = declaration / expression? ";"
 
 jump-statement =
-    GOTO identifier `;` /
-    CONTINUE `;` /
-    Break `;` /
-    RETURN expression? `;`
+    GOTO identifier ";" /
+    CONTINUE ";" /
+    Break ";" /
+    RETURN expression? ";"
 
 // ----- A.2.4 External definitions -----
 
-translation-unit = external-declaration+ ``
+translation-unit = external-declaration+ ""
 
 // Combine declarations and function definitions to avoid lookahead
 external-declaration = declaration-specifiers (
-    `;` /
+    ";" /
     declarator (
-        (`=` initializer)? (`,` init-declarator)* `;` /
+        ("=" initializer)? ("," init-declarator)* ";" /
         declaration-list? compound-statement
     )
 )

@@ -399,9 +399,9 @@ struct-declarator =
     declarator? ":" constant-expression
 
 enum-specifier =
-    `enum` identifier? "{" enumerator-list "}" |
-    `enum` identifier? "{" enumerator-list "," "}" |
-    `enum` identifier
+    "enum" identifier? "{" enumerator-list "}" |
+    "enum" identifier? "{" enumerator-list "," "}" |
+    "enum" identifier
 
 enumerator-list =
     enumerator |

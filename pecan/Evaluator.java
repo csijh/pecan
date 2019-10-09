@@ -55,7 +55,7 @@ public class Evaluator implements Testable {
     private String setup(Source source) {
         Stacker stacker = new Stacker();
         grammar = stacker.run(source);
-        charInput = grammar.has(CI);
+        charInput = ! grammar.has(TokenInput);
         tracing = source.trace();
         if (grammar.op() == Error) return grammar.note();
         else return "";

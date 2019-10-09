@@ -17,7 +17,7 @@ class Node {
     static { fillCharMap(); }
 
     public static void main(String[] args) {
-        Source s = new Source("127 'a' @add @2add 'a..z' 0..127 `<=`", "file");
+        Source s = new Source("127 'a' @add @2add 'a..z' 0..127 '<='", "file");
         Node n = new Node(Code, s, 0, 3);
         assert(n.name().equals("127"));
         assert(n.charCode() == 127);
@@ -119,29 +119,32 @@ class Node {
     void end(int e) { end = e; }
     void source(Source s) { source = s; }
 
-    // The name is the text, without decoration, i.e. x = e -> x, #x -> x,
-    // %x -> x, @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab, 'a..z' -> a..z
-    // `<=` -> <=
+    // The name is the text, without decoration, e.g. #x -> x, %x -> x,
+    // @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab, 'a..z' -> a..z
     String name() {
         int s = start, e = end;
         switch (op) {
         case Rule: return left().name();
         case Mark:
-            if (source.charAt(s + 1) != '`') return source.substring(s + 1, e);
-            else return source.substring(s + 2, e - 1);
+            if (source.charAt(s + 1) == '"') return source.substring(s+2, e-1);
+            if (source.charAt(s + 1) == '\'') return source.substring(s+2, e-1);
+            return source.substring(s + 1, e);
         case Tag:
-            if (source.charAt(s + 1) != '`') return source.substring(s + 1, e);
-            else return source.substring(s + 2, e - 1);
+            if (source.charAt(s + 1) == '"') return source.substring(s+2, e-1);
+            if (source.charAt(s + 1) == '\'') return source.substring(s+2, e-1);
+            return source.substring(s + 1, e);
         case Act:
             int n = s + 1;
             while (Character.isDigit(source.charAt(n))) n++;
-            if (source.charAt(s + 1) != '`') return source.substring(n, e);
-            else return source.substring(n + 1, e - 1);
+            if (source.charAt(s + 1) == '"') return source.substring(n+1, e-1);
+            if (source.charAt(s + 1) == '\'') return source.substring(n+1, e-1);
+            return source.substring(n, e);
         case String: case Set: case Split: case Char: case Range: case Temp:
             return source.substring(s + 1, e - 1);
         case Id:
-            if (source.charAt(start) != '`') return text();
-            else return source.substring(s + 1, e - 1);
+            if (source.charAt(start) == '"') return source.substring(s+1, e-1);
+            if (source.charAt(start) == '\'') return source.substring(s+1, e-1);
+            return text();
         default: return text();
         }
     }
@@ -152,8 +155,11 @@ class Node {
     String translate() {
         String name = name();
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < name.length(); i++) {
-            sb.append(charMap[name.charAt(i)]);
+        for (int i = 0; i < name.length(); ) {
+            int ch = name.codePointAt(i);
+            if (ch < 128) sb.append(charMap[ch]);
+            else sb.append("U" + ch);
+            i += Character.charCount(ch);
         }
         return sb.toString();
     }
@@ -290,12 +296,13 @@ class Node {
     }
 
     // For each visible ascii character, define how it is translated when it
-    // appears in a backquote identifier.
+    // appears in a literal name.
     private static void fillCharMap() {
         for (char ch = 'a'; ch <= 'z'; ch++) charMap[ch] = "" + ch;
         for (char ch = 'A'; ch <= 'Z'; ch++) charMap[ch] = "" + ch;
         for (char ch = '0'; ch <= '9'; ch++) charMap[ch] = "" + ch;
-        for (char ch = '!'; ch < '~'; ch++) switch (ch) {
+        for (char ch = ' '; ch < '~'; ch++) switch (ch) {
+            case ' ': charMap[ch] = "Sp"; break;
             case '!': charMap[ch] = "Em"; break;
             case '"': charMap[ch] = "Dq"; break;
             case '#': charMap[ch] = "Hs"; break;

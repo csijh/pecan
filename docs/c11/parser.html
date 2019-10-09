@@ -62,27 +62,27 @@ typical. It sets up an error marker, matches a token with tag <code
 class="pecan">identifier</code> and converts it into an output item. There is a
 group of rules for keywords:</p>
 
-<pre class="pecan">`alignof` = %alignof
-`auto` = #type %auto
+<pre class="pecan">"alignof" = %alignof
+"auto" = #type %auto
 ...
-`_Thread_local` = %_Thread_local
+"_Thread_local" = %_Thread_local
 </pre>
 
 <p>Explicit keyword spellings such as <code class="c11">"alignof"</code> from
-the original grammar are translated into literal identifiers such as <code
-class="pecan">`alignof`</code> in the Pecan grammar. Keywords which have to do
+the original grammar are used as literal identifiers such as <code
+class="pecan">"alignof"</code> in the Pecan grammar. Keywords which have to do
 with types are marked with the <code class="pecan">#type</code> marker. Also,
 keywords which continue a construct rather than start a new one are given error
 markers. There is a group of definitions for punctuators:</p>
 
-<pre class="pecan">`%:%:` = #op %`%:%:`
-`<<=` = #op %`<<=`
+<pre class="pecan">"%:%:" = #op %"%:%:"
+"<<=" = #op %"<<="
 ...
-`#` = %`#`
+"#" = %"#"
 </pre>
 
 <p>Again, explicit spellings such as <code class=c11>"%:%:"</code> are
-translated using literal names such as <code class="pecan">`%:%:`</code>, and
+translated using literal names such as <code class="pecan">"%:%:"</code>, and
 various error markers are included.</p>
 
 <h2>Expressions</h2>
@@ -126,7 +126,7 @@ rule for primary expressions is:</p>
     identifier /
     constant /
     string-literal /
-    `(` expression `)` /
+    "(" expression ")" /
     generic-selection
 </pre>
 
@@ -137,20 +137,20 @@ different type of token:</p>
     identifier /
     constant /
     string-literal /
-    `(`expression `)` /
+    "("expression ")" /
     generic-selection
 </pre>
 
 <p>Generic selections also cause no translation problems:</p>
 
 <pre class="pecan">generic-selection =
-    `_Generic` `(` (assignment-expression `,` generic-assoc-list `)` @2generic)
+    "_Generic" "(" (assignment-expression "," generic-assoc-list ")" @2generic)
 
 generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
-    type-name `:` assignment-expression @2assoc /
-    `default` @nil `:` assignment-expression @2assoc
+    type-name ":" assignment-expression @2assoc /
+    "default" @nil ":" assignment-expression @2assoc
 </pre>
 
 <p>Actions can be thought of as creating parse tree node, where the type of the
@@ -186,21 +186,21 @@ begin with a bracketed type name.</p>
 <p>Rather than stray too far from the structure of the original rules, a try
 expression is used to check for the open curly bracket:</p>
 
-<pre class="pecan">[`(` type-name `)` `{`]
+<pre class="pecan">["(" type-name ")" "{"]
 </pre>
 
 <p>Now the left recursion can be removed from the postfix expression rule, and
 the last two alternatives can be merged and put at the beginning:</p>
 
 <pre class="pecan">postfix-expression =
-    [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
+    ["(" type-name ")" "{"] initializer-list ","? "}" @2compound /
     primary-expression (
-        `[` expression `]` @2index /
-        `(` (argument-expression-list / @nil) `)` @2apply /
-        `.` identifier @2field /
-        `->` identifier @2arrow /
-        `++` @1postInc /
-        `--` @1postDec
+        "[" expression "]" @2index /
+        "(" (argument-expression-list / @nil) ")" @2apply /
+        "." identifier @2field /
+        "->" identifier @2arrow /
+        "++" @1postInc /
+        "--" @1postDec
     )*
 </pre>
 
@@ -225,12 +225,12 @@ this, the two alternatives can be reversed and a try expression applied:</p>
 
 <pre class="pecan">unary-expression  =
     postfix-expression /
-    `++` unary-expression @1preInc /
-    `--` unary-expression @1preDec /
+    "++" unary-expression @1preInc /
+    "--" unary-expression @1preDec /
     unary-operator cast-expression @2preOp /
-    [`sizeof` `(` type-name `)`] @1sizeofType /
-    `sizeof` unary-expression @1sizeofVar /
-    `alignof` `(` type-name `)` @1align
+    ["sizeof" "(" type-name ")"] @1sizeofType /
+    "sizeof" unary-expression @1sizeofVar /
+    "alignof" "(" type-name ")" @1align
 </pre>
 
 <p>The rule for a unary operator is easy to translate. The next layer up is cast
@@ -247,7 +247,7 @@ alternatives can be swapped, and a lookahead used to check for a type-name but
 no curly bracket:</p>
 
 <pre class="pecan">cast-expression =
-    [`(` type-name `)` `{`!] cast-expression @2cast /
+    ["(" type-name ")" "{"!] cast-expression @2cast /
     unary-expression
 </pre>
 
@@ -265,9 +265,9 @@ expressions, defined by the original rule:</p>
 
 <pre class="pecan">multiplicative-expression =
     cast-expression (
-        `*` cast-expression @2multiply /
-        `/` cast-expression @2divide /
-        `%` cast-expression @2remainder
+        "*" cast-expression @2multiply /
+        "/" cast-expression @2divide /
+        "%" cast-expression @2remainder
     )*
 </pre>
 
@@ -288,7 +288,7 @@ way.</p>
 prefixes and making the suffix optional:</p>
 
 <pre class="pecan">conditional-expression =
-    logical-OR-expression (`?` expression `:` conditional-expression @3ifExp)?
+    logical-OR-expression ("?" expression ":" conditional-expression @3ifExp)?
 </pre>
 
 <p>The original rule for assignment expressions is:</p>
@@ -326,7 +326,7 @@ expression hierarchy is the expression rule:</p>
 <p>This poses no problems, beyond the usual removal of left recursion:</p>
 
 <pre class="pecan">expression =
-    assignment-expression (`,` assignment-expression @2comma)*
+    assignment-expression ("," assignment-expression @2comma)*
 </pre>
 
 <p>The expression section of the C11 grammar has one more rule in it. It is
@@ -354,7 +354,7 @@ are used to define and test C declarations:</p>
 <p>This can be translated directly as:</p>
 
 <pre class="pecan">declaration =
-    declaration-specifiers (init-declarator-list @2declaration)? `;` /
+    declaration-specifiers (init-declarator-list @2declaration)? ";" /
     static_assert-declaration
 </pre>
 
@@ -393,7 +393,7 @@ class="pecan">type-specifier</code> are simple. The original rules for a struct
 or union specifier are:</p>
 
 <pre class="c11">struct-or-union-specifier =
-    struct-or-union identifier? `{` struct-declaration-list `}` |
+    struct-or-union identifier? "{" struct-declaration-list "}" |
     struct-or-union identifier
 
 struct-or-union = "struct" | "union"
@@ -403,23 +403,23 @@ struct-or-union = "struct" | "union"
 the common left factors gives:</p>
 
 <pre class="c11">struct-or-union-specifier = struct-or-union (
-    identifier (`{` struct-declaration-list `}`)? /
-    `{` struct-declaration-list `}`
+    identifier ("{" struct-declaration-list "}")? /
+    "{" struct-declaration-list "}"
 )
 
-struct-or-union = `struct` / `union`
+struct-or-union = "struct" / "union"
 </pre>
 
 <p>However, to add actions, it seems preferable to organize the rules
 differently, recognizing the main keywords first:</p>
 
 <pre class="pecan">struct-or-union-specifier =
-    `struct` struct-or-union-body @2struct /
-    `union` struct-or-union-body @2union
+    "struct" struct-or-union-body @2struct /
+    "union" struct-or-union-body @2union
 
 struct-or-union-body =
-    identifier (`{` struct-declaration-list `}` / @nil) /
-    @nil `{` struct-declaration-list `}`
+    identifier ("{" struct-declaration-list "}" / @nil) /
+    @nil "{" struct-declaration-list "}"
 </pre>
 
 <p>The rules for <code class="pecan">struct-declaration-list</code>, <code
@@ -431,9 +431,9 @@ class="pecan">struct-declarator</code> are easy to handle.</p>
 <p>The original grammar rules for enumeration specifiers are:</p>
 
 <pre class="c11">enum-specifier =
-    `enum` identifier? "{" enumerator-list "}" |
-    `enum` identifier? "{" enumerator-list "," "}" |
-    `enum` identifier
+    "enum" identifier? "{" enumerator-list "}" |
+    "enum" identifier? "{" enumerator-list "," "}" |
+    "enum" identifier
 
 enumerator-list = enumerator | enumerator-list "," enumerator
 </pre>
@@ -441,9 +441,9 @@ enumerator-list = enumerator | enumerator-list "," enumerator
 <p>Perhaps the most obvious way to translate the first definition, expanding,
 rearranging and combining left factors as before, is:</p>
 
-<pre class="pecan">enum-specifier = `enum` (
-    identifier (`{` enumerator-list `,`? `}` / @nil) @2enum /
-    @nil `{` enumerator-list `,`? `}` @2enum
+<pre class="pecan">enum-specifier = "enum" (
+    identifier ("{" enumerator-list ","? "}" / @nil) @2enum /
+    @nil "{" enumerator-list ","? "}" @2enum
 )
 </pre>
 
@@ -451,7 +451,7 @@ rearranging and combining left factors as before, is:</p>
 curly bracket causes a problem. It means that care is needed to prevent it from
 being matched in the second rule:</p>
 
-<pre class="pecan">enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
+<pre class="pecan">enumerator-list = enumerator (("," "}")! "," enumerator @2pair)*
 </pre>
 
 <p>The <code class="pecan">enumerator</code>, <code
@@ -464,13 +464,13 @@ class="pecan">declarator</code> rules are straightforward. The original rule for
 
 <pre class="c11">direct-declarator:
     identifier |
-    `(` declarator `)` |
-    direct-declarator `[` type-qualifier-list? assignment-expression? `]` |
-    direct-declarator `[` `static` type-qualifier-list? assignment-expression `]` |
-    direct-declarator `[` type-qualifier-list `static` assignment-expression `]` |
-    direct-declarator `[` type-qualifier-list? `*` `]` |
-    direct-declarator `(` parameter-type-list `)` |
-    direct-declarator `(` identifier-list? `)` |
+    "(" declarator ")" |
+    direct-declarator "[" type-qualifier-list? assignment-expression? "]" |
+    direct-declarator "[" "static" type-qualifier-list? assignment-expression "]" |
+    direct-declarator "[" type-qualifier-list "static" assignment-expression "]" |
+    direct-declarator "[" type-qualifier-list? "*" "]" |
+    direct-declarator "(" parameter-type-list ")" |
+    direct-declarator "(" identifier-list? ")" |
 </pre>
 
 <p>Removing the left recursion, combining the contents of each kind of bracket,
@@ -480,24 +480,24 @@ lookahead to check for the first identifier, inventing extra rules for clarity,
 and tidying up, yields:</p>
 
 <pre class="pecan">direct-declarator =
-    (identifier / `(` declarator `)`) dd-bracket*
+    (identifier / "(" declarator ")") dd-bracket*
 
 dd-bracket =
-    `(` (dd-parameters / @nil) `)` @2function /
-    `[` (dd-array-size / @nil) `]` @2array
+    "(" (dd-parameters / @nil) ")" @2function /
+    "[" (dd-array-size / @nil) "]" @2array
 
 dd-parameters =
     identifier& identifier-list / parameter-type-list
 
 dd-array-size =
-    `*` @star /
-    `static` type-qualifiers assignment-expression @2pair @1staticSize /
+    "*" @star /
+    "static" type-qualifiers assignment-expression @2pair @1staticSize /
     type-qualifier-list (dd-simple-array-size / @nil) @2typeSize /
     assignment-expression @1size
 
 dd-simple-array-size =
-    `*` @star /
-    `static` assignment-expression @1staticSize1 /
+    "*" @star /
+    "static" assignment-expression @1staticSize1 /
     assignment-expression @1size
 
 type-qualifiers = type-qualifier-list / @nil
@@ -527,8 +527,8 @@ transformation to find their common prefixes doesn't work here, because
 recursion intervenes before the issue is resolved. So, it is better to use
 lookahead. However, it is worth finding a 'cheap' lookahead. The main difference
 between the alternatives is that <code class="c11">declarator</code> includes an
-identifier. Checking the possibilities, only <code class="c11">`*`</code> or
-<code class="c11">type-qualifier</code> or <code class="c11">`(`</code> tokens
+identifier. Checking the possibilities, only <code class="c11">"*"</code> or
+<code class="c11">type-qualifier</code> or <code class="c11">"("</code> tokens
 can occur before the identifier. On the other hand, in an <code
 class="c11">abstract-declarator</code>, a close bracket must appear before the
 end. This leads to:</p>
@@ -539,7 +539,7 @@ end. This leads to:</p>
 )
 
 has-identifier =
-    ((`*` / type-qualifier / `(`)* `identifier`) &amp;
+    (("*" / type-qualifier / "(")* "identifier") &amp;
 </pre>
 
 <p>The <code class="pecan">identifier-list</code>, <code
@@ -548,12 +548,12 @@ class="pecan">abstract-declarator</code> rules are simple. The original rule for
 <code class="c11">direct-abstract-declarator</code> is:</p>
 
 <pre class="c11">direct-abstract-declarator =
-    `(` abstract-declarator `)` |
-    direct-abstract-declarator? `[` type-qualifier-list? assignment-expression? `]` |
-    direct-abstract-declarator? `[` `static` type-qualifier-list? assignment-expression `]` |
-    direct-abstract-declarator? `[` type-qualifier-list `static` assignment-expression `]` |
-    direct-abstract-declarator? `[` `*` `]` |
-    direct-abstract-declarator? `(` parameter-type-list? `)`
+    "(" abstract-declarator ")" |
+    direct-abstract-declarator? "[" type-qualifier-list? assignment-expression? "]" |
+    direct-abstract-declarator? "[" "static" type-qualifier-list? assignment-expression "]" |
+    direct-abstract-declarator? "[" type-qualifier-list "static" assignment-expression "]" |
+    direct-abstract-declarator? "[" "*" "]" |
+    direct-abstract-declarator? "(" parameter-type-list? ")"
 </pre>
 
 <p>This defines a sequence of clauses which have round or square brackets. There
@@ -563,10 +563,10 @@ whereas a parameter type list begins with a keyword. That means the left
 recursion can be removed from the rule, with a cheap lookahead:</p>
 
 <pre class="pecan">direct-abstract-declarator =
-    has-declarator `(` abstract-declarator `)` (dad-bracket @2dad)* /
+    has-declarator "(" abstract-declarator ")" (dad-bracket @2dad)* /
     dad-bracket (dad-bracket @2dad)*
 
-has-declarator = (`(` (`*` / `(` / `[`)) &amp;
+has-declarator = ("(" ("*" / "(" / "[")) &amp;
 </pre>
 
 <p>The <code class="pecan">dad-bracket</code> rule can handle the overlap of the
@@ -574,21 +574,21 @@ square-bracket clauses simply by lifting out their contents into a separate
 rule:</p>
 
 <pre class="pecan">dad-bracket =
-    `(` parameter-type-list / @nil `)` @1parameters /
-    `[` dad-array-size / @nil `]` @1arraySize
+    "(" parameter-type-list / @nil ")" @1parameters /
+    "[" dad-array-size / @nil "]" @1arraySize
 </pre>
 
 <p>Then <code class="pecan">dad-array-size</code> and <code
 class="pecan">dad-simple-array-size</code> are easy:</p>
 
 <pre class="pecan">dad-array-size =
-    `*` @star /
-    `static` type-qualifiers assignment-expression @2pair @1staticSize /
+    "*" @star /
+    "static" type-qualifiers assignment-expression @2pair @1staticSize /
     type-qualifier-list (dad-simple-array-size / @nil) @2pair /
     assignment-expression
 
 dad-simple-array-size =
-    assignment-expression / `static` assignment-expression @1staticSize
+    assignment-expression / "static" assignment-expression @1staticSize
 </pre>
 
 <p>There is an original rule:</p>
@@ -649,15 +649,15 @@ two-token lookahead:</p>
     jump-statement
 
 labeled-statement =
-    [identifier `:`] statement @2label /
-    `case` constant-expression `:` statement @2case /
-    `default` `:` statement @1default
+    [identifier ":"] statement @2label /
+    "case" constant-expression ":" statement @2case /
+    "default" ":" statement @1default
 </pre>
 
 <p>The original rule for a compound statement is easily transformed, adding
 actions to produce a list of statements:</p>
 
-<pre class="pecan">compound-statement = `{` @nil (block-item @2list)* `}` @1block
+<pre class="pecan">compound-statement = "{" @nil (block-item @2list)* "}" @1block
 </pre>
 
 <p>The original rule for a block item is:</p>
@@ -679,7 +679,7 @@ by a suitable rule in the <code>c-tokens.txt</code> file.</p>
 
 <p>The rule for expression statements is unproblematic:</p>
 
-<pre class="pecan">expression-statement = (expression / @nil) `;` @1statement
+<pre class="pecan">expression-statement = (expression / @nil) ";" @1statement
 </pre>
 
 <p>With selection statements, the original rule is:</p>
@@ -700,8 +700,8 @@ written down. By the very nature of the 'greedy' <code class="pecan">/</code> op
 <code class="pecan">if</code> statement.</p>
 
 <pre class="pecan">selection-statement =
-    `if` `(` expression `)` statement (`else` statement / @nil) @3if /
-    `switch` `(` expression `)` statement @2switch
+    "if" "(" expression ")" statement ("else" statement / @nil) @3if /
+    "switch" "(" expression ")" statement @2switch
 </pre>
 
 <p>The rule for iteration statements starts out as:</p>
@@ -721,22 +721,22 @@ and expressions are easily distinguished by their first tokens, so the rule can
 be transformed to:</p>
 
 <pre class="pecan">iteration-statement =
-    `while` `(` expression `)` statement @2while /
-    `do` statement `while` `(` expression `)` `;` @2do /
-    `for` `(` for-start exp-opt `;` exp-opt `)` statement @4for
+    "while" "(" expression ")" statement @2while /
+    "do" statement "while" "(" expression ")" ";" @2do /
+    "for" "(" for-start exp-opt ";" exp-opt ")" statement @4for
 
 exp-opt = expression / @nil
 
-for-start = declaration / (expression / @nil) `;`
+for-start = declaration / (expression / @nil) ";"
 </pre>
 
 <p>The rule for jump statements can be transformed directly into:</p>
 
 <pre class="pecan">jump-statement =
-    `goto` identifier `;` @1goto /
-    `continue` `;` @continue /
-    `break` `;` @break /
-    `return` (expression / @nil) `;` @1return
+    "goto" identifier ";" @1goto /
+    "continue" ";" @continue /
+    "break" ";" @break /
+    "return" (expression / @nil) ";" @1return
 </pre>
 
 <h2>External definitions</h2>
@@ -874,16 +874,16 @@ gives:</p>
 <pre class="pecan">external-declaration =
     static_assert-declaration /
     declaration-specifiers (
-        `;` @nil @2declaration /
+        ";" @nil @2declaration /
         declarator (
-            init? more* `;` @2declaration /
+            init? more* ";" @2declaration /
             declaration-list-opt compound-statement @4definition
         )
     )
 
-init = `=` initializer @2eq
+init = "=" initializer @2eq
 
-more = `,` init-declarator @2comma
+more = "," init-declarator @2comma
 
 declaration-list-opt = @nil (declaration @2list)*
 </pre>
