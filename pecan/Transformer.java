@@ -16,7 +16,7 @@ class Transformer {
 
     // Replace [x] by (x& x) if x contains actions or markers. Assume x is small
     // enough to be repeated twice, rather than making a separate rule for it.
-    // The node for x is shared, so the nodes no longer for a true tree. The
+    // The node for x is shared, so the nodes no longer form a true tree. The
     // source description of the changed nodes is not accurate. The source
     // description of the rule containing the nodes isn't changed.
     void expandTry(Node node) {
@@ -52,11 +52,10 @@ class Transformer {
     // lift the loops within the node out as separate preceding rules. Lift
     // innermost loops out first.
     private void liftNode(Set<String> names, Node list, Node node) {
-        System.out.println("LN " + node.op());
         if (node.left() != null) liftNode(names, list, node.left());
         if (node.right() != null) liftNode(names, list, node.right());
         if (node.op() == Any) liftAny(names, list, node);
-//        if (node.op() == Some) liftSome(names, list, node);
+        if (node.op() == Some) liftSome(names, list, node);
     }
 
     // Lift x = ...p*... to x1 = (p x1)?. Nodes are shared, so no longer form a
@@ -74,6 +73,37 @@ class Transformer {
         Node and = new Node(And, p, id, src, andS, andE);
         Node opt = new Node(Opt, and, src, andS-1, text.length());
         Node newRule = new Node(Rule, id, opt, src, 0, text.length());
+        loop.op(Id);
+        loop.source(src);
+        loop.start(0);
+        loop.end(x1.length());
+        loop.right(null);
+        loop.left(null);
+        loop.ref(newRule);
+        Node oldList = new Node(
+            List, list.left(), list.right(),
+            list.source(), list.start(), list.end()
+        );
+        list.left(newRule);
+        list.right(oldList);
+    }
+
+    // Lift x = ...p+... to x1 = p x1?. Nodes are shared, so no longer form a
+    // tree. The source description of the x rule is unchanged.
+    private void liftSome(Set<String> names, Node list, Node loop) {
+        String x = list.left().left().name();
+        String x1 = findName(names, x);
+        Node p = loop.left();
+        int s = p.start(), e = p.end();
+        String pText = p.source().substring(s,e);
+        String text = x1 + " = (" + pText + ") " + x1 + "?";
+        Source src = new Source(text);
+        Node id = new Node(Id, src, 0, x1.length());
+        int optS = text.length() - 1 - x1.length(), optE = text.length();
+        Node opt = new Node(Opt, id, src, optS, optE);
+        int andS = x1.length() + 3, andE = text.length();
+        Node and = new Node(And, p, opt, src, andS, andE);
+        Node newRule = new Node(Rule, id, and, src, 0, text.length());
         loop.op(Id);
         loop.source(src);
         loop.start(0);

@@ -7,9 +7,9 @@ import java.nio.file.*;
 import java.nio.charset.*;
 
 /* A source is a string, with a file path and line number, so that error
-messages can be generated based on ranges of text. There is a flag to say that
-the string represents a default grammar during a series of tests. There is also
-a flag to specify tracing during testing. */
+messages can be generated based on ranges of text. There are flags to say
+whether the string represents a default grammar, and whether tracing is
+required, during testing. */
 
 class Source {
     private String text;
@@ -18,7 +18,6 @@ class Source {
     private boolean grammar, trace;
     private int[] rows;
 
-    // The default container is null.
     Source(String t, String file, int n) {
         if (t.length() > 0 && ! t.endsWith("\n")) t += "\n";
         text = t;

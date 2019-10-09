@@ -15,6 +15,58 @@ is stored in the node, and the output is discarded. The second time, the margin
 is set small, and the lengths in the nodes are used to decide how to print each
 node. */
 
+// tab = 4
+// indent = 0
+// margin = 80
+// comment = // %s
+// function-start = bool %s() {
+// function-body = return %s;
+// function-end = }
+// call = ()
+// true = true
+// false = false
+// or = ||
+// and = &&
+// char = '%s'
+// string = "%s"
+// ALT = ALT
+// DO = DO
+// OR = OR
+// OPT = OPT
+// TRY = TRY
+// HAS = HAS
+// NOT = NOT
+// TAG = TAG
+// END = END
+// CHAR = CHAR
+// CODE = CODE
+// STRING = STRING
+// SET = SET
+// RANGE = RANGE
+// CODES = CODES
+// SPLIT = SPLIT
+// CAT = CAT
+// MARK = MARK
+// DROP = DROP
+// ACT = ACT
+// ACT1 = ACT1
+// ACT2 = ACT2
+// ACT3 = ACT3
+
+// -- C ->
+// // C
+//
+// X = P ->
+// bool X() {
+//     return P;
+// }
+//
+// X -> X()
+// P / Q -> P || Q
+// P / Q -> ALT(DO() && P || OR() && Q())
+//
+// P Q -> P && Q
+
 public class Compiler implements Testable {
     private boolean switchTest;
     private StringBuilder output = new StringBuilder();

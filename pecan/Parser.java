@@ -25,7 +25,7 @@ symbols, brackets, and bracketed subexpressions, and then removes them at the
 end. This allows the text extent of a node to be found uniformly by combining
 the text extents of its children. For example, given an expression (x)y, the
 combination of two nodes with extents "x" and "y" is "(x)y" and not "x)y". An
-alternative, to increase the  extent "x" to "(x)" wouldn't work when x is an
+alternative, to increase the extent "x" to "(x)" wouldn't work when x is an
 identifier, because then the node's text would not be the name of the id. */
 
 class Parser implements Testable {

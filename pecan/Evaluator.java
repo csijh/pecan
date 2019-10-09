@@ -95,7 +95,7 @@ public class Evaluator implements Testable {
 
     // Parse according to the given node.
     private void parse(Node node) {
-        if (tracing && ! skipTrace)
+        if (tracing && ! skipTrace) System.out.println(node.trace());
         skipTrace = false;
         switch(node.op()) {
             case Error: case Temp: case List: case Empty: break;
