@@ -127,3 +127,84 @@ bool x1() { return CHAR('b') && (x1() || true); }
 
 // x = 'a' 'b'+
 bool x() { return CHAR('a') && x1(); }
+==========
+sum = gap expression end
+expression = term (plus term @2add / minus term @2subtract)*
+term = atom (times atom @2multiply / over atom @2divide)*
+atom = number / open expression close
+number = digit+ @number gap
+plus = #operator '+' gap
+minus = #operator '-' gap
+times = #operator '*' gap
+over = #operator '/' gap
+open = #bracket '(' gap
+close = #bracket ')' gap
+digit = #digit '0..9'
+gap = (' ')* @
+end = #newline 13? 10 @
+..........
+// sum = gap expression end
+bool sum() { return gap() && expression() && end(); }
+
+// expression1 = (plus term @2add / minus term @2subtract expression1)?
+bool expression1() {
+    return ((ALT(
+        DO() && plus() && term() && ACT2(add) ||
+        OR() && minus() && term() && ACT2(subtract)
+    )) && expression1() || true);
+}
+
+// expression = term (plus term @2add / minus term @2subtract)*
+bool expression() { return term() && expression1(); }
+
+// term1 = (times atom @2multiply / over atom @2divide term1)?
+bool term1() {
+    return ((ALT(
+        DO() && times() && atom() && ACT2(multiply) ||
+        OR() && over() && atom() && ACT2(divide)
+    )) && term1() || true);
+}
+
+// term = atom (times atom @2multiply / over atom @2divide)*
+bool term() { return atom() && term1(); }
+
+// atom = number / open expression close
+bool atom() { return number() || open() && expression() && close(); }
+
+// number1 = (digit) number1?
+bool number1() { return digit() && (number1() || true); }
+
+// number = digit+ @number gap
+bool number() { return number1() && ACT(number) && gap(); }
+
+// plus = #operator '+' gap
+bool plus() { return MARK(operator) && CHAR('+') && gap(); }
+
+// minus = #operator '-' gap
+bool minus() { return MARK(operator) && CHAR('-') && gap(); }
+
+// times = #operator '*' gap
+bool times() { return MARK(operator) && CHAR('*') && gap(); }
+
+// over = #operator '/' gap
+bool over() { return MARK(operator) && CHAR('/') && gap(); }
+
+// open = #bracket '(' gap
+bool open() { return MARK(bracket) && CHAR('(') && gap(); }
+
+// close = #bracket ')' gap
+bool close() { return MARK(bracket) && CHAR(')') && gap(); }
+
+// digit = #digit '0..9'
+bool digit() { return MARK(digit) && RANGE('0','9'"); }
+
+// gap1 = (' ' gap1)?
+bool gap1() { return (CHAR(' ') && gap1() || true); }
+
+// gap = (' ')* @
+bool gap() { return gap1() && DROP(0); }
+
+// end = #newline 13? 10 @
+bool end() {
+    return MARK(newline) && (CODE(13) || true) && CODE(10) && DROP(0);
+}

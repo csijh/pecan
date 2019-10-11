@@ -473,19 +473,19 @@ class Parser implements Testable {
         return in == saves[save-1];
     }
 
-    // Check the result of a choice and pop the saved position.
+    // Pop a saved position, and return the result of a choice.
     private boolean ALT(boolean b) {
         --save;
         return b;
     }
 
-    // Pop saved position, make the result success if fail with no progress
+    // After parsing x in x?, pop saved position, and adjust the result.
     private boolean OPT(boolean b) {
         --save;
         return b || in == saves[save];
     }
 
-    // Backtrack to saved position.
+    // Backtrack to saved position, and return result of lookahead.
     private boolean HAS(boolean b) {
         in = saves[--save];
         return b;

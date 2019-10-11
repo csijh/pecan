@@ -40,7 +40,7 @@ typedef struct result result;
 // Parse character input according to the provided bytecode. Use function f to
 // carry out actions, passing it x as an argument. Fill in the given result
 // structure. There is no automatic recovery. Since all offsets within bytecode
-// sequnces are relative, the first argument can be a pointer to an alternative
+// sequences are relative, the first argument can be a pointer to an alternative
 // rule in the grammar, other than the first.
 void parseText(byte code[], char in[], doAct *f, void *x, result *r);
 
