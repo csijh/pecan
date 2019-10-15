@@ -47,11 +47,10 @@
 <!--<li><a href="#token">Token checking</a></li>-->
 <li><a href="#output">Output checking</a></li>
 </ul>
-<li><a href="#java">Generating code</a>
+<li><a href="#compile">Compilation</a>
 <ul>
-<li><a href="#compilation">Compilation</a></li>
+<li><a href="#functions">Recursive functions</a></li>
 <li><a href="#code">Bytecode</a></li>
-<li><a href="#interpreters">Interpreters</a></li>
 </ul>
 </li>
 </li>
@@ -115,14 +114,19 @@ an alias or equivalent, so that the program can be run just by typing:</p>
 <pre>pecan [-t | -trace] [line] testfile
 </pre>
 
-<p>To generate a bytecode version of a grammar, type a command of the form:</p>
+<p>To generate a bytecode version of a grammar, type a command with one of the
+forms:</p>
 
-<pre>pecan grammar -o output
+<pre>pecan grammar -c program
+pecan grammar -b program
 </pre>
 
-<p>The output file is a template written in any target implementation language.
-The command inserts a bytecode array into it to form a parser or application
-program.</p>
+<p>The option <code>-c program</code> indicates that the grammar is to be
+compiled to a set of recursive descent functions. The option <code>-b
+program</code> indicates that the grammar is to be compiled into a bytecode
+array. Either way, the file is a template program in the desired target
+programming language, into which the result of the compilation is embedded, to
+form a parser or application program.</p>
 
 <h2 id="intro">Background</h2>
 
@@ -302,7 +306,7 @@ than sign followed by a greater than sign, matches the end of the input.</p>
 
 <p>An identifier introduced by a rule starts with a letter and continues with
 letters, digits, hyphens or underscores. The text of a grammar is assumed to be
-encoded using UTF-8, so Unicode letters and digit characters can be
+encoded using UTF-8, so Unicode letter and digit characters can be
 included.</p>
 
 <p>There is also a literal form of identifier, consisting of characters in
@@ -448,13 +452,13 @@ expression fails.</p>
 
 <h3 id="lookahead">Lookahead</h3>
 
-<p>There are three lookahead operators, the try operator <code>[...]</code>, the
-has operator <code>&amp;</code> and the not operator <code>!</code>.</p>
+<p>There are three lookahead operators, the prefix operator <code>[...]</code>,
+the has operator <code>&amp;</code> and the not operator <code>!</code>.</p>
 
-<p>The try operator is specified using square brackets. In an expression
+<p>The prefix operator is specified using square brackets. In an expression
 <code>[x]</code>, the subexpression <code>x</code> is parsed speculatively. If
 it succeeds, parsing continues as normal. If it fails, the parser backtracks to
-the point just before <code>x</code>. The try operator is usually used to
+the point just before <code>x</code>. The prefix operator is usually used to
 indicate the point at which the parser should commit to an alternative. For
 example:</p>
 
@@ -500,7 +504,7 @@ quote does not appear next in the input.</p>
 <p>Lookahead expressions are regarded only as ways to decide which alternative
 to take, so actions and error reporting are suspended. During has and not
 operations <code>x&amp;</code> or <code>x!</code>, actions and error markers are
-ignored. A try operation <code>[x]</code> is equivalent to <code>x&amp;
+ignored. A prefix operation <code>[x]</code> is equivalent to <code>x&amp;
 x</code>, so actions and error reporting are only performed if <code>x</code>
 succeeds.</p>
 
@@ -898,7 +902,7 @@ matches up with the scanner.</p>
 
 <p>To improve the readability of a token-based parser further, e.g. so that it
 corresponds closely to a published grammar, literal names can also be used for
-for identifiers. For example:</p>
+identifiers. For example:</p>
 
 <pre>comparison = expression ">=" expression
 ...
@@ -910,10 +914,10 @@ is equivalent to <code>int</code>, making the quotes unnecessary, but using
 <code>"int"</code> may still be desirable to emphasize that the identifier
 stands for a keyword token with a fixed spelling.</p>
 
-<p>When a grammar is compiled to produce a parser, a prefix can be specified for
-each different type of name, to prevent name clashes. The same prefix should be
-specified for actions in the scanner and for tags in the parser, so that the
-generated tag names correspond.</p>
+<p>When a grammar is compiled to produce a parser, custom adjustments can be
+specified for each different type of name, to prevent name clashes. The same
+adjustment should be specified for actions in the scanner and for tags in the
+parser, so that the generated tag names correspond.</p>
 
 <h2 id="testing">Testing</h2>
 
@@ -1054,8 +1058,10 @@ no rule name clashes with a category name.</p>
 
 <p>A grammar is checked to see if it represents a text parser or a token parser.
 A text parser must contain no tags. A token parser must not contain text
-matchers, i.e. strings, splitters, sets, ranges or numbers, with the
-exception of <code>""</code> or <code>''</code> or <code>&lt;></code>.</p>
+matchers, i.e. strings, splitters, sets, ranges or numbers, with the exception
+of <code>""</code> or <code>''</code> or <code>&lt;></code>. However, a token
+parser may reuse the string or set notations to form literal identifiers, but
+there must be a rule defining each such identifier.</p>
 
 <p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
 there is a check that there is a single code point either side of the
@@ -1322,71 +1328,288 @@ on the stack, even though the net effect of <code>x</code> is zero. Such a
 situation is reported as an error.</p>
 
 <p>Any situation where the net effect or the needed number can't be calculated
-as a fixed integer is reported. For a complete grammar which is to be compiled
-into bytecode, the first rule is checked to make sure its net effect is one, and
-its needed number is zero, so that stack underflow is impossible.</p>
+as a fixed integer is reported. For a complete grammar which is about to be
+compiled, the first rule is checked to make sure its net effect is one, and its
+needed number is zero, so that stack underflow is impossible.</p>
 
 <p>These checks are conservative, i.e. there could be pathological grammars
 which always work correctly in practice, but which don't pass the checks.</p>
 
-<h2 id="java">Generating code</h2>
-<!--
-TODO: Have multiple entry points. (Don't generate rules?)
-TODO: Insist on all names distinct. (Or what? Prefix?)
+<h2 id="compile">Compilation</h2>
 
-Have opcodes, actions, errors, tags, rules, bytes.
--->
+<p>A grammar can be compiled either to a set of recursive functions, or to a
+bytecode array, in almost any desired target programming language. Compilation
+to recursive functions is usually preferred, but compilation to bytecode has
+greater language independence, and can be used in more dynamic situations, e.g.
+where Pecan is used as a library and grammars need to be compiled without
+involving files.</p>
 
-<!--
-Instead of the generated code being given an array of tokens, calls are made to
-an external function which provides the next tag. This can be used to cope with
-non-context-free features of languages. For example, take the infamous situation
-with the C language where parsing depends on recognizing identifiers which have
-been defined as type names using <code>typedef</code>. A C scanner which is
-independent of parsing may emit tokens with an identifier tag, which may or may
-not turn out later to be type names. The external functions for a C parser
-would include symbol table construction, and could change the tags of tokens
-given to the parser, according to those symbol tables.</p>
--->
+<h3 id="functions">Recursive functions</h3>
 
+<p>Very few restrictions are placed on the target programming language when
+compiling to recursive functions. The main assumption is that the language has
+two binary and/or operators which are guaranteed to use short-circuit
+evaluation, i.e. they do not evaluate their right hand arguments
+unnecessarily. In many languages, the symbols <code>&amp;&amp;</code> and
+<code>||</code> are suitable. The <code>&amp;&amp;</code> operator does exactly
+what is required for a sequence <code>x y</code>, evaluating <code>x</code> and
+then, only if <code>x</code> succeeds, continuing with <code>y</code>. A choice
+<code>x / y</code> is complicated by the need to test whether <code>x</code> has
+progressed or not before deciding whether to try <code>y</code> instead. So, in
+general, <code>x / y</code> is compiled into something like:</p>
 
-<p>Code is generated as a bytecode with an interpreter. This is somewhat similar
-to the table-driven techniques used in bottom-up CFG-based parser generators.
-Advantages of using the bytecode approach are:</p>
+<pre>alt((go() &amp;&amp; x()) || (ok() &amp;&amp; y()))
+</pre>
+
+<p>The <code>go</code> function pushes the current input position on a stack
+before <code>x</code> is executed, the <code>ok</code> function checks for
+progress, and the <code>alt</code> function pops the saved position off the
+stack after the choice has been completed.</p>
+
+<p>The <code>go</code> function is also used in the compilation of other Pecan
+features. For example, an expression <code>x&amp;</code> is compiled to:</p>
+
+<pre>has(go() &amp;&amp; x())
+</pre>
+
+<p>The <code>has</code> function pops the position saved by <code>go</code> and
+backtracks to it, before returning the result of <code>x()</code>.</p>
+
+<p>This general approach, using a background stack for progress checking, allows
+every parsing expression to be compiled into a boolean expression, with only the
+<code>&amp;&amp;</code> and <code>||</code> operators being used to combine
+expressions.</p>
+
+<p>A grammar is compiled into recursive functions using a command of the
+form:</p>
+
+<pre>pecan grammar -c program
+</pre>
+
+<p>The option <code>-c program</code> specifies a template program file. The
+file must already exist, and can be written in any desired target programming
+language. It must contain a placeholder such as:</p>
+
+<pre>// &lt;pecan
+//     comment = "// %s"
+//     rule    = "bool %s(parser *p) {\n  return %e;\n}"
+//     call    = "%s(p)"
+// >
+...
+// &lt;/pecan>
+</pre>
+
+<p>The placeholder begins with an open tag <code>&lt;pecan></code> in a
+target-language comment (or series of comments), and ends with a close tag
+<code>&lt;/pecan></code>, also embedded in a comment. Lines in between the two
+tags, if any, are removed, and the result of compiling the grammar is
+inserted.</p>
+
+<p>The start tag <code>&lt;pecan></code> contains attributes which specify
+details of how to generate functions in the target language, plus any other
+desired conventions. The above example would be suitable for C as a target
+language.</p>
+
+<p>Each attribute must be on a separate line, and consists of one of the
+attribute names described below, followed by an equal sign followed by a string
+in double quotes. The whole attribute may be preceded or followed by comment
+characters. Each attribute string is a format string in the printf style
+specifying the text to be generated for a specific Pecan feature.</p>
+
+<p>In a format string, <code>\n</code> represents a newline, <code>\"</code>
+represents a double quote and <code>\\</code> represents a backslash. Spaces at
+the beginning of a line represent an indent to be applied to anything generated
+from that line. For example, the spaces before <code>return</code> above
+represent an indent applied to the entire body of the function generated by
+the <code>%e</code> specifier. The number of spaces in the first indent
+encountered is used as the amount for any further indenting which may be added
+during compilation.</p>
+
+<p>A format string contains specifiers indicated by the percent character.
+Unlike printf format strings, items to be printed are primarily matched up by
+type rather than by sequence. For example, in the format string for a rule, a
+specifier <code>%s</code> indicates that the name of the identifier is to be
+printed, and <code>%e</code> indicates that the right hand expression of the
+rule is to be printed, regardless of the order the specifiers appear in, or how
+many times they appear, or whether they appear at all. An exception to this is
+where two characters are available in the format for a range. In that case,
+sequencing is used, i.e. the first specifier encountered relates to the low end
+of the range, and the second to the upper end.</p>
+
+<p>A specifier refers to an expression, a string, or a character. An expression
+is always printed using <code>%e</code>. A string can be printed with
+<code>%s</code> to copy it verbatim, or <code>%t</code> to translate underscores
+or hyphens in non-literal names to <a
+href="https://en.wikipedia.org/wiki/Camel_case">camel case</a>, or
+<code>%f</code> to additionally capitalize the first letter. A character can be
+printed directly using <code>%c</code>, or its integer code can be printed using
+<code>%d</code> for decimal, <code>%o</code> for octal, or <code>%x</code> for
+hexadecimal. A fixed number of digits can be specified for numbers, e.g.
+<code>%4x</code>.</p>
+
+<p>The attributes that can be specified are:</p>
 
 <ul>
 
-<li>it supports any target programming language</li>
+<li><p><code><b>comment</b>:</code> the format for generating each line of a
+comment before each function generated. The format string might be <code
+style="white-space:nowrap">"// %s"</code> or <code
+style="white-space:nowrap">"/* %s */"</code> for example. The comment generated
+contains the Pecan rule that the function corresponds to. The default is to have
+no comments.</p></li>
 
-<li>it avoids the repetition in hand-written parsers</li>
+<li><p><code><b>rule</b>:</code> the format for a function generated from a
+rule <code>id = e</code>. The two items available as parameters are the name
+of the identifier as a string, and the right hand side as an expression. There
+is no default.</p></li>
 
-<li>it allows calls, which are very frequent, to be implemented in a simple
-and efficient way using a custom stack</li>
+<li><p><code><b>rule1</b>:</code> an alternative format for a rule, if it fits
+on one line. The default is to use the <code>rule</code> format
+exclusively.</p></li>
 
-<li>it makes various optimisations such as tail calls easier to implement</li>
+<li><p><code><b>and</b>, <b>or</b>, <b>true</b>, <b>false</b>:</code> the
+formats for the boolean operators and constants. The defaults are <code
+style="white-space:nowrap">" &amp;&amp; "</code>, <code
+style="white-space:nowrap">" || "</code>, <code>"true"</code> and
+<code>"false"</code>.</p></li>
+
+<li><p><code><b>call</b>:</code> the format for making a call to a parsing
+function. An example where an argument is to be passed to every function to
+provide the parsing state might be <code>"%s(p)"</code> whereas if the state is
+implicit, <code>"%s()"</code> might be suitable instead. The call format (along
+with the <code>rule</code> format) can be used to add a prefix or suffix to
+identifier names. For example, a call format <code>"p%f()"</code> would cause an
+occurrence of an identifier <code>term</code> to be compiled as
+<code>pTerm()</code>. There is no default for the call format.</p></li>
+
+<li><p><code><b>support</b>:</code> the format for generating defaults for calls
+to the support functions below. The default for the <code>support</code> format
+is to use the <code>call</code> format.</p></li>
+
+<li><p><code><b>go</b>, <b>ok</b>, <b>alt</b>, <b>opt</b>, <b>pre</b>,
+<b>has</b>, <b>not</b>, <b>tag</b>, <b>end</b>:</code> the formats for simple
+support functions. The <code>go</code>, <code>ok</code> and <code>alt</code>
+functions are for choices as explained above. The function <code>opt</code> is
+for <code>x?</code>, <code>pre</code> is for <code>[x]</code>, <code>has</code>
+is for <code>x&amp;</code>, <code>not</code> is for <code>x!</code>,
+<code>tag</code> is for <code>%x</code>, and <code>end</code> is for
+<code>&lt;></code>. Explicit definitions of these formats can be given to change
+the case or spelling of the function names generated, or to produce different
+inline code. For <code>go</code>, <code>ok</code>, <code>alt</code>, the format
+can be the empty string <code>""</code> to switch off the special treatment of
+choices. That would suit a functional language such as Haskell, for example,
+where custom operators can be defined with lazy evaluation, so the resulting
+code would be equivalent to using a parser combinator library. The default
+format for each of the functions is to specialize the support format by filling
+in the function name. For example, if the support format is <code>"%s(p)"</code>
+then the default go format is <code>"go(p)"</code>.</p></li>
+
+<li><p><code><b>text</b>, <b>set</b>, <b>split</b>:</code> the formats for the
+main text matchers. The defaults are obtained from the support format by adding
+an extra double-quoted string argument to the call. For example, if the support
+format is <code>"%s(p)"</code> then the default set format is
+<code>"set(p,\"%s\")"</code>. For example, a Pecan set <code>'+-*/'</code> would
+cause <code>set(p,"+-*/")</code> to be printed.</p></li>
+
+<li><p><code><b>range</b>:</code> the format for printing a range of the form
+<code>'a..z'</code> or <code>0..127</code>. The two characters can be printed
+using <code>%c</code>, or their codes can be printed using a numerical specifier
+such as <code>%d</code>. The default adds two character arguments in single
+quotes to the support format, e.g. <code>"range(p,'%c','%c')"</code>.</p></li>
+
+<li><p><code><b>cat</b>, <b>mark</b>:</code> the formats for printing a category
+such as <code>Nd</code> or an error marker such as <code>#id</code>. The name is
+available as a string. The default format strings add a string argument to the
+support format, e.g. <code>cat(p,%s)</code> and
+<code>mark(p,%s)</code>.</p></li>
+
+<li><p><code><b>drop</b>:</code> the format for printing a drop symbol such as
+<code>@</code> or <code>@2</code>. The default is to add a numerical argument
+representing the arity to the support format, e.g.
+<code>drop(p,%d)</code>.</p></li>
+
+<li><p><code><b>act</b>, <b>act0</b>, ...:</code> the formats for printing
+actions generally, and for specific overrides for given arities. The default for
+the act format depends on the call format, e.g. <code>"act%d(p,%s)"</code> where
+the numerical parameter is the arity and the string parameter is the name of the
+action, in this case acting as an enumerated constant. By default, there are no
+overrides.</p></li>
+
+<li><p><code><b>escape1</b>, <b>escape2</b>, <b>escape4</b>:</code> formats to
+change the way <code>%c</code> and <code>%s</code> work by printing escape
+sequences instead of UTF-8. The escape1 format is for control characters in the
+ASCII range, the escape2 format for characters beyond ASCII up to hex FFFF, and
+escape4 for the remainder of the Unicode character set. The defaults are
+<code>"\\%3o"</code>, <code>"\\u%4x"</code>, and <code>"\\U%8x"</code>. These
+work in C and several other languages. (In C, these escape sequences have a
+length limit. Using <code>"\\%2o"</code> or <code>"\\x%2x"</code> for example,
+would not be safe because digits could follow.)</p></li>
 
 </ul>
 
-<h3 id="compilation">Compilation</h3>
+<p>These format strings provide considerable flexibility. For example, the
+rule format for Java could be:</p>
 
-<p>A bytecode sequence is generated using a command of the form:</p>
-
-<pre>pecan grammar -o output
+<pre>// &lt;pecan
+//     comment = "// %s"
+//     rule    = "  boolean %s() {\n    return %e;\n  }"
+//     call    = "%s()"
+// >
 </pre>
 
-<p>The option <code>-o output</code> specifies an output file. The file must
-already exist, as a source file template, written in any desired programming
-language. It must contain a placeholder such as:</p>
+<p>This establishes an indent for all the methods generated, and passes no
+arguments to parsing functions because the state is implicitly made available by
+the surrounding object.</p>
+
+<p>The default act format treats action names as enumerated constants. Instead,
+the act format could be <code>"%s()"</code> so that each action has its own
+function with implicit arity. Alternatively, the act0 format could be
+<code>"push(%s(string()))"</code>, the act1 format
+<code>push1(%s(top(0)))</code>, the act2 format
+<code>push2(%s(top(1),top(0)))</code> so that the handling of the output stack
+is covered by the generated code and only pure external functions need to be
+provided. Here <code>top(n)</code> returns the n'th item from the top of the
+output stack and <code>push2</code>, for example, pops two items from the
+output stack before pushing its argument.</p>
+
+<h3 id="bytecode">Bytecode</h3>
+
+<p>Compilation of a grammar into bytecode is provided, along similar lines to
+compilation into recursive functions. An interpreted bytecode is somewhat
+similar to the table-driven techniques used in bottom-up CFG-based parser
+generators.</p>
+
+<p>This bytecode facility is provided mainly for demonstration purposes. The
+real advantage of a bytecode approach would be in a library setting. For
+example, one could imagine an editor or IDE which uses a variant of Pecan as a
+library. It could dynamically load a Pecan language description file, according
+to the language of the source file it is editing, convert the description to a
+bytecode, and interpret the bytecode to parse the source file. This would be
+preferable to writing out a parser program, compiling it, then dynamically
+loading it on the fly. The process of loading a language description and
+compiling it to bytecode could bypass much of the processing currently built
+into Pecan, assuming that the description was previously developed and tested
+offline.</p>
+
+<p>A grammar is compiled into bytecode using a command of the form:</p>
+
+<pre>pecan grammar -b program
+</pre>
+
+<p>The option <code>-b program</code> specifies a template program file
+containing an interpreter for the bytecode. The file must already exist, as a
+source file template, written in any desired target programming language. It
+must contain a placeholder such as:</p>
 
 <pre>// &lt;pecan>
     ...
 // &lt;/pecan>
 </pre>
 
-<p>The first line contain <code>&lt;pecan></code> in a target-language comment.
-Similarly, the last line must contain <code>&lt;/pecan></code>. Lines in
-between, if any, are removed, and the bytecode is inserted. Thus bytecode
-generation may be carried out repeatedly on the same source file.</p>
+<p>The placeholder begins with an open tag <code>&lt;pecan></code> in a
+target-language comment and ends with a close tag <code>&lt;/pecan></code>, also
+embedded in a comment. Lines in between, if any, are removed, and the result of
+compiling the grammar is inserted.</p>
 
 <p>The bytecode sequence is printed as text, as a comma-separated list of
 unsigned byte values. Those values which are opcodes, categories, tags, actions
@@ -1407,16 +1630,17 @@ to <code>255</code>. By default, the same names are used as in the grammar,
 after removing the prefix character. That means the names of actions, error
 markers and tags must normally all be distinct.</p>
 
-<p>An interpreter can be constructed by taking one of the example interpreters
-provided with Pecan, translating it into the desired programming language if
-necessary, and adapting it to a particular application by customising tags,
-actions and error handling as appropriate.</p>
+<p>In a library setting, values for opcodes and names in the grammar would be
+passed to the Pecan compiler, and an array of bytes returned.</p>
 
-<h3 id="code">Bytecode</h3>
+<p>An interpreter can be constructed by taking the example interpreter provided,
+translating it into the desired programming language, and adapting it to a
+particular application by customising tags, actions and error handling as
+appropriate.</p>
 
 <p>The bytecode produced from a grammar is a fairly simple flattening of the
-parse tree for the grammar. Examples are given in this section of how every
-construct is translated into bytecode:</p>
+parse tree for the grammar. Examples are given of how every construct is
+translated into bytecode:</p>
 
 <pre>{id = x}    =   START, nx, {x}, STOP
 </pre>
@@ -1489,7 +1713,7 @@ be used to find the character's length.</p>
 </pre>
 
 <p>An action is translated using the <code>ACT</code> opcode. Actions need to be
-delayed, either because they are inside a try construct <code>[x]</code>, or
+delayed, either because they are inside a prefix construct <code>[x]</code>, or
 because they are at the start of a left hand of a choice, e.g. <code>@a x /
 y</code>. On the other hand, in the case of a context sensitive grammar, actions
 need to be carried out as early as possible, so that they have the right effect
@@ -1556,8 +1780,6 @@ result.</p>
 <p>Further details of what each opcode does can be gleaned from the provided
 interpreters and their comments.</p>
 
-<h3 id="interpreters">Interpreters</h3>
-
 <p>The main example interpreter currently provided is in C. It can be used as
 starting point for developing interpreters in other languages:</p>
 
@@ -1591,8 +1813,8 @@ saved value. Whenever progress is made in the input, other than in a lookahead
 construct, all the delayed actions are performed. If a number of nested left
 hand choices are under way, and there is progress, all the left choices become
 committed, so it is correct to perform all the delayed actions at that point. If
-a try <code>[x]</code> succeeds, any accumulated actions are kept, and performed
-at the next opportunity.</p>
+a prefix <code>[x]</code> succeeds, any accumulated actions are kept, and
+performed at the next opportunity.</p>
 
 <h2 id="transforms">Transforms</h2>
 

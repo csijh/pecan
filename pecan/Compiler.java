@@ -3,70 +3,113 @@
 package pecan;
 
 import java.util.*;
+import java.io.*;
+import java.nio.file.*;
+import java.nio.charset.*;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
 
 /* Compile a Pecan grammar into a given target language, using a simplified
-approach to pretty-printing.
+custom approach to pretty-printing. The approach is informed by, but doesn't
+closely follow, the paper "A Prettier Printer" by Wadler.
 
-The compile function is run twice. The first time, the margin is set large, each
-rule is printed out on one line, the length of the text generated for each node
-is stored in the node, and the output is discarded. The second time, the margin
-is set small, and the lengths in the nodes are used to decide how to print each
-node.
+The compile function is run twice for each rule. The first time, the margin is
+unlimited, the rule is printed out on one line, the length of the text generated
+for each node is stored in the node, and the output is discarded. The second
+time, a margin is set, and the lengths stored in the nodes are used to decide
+how to print each node.
 
 A template file is read in, and then written back out with the compiled parser
 functions inserted into it. The compiled functions are customised for a specific
-target language via printf-style strings defined in <pecan> tags. Examples for C
-are:
+target language via printf-style strings defined in a <pecan> tag embedded in
+the template file. Examples for C are:
 
-    <pecan comment = "// %s">                   text
+<pecan
+    comment  = "// %s"
+    indent   = ""
+    rule     = "bool %s(parser *p) {\n    return %e;\n}"
+    rule     = "private boolean %s() {\n    return %e;\n}"
+    call     = "%s(p)"
+    true     = "true"
+    false    = "false"
+    or       = "||"
+    and      = "&&"
+    char     = "'%c'"
+    string   = '"%s"'
+    unicode2 = "\ u%x"
+    unicode4 = "\ U%x"
+    tag      = "tag(p,%s)"
+    tag      = "(tag(token(p,%d))==%s)"
+    act0     = "%s(p)"
+    act0     = "push(%s(string(p))"
+    act0     = "push(token(%s,string(p)))"
+    act2     = "%s(p,%d)"
+    act2     = "push2(%s(top1(p),top(p))"
+    act      = "act%d(p,%s)"
+    go       = "GO"
+>
 
-    <pecan declare = "bool %s(parser *p) {">    id
-    <pecan body    = "    return %s;">          expression
-    <pecan close   = "}">
-    <pecan compact = "bool %s(parser *p) { return %s; }">
-    <pecan call    = "%s(p)">                   id
-    <pecan true    = "true">
-    <pecan false   = "false">
-    <pecan or      = "||">
-    <pecan and     = "&&">
-    <pecan char    = "'%c'">                    ascii character
-    <pecan string  = '"%s"'>                    string
-    <pecan bmp     = "\ u%4x">                   BMP character in string
-    <pecan unicode = "\ U%8x">                   longer unicode character
-    <pecan tag     = "tag(p,%.0s%s)"            input position, tag name
-    <pecan act0    = "%s(p,%.0s,%d,%0.s)">             name, inp, start, length
-    <pecan act2    = "%s(p%.0s%.0s)">           name, start, length
-    <pecan act     = "act%d(p,%s, )">           arity, name, start, length
-    <pecan do      = "DO(p)"
+[x ||\n y ||\n z]        one group, all or none.
+[[x &&\n y] &&\n z]      many groups, 'fill'
 
-For each example, the items printed are shown. There must be a % specifier for
-each, but %.0s can be used to omit an item (even an integer). Items can be
-reordered using %1$..., %2$... */
+Input = p->ins; posn = p->start, length = p->in - p->start
+
+Use spaces in rule template to determine initial indent and tab.
+
+For each example, the items printed are shown. */
 
 
 public class Compiler implements Testable {
     private boolean switchTest;
     private StringBuilder output = new StringBuilder();
-    private int tab = 4, indent, margin = 80, cursor;
+    private int indent, margin = 80, cursor;
     private boolean startLine;
 
     private String
         COMMENT = "// %s",
-        DECLARE1 = "bool ", DECLARE2 = "() {",
-        BODY1 = "return ", BODY2 = ";",
-        CLOSE = "}",
-        CALL = "()",
+        TAB = "    ",
+        RULE = "bool %s() {%n    return %e;%n}",
+        RULE1 = "bool %s() { return %e; }",
+        CALL = "%s()",
+        OR = " || ",
+        AND = " && ",
+        GO = "go",
+        OK = "ok",
+        ALT = "alt",
+        OPT = "opt",
+        TRY = "try",
+        HAS = "has",
+        NOT = "not",
+        TAG = "tag",
+        END = "end",
         TRUE = "true",
         FALSE = "false",
-        OR = "||",
-        AND = "&&",
-        CHAR = "'$'",
-        STRING = "\"$\"",
-        OP = "OP",
-        ACT0 = "ACT($, $, $)",
-        ACT2 = "ACT2($, $, $)";
+        TEXT = "text(\"%s\")",
+        SET = "set(\"%s\")",
+        SPLIT = "split(\"%s\")",
+        RANGE = "range('%c','%c')",
+        DROP = "drop(%d)",
+        CAT = "cat(%s)",
+        MARK = "mark(%s)",
+        ACT  = "act%d(%s)";
+    String[] ACTS = new String[10];
+
+// ascii visible char, code, uni visible char, uni code
+
+
+/*
+        static bool has(parser *p, bool b);
+        static bool not(parser *p, bool b);
+        static bool mark(parser *p, int m);
+        static bool cat(parser *p, int c);
+        static bool range(parser *p, int low, int high);
+        static bool text(parser *p, char *s);
+        static bool set(parser *p, char *s);
+        static bool drop(parser *p, int n);
+        static bool end(parser *p);
+*/
+
+// print(template, fit, named-params)
 
     // Do unit testing on the Stacker class, then check the switch is complete,
     // then run the Compiler unit tests.
@@ -107,9 +150,11 @@ public class Compiler implements Testable {
         return s.length();
     }
 
-    // Generate text from a node. Measure how much was generated.
+    // Generate text from a node. Measure how much was generated. Indents within
+    // a node are relative, so restore the indent afterwards.
     private void compile(Node node) {
         int start = output.length();
+        int saveIndent = indent;
         switch (node.op()) {
             case Error: case Temp:
             case List: compileList(node); break;
@@ -143,6 +188,21 @@ public class Compiler implements Testable {
         }
         int end = output.length();
         node.LEN(end - start);
+        indent = saveIndent;
+    }
+
+    // Compile a node, with brackets if the first argument is true.
+    private void compileBracket(boolean yes, Node node) {
+        if (yes) print("(");
+        compile(node);
+        if (yes) print(")");
+    }
+
+    // Compile a node, with brackets if the node is of the given type.
+    private void compileBracket(Op op, Node node) {
+        if (node.op() == op) print("(");
+        compile(node);
+        if (node.op() == op) print(")");
     }
 
     // Compile a list of rules. The first time, clear the text of each rule.
@@ -150,7 +210,7 @@ public class Compiler implements Testable {
         if (switchTest) return;
         String[] lines = node.left().text().split("\n");
         for (String line : lines) {
-            print(java.lang.String.format(COMMENT,line));
+            printT(COMMENT, line);
             newline(0);
         }
         compile(node.left());
@@ -168,80 +228,94 @@ public class Compiler implements Testable {
     private void compileRule(Node node) {
         if (switchTest) return;
         boolean fit = node.LEN() <= margin - cursor;
-        print(DECLARE1, node.left().name(), DECLARE2);
-        if (! fit) newline(+1);
-        else print(" ");
-        print(BODY1);
-        compile(node.right());
-        print(BODY2);
-        if (! fit) newline(-1);
-        else print(" ");
-        print(CLOSE);
+        if (fit) printT(RULE1, node.left().name(), node.right());
+        else printT(RULE, node.left().name(), node.right());
         newline(0);
     }
 
     // Compile x
     private void compileId(Node node) {
         if (switchTest) return;
-        print(node.name(), CALL);
+        printT(CALL, node.name());
     }
 
     // Compile p / q / ...
     private void compileOr(Node node) {
         if (switchTest) return;
-        boolean complex = false, needOR = false;
+        boolean complex = false;
         for (Node n = node; n.op() == Or; n = n.right()) {
             if (n.left().has(FP)) complex = true;
         }
-        if (complex) {
-            boolean fit = node.LEN() <= margin - cursor;
-            print("ALT(");
-            if (! fit) newline(+1);
-            print("DO", CALL, " ", AND, " ");
-            compile(node.left());
-            print(" ", OR, " ");
-            if (! fit) newline(0);
-            needOR = node.left().has(FP);
-            node = node.right();
-            while (node.op() == Or) {
-                if (needOR) print("OR", CALL, " ", AND, " ");
-                compile(node.left());
-                print(" ", OR, " ");
-                if (! fit) newline(0);
-                needOR = node.left().has(FP);
-                node = node.right();
+        if (complex) compileComplexOr(node);
+        else compileSimpleOr(node);
+    }
+
+    // Compile p / q / ... where no alternative can fail after progress. Fill as
+    // many alternatives on a line as possible before breaking.
+    private void compileSimpleOr(Node node) {
+        compileBracket(And, node.left());
+        print(OR);
+        Node next = node.right();
+        if (next.op() == Or) next = next.left();
+        boolean fit = next.LEN() <= margin - cursor;
+        if (! fit) newline(0);
+        compileBracket(And, node.right());
+    }
+
+    // Compile p / q / ... where at least one alternative can fail after
+    // progress. Add GO to the first alternative and OK to those that need it,
+    // and make the sequence a single group so that it is all on one line, or
+    // has a line per alternative.
+    private void compileComplexOr(Node node) {
+        boolean needOK = false;
+        boolean fit = node.LEN() <= margin - cursor;
+        print(ALT, "(");
+        if (! fit) newline(+1);
+        print("(");
+        printT(CALL, GO);
+        print(AND);
+        compileBracket(Or, node.left());
+        print (")");
+        print(OR);
+        if (! fit) newline(0);
+        needOK = node.left().has(FP);
+        node = node.right();
+        while (node.op() == Or) {
+            if (needOK) {
+                print("(");
+                printT(CALL, OK);
+                print(AND);
+                compileBracket(Or, node.left());
+                print(")");
             }
-            if (needOR) print("OR", CALL, " ", AND, " ");
-            compile(node);
-            if (! fit) newline(-1);
-            print(")");
-        } else {
-            compile(node.left());
-            print(" ", OR, " ");
-            Node next = node.right();
-            if (next.op() == Or) next = next.left();
-            boolean fit = next.LEN() <= margin - cursor;
+            else compileBracket(And, node.left());
+            print(OR);
             if (! fit) newline(0);
-            compile(node.right());
+            needOK = node.left().has(FP);
+            node = node.right();
         }
+        if (needOK) {
+            print("(");
+            printT(CALL, OK);
+            print(AND);
+            compileBracket(Or, node);
+            print(")");
+        }
+        else compileBracket(And, node);
+        if (! fit) newline(-1);
+        print(")");
     }
 
     // Compile p q
     private void compileAnd(Node node) {
         if (switchTest) return;
-        boolean bracketsL = node.left().op() == Or;
-        if (bracketsL) print("(");
-        compile(node.left());
-        if (bracketsL) print(")");
-        print(" ", AND, " ");
-        boolean bracketsR = node.right().op() == Or;
+        compileBracket(Or, node.left());
+        print(AND);
         Node next = node.right();
         if (next.op() == And) next = next.left();
         boolean fit = next.LEN() <= margin - cursor;
-        if (! bracketsR && ! fit) newline(0);
-        if (bracketsR) print("(");
-        compile(node.right());
-        if (bracketsR) print(")");
+        if (! fit) newline(0);
+        compileBracket(Or, node.right());
     }
 
     // Compile p?
@@ -249,16 +323,17 @@ public class Compiler implements Testable {
         if (switchTest) return;
         boolean fit = node.LEN() <= margin - cursor;
         if (node.left().has(FP)) {
-            print("OPT(");
+            print(OPT, "(");
             if (! fit) newline(+1);
-            print("DO", CALL, " ", AND, " ");
-            compile(node.left());
+            printT(CALL, GO);
+            print(AND);
+            compileBracket(Or, node.left());
             if (! fit) newline(-1);
             print(")");
         } else {
             print("(");
-            compile(node.left());
-            print(" ", OR, " ", TRUE, ")");
+            compileBracket(And, node.left());
+            print(OR, TRUE, ")");
         }
     }
 
@@ -266,10 +341,11 @@ public class Compiler implements Testable {
     private void compileTry(Node node) {
         if (switchTest) return;
         boolean fit = node.LEN() <= margin - cursor;
-        print("TRY(");
+        print(TRY, "(");
         if (! fit) newline(+1);
-        print("DO", CALL, " ", AND, " ");
-        compile(node.left());
+        printT(CALL, GO);
+        print(AND);
+        compileBracket(Or, node.left());
         if (! fit) newline(-1);
         print(")");
     }
@@ -278,10 +354,11 @@ public class Compiler implements Testable {
     private void compileHas(Node node) {
         if (switchTest) return;
         boolean fit = node.LEN() <= margin - cursor;
-        print("HAS(");
+        print(HAS, "(");
         if (! fit) newline(+1);
-        print("DO() && ");
-        compile(node.left());
+        printT(CALL, GO);
+        print(AND);
+        compileBracket(Or, node.left());
         if (! fit) newline(-1);
         print(")");
     }
@@ -290,10 +367,11 @@ public class Compiler implements Testable {
     private void compileNot(Node node) {
         if (switchTest) return;
         boolean fit = node.LEN() <= margin - cursor;
-        print("NOT(");
+        print(NOT, "(");
         if (! fit) newline(+1);
-        print("DO() && ");
-        compile(node.left());
+        printT(CALL, GO);
+        print(AND);
+        compileBracket(Or, node.left());
         if (! fit) newline(-1);
         print(")");
     }
@@ -301,31 +379,31 @@ public class Compiler implements Testable {
     // Compile %t
     private void compileTag(Node node) {
         if (switchTest) return;
-        print("TAG('" + node.name() + "')");
+        print(TAG, "('", node.name(), "')");
     }
 
     // Compile ""
     private void compileSuccess(Node node) {
         if (switchTest) return;
-        print("true");
+        print(TRUE);
     }
 
     // Compile ''
     private void compileFail(Node node) {
         if (switchTest) return;
-        print("false");
+        print(FALSE);
     }
 
     // Compile <>
     private void compileEnd(Node node) {
         if (switchTest) return;
-        print("END()");
+        printT(CALL, END);
     }
 
     // Compile 'a' or "a"
     private void compileChar(Node node) {
         if (switchTest) return;
-        print("CHAR('" + node.name() + "')");
+        printT(TEXT, node.name());
     }
 
     // Compile 127
@@ -337,13 +415,13 @@ public class Compiler implements Testable {
     // Compile "abc"
     private void compileString(Node node) {
         if (switchTest) return;
-        print("STRING(\"" + node.name() + "\")");
+        printT(TEXT, node.name());
     }
 
     // Compile 'abc'
     private void compileSet(Node node) {
         if (switchTest) return;
-        print("SET(\"" + node.name() + "\")");
+        printT(SET, node.name());
     }
 
     // Compile 'a..z'
@@ -352,7 +430,7 @@ public class Compiler implements Testable {
         if (switchTest) return;
         char c1 = node.name().charAt(0);
         char c2 = node.name().charAt(node.name().length() - 1);
-        print("RANGE('" + c1 + "','" + c2 + "'\")");
+        printT(RANGE, c1, c2);
     }
 
     // Compile 0..127
@@ -364,45 +442,33 @@ public class Compiler implements Testable {
     // Compile <abc>
     private void compileSplit(Node node) {
         if (switchTest) return;
-        print("SPLIT(\"" + node.name() + "\")");
+        print(SPLIT, node.name());
     }
 
     // Compile Nd
     private void compileCat(Node node) {
         if (switchTest) return;
-        print("CAT(\"" + node.name() + "\")");
+        print(CAT, node.name());
     }
 
     // Compile #m
     private void compileMark(Node node) {
         if (switchTest) return;
-        print("MARK(" + node.name() + ")");
+        printT(MARK, node.name());
     }
 
     // Compile @3
     private void compileDrop(Node node) {
         if (switchTest) return;
-        print("DROP(" + node.arity() + ")");
+        printT(DROP, node.arity());
     }
 
     // Compile @3a
     private void compileAct(Node node) {
         if (switchTest) return;
-        String a = node.arity() == 0 ? "" : "" + node.arity();
-        print("ACT" + a + "(" + node.name() + ")");
+        printT(ACT, node.arity(), node.name());
     }
 
-/*
-    // Check whether a node is compound, i.e. able to split itself across lines.
-    private boolean compound(Node node) {
-        Op op = node.op();
-        switch (op) {
-            case Rule: case Or: case And: case Opt: case Any: case Some:
-            case Try: case Has: case Not: return true;
-            default: return false;
-        }
-    }
-*/
     // Remove all the output and reset.
     private void clear() {
         output.setLength(0);
@@ -410,15 +476,73 @@ public class Compiler implements Testable {
         indent = 0;
         startLine = true;
     }
-/*
-    // Print text according to a pattern with '$' in it.
-    private void print(String pattern, String text) {
-        int n = pattern.indexOf('$');
-        print(pattern.substring(0, n));
-        print(text);
-        print(pattern.substring(n+1));
+
+    // Check whether a node is And or Or or both.
+    private boolean and(Node node) { return node.op() == And; }
+    private boolean or(Node node) { return node.op() == Or; }
+    private boolean andOr(Node node) { return and(node) || or(node); }
+
+    // Print text. On newline, remove any trailing spaces, insert the current
+    // indent, and increase the indent if there are spaces at the start of the
+    // next line.
+    private void printI(String s) {
+        int n = s.indexOf('\n');
+        while (n >= 0) {
+            output.append(s.substring(0, n));
+        }
     }
-*/
+
+    // Print according to a given format. Further arguments are matched up with
+    // % specifiers in the template. Matching is by type rather than position,
+    // except for the case of two integers. Spaces at the start of a line indent
+    // everything generated from that line, but the indent reverts at the next
+    // newline.
+    private void printT(String t, String s, int n, int n2, Node e) {
+        int start = 0, i = t.indexOf('%');
+        int save = indent;
+        while (i >= 0) {
+            print(t.substring(start, i));
+            i++;
+            char ch = t.charAt(i++);
+            switch (ch) {
+                case 's': print(s); break;
+                case 'c': print("" + (char)n); n = n2; break;
+                case 'd': print("" + n); n = n2; break;
+                case 'x': case 'X':
+                    String f = (n <= 0xFFFF) ? "%4" + ch : "%8" + ch;
+                    print(java.lang.String.format(f, n));
+                    n = n2;
+                    break;
+                case 'e': compile(e); break;
+                case 'n':
+                    indent = save;
+                    while (i < t.length() && t.charAt(i) == ' ') {
+                        indent++;
+                        i++;
+                    }
+                    newline(0);
+                    break;
+                default: check(false, t, ch);
+            }
+            start = i;
+            i = t.indexOf('%', start);
+        }
+        indent = save;
+        print(t.substring(start));
+    }
+
+    // Cover all the patterns of call.
+    private void printT(String t, String s, Node e) { printT(t,s,-1,-1,e); }
+    private void printT(String t, String s) { printT(t,s,-1,-1,null); }
+    private void printT(String t, int n) { printT(t,null,n,-1,null); }
+    private void printT(String t, int n, String s) { printT(t,s,n,-1,null); }
+    private void printT(String t, int n, int n2) { printT(t,null,n,n2,null); }
+
+    private void check(boolean ok, String t, char ch) {
+        if (ok) return;
+        throw new Error("Unexpected specifier %" + ch + " in " + t);
+    }
+
     // Print non-newline text, keep track of amount printed on current line.
     // Remove initial space if starting a new line.
     private void print(String... ss) {
@@ -435,10 +559,34 @@ public class Compiler implements Testable {
         if (output.charAt(output.length() - 1) == ' ') {
             output.setLength(output.length() - 1);
         }
-        indent = indent + tab * change;
+        indent = indent + TAB.length() * change;
         output.append("\n");
         for (int i=0; i<indent; i++) output.append(' ');
         cursor = indent;
         startLine = true;
+    }
+
+    // Insert the code into the file.
+    private void insert(String file, String code) {
+        List<String> lines = null;
+        Path p = Paths.get(file);
+        PrintStream out = null;
+        try {
+            lines = Files.readAllLines(p, StandardCharsets.UTF_8);
+            out = new PrintStream(new File(file));
+        }
+        catch (Exception e) { throw new Error(e); }
+        boolean skipping = false, templates = false, done = false;
+        for (String line : lines) {
+            if (line.indexOf("</pecan>") >= 0) skipping = false;
+            if (! skipping) out.println(line);
+            if (line.indexOf("<pecan") >= 0) {
+
+                //readTemplates();
+                skipping = true;
+                out.print(code);
+            }
+        }
+        out.close();
     }
 }

@@ -2,39 +2,41 @@
 x = 'a'
 ..........
 // x = 'a'
-bool x() { return CHAR('a'); }
+bool x() { return text("a"); }
 ==========
 -- Sequence
 x = 'a' 'b'
 ..........
 // x = 'a' 'b'
-bool x() { return CHAR('a') && CHAR('b'); }
+bool x() { return text("a") && text("b"); }
 ==========
 -- Simple choice (LHS doesn't have FP)
 x = 'a' / 'b'
 ..........
 // x = 'a' / 'b'
-bool x() { return CHAR('a') || CHAR('b'); }
+bool x() { return text("a") || text("b"); }
 ==========
 -- General choice (LHS does have FP)
 x = 'a' 'b' / 'c'
 ..........
 // x = 'a' 'b' / 'c'
-bool x() { return ALT(DO() && CHAR('a') && CHAR('b') || OR() && CHAR('c')); }
+bool x() {
+    return alt((go() && text("a") && text("b")) || (ok() && text("c")));
+}
 ==========
 -- Option
 x = 'a'?
 ..........
 // x = 'a'?
-bool x() { return (CHAR('a') || true); }
+bool x() { return (text("a") || true); }
 ==========
 -- Long sequence
 x = 'a' 'b' 'c' 'd' 'e' 'f' 'g'
 ..........
 // x = 'a' 'b' 'c' 'd' 'e' 'f' 'g'
 bool x() {
-    return CHAR('a') && CHAR('b') && CHAR('c') && CHAR('d') && CHAR('e') &&
-    CHAR('f') && CHAR('g');
+    return text("a") && text("b") && text("c") && text("d") && text("e") &&
+    text("f") && text("g");
 }
 ==========
 -- Long choice
@@ -42,8 +44,8 @@ x = 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / 'g'
 ..........
 // x = 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / 'g'
 bool x() {
-    return CHAR('a') || CHAR('b') || CHAR('c') || CHAR('d') || CHAR('e') ||
-    CHAR('f') || CHAR('g');
+    return text("a") || text("b") || text("c") || text("d") || text("e") ||
+    text("f") || text("g");
 }
 ==========
 -- Long complex choice
@@ -51,14 +53,14 @@ x = 'a' '1' / 'b' / 'c' / 'd' / 'e' '2' / 'f' / 'g'
 ..........
 // x = 'a' '1' / 'b' / 'c' / 'd' / 'e' '2' / 'f' / 'g'
 bool x() {
-    return ALT(
-        DO() && CHAR('a') && CHAR('1') ||
-        OR() && CHAR('b') ||
-        CHAR('c') ||
-        CHAR('d') ||
-        CHAR('e') && CHAR('2') ||
-        OR() && CHAR('f') ||
-        CHAR('g')
+    return alt(
+        (go() && text("a") && text("1")) ||
+        (ok() && text("b")) ||
+        text("c") ||
+        text("d") ||
+        (text("e") && text("2")) ||
+        (ok() && text("f")) ||
+        text("g")
     );
 }
 ==========
@@ -71,14 +73,14 @@ x = 'a' '1' / 'b' /
 //     'c' / 'd' / 'e' '2' /
 //     'f' / 'g'
 bool x() {
-    return ALT(
-        DO() && CHAR('a') && CHAR('1') ||
-        OR() && CHAR('b') ||
-        CHAR('c') ||
-        CHAR('d') ||
-        CHAR('e') && CHAR('2') ||
-        OR() && CHAR('f') ||
-        CHAR('g')
+    return alt(
+        (go() && text("a") && text("1")) ||
+        (ok() && text("b")) ||
+        text("c") ||
+        text("d") ||
+        (text("e") && text("2")) ||
+        (ok() && text("f")) ||
+        text("g")
     );
 }
 ==========
@@ -86,47 +88,47 @@ bool x() {
 x = ['a']
 ..........
 // x = ['a']
-bool x() { return TRY(DO() && CHAR('a')); }
+bool x() { return try(go() && text("a")); }
 ==========
 -- Complex try
 x = ['a' @a]
 ..........
 // x = ['a' @a]
-bool x() { return HAS(DO() && CHAR('a') && ACT(a)) && CHAR('a') && ACT(a); }
+bool x() { return has(go() && text("a") && act0(a)) && text("a") && act0(a); }
 ==========
 -- Two rules
 x = 'a'
 y = 'b'
 ..........
 // x = 'a'
-bool x() { return CHAR('a'); }
+bool x() { return text("a"); }
 
 // y = 'b'
-bool y() { return CHAR('b'); }
+bool y() { return text("b"); }
 ==========
 -- Action
 x = 'a' @a
 ..........
 // x = 'a' @a
-bool x() { return CHAR('a') && ACT(a); }
+bool x() { return text("a") && act0(a); }
 ==========
 -- Lift out * loop
 x = 'a' 'b'*
 ..........
 // x1 = ('b' x1)?
-bool x1() { return (CHAR('b') && x1() || true); }
+bool x1() { return ((text("b") && x1()) || true); }
 
 // x = 'a' 'b'*
-bool x() { return CHAR('a') && x1(); }
+bool x() { return text("a") && x1(); }
 ==========
 -- Lift out + loop
 x = 'a' 'b'+
 ..........
 // x1 = ('b') x1?
-bool x1() { return CHAR('b') && (x1() || true); }
+bool x1() { return text("b") && (x1() || true); }
 
 // x = 'a' 'b'+
-bool x() { return CHAR('a') && x1(); }
+bool x() { return text("a") && x1(); }
 ==========
 sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
@@ -148,10 +150,10 @@ bool sum() { return gap() && expression() && end(); }
 
 // expression1 = (plus term @2add / minus term @2subtract expression1)?
 bool expression1() {
-    return ((ALT(
-        DO() && plus() && term() && ACT2(add) ||
-        OR() && minus() && term() && ACT2(subtract)
-    )) && expression1() || true);
+    return (((alt(
+        (go() && plus() && term() && act2(add)) ||
+        (ok() && minus() && term() && act2(subtract))
+    )) && expression1()) || true);
 }
 
 // expression = term (plus term @2add / minus term @2subtract)*
@@ -159,52 +161,52 @@ bool expression() { return term() && expression1(); }
 
 // term1 = (times atom @2multiply / over atom @2divide term1)?
 bool term1() {
-    return ((ALT(
-        DO() && times() && atom() && ACT2(multiply) ||
-        OR() && over() && atom() && ACT2(divide)
-    )) && term1() || true);
+    return (((alt(
+        (go() && times() && atom() && act2(multiply)) ||
+        (ok() && over() && atom() && act2(divide))
+    )) && term1()) || true);
 }
 
 // term = atom (times atom @2multiply / over atom @2divide)*
 bool term() { return atom() && term1(); }
 
 // atom = number / open expression close
-bool atom() { return number() || open() && expression() && close(); }
+bool atom() { return number() || (open() && expression() && close()); }
 
 // number1 = (digit) number1?
 bool number1() { return digit() && (number1() || true); }
 
 // number = digit+ @number gap
-bool number() { return number1() && ACT(number) && gap(); }
+bool number() { return number1() && act0(number) && gap(); }
 
 // plus = #operator '+' gap
-bool plus() { return MARK(operator) && CHAR('+') && gap(); }
+bool plus() { return mark(operator) && text("+") && gap(); }
 
 // minus = #operator '-' gap
-bool minus() { return MARK(operator) && CHAR('-') && gap(); }
+bool minus() { return mark(operator) && text("-") && gap(); }
 
 // times = #operator '*' gap
-bool times() { return MARK(operator) && CHAR('*') && gap(); }
+bool times() { return mark(operator) && text("*") && gap(); }
 
 // over = #operator '/' gap
-bool over() { return MARK(operator) && CHAR('/') && gap(); }
+bool over() { return mark(operator) && text("/") && gap(); }
 
 // open = #bracket '(' gap
-bool open() { return MARK(bracket) && CHAR('(') && gap(); }
+bool open() { return mark(bracket) && text("(") && gap(); }
 
 // close = #bracket ')' gap
-bool close() { return MARK(bracket) && CHAR(')') && gap(); }
+bool close() { return mark(bracket) && text(")") && gap(); }
 
 // digit = #digit '0..9'
-bool digit() { return MARK(digit) && RANGE('0','9'"); }
+bool digit() { return mark(digit) && range('0','9'); }
 
 // gap1 = (' ' gap1)?
-bool gap1() { return (CHAR(' ') && gap1() || true); }
+bool gap1() { return ((text(" ") && gap1()) || true); }
 
 // gap = (' ')* @
-bool gap() { return gap1() && DROP(0); }
+bool gap() { return gap1() && drop(0); }
 
 // end = #newline 13? 10 @
 bool end() {
-    return MARK(newline) && (CODE(13) || true) && CODE(10) && DROP(0);
+    return mark(newline) && (CODE(13) || true) && CODE(10) && drop(0);
 }
