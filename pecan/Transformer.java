@@ -6,8 +6,17 @@ import java.util.*;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
 
-/* Provide a collection of transform methods to be used particularly for
-compiling to a target language or to bytecode. */
+/* Provide a collection of transform methods, to be used before compiling to a
+target language or to bytecode.
+
+The transforms aim to preserve the analysis flags that might be used to guide
+compilation, particularly the FP flag.
+
+The source text of nodes is only preserved to the extent that (a) a rule node
+has text which serves as a comment for its compiled function and (b) atomic
+nodes still have the right text so that they are compiled correctly.
+
+The tree structure of rules is not preserved. Nodes may becomes shared. */
 
 // TODO: liftSome
 // TODO: replace string in rule (assuming all nodes same source)
@@ -16,16 +25,14 @@ class Transformer {
 
     // Replace [x] by (x& x) if x contains actions or markers. Assume x is small
     // enough to be repeated twice, rather than making a separate rule for it.
-    // The node for x is shared, so the nodes no longer form a true tree. The
-    // source description of the changed nodes is not accurate. The source
-    // description of the rule containing the nodes isn't changed.
-    void expandTry(Node node) {
-        if (node.left() != null) expandTry(node.left());
-        if (node.right() != null) expandTry(node.right());
-        if (node.op() == Try && (node.has(AA) || node.has(EE))) {
+    void expandSee(Node node) {
+        if (node.left() != null) expandSee(node.left());
+        if (node.right() != null) expandSee(node.right());
+        if (node.op() == See && (node.has(AA) || node.has(EE))) {
             Node x = node.left();
+            Node hasX = new Node(Has, x, x.source(), x.start(), x.end());
             node.op(And);
-            node.left(new Node(Has, x, x.source(), x.start(), x.end()));
+            node.left(hasX);
             node.right(x);
         }
     }
@@ -67,16 +74,19 @@ class Transformer {
         int s = p.start(), e = p.end();
         String pText = p.source().substring(s,e);
         String text = x1 + " = (" + pText + " " + x1 + ")?";
+        int n0 = 0, n1 = x1.length(), n2 = n1 + 3, n3 = n2 + 1;
+        int n4 = n3 + pText.length(), n5 = n4 + 1 + x1.length(), n6 = n5 + 2;
         Source src = new Source(text);
-        Node id = new Node(Id, src, 0, x1.length());
-        int andS = x1.length() + 4, andE = andS + pText.length();
-        Node and = new Node(And, p, id, src, andS, andE);
-        Node opt = new Node(Opt, and, src, andS-1, text.length());
-        Node newRule = new Node(Rule, id, opt, src, 0, text.length());
+        Node id = new Node(Id, src, n0, n1);
+        id.flags(loop.flags());
+        Node p1 = p.copy(p.op(), src, n3, n4);
+        Node and = new Node(And, p1, id, src, n3, n5);
+        Node opt = new Node(Opt, and, src, n2, n6);
+        Node newRule = new Node(Rule, id, opt, src, n0, n6);
         loop.op(Id);
         loop.source(src);
-        loop.start(0);
-        loop.end(x1.length());
+        loop.start(n0);
+        loop.end(n1);
         loop.right(null);
         loop.left(null);
         loop.ref(newRule);
@@ -130,7 +140,25 @@ class Transformer {
         return name;
     }
 
-    // Currently no testing.
+    // Currently only expandSee is tested.
     public static void main(String[] args) {
+        Transformer trans = new Transformer();
+        Source src = new Source("  x = [y] z");
+        Node nx = new Node(Id, src, 2, 3);
+        Node ny = new Node(Id, src, 7, 8);
+        Node nz = new Node(Id, src, 10, 11);
+        Node see = new Node(See, ny, src, 6, 9);
+        see.set(AA);
+        Node and = new Node(And, see, nz, src, 6, 11);
+        Node rule = new Node(Rule, nx, and, src, 2, 11);
+        trans.expandSee(see);
+        assert(rule.text().equals("x = [y] z"));
+        assert(rule.right().op() == And);
+        assert(rule.right().left().op() == And);
+        assert(rule.right().left().left().op() == Has);
+        assert(rule.right().left().left().left().op() == Id);
+        assert(rule.right().left().left().left().text().equals("y"));
+        assert(rule.right().left().right().op() == Id);
+        assert(rule.right().left().right().text().equals("y"));
     }
 }

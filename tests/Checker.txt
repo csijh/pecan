@@ -110,14 +110,14 @@ Error in tests/Checker.txt, line 107: undefined identifier
 x = [%a] 'b'
          ^^^
 ==========
--- Try: FN,SP,FP
+-- See: FN,SP,FP
 x = [%a] %b
 ..........
 List x = [%a] %b... TokenInput
   Rule x = [%a] %b FN,SP,FP
     Id x FN,SP,FP
     And [%a] %b FN,SP,FP
-      Try [%a] FN,SP
+      See [%a] FN,SP
         Tag %a FN,SP
       Tag %b FN,SP
   Empty

@@ -119,7 +119,7 @@ class Stacker implements Testable {
         case Opt: scanRepeat(node); break;
         case Any: scanRepeat(node); break;
         case Some: scanRepeat(node); break;
-        case Try: scanTry(node); break;
+        case See: scanSee(node); break;
         default: assert false : "Unexpected node type " + node.op(); break;
         }
         if (oldNet != UNKNOWN && node.NET() != oldNet) {
@@ -205,7 +205,7 @@ class Stacker implements Testable {
     }
 
     // [x]
-    private void scanTry(Node node) {
+    private void scanSee(Node node) {
         if (switchTest) return;
         node.NET(node.left().NET());
         node.NEED(node.left().NEED());

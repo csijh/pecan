@@ -15,8 +15,8 @@ typedef char input;
 typedef int output;
 
 // Error marker constants, and spellings.
-enum marker { digit, operator, bracket, newline };
-char *names[] = { "digit", "operator", "bracket", "newline" };
+enum marker { integer, operator, bracket, newline };
+char *names[] = { "integer", "operator", "bracket", "newline" };
 
 // Forward declarations of parser functions.
 parser *newParser(int n, input[n]);
@@ -25,7 +25,7 @@ output answer(parser *p);
 void report(parser *p, char *ds, char *f, char *names[]);
 
 // Actions:: Create a number from given text, and arithmetic operations.
-output number(int n, char s[n]) {
+output scan(int n, char s[n]) {
     output x = 0;
     for (int i = 0; i < n; i++) x = x * 10 + s[i] - '0';
     return x;
@@ -36,20 +36,20 @@ output multiply(output x, output y) { return x * y; }
 output divide(output x, output y) { return x / y; }
 
 // Forward declarations of parsing functions, to allow them to be recursive.
-bool Psum(parser *p);
-bool Pexpression(parser *p);
-bool Pterm(parser *p);
-bool Patom(parser *p);
-bool Pnumber(parser *p);
-bool Pgap(parser *p);
-bool Pend(parser *p);
-bool Pplus(parser *p);
-bool Pminus(parser *p);
-bool Ptimes(parser *p);
-bool Pover(parser *p);
-bool Popen(parser *p);
-bool Pclose(parser *p);
-bool Pdigit(parser *p);
+bool sum(parser *p);
+bool expression(parser *p);
+bool term(parser *p);
+bool atom(parser *p);
+bool number(parser *p);
+bool gap(parser *p);
+bool eol(parser *p);
+bool plus(parser *p);
+bool minus(parser *p);
+bool times(parser *p);
+bool over(parser *p);
+bool open(parser *p);
+bool close(parser *p);
+bool digit(parser *p);
 
 int main() {
     char in[100];
@@ -57,7 +57,7 @@ int main() {
     char *r = fgets(in, 100, stdin);
     if (r == NULL) printf("Can't read stdin\n");
     parser *p = newParser(strlen(in), in);
-    bool ok = Psum(p);
+    bool ok = sum(p);
     if (ok) printf("%d\n", answer(p));
     else report(p, "Syntax error:\n", "Error: expecting %s, %s\n", names);
     freeParser(p);
@@ -79,14 +79,14 @@ static bool alt(parser *p, bool b);
 static bool opt(parser *p, bool b);
 static bool has(parser *p, bool b);
 static bool not(parser *p, bool b);
-static bool try(parser *p, bool b);
+static bool see(parser *p, bool b);
 static bool mark(parser *p, int m);
 static bool cat(parser *p, int c);
 static bool range(parser *p, int low, int high);
 static bool text(parser *p, char *s);
 static bool set(parser *p, char *s);
 static bool drop(parser *p, int n);
-static bool end(parser *p);
+static bool eot(parser *p);
 
 // Parser structure support functions.
 static input *start(parser *p);
@@ -119,73 +119,74 @@ static bool push2(parser *p, output n);
     do       = "go"
 > */
 
-// sum = gap expression end
-bool Psum(parser *p) { return Pgap(p) && Pexpression(p) && Pend(p); }
+// sum = gap expression eol
+bool sum(parser *p) { return gap(p) && expression(p) && eol(p); }
 
 // expression1 = (plus term @2add / minus term @2subtract expression1)?
-bool Pexpression1(parser *p) {
+bool expression1(parser *p) {
     return ((alt(p,
-        (go(p) && Pplus(p) && Pterm(p) && push2(p,add(top1(p),top(p)))) ||
-        (ok(p) && Pminus(p) && Pterm(p) && push2(p,subtract(top1(p),top(p))))
-    ) && Pexpression1(p)) || true);
+        (go(p) && plus(p) && term(p) && push2(p,add(top1(p),top(p)))) ||
+        (ok(p) && minus(p) && term(p) && push2(p,subtract(top1(p),top(p))))
+    ) && expression1(p)) || true);
 }
 
 // expression = term (plus term @2add / minus term @2subtract)*
-bool Pexpression(parser *p) { return Pterm(p) && Pexpression1(p); }
+bool expression(parser *p) { return term(p) && expression1(p); }
 
-// term1 = (times atom @2multiply / over atom @2divide term1)?
-bool Pterm1(parser *p) {
+// term1 = ((times atom @2multiply / over atom @2divide) term1)?
+bool term1(parser *p) {
     return ((alt(p,
-        (go(p) && Ptimes(p) && Patom(p) && push2(p,multiply(top1(p),top(p)))) ||
-        (ok(p) && Pover(p) && Patom(p) && push2(p,divide(top1(p),top(p))))
-    ) && Pterm1(p)) || true);
+        (go(p) && times(p) && atom(p) && push2(p,multiply(top1(p),top(p)))) ||
+        (ok(p) && over(p) && atom(p) && push2(p,divide(top1(p),top(p))))
+    ) && term1(p)) || true);
 }
 
 // term = atom (times atom @2multiply / over atom @2divide)*
-bool Pterm(parser *p) { return Patom(p) && Pterm1(p); }
+bool term(parser *p) { return atom(p) && term1(p); }
 
 // atom = number / open expression close
-bool Patom(parser *p) {
-    return Pnumber(p) || (Popen(p) && Pexpression(p) && Pclose(p));
+bool atom(parser *p) {
+    return number(p) || (open(p) && expression(p) && close(p));
 }
 
 // number1 = (digit) number1?
-bool Pnumber1(parser *p) { return Pdigit(p) && (Pnumber1(p) || true); }
+bool number1(parser *p) { return digit(p) && (number1(p) || true); }
 
-// number = digit+ @number gap
-bool Pnumber(parser *p) {
-    return Pnumber1(p) && push(p,number(length(p),start(p))) && Pgap(p);
+// number = #integer digit+ @scan gap
+bool number(parser *p) {
+    return mark(p,integer) && number1(p) &&
+    push(p,scan(length(p),start(p))) && gap(p);
 }
 
 // plus = #operator '+' gap
-bool Pplus(parser *p) { return mark(p,operator) && text(p,"+") && Pgap(p); }
+bool plus(parser *p) { return mark(p,operator) && text(p,"+") && gap(p); }
 
 // minus = #operator '-' gap
-bool Pminus(parser *p) { return mark(p,operator) && text(p,"-") && Pgap(p); }
+bool minus(parser *p) { return mark(p,operator) && text(p,"-") && gap(p); }
 
 // times = #operator '*' gap
-bool Ptimes(parser *p) { return mark(p,operator) && text(p,"*") && Pgap(p); }
+bool times(parser *p) { return mark(p,operator) && text(p,"*") && gap(p); }
 
 // over = #operator '/' gap
-bool Pover(parser *p) { return mark(p,operator) && text(p,"/") && Pgap(p); }
+bool over(parser *p) { return mark(p,operator) && text(p,"/") && gap(p); }
 
 // open = #bracket '(' gap
-bool Popen(parser *p) { return mark(p,bracket) && text(p,"(") && Pgap(p); }
+bool open(parser *p) { return mark(p,bracket) && text(p,"(") && gap(p); }
 
 // close = #bracket ')' gap
-bool Pclose(parser *p) { return mark(p,bracket) && text(p,")") && Pgap(p); }
+bool close(parser *p) { return mark(p,bracket) && text(p,")") && gap(p); }
 
-// digit = #digit '0..9'
-bool Pdigit(parser *p) { return mark(p,digit) && range(p,'0','9'); }
+// digit = '0..9'
+bool digit(parser *p) { return range(p,'0','9'); }
 
 // gap1 = (' ' gap1)?
-bool Pgap1(parser *p) { return (text(p," ") && Pgap1(p)) || true; }
+bool gap1(parser *p) { return (text(p," ") && gap1(p)) || true; }
 
 // gap = (' ')* @
-bool Pgap(parser *p) { return Pgap1(p) && drop(p,0); }
+bool gap(parser *p) { return gap1(p) && drop(p,0); }
 
-// end = #newline 13? 10 @
-bool Pend(parser *p) {
+// eol = #newline 13? 10 @
+bool eol(parser *p) {
     return mark(p,newline) && (text(p,"\r") || true) && text(p,"\n") &&
     drop(p,0);
 }
@@ -350,7 +351,7 @@ static inline bool not(parser *p, bool b) {
 }
 
 // Backtrack on failure.
-static inline bool try(parser *p, bool b) {
+static inline bool see(parser *p, bool b) {
     int n = unsave(p);
     if (! b) p->in = n;
     return b;
@@ -422,7 +423,7 @@ static inline bool drop(parser *p, int n) {
 }
 
 // Match end of input.
-static inline bool end(parser *p) {
+static inline bool eot(parser *p) {
     return p->in >= p->end;
 }
 

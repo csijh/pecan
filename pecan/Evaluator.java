@@ -106,7 +106,7 @@ public class Evaluator implements Testable {
             case Opt: parseOpt(node); break;
             case Any: parseAny(node); break;
             case Some: parseSome(node); break;
-            case Try: parseTry(node); break;
+            case See: parseSee(node); break;
             case Has: parseHas(node); break;
             case Not: parseNot(node); break;
             case Tag: parseTag(node); break;
@@ -193,7 +193,7 @@ public class Evaluator implements Testable {
 
     // Parse [x]. If x contains an action or a marker, parse twice as x& then x.
     // Otherwise parse once and decide whether to backtrack.
-    private void parseTry(Node node) {
+    private void parseSee(Node node) {
         if (switchTest) return;
         if (node.has(AA) || node.has(EE)) {
             parseHas(node);

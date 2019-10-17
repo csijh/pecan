@@ -163,7 +163,7 @@ class Parser implements Testable {
 
     // try = sopen expression sclose @3try
     private boolean try_() {
-        return sopen() && exp() && sclose() && ACT3(Try);
+        return sopen() && exp() && sclose() && ACT3(See);
     }
 
     // id = (cat alpha!)! name @id blank

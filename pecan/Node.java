@@ -67,7 +67,11 @@ class Node {
         if (f != Flag.Changed) flags = flags | Flag.Changed.bit();
     }
 
-    // Get/set counts and get bitsets. Set changed as appropriate.
+    // Get or set all the flags (e.g. to copy them from one node to another).
+    int flags() { return flags; }
+    void flags(int fs) { flags = fs; }
+
+    // Get/set counts.
     int NET() { return NET; }
     int NEED() { return NEED; }
     void NET(int n) { NET = n; }
@@ -81,16 +85,16 @@ class Node {
     int PC() { return PC; }
     void PC(int i) { PC = i; }
 
-    // Get/set LEN = number of bytes of bytecode or characters of compiled code.
+    // Get/set LEN = number of bytes or characters of compiled code.
     int LEN() { return LEN; }
     void LEN(int n) { LEN = n; }
 
 // ---------- The structural fields and methods -------------------------------
 
     private Op op;
+    private Node left, right;
     private Source source;
     private int start, end;
-    private Node left, right;
 
     // Construct a node.
     Node(Op o, Node r1, Node r2, Source s, int b, int e) {
@@ -103,9 +107,20 @@ class Node {
     // Construct a node with no subnodes.
     Node(Op o, Source s, int b, int e) { this(o, null, null, s, b, e); }
 
-    // Copy a node, with given children. Leave out info.
-    Node copy(Node x, Node y) {
-        return new Node(op, x, y, source, start, end);
+    // Copy this node, with a new op, but with the same children and flags.
+    Node copy(Op o) {
+        Node y = new Node(o, left, right, source, start, end);
+        y.flags = flags;
+        return y;
+    }
+
+    // Copy this node, but with different source text.
+    Node copy(Op o, Source s, int b, int e) {
+        Node y = copy(o);
+        y.source(s);
+        y.start(b);
+        y.end(e);
+        return y;
     }
 
     // Get/set the op and range of text.

@@ -84,13 +84,13 @@ bool x() {
     );
 }
 ==========
--- Simple try
+-- Simple see
 x = ['a']
 ..........
 // x = ['a']
-bool x() { return try(go() && text("a")); }
+bool x() { return see(go() && text("a")); }
 ==========
--- Complex try
+-- Complex see
 x = ['a' @a]
 ..........
 // x = ['a' @a]

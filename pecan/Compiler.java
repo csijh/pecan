@@ -27,8 +27,8 @@ the template file. Examples for C are:
 <pecan
     comment  = "// %s"
     indent   = ""
-    rule     = "bool %s(parser *p) {\n    return %e;\n}"
-    rule     = "private boolean %s() {\n    return %e;\n}"
+    rule     = "bool %s(parser *p) {%n    return %e;%n}"
+    rule     = "private boolean %s() {%n    return %e;%n}"
     call     = "%s(p)"
     true     = "true"
     false    = "false"
@@ -49,8 +49,8 @@ the template file. Examples for C are:
     go       = "GO"
 >
 
-[x ||\n y ||\n z]        one group, all or none.
-[[x &&\n y] &&\n z]      many groups, 'fill'
+[x ||%n y ||%n z]        one group, all or none.
+[[x &&%n y] &&%n z]      many groups, 'fill'
 
 Input = p->ins; posn = p->start, length = p->in - p->start
 
@@ -77,7 +77,7 @@ public class Compiler implements Testable {
         OK = "ok",
         ALT = "alt",
         OPT = "opt",
-        TRY = "try",
+        SEE = "see",
         HAS = "has",
         NOT = "not",
         TAG = "tag",
@@ -131,7 +131,7 @@ public class Compiler implements Testable {
         Node root = stacker.run(grammar);
         if (root.op() == Error) return "Error: " + root.note();
         Transformer transformer = new Transformer();
-        transformer.expandTry(root);
+        transformer.expandSee(root);
         transformer.lift(root);
         int old = margin;
         margin = Integer.MAX_VALUE;
@@ -166,7 +166,7 @@ public class Compiler implements Testable {
             case Opt: compileOpt(node); break;
             case Any: compileEmpty(node); break;
             case Some: compileEmpty(node); break;
-            case Try: compileTry(node); break;
+            case See: compileSee(node); break;
             case Has: compileHas(node); break;
             case Not: compileNot(node); break;
             case Tag: compileTag(node); break;
@@ -338,10 +338,10 @@ public class Compiler implements Testable {
     }
 
     // Compile [p] when p has no actions or errors.
-    private void compileTry(Node node) {
+    private void compileSee(Node node) {
         if (switchTest) return;
         boolean fit = node.LEN() <= margin - cursor;
-        print(TRY, "(");
+        print(SEE, "(");
         if (! fit) newline(+1);
         printT(CALL, GO);
         print(AND);

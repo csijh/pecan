@@ -97,7 +97,7 @@ class Checker implements Testable {
         case Opt: scanOpt(node); break;
         case Any: scanAny(node); break;
         case Some: scanSome(node); break;
-        case Try: scanTry(node); break;
+        case See: scanSee(node); break;
         case Tag: case Char: case String: case Set: scanMatch(node); break;
         case Cat: case Range: case Code: case Codes: scanMatch(node); break;
         case Success: scanSuccess(node); break;
@@ -295,7 +295,7 @@ class Checker implements Testable {
     }
 
     // [x] = x& x
-    private void scanTry(Node node) {
+    private void scanSee(Node node) {
         if (switchTest) return;
         Node x = node.left();
         boolean xSN = x.has(SN);

@@ -1,4 +1,4 @@
-// Try with no actions
+// See with no actions
 x = @x ['a'] 'b'
 ..........
 RULE x
@@ -8,7 +8,7 @@ RULE x
       SET 'a'
     SET 'b'
 ==========
-// Try with actions
+// See with actions
 x = ['a' @a] 'b'
 ..........
 RULE x

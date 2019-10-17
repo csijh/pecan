@@ -63,7 +63,7 @@ class Generator implements Testable {
             case Opt:       encodeOpt(node);        break;
             case Any:       encodeAny(node);        break;
             case Some:      encodeSome(node);       break;
-            case Try:       encodeTry(node);        break;
+            case See:       encodeSee(node);        break;
             case Has:       encodeHas(node);        break;
             case Not:       encodeNot(node);        break;
             case Drop:      encodeDrop(node);       break;
@@ -139,10 +139,10 @@ class Generator implements Testable {
         encode(node.left());
     }
 
-    // {[x]}  =  LOOK TRY {x}
-    private void encodeTry(Node node) {
+    // {[x]}  =  LOOK SEE {x}
+    private void encodeSee(Node node) {
         add(LOOK);
-        add(TRY);
+        add(SEE);
         encode(node.left());
     }
 

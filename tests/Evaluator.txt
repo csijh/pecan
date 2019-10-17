@@ -32,14 +32,14 @@
 ==========
 {sum17.txt}
 ==========
--- Try succeeds
+-- See succeeds
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
 ..
 ..........
 dots ..
 ==========
--- Try fails
+-- See fails
 dots = ['.' '.'] @dots / '.' '3' @num
 ==========
 .3

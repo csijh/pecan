@@ -77,7 +77,7 @@ class Binder implements Testable {
         switch(node.op()) {
         case Error: case Temp: case List: case Empty: case End: break;
         case And: case Or: case Opt: case Any: case Some: case Drop: break;
-        case Has: case Not: case Try: case Mark: case Tag: break;
+        case Has: case Not: case See: case Mark: case Tag: break;
         case Success: case Fail: break;
         case Cat: scanCat(node); break;
         case Rule: scanRule(node); break;

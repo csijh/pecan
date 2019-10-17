@@ -17,7 +17,7 @@ public enum Op {
     Opt,       // Optional, x?
     Any,       // Zero or more, x*
     Some,      // One or more, x+
-    Try,       // Lookahead, [e]
+    See,       // Lookahead, [e]
     Has,       // Positive lookahead, e&
     Not,       // Negative lookahead, e!
     Mark,      // Error annotation, x #e

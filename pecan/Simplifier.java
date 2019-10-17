@@ -28,7 +28,7 @@ class Simplifier implements Test.Callable {
         Stacker stacker = new Stacker();
         Node root = stacker.run(text);
 //        expandSome(root);
-        expandTry(root);
+        expandSee(root);
         deactivate(root);
         return root;
     }
@@ -55,10 +55,10 @@ class Simplifier implements Test.Callable {
     // Replace [x] by (x& x) if x contains actions. Assume x is small enough to
     // be repeated twice, rather than making a separate rule for it. Note this
     // makes the tree into a DAG.
-    private void expandTry(Node node) {
-        if (node.left() != null) expandTry(node.left());
-        if (node.right() != null) expandTry(node.right());
-        if (node.op() == TRY && (node.has(AA) || node.has(EE)) {
+    private void expandSee(Node node) {
+        if (node.left() != null) expandSee(node.left());
+        if (node.right() != null) expandSee(node.right());
+        if (node.op() == See && (node.has(AA) || node.has(EE))) {
             Node x = node.left();
             node.op(And);
             int s = x.start(), e = x.end();
