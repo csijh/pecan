@@ -35,9 +35,7 @@ static char *opNames[] = {
 // arg:     an argument to pass to the act or tag function.
 // look:    the nesting depth inside lookahead constructs.
 // top:     the number of items on the call stack.
-// out:     the number of delayed actions stored in the actions array.
 // stack:   the call stack, i.e. return addresses and saved in/out values.
-// actions: the delayed action codes and input positions.
 struct parser {
     byte *code;
     char *input;
@@ -47,8 +45,8 @@ struct parser {
     doAct *act;
     doTag *tag;
     void *arg;
-    int look, top, out;
-    int stack[1000], actions[1000];
+    int look, top;
+    int stack[1000];
 };
 typedef struct parser parser;
 
@@ -87,18 +85,7 @@ static void new(
     p->act = act;
     p->arg = arg;
     p->tag = tag;
-    p->look = p->top = p->out = 0;
-}
-
-// Carry out any delayed actions.
-static inline void doActs(parser *p) {
-    for (int i = 0; i < p->out; i = i + 2) {
-        int a = p->actions[i];
-        int oldIn = p->actions[i+1];
-        if (a != -1) p->act(p->arg, a, p->start, oldIn - p->start);
-        p->start = oldIn;
-    }
-    p->out = 0;
+    p->look = p->top = 0;
 }
 
 // {id = x}  =  START, nx, {x}, STOP
@@ -108,10 +95,8 @@ static inline void doSTART(parser *p, int arg) {
 }
 
 // {id = x}  =  ... STOP
-// Carry out any outstanding delayed actions. Return NULL for success, or an
-// error report containing a bitmap of markers.
+// Return NULL for success, or an error report containing a bitmap of markers.
 static inline void doSTOP(parser *p, result *r) {
-    if (p->ok && p->out > 0) doActs(p);
     if (p->ok || p->in > p->marked) p->markers = 0L;
     r->ok = p->ok;
     r->at = p->in;
@@ -125,20 +110,17 @@ static inline void doGO(parser *p, int arg) {
 }
 
 // {x / y}  =  EITHER, nx, {x}, OR, {y}
-// Save in/out, call x, returning to OR.
+// Save in, call x, returning to OR.
 static inline void doEITHER(parser *p, int arg) {
     p->stack[p->top++] = p->in;
-    p->stack[p->top++] = p->out;
     p->stack[p->top++] = p->pc + arg;
 }
 
 // {x / y}  =  EITHER, nx, {x}, OR, {y}
 // After x, check success and progress, return or continue with y.
 static inline void doOR(parser *p) {
-    int saveOut = p->stack[--p->top];
     int saveIn = p->stack[--p->top];
     if (p->ok || p->in > saveIn) p->pc = p->stack[--p->top];
-    else p->out = saveOut;
 }
 
 // {x y}  =  BOTH, nx, {x}, AND, {y}
@@ -154,10 +136,9 @@ static inline void doAND(parser *p) {
 }
 
 // {x?}  =  MAYBE, ONE, {x},   and similarly for x*, x+
-// Save in/out and call x, returning to ONE or MANY.
+// Save in and call x, returning to ONE or MANY.
 static inline void doMAYBE(parser *p) {
     p->stack[p->top++] = p->in;
-    p->stack[p->top++] = p->out;
     p->stack[p->top++] = p->pc;
     p->pc++;
 }
@@ -165,10 +146,8 @@ static inline void doMAYBE(parser *p) {
 // {x?}  =  MAYBE, ONE, {x}
 // After x, check success or no progress and return.
 static inline void doONE(parser *p) {
-    int saveOut = p->stack[--p->top];
     int saveIn = p->stack[--p->top];
     if (! p->ok && p->in == saveIn) {
-        p->out = saveOut;
         p->ok = true;
     }
     p->pc = p->stack[--p->top];
@@ -177,16 +156,13 @@ static inline void doONE(parser *p) {
 // {x*}  =  MAYBE, MANY, {x}
 // After x, check success and re-try x or return.
 static inline void doMANY(parser *p) {
-    int saveOut = p->stack[--p->top];
     int saveIn = p->stack[--p->top];
     if (p->ok) {
         p->stack[p->top++] = p->in;
-        p->stack[p->top++] = p->out;
         p->stack[p->top++] = p->pc - 1;
     }
     else {
         if (! p->ok && p->in == saveIn) {
-            p->out = saveOut;
             p->ok = true;
         }
         p->pc = p->stack[--p->top];
@@ -201,33 +177,26 @@ static inline void doDO(parser *p) {
 }
 
 // {[x]}  =  LOOK, TRY, x,   and similarly for x& and x!
-// Save in/out and call x as a lookahead, returning to TRY or HAS or NOT.
+// Save in and call x as a lookahead, returning to TRY or HAS or NOT.
 static inline void doLOOK(parser *p) {
     p->stack[p->top++] = p->in;
-    p->stack[p->top++] = p->out;
     p->look++;
     p->stack[p->top++] = p->pc;
     p->pc++;
 }
 
 // {[x]}  =  LOOK, TRY, x
-// Succeed and perform actions, or fail and discard them and backtrack.
+// After x, backtrack, and if successfull, tail-call x for actions/markers.
 static inline void doTRY(parser *p) {
-    int saveOut = p->stack[--p->top];
     int saveIn = p->stack[--p->top];
     p->look--;
-    if (p->ok && p->look == 0 && p->out > 0) doActs(p);
-    else if (! p->ok) {
-        p->out = saveOut;
-        p->in = saveIn;
-    }
-    p->pc = p->stack[--p->top];
+    p->in = saveIn;
+    if (! p->ok) p->pc = p->stack[--p->top];
 }
 
 // {x&}  =  LOOK, HAS, x
 // After x, backtrack and return.
 static inline void doHAS(parser *p) {
-    p->out = p->stack[--p->top];
     p->in = p->stack[--p->top];
     p->look--;
     p->pc = p->stack[--p->top];
@@ -236,7 +205,6 @@ static inline void doHAS(parser *p) {
 // {x!}  =  LOOK, NOT, x
 // After x, backtrack, invert the result, and return.
 static inline void doNOT(parser *p) {
-    p->out = p->stack[--p->top];
     p->in = p->stack[--p->top];
     p->look--;
     p->ok = ! p->ok;
@@ -244,19 +212,18 @@ static inline void doNOT(parser *p) {
 }
 
 // {@}  =  DROP
-// Delay the drop, using action code -1.
 static inline void doDROP(parser *p) {
-    p->actions[p->out++] = -1;
-    p->actions[p->out++] = p->in;
+    if (p->look == 0) p->start = p->in;
     p->ok = true;
     p->pc = p->stack[--p->top];
 }
 
 // {@2add}  =  ACT, add
-// Delay the action and return success.
 static inline void doACT(parser *p, int arg) {
-    p->actions[p->out++] = arg;
-    p->actions[p->out++] = p->in;
+    if (p->look == 0) {
+        p->act(p->arg, arg, p->start, p->in - p->start);
+        p->start = p->in;
+    }
     p->ok = true;
     p->pc = p->stack[--p->top];
 }
@@ -285,7 +252,6 @@ static inline void doSTRING(parser *p, int arg) {
     }
     if (p->ok) {
         p->in = p->in + arg;
-        if (p->look == 0 && p->out > 0) doActs(p);
     }
     p->pc = p->stack[--p->top];
 }
@@ -315,7 +281,6 @@ static inline void doHIGH(parser *p, int arg) {
     if (p->ok) {
         p->pc = p->pc + arg;
         p->in = p->in + arg;
-        if (p->look == 0 && p->out > 0) doActs(p);
     }
     p->pc = p->stack[--p->top];
 }
@@ -366,7 +331,6 @@ static inline void doSET(parser *p, int arg) {
         if (oki) p->ok = true;
     }
     if (p->ok) {
-        if (p->look == 0 && p->out > 0) doActs(p);
         p->in = p->in + n;
     }
     p->pc = p->stack[--p->top];
@@ -379,7 +343,6 @@ static inline void doTAG(parser *p, int t) {
     int nextTag = p->tag(p->arg, p->in);
     p->ok = (nextTag == t);
     if (p->ok) {
-        if (p->look == 0 && p->out > 0) doActs(p);
         p->in++;
     }
     p->pc = p->stack[--p->top];
@@ -396,7 +359,6 @@ static inline void doCAT(parser *p, int arg) {
     int cat = table2[table1[ch>>8]*256+(ch&255)];
     p->ok = cat == arg;
     if (p->ok) {
-        if (p->look == 0 && p->out > 0) doActs(p);
         p->in += len;
     }
     p->pc = p->stack[--p->top];
@@ -850,7 +812,7 @@ int main() {
     assert(run(s, calc3, "2", "#2"));
     assert(run(s, calc3, "42", "#42"));
     assert(run(s, calc3, "2x", "#2"));
-    assert(run(s, calc4, "2", "E1:0"));
+    assert(run(s, calc4, "2", "#2E1:0"));
     assert(run(s, calc5, "2", "#2"));
     assert(run(s, calc5, "42", "#42"));
     assert(run(s, calc5, "2+40", "#2#+40+"));
@@ -863,23 +825,23 @@ int main() {
     assert(run(s, calc8, "2\n", "#2"));
     assert(run(s, calc8, "42\n", "#42"));
     assert(run(s, calc8, "2+40\n", "#2#40+"));
-    assert(run(s, calc8, "2+40%\n", "#2E4:0"));
+    assert(run(s, calc8, "2+40%\n", "#2#40+E4:0"));
     assert(run(s, calc9, "2+10+12+18\n", "#2#10+#12+#18+"));
     assert(run(s, calc10, "2+10+12+18\n", "#2#10+#12+#18+"));
     assert(run(s, calc10, "2-10+53-3\n", "#2#10-#53+#3-"));
     assert(run(s, calc11, "2-10+53-3\n", "#2#10-#53+#3-"));
     assert(run(s, calc12, "2-10+53-3\n", "#2#10-#53+#3-"));
     assert(run(s, calc12, "2+\n", "#2E2:1"));
-    assert(run(s, calc12, "2+40%\n", "#2E4:b"));
+    assert(run(s, calc12, "2+40%\n", "#2#40+E4:b"));
     assert(run(s, calc13, "5*8+12/6\n", "#5#8*#12#6/+"));
-    assert(run(s, calc14, "2*(20+1)\n", "#2#20E7:b"));
+    assert(run(s, calc14, "2*(20+1)\n", "#2#20#1+E7:b"));
     assert(run(s, calc15, "2*(20+1)\n", "#2#20#1+*"));
     assert(run(s, calc16, "2\n", "#2"));
     assert(run(s, calc16, "2+\n", "#2E2:15"));
     assert(run(s, calc17, "2\n", "#2"));
     assert(run(s, calc17, "42\n", "#42"));
     assert(run(s, calc17, "2+40\n", "#2#40+"));
-    assert(run(s, calc17, "2+40%\n", "#2E4:b"));
+    assert(run(s, calc17, "2+40%\n", "#2#40+E4:b"));
     assert(run(s, calc17, "2+10+12+18\n", "#2#10+#12+#18+"));
     assert(run(s, calc17, "2-10+53-3\n", "#2#10-#53+#3-"));
     assert(run(s, calc17, "2+\n", "#2E2:5"));

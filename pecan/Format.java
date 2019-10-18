@@ -15,7 +15,7 @@ class Format {
     enum Tag {
         ESCAPE1("c"), ESCAPE2("c"), ESCAPE4("c"), COMMENT("s"), TAB(""),
         RULE("sen"), RULE1("se"), AND(""), OR(""), TRUE(""), FALSE(""),
-        CALL("s"), SUPPORT("s"), GO(""), OK(""), ALT("e"), OPT("e"), SEE("e"),
+        CALL("s"), ID("s"), GO(""), OK(""), ALT("e"), OPT("e"), SEE("e"),
         HAS("e"), NOT("e"), TAG("s"), EOT(""), TEXT("s"), SET("s"), SPLIT("s"),
         RANGE("cd"), CAT("s"), MARK("s"), DROP("d"), ACT("ds"), ACT0("s"),
         ACT1("s"), ACT2("s"), ACT3("s"), ACT4("s"), ACT5("s"), ACT6("s"),
@@ -206,9 +206,9 @@ class Format {
         if (format(OR) == null) format(OR, " || ");
         if (format(TRUE) == null) format(TRUE, "true");
         if (format(FALSE) == null) format(FALSE, "false");
-        if (format(CALL) == null) return "no call format";
-        if (format(SUPPORT) == null) format(SUPPORT, format(CALL));
-        String f = format(SUPPORT);
+        if (format(CALL) == null) format(CALL, "%s()");
+        if (format(ID) == null) format(ID, format(CALL));
+        String f = format(CALL);
         if (format(GO) == null) format(GO, call(f, "go"));
         if (format(OK) == null) format(OK, call(f, "ok"));
         if (format(ALT) == null) format(ALT, call(f, "alt", "%e"));
@@ -217,7 +217,7 @@ class Format {
         if (format(HAS) == null) format(HAS, call(f, "has", "%e"));
         if (format(NOT) == null) format(NOT, call(f, "not", "%e"));
         if (format(TAG) == null) format(TAG, call(f, "tag", "%e"));
-        if (format(EOT) == null) format(EOT, call(f, "end"));
+        if (format(EOT) == null) format(EOT, call(f, "eot"));
         if (format(TEXT) == null) format(TEXT, call(f, "text", "\"%s\""));
         if (format(SET) == null) format(SET, call(f, "set", "\"%s\""));
         if (format(SPLIT) == null) format(SPLIT, call(f, "split", "\"%s\""));
@@ -284,9 +284,6 @@ class Format {
         assert(call("%s()","alt","%e").equals("alt(%e)"));
         assert(call("%s(p)","alt","%e").equals("alt(p,%e)"));
         assert(call("%s p","alt","%e").equals("alt p %e"));
-///        boolean b = readAttribute("//  ");
-//        System.out.println(""+errorColumn + " " + error);
-//        assert(errorColumn == 0);
     }
 
     public static void main(String[] args) {

@@ -739,25 +739,29 @@ anywhere, it seems rather fussy to mention them.</p>
 
 <p>Rather than change the error messages to add <code>space</code> as an extra
 expected item, let's decide that error messages will look cleaner if spaces are
-not reported. So, we will change the grammar to:</p>
+not reported. Also, there are no circumstances where one or more digits have
+been matched, and a further digit is required. So let's remove the marker
+<code>#digit</code> from the digit rule and put a marker <code>#integer</code>
+on the number rule instead. The grammar becomes:</p>
 
 <pre>sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
-number = digit+ @number gap
+number = #integer digit+ @number gap
 plus = #operator '+' gap
 minus = #operator '-' gap
 times = #operator '*' gap
 over = #operator '/' gap
 open = #bracket '(' gap
 close = #bracket ')' gap
-digit = #digit '0..9'
+digit = '0..9'
 gap = (' ')* @
 end = #newline 13? 10 @
 </pre>
 
-<p>Let's run the tests just one more time:</p>
+<p>Running the tests again shows that there are error messages that need to
+be adjusted, but after that:</p>
 
 <pre>pecan sum-test.txt
 Pass 10 tests.

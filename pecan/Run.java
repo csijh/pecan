@@ -11,11 +11,11 @@ import java.nio.charset.*;
 /* Read in a file of tests and run them:
 
     pecan [-t | -trace] [line] testfile
-    pecan -o output grammar
+    pecan grammar [-b | -c] output
 */
 
 class Run {
-    private boolean tracing, compiling;
+    private boolean tracing, compiling, bytecode;
     private String infile, outfile, sourcefile;
     private int line = 0;
     private Evaluator evaluator;
@@ -27,9 +27,10 @@ class Run {
 
     private void run(String[] args) {
         if (args == null) usage();
-        tracing = compiling = false;
+        tracing = compiling = bytecode = false;
         for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-o")) compiling = true;
+            if (args[i].equals("-b")) compiling = true;
+            if (args[i].equals("-c")) compiling = true;
         }
         if (compiling) runCompile(args);
         else runTest(args);
@@ -52,11 +53,12 @@ class Run {
         Test.run(e, args);
     }
 
-    // pecan -o output grammar
+    // pecan grammar [-b | -c] output
+    // Read grammar file and program file.
     private void runCompile(String[] args) {
-        /*
         for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-o")) {
+            if (args[i].equals("-b") || args[i].equals("-c")) {
+                if (args[i].equals("-b")) bytecode = true;
                 outfile = args[i+1];
                 i++;
             }
@@ -65,15 +67,23 @@ class Run {
             else usage();
         }
         if (sourcefile == null) usage();
-        String grammar = null;
-        try {
-            byte[] bytes = Files.readAllBytes(Paths.get(sourcefile));
-            grammar = new String(bytes, "UTF-8");
+        String text = Source.readFile(sourcefile);
+        Source grammar = new Source(text, sourcefile, 1);
+
+        List<String> lines = null;
+        Path p = Paths.get(outfile);
+        try { lines = Files.readAllLines(p, StandardCharsets.UTF_8); }
+        catch (Exception e) { throw new Error(e); }
+
+
+
+
+        String code;
+        if (bytecode) code = null; // TODO
+        else {
+            code = new Compiler().run(grammar);
         }
-        catch (Exception e) {
-            System.err.println("Error: can't read " + sourcefile + ": " + e);
-            System.exit(1);
-        }
+        /*
         int n = grammar.indexOf("===");
         if (n >= 0) grammar = grammar.substring(0, n);
         Generator gen = new Generator();

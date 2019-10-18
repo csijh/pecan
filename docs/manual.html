@@ -74,7 +74,7 @@ has these features:</p>
 
 <li>output actions and error markers are included</li>
 
-<li>transformations on grammars preserve actions and errors</li>
+<li>transformations on grammars preserve actions and error handling</li>
 
 <li>many consistency checks are applied to grammars</li>
 
@@ -82,7 +82,7 @@ has these features:</p>
 
 <li>compilation can be direct or via bytecode</li>
 
-<li>compilation can be to almost any target languages</li>
+<li>compilation can be to almost any target language</li>
 
 </ul>
 
@@ -90,8 +90,8 @@ has these features:</p>
 various issues that have to be addressed, separately from the programming
 details. However, that also makes grammars rather dense. Creating or translating
 a grammar accurately can be difficult. In addition, programmers typically use
-parser generators only rarely, and are often not grammar experts. That's why
-Pecan has explicit support for test-driven grammar development.</p>
+parser generators only rarely, and are often not grammar experts. For those
+reasons, Pecan has explicit support for test-driven grammar development.</p>
 
 <p>The Pecan system is written in Java, so the first step is to make sure that
 version 8 or better of Java is available. Pecan is provided as an executable jar
@@ -209,7 +209,7 @@ the worst case.</p>
 <p>The main difference with PEG grammars compared to CFG grammars is that the
 symmetrical choice operator <code>|</code> is replaced by an ordered choice
 operator <code>/</code> which has a more operational meaning. The expressive
-power of PEG grammars is extremely close to that of CFG grammars, certainly
+power of PEG grammars is extremely close to that of CFG grammars. Certainly,
 grammars for all practical everyday languages can be expressed in either
 notation.</p>
 
@@ -272,11 +272,14 @@ on the <a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">PEG</a>
 notation. Pecan has a sequential choice operator <code>x/y</code> but, unlike
 the PEG notation, the operator does not automatically involve backtracking.
 There are separate lookahead operators, for the controlled use of backtracking,
-which provide greater control over the progress of parsing. It is much easier to
-generate accurate error messages, and parsers can be kept reasonably efficient
-by the programmer, without the space overhead of such techniques as the PEG
-packrat algorithm. The syntax of Pecan grammars is explained below, and there is
-a Pecan grammar for the Pecan language, with tests, in the file:</p>
+which provide greater control over the progress of parsing. That makes it much
+easier to generate accurate error messages, while having the full power of the
+PEG notation available to decide between alternatives. The approach gives
+programmers the expressiveness to make parsers efficient without relying on
+obscure automatic optimisations, and parsers normally run without the space
+overhead of such techniques as the PEG packrat algorithm. The syntax of Pecan
+grammars is explained below, and there is a Pecan grammar for the Pecan
+language, with tests, in the file:</p>
 
 <p class="indent"><a href="pecan.txt">pecan.txt</a></p>
 
@@ -440,7 +443,7 @@ in exactly the same way as the three rules <code>xs</code>, <code>xp</code>,
 <code>xq</code> defined by:</p>
 
 <pre>xs = x xs / ""
-xp = x xs
+xp = x (xp / "")
 xq = x / ""
 </pre>
 
@@ -510,9 +513,8 @@ x</code>, so actions and error reporting are only performed if <code>x</code>
 succeeds.</p>
 
 <p>The fact that actions are not performed during speculative parsing restricts
-the possible context sensitive aspects of a language, which can only depend on
-actions outside of lookahead constructs. Lookahead is regarded only as a way of
-deciding which alternative to take.</p>
+the possible context sensitive aspects of a parser. Context sensitivity is
+discussed further in the section on token parsers.</p>
 
 <h3 id="text">Text</h3>
 
@@ -554,13 +556,14 @@ characters can be used in set or string quotes. However, in sets, each code
 point is treated as a separate character. Where graphemes might be involved,
 care needs to be taken. For example, <code>'é'</code> is visually ambiguous
 because it could contain one or two code points, depending on whether a combiner
-is used. If it contains two code points, writing it as <code>"é"</code> is more
-likely to convey the intended meaning. Similarly, <code>'éè'</code> is probably
-better written as <code>"é" / "è"</code>.
+is used. If the intended meaning is a single character, it is better to write
+<code>"é"</code> to cover both possibilities. Similarly, if the intention of
+<code>'éè'</code> is a choice between two characters, it is better to write
+<code>"é" / "è"</code> to avoid problems.</p>
 
 <p>There is no escape convention within single or double quotes, because common
 escape conventions, apart from being complicated and error prone, don't support
-decimal or variable-length character codes. Instead, to represent control
+decimal or variable-length character codes well. Instead, to represent control
 characters, or to represent Unicode characters using plain text, integers are
 used. An integer on its own represents a single character, using its decimal
 character code. For example:</p>
@@ -584,17 +587,16 @@ ascii = 0..127
 </pre>
 
 <p>The first is a variation of the set notation, with a single character either
-side of two dots. The second is a dot-dot operator between two numerical
-character codes. These are both atomic tokens, with no spaces either side of the
-dots.</p>
+side of two dots. The second is two numerical character codes either side of two
+dots. These are both atomic tokens, with no spaces either side of the dots.</p>
 
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
 No, Pc, Pd, Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided.
-The name <code>Uc</code> represents all Unicode code points (equivalent to
-<code>0..1114111</code>), and the others are the standard two-letter
-abbreviations for the Unicode general categories which partition all the code
-points. For example:</p>
+The name <code>Uc</code> represents all Unicode code points. It is equivalent to
+<code>0..1114111</code>. The others are the standard two-letter abbreviations
+for the Unicode general categories which partition all the code points. For
+example:</p>
 
 <pre>letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
@@ -612,8 +614,8 @@ which are unassigned, private, surrogate, controls, or line or paragraph
 separators.</p>
 
 <p>A splitter is a string in angle brackets such as <code>&lt;abc></code> which
-represents a lookahead. It does not match any input characters, but succeeds if
-the remaining input, regarded as a string, is lexicographically less than or
+represents a lookahead. It does not consume any input characters, but succeeds
+if the remaining input, regarded as a string, is lexicographically less than or
 equal to <code>"abc"</code>. For example:</p>
 
 <pre>keyword = &lt;df> keyword1 / keyword2
@@ -695,11 +697,12 @@ convention which allows matched characters to be discarded. For example:</p>
 tokens) to be discarded by the parser, without any external code being
 executed.</p>
 
-<!--
-<p>Although tokens can be explicitly discarded in this way, it is normal for
-actions to use only the most recent token, in which case tokens are effectively
-discarded implicitly when they are matched but not acted on.</p>
--->
+<p>Recently matched characters are available to an action, no matter what arity
+it has. However, for an action like <code>@2add</code> which combines output
+items, it is common to ignore them. If there are any such characters, and they
+are ignored by an action, they are implicitly discarded. Also, a discard with
+non-zero arity such as <code>@2</code> is allowed. This discards two output
+items, as well as any outstanding matched characters.</p>
 
 <p>There are severe consistency restrictions on actions. Every expression or
 rule must produce or consume a fixed number of output items. Each alternative in
@@ -1460,6 +1463,16 @@ style="white-space:nowrap">"/* %s */"</code> for example. The comment generated
 contains the text of the Pecan rule that the function corresponds to. The
 default is to have no comments.</p></li>
 
+<li><p><code><b>escape1</b>, <b>escape2</b>, <b>escape4</b>:</code> formats to
+change the way <code>%c</code> and <code>%s</code> work by printing escape
+sequences instead of UTF-8. The escape1 format is for control characters in the
+ASCII range, the escape2 format for characters beyond ASCII up to hex FFFF, and
+escape4 for the remainder of the Unicode character set. The defaults are
+<code>"\%3o"</code>, <code>"\u%4x"</code>, and <code>"\U%8x"</code>. These
+work in C and several other languages. (In C, these escape sequences have a
+length limit. Using <code>"\%2o"</code> or <code>"\x%2x"</code> for example,
+would not be safe because digits could follow.)</p></li>
+
 <li><p><code><b>rule</b>:</code> the format for a function generated from a
 rule <code>id = e</code>. The two items available as parameters are the name
 of the identifier as a string, and the right hand side as an expression. There
@@ -1476,30 +1489,29 @@ style="white-space:nowrap">" || "</code>, <code>"true"</code> and
 <code>"false"</code>.</p></li>
 
 <li><p><code><b>call</b>:</code> the format for making a call to a parsing
-function. An example where an argument is to be passed to every function to
-provide the parsing state might be <code>"%s(p)"</code> whereas if the state is
-implicit, <code>"%s()"</code> might be suitable instead. The call format (along
-with the <code>rule</code> format) can be used to add a prefix or suffix to
-identifier names. For example, a call format <code>"p%f()"</code> would cause an
-occurrence of an identifier <code>term</code> to be compiled as
-<code>pTerm()</code>. There is no default for the call format.</p></li>
+function, and the default for the formats below. If an explicit parsing state is
+needed, for example, this could be set to <code>"%s(p)"</code>. The default is
+<code>"%s()"</code>.</p>
 
-<li><p><code><b>support</b>:</code> the format for generating defaults for calls
-to the support functions below. The default for the <code>support</code> format
-is to use the <code>call</code> format.</p></li>
+<li><p><code><b>id</b>:</code> the format for generating a call for the
+occurrence of an identifier. Along with the <code>rule</code> format, this can
+be used to adjust identifier names. For example, an id format
+<code>"P%s()"</code> would cause an occurrence of an identifier
+<code>term</code> to be compiled as <code>Pterm()</code>. The default is to use
+the call format.</p>
 
 <li><p><code><b>go</b>, <b>ok</b>, <b>alt</b>, <b>opt</b>, <b>see</b>,
-<b>has</b>, <b>not</b>, <b>tag</b>, <b>end</b>:</code> the formats for simple
+<b>has</b>, <b>not</b>, <b>tag</b>, <b>eot</b>:</code> the formats for various
 support functions. The <code>go</code>, <code>ok</code> and <code>alt</code>
 functions are for choices as explained above. The function <code>opt</code> is
 for <code>x?</code>, <code>see</code> is for <code>[x]</code>, <code>has</code>
 is for <code>x&amp;</code>, <code>not</code> is for <code>x!</code>,
-<code>tag</code> is for <code>%x</code>, and <code>end</code> is for
-<code>&lt;></code>. Explicit definitions of these formats can be given to change
-the case or spelling of the function names generated, or to produce different
-inline code. The default format for each of the functions is to specialize the
-support format by filling in the function name. For example, if the support
-format is <code>"%s(p)"</code> then the default go format is
+<code>tag</code> is for <code>%x</code>, and <code>eot</code> (end of text) is
+for <code>&lt;></code>. Explicit definitions of these formats can be given to
+change the case or spelling of the function names generated, or to produce
+different inline code. The default format for each of the functions is to
+specialize the support format by filling in the function name. For example, if
+the support format is <code>"%s(p)"</code> then the default go format is
 <code>"go(p)"</code> and the default alt format is
 <code>"alt(p,%e)"</code>.</p></li>
 
@@ -1527,22 +1539,11 @@ support format, e.g. <code>"cat(p,%s)"</code> and
 representing the arity to the support format, e.g.
 <code>"drop(p,%d)"</code>.</p></li>
 
-<li><p><code><b>act</b>, <b>act0</b>, ...:</code> the formats for printing
-actions generally, and for specific overrides for given arities. The default for
-the act format depends on the call format, e.g. <code>"act%d(p,%s)"</code> where
-the numerical parameter is the arity and the string parameter is the name of the
-action, in this case acting as an enumerated constant. By default, there are no
-overrides.</p></li>
-
-<li><p><code><b>escape1</b>, <b>escape2</b>, <b>escape4</b>:</code> formats to
-change the way <code>%c</code> and <code>%s</code> work by printing escape
-sequences instead of UTF-8. The escape1 format is for control characters in the
-ASCII range, the escape2 format for characters beyond ASCII up to hex FFFF, and
-escape4 for the remainder of the Unicode character set. The defaults are
-<code>"\%3o"</code>, <code>"\u%4x"</code>, and <code>"\U%8x"</code>. These
-work in C and several other languages. (In C, these escape sequences have a
-length limit. Using <code>"\%2o"</code> or <code>"\x%2x"</code> for example,
-would not be safe because digits could follow.)</p></li>
+<li><p><code><b>act</b>, <b>act0</b>, ...:</code> the format for printing
+actions, and formats to override it for specific arities. The default for the
+act format depends on the call format, e.g. <code>"act%d(p,%s)"</code> where the
+numerical parameter is the arity and the string parameter is the name of the
+action. The defaults for specific arities are to use the act format.</p></li>
 
 </ul>
 
@@ -1568,15 +1569,24 @@ code would be equivalent to using a parser combinator library.</p>
 
 <p>The default act format treats action names as enumerated constants. Instead,
 the act format could be specified as <code>"%s()"</code> so that each action has
-its own function with implicit arity. Alternatively, the act0 format could be
-specified as <code>"push(0,%s(string()))"</code>, the act1 format as
-<code>"push(1,%s(top(0)))"</code>, the act2 format as
-<code>"push(2,%s(top(1),top(0)))"</code> and so on as necessary, so that the
-handling of the output stack is covered by the generated code and only pure
-external functions need to be provided. Here <code>string()</code> forms a
-string from the recently matched characters, <code>top(n)</code> returns the
-n'th item from the top of the output stack and <code>push(n,x)</code> pops n
-items from the output stack before pushing its argument.</p>
+its own function with implicit arity. Alternatively, the formats for actions of
+each arity could be specified as:</p>
+
+<pre>// &lt;pecan
+//   ...
+//   act0 = "act(0,%s(string()))"
+//   act1 = "act(1,%s(top(0)))"
+//   act2 = "act(2,%s(top(1),top(0)))"
+//   ...
+// >
+</pre>
+
+<p>Then the handling of the output stack is covered by the generated code and
+only pure external action functions need to be provided. Here
+<code>string()</code> forms a string from the recently matched characters,
+<code>top(n)</code> returns the n'th item from the top of the output stack and
+<code>act(n,x)</code> pops n items from the output stack, pushes
+<code>x</code>, and discards any recently matched characters.</p>
 
 <h3 id="bytecode">Bytecode</h3>
 

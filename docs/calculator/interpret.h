@@ -6,18 +6,17 @@
 typedef unsigned char byte;
 
 // The opcodes: first those that take no argument or have an implicit argument
-// of 1, then from OP1 those that take a one-byte operand 0..255, and then from
-// OP2 those that take a two-byte big-endian argument 0..65535,
+// of 1, then from OP1 onwards those that take a one-byte operand 0..255, and
+// then from OP2 those that take a two-byte big-endian argument 0..65535,
 enum op {
     STOP, OR, AND, MAYBE, ONE, MANY, DO, LOOK, TRY, HAS, NOT, DROP, END,
     STRING1, LOW1, HIGH1, LESS1, SET1,
-    START,  GO,  BACK,  EITHER,  BOTH,  STRING,  LOW,  HIGH,  LESS,
+    OP1, START=OP1,  GO,  BACK,  EITHER,  BOTH,  STRING,  LOW,  HIGH,  LESS,
     SET, ACT, MARK, CAT, TAG,
-    GOL, BACKL,
-    OP1 = START, OP2 = GOL
+    OP2, GOL=OP2, BACKL
 };
 
-// Unicode category codes, in the same order as Java, using unused 17 for Uc.
+// Unicode category codes, in the order used in the lookup tables.
 enum category {
     Cn, Lu, Ll, Lt, Lm, Lo, Mn, Me, Mc, Nd, Nl, No, Zs, Zl, Zp, Cc,
     Cf, Uc, Co, Cs, Pd, Ps, Pe, Pc, Po, Sm, Sc, Sk, So, Pi, Pf

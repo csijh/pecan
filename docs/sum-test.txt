@@ -16,7 +16,7 @@ add
 ==========
 2+40%
 ..........
-Error in sum-test.txt, line 17: expecting digit, newline, operator
+Error in sum-test.txt, line 17: expecting newline, operator
 2+40%
     ^
 ==========
@@ -42,7 +42,7 @@ subtract
 ==========
 2+
 ..........
-Error in sum-test.txt, line 43: expecting bracket, digit
+Error in sum-test.txt, line 43: expecting bracket, integer
 2+
   ^
 ==========

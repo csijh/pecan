@@ -111,7 +111,7 @@ public class Compiler implements Testable {
 
 // print(template, fit, named-params)
 
-    // Do unit testing on the Stacker class, then check the switch is complete,
+    // Do unit testing on previous classes, then check the switch is complete,
     // then run the Compiler unit tests.
     public static void main(String[] args) {
         if (args.length == 0) Stacker.main(args);
