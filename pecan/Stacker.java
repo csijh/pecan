@@ -108,7 +108,7 @@ class Stacker implements Testable {
         case List: case Empty: scanZero(node); break;
         case Mark: case Tag: case Char: case String: scanZero(node); break;
         case Set: case Cat: case Range: case Code: scanZero(node); break;
-        case Codes: case Split: case End: case Has: scanZero(node); break;
+        case Codes: case Split: case Eot: case Has: scanZero(node); break;
         case Not: case Success: case Fail: scanZero(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;

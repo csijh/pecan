@@ -1,4 +1,4 @@
-sum = gap expression end
+sum = gap expression eol
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
@@ -11,4 +11,4 @@ open = #bracket '(' gap
 close = #bracket ')' gap
 digit = '0..9'
 gap = (' ')* @
-end = #newline 13? 10 @
+eol = #newline 13? 10 @

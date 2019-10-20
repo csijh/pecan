@@ -112,7 +112,7 @@ public class Evaluator implements Testable {
             case Tag: parseTag(node); break;
             case Success: parseSuccess(node); break;
             case Fail: parseFail(node); break;
-            case End: parseEnd(node); break;
+            case Eot: parseEot(node); break;
             case Char: parseChar(node); break;
             case Code: parseCode(node); break;
             case String: parseString(node); break;
@@ -262,7 +262,7 @@ public class Evaluator implements Testable {
     }
 
     // Parse <>
-    private void parseEnd(Node node) {
+    private void parseEot(Node node) {
         if (switchTest) return;
         ok = in == input.length();
     }

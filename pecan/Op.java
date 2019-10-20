@@ -28,7 +28,7 @@ public enum Op {
     Char,      // Single character, "a" or 'a'
     Success,   // Always succeed, ""
     Fail,      // Always fail, ''
-    End,       // End of input, <>
+    Eot,       // End of text or tokens, <>
     Range,     // Character range, 'x..y'
     Codes,     // Code range, 0..127
     Cat,       // Unicode category, e.g. Lu

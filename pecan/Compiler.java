@@ -81,7 +81,7 @@ public class Compiler implements Testable {
         HAS = "has",
         NOT = "not",
         TAG = "tag",
-        END = "end",
+        EOT = "eot",
         TRUE = "true",
         FALSE = "false",
         TEXT = "text(\"%s\")",
@@ -93,6 +93,12 @@ public class Compiler implements Testable {
         MARK = "mark(%s)",
         ACT  = "act%d(%s)";
     String[] ACTS = new String[10];
+
+    // Fill in default formats.
+    void formats(Pretty pretty) {
+        RULE = pretty.formats[Pretty.Tag.RULE.ordinal()];
+        CALL = pretty.formats[Pretty.Tag.CALL.ordinal()];
+    }
 
 // ascii visible char, code, uni visible char, uni code
 
@@ -172,7 +178,7 @@ public class Compiler implements Testable {
             case Tag: compileTag(node); break;
             case Success: compileSuccess(node); break;
             case Fail: compileFail(node); break;
-            case End: compileEnd(node); break;
+            case Eot: compileEot(node); break;
             case Char: compileChar(node); break;
             case Code: compileCode(node); break;
             case String: compileString(node); break;
@@ -395,9 +401,9 @@ public class Compiler implements Testable {
     }
 
     // Compile <>
-    private void compileEnd(Node node) {
+    private void compileEot(Node node) {
         if (switchTest) return;
-        printT(CALL, END);
+        printT(CALL, EOT);
     }
 
     // Compile 'a' or "a"

@@ -9,7 +9,7 @@ import static pecan.Node.Flag.*;
 import static java.lang.Character.*;
 
 /* Carry out binding:
-Replace empty String by Success, empty Set by Fail, empty Split by End.
+Replace empty String by Success, empty Set by Fail, empty Split by Eot.
 Replace String or Set by Id in a token-based parser
 Replace String or Set with single character by Char.
 Replace unnamed Act by Drop.
@@ -75,7 +75,7 @@ class Binder implements Testable {
     // The main switch.
     private void scanNode(Node node) {
         switch(node.op()) {
-        case Error: case Temp: case List: case Empty: case End: break;
+        case Error: case Temp: case List: case Empty: case Eot: break;
         case And: case Or: case Opt: case Any: case Some: case Drop: break;
         case Has: case Not: case See: case Mark: case Tag: break;
         case Success: case Fail: break;
@@ -134,11 +134,11 @@ class Binder implements Testable {
         else if (n == 1) node.op(Char);
     }
 
-    // Set <> to End. Check not token input.
+    // Set <> to Eot. If non-empty, check not token input.
     private void scanSplit(Node node) {
         if (switchTest) return;
         int n = node.name().length();
-        if (n == 0) { node.op(End); return; }
+        if (n == 0) { node.op(Eot); return; }
         if (root.has(TokenInput)) err(node, "text matcher in a token parser");
     }
 

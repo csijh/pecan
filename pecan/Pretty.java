@@ -2,14 +2,16 @@
 
 package pecan;
 import java.util.*;
-import static pecan.Format.Tag.*;
+import static pecan.Pretty.Tag.*;
 
-/* Read in format strings, check them for correctness, provide defaults, and
-chop them into fragment arrays. When reading a program template, call
-readAttribute for each attribute line, then call fillDefaults. When compilimg,
-call ... to use a format for printing... */
+/* Provide support for formatted pretty printing. When reading a template
+program, call readLine for each attribute line, to set up a format string and
+check it for correctness. Then call fillDefaults to fill in defaults for any
+attributes that haven't been given. When compiling, call print to print a string
+or formatted items. Call text to get the printed text back as a string and clear
+the buffer. */
 
-class Format {
+class Pretty {
     // Attributes, and the types of parameter their formats allow (string,
     // expression, character, decimal, newline).
     enum Tag {
@@ -25,44 +27,31 @@ class Format {
     }
 
     // Formats as strings, and as split strings.
-    private String[] formats = new String[Tag.values().length];
+    String[] formats = new String[Tag.values().length];
     private String[][] splits = new String[Tag.values().length][];
 
-    // The current line, attribute and error.
+    // The current items while reading an attribute.
     private String line, name, format, error;
     private int lineNumber, nameColumn, formatColumn, errorColumn;
     private Tag tag;
 
-    // Get the format for an item.
+    // Get or set the format for an item.
     private String format(Tag it) { return formats[it.ordinal()]; }
-
-    // Set the format for an item.
     private void format(Tag it, String x) { formats[it.ordinal()] = x; }
-/*
 
-    // Get the split format for an item.
-    private String[] split(Tag it) { return splits[it.ordinal()]; }
+    // The text buffer for printing.
+    private StringBuilder text = new StringBuilder();
 
-    // Set the format for an item, and split it.
-    private void format(Tag it, String x) {
-        formats[it.ordinal()] = x;
-        splits[it.ordinal()] = split(x);
+    // Read an attribute line, extract the info, print an error message.
+    public void readLine(int n, String file, String line) {
+        boolean ok = readAttribute(line);
+        if (ok) ok = checkName(name);
+        if (ok) format(tag, format);
+        if (ok) return;
+        System.err.print("Error on line " + n + " of " + file);
+        System.err.println(": " + error);
     }
 
-    void readAttributes(List<String> lines) {
-        String err = null;
-        for (String line : lines) {
-            String[] attribute = readAttribute(line);
-            if (attribute[0] == null) { err = attribute[1]; break; }
-            int pos = check(line, split(attribute[1]));
-        }
-        String err = processDefaults();
-        if (err != null) {
-            System.err.print(err);
-            System.exit(1);
-        }
-    }
-*/
     // Set the error position and message and return false.
     private boolean err(int col, String s) {
         errorColumn = col;
@@ -190,10 +179,13 @@ class Format {
         return format + " " + x;
     }
 
-
-    private String fillDefaults() {
+    // Fill in any unspecified defaults. Return null or an error message.
+    public void fillDefaults(int n, String file) {
         String rule = format(RULE);
-        if (rule == null) return "no rule format";
+        if (rule == null) {
+            System.err.print("Error on line " + n + " of " + file);
+            System.err.println(": no rule format");
+        }
         int s = 0;
         if (! rule.startsWith(" ")) s = rule.indexOf("%n ") + 2;
         if (s >= 0) {
@@ -201,6 +193,7 @@ class Format {
             while (e < rule.length() && rule.charAt(e) == ' ') e++;
             format(TAB, rule.substring(s,e));
         }
+        if (format(RULE1) == null) format(RULE1, format(RULE));
         if (format(TAB) == null) format(TAB, "  ");
         if (format(AND) == null) format(AND, " && ");
         if (format(OR) == null) format(OR, " || ");
@@ -226,10 +219,23 @@ class Format {
         if (format(MARK) == null) format(MARK, call(f, "mark", "\"%s\""));
         if (format(DROP) == null) format(DROP, call(f, "drop", "\"%d\""));
         if (format(ACT) == null) format(ACT, call(f, "act%d", "\"%s\""));
+        if (format(ACT0) == null) format(ACT0, format(ACT));
+        if (format(ACT1) == null) format(ACT1, format(ACT));
+        if (format(ACT2) == null) format(ACT2, format(ACT));
+        if (format(ACT3) == null) format(ACT3, format(ACT));
+        if (format(ACT4) == null) format(ACT4, format(ACT));
+        if (format(ACT5) == null) format(ACT5, format(ACT));
+        if (format(ACT6) == null) format(ACT6, format(ACT));
+        if (format(ACT7) == null) format(ACT7, format(ACT));
+        if (format(ACT8) == null) format(ACT8, format(ACT));
+        if (format(ACT9) == null) format(ACT9, format(ACT));
         if (format(ESCAPE1) == null) format(ESCAPE1, "\\%3o");
         if (format(ESCAPE2) == null) format(ESCAPE2, "\\u%4x");
-        if (format(ESCAPE1) == null) format(ESCAPE1, "\\U%8x");
-        return null;
+        if (format(ESCAPE4) == null) format(ESCAPE4, "\\U%8x");
+        for (Tag t : Tag.values()) {
+            if (format(t) == null) System.out.println("null for " + t);
+            else splits[t.ordinal()] = split(format(t));
+        }
     }
 
     private void test() {
@@ -287,7 +293,7 @@ class Format {
     }
 
     public static void main(String[] args) {
-        Format f = new Format();
+        Pretty f = new Pretty();
         f.test();
     }
 }

@@ -189,7 +189,7 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
             Char "-"
             Id term
             Act @2sub
-      End <>
+      Eot <>
   Rule term = factor ("*" factor @2mul / "/" factor @2div)*
     Id term
     And factor ("*" factor @2mul / "/" factor @2div)*
@@ -299,7 +299,7 @@ List x = "" '' <>...
     And "" '' <>
       Success ""
       Fail ''
-      End <>
+      Eot <>
   Empty
 ==========
 -- Singleton string or set becomes Char

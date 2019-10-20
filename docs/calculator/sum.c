@@ -102,95 +102,74 @@ static bool act(parser *p, int n, output x);
 // the pecan tag are the patterns to be used to generate the functions.
 // <pecan
 //   comment  = "// %s"
-//   declare  = "bool P%s(parser *p) {"
-//   body     = "  return %s;"
-//   close    = "}"
-//   compact  = "bool P%s(parser *p) { return %s; }"
-//   call     = "P%s(p)"
-//   true     = "true"
-//   false    = "false"
-//   or       = "||"
-//   and      = "&&"
-//   char     = "'%c'"
-//   string   = '"%s"'
-//   bmp      = "\u%4x"
-//   unicode  = "\U%8x"
-//   act0     = "%s(p%.0s%.0s%.0s)"
-//   act2     = "%s(p%.0s%.0s%.0s)"
-//   tag      = "tag(p, %n%d)"
-//   do       = "go"
+//   rule     = "bool %s(parser *p) {%n  return %s;%n}"
+//   call     = "%s(p)"
 // >
 
 // sum = gap expression eol
-bool sum(parser *p) { return gap(p) && expression(p) && eol(p); }
+bool sum() { return gap() && expression() && eol(); }
 
-// expression1 = ((plus term @2add / minus term @2subtract) expression1)?
-bool expression1(parser *p) {
-  return opt(p, go(p) && (alt(p,
-      (go(p) && plus(p) && term(p) && act(p,2,add(top(p,1),top(p,0)))) ||
-      (ok(p) && minus(p) && term(p) && act(p,2,subtract(top(p,1),top(p,0))))
-    ) && expression1(p)));
+// expression1 = (plus term @2add / minus term @2subtract expression1)?
+bool expression1() {
+    return (((alt(
+        (go() && plus() && term() && act2(add)) ||
+        (ok() && minus() && term() && act2(subtract))
+    )) && expression1()) || true);
 }
 
 // expression = term (plus term @2add / minus term @2subtract)*
-bool expression(parser *p) { return term(p) && expression1(p); }
+bool expression() { return term() && expression1(); }
 
-// term1 = ((times atom @2multiply / over atom @2divide) term1)?
-bool term1(parser *p) {
-  return opt(p, go(p) && (alt(p,
-      (go(p) && times(p) && atom(p) && act(p,2,multiply(top(p,1),top(p,0)))) ||
-      (ok(p) && over(p) && atom(p) && act(p,2,divide(top(p,1),top(p,0))))
-    ) && term1(p)));
+// term1 = (times atom @2multiply / over atom @2divide term1)?
+bool term1() {
+    return (((alt(
+        (go() && times() && atom() && act2(multiply)) ||
+        (ok() && over() && atom() && act2(divide))
+    )) && term1()) || true);
 }
 
 // term = atom (times atom @2multiply / over atom @2divide)*
-bool term(parser *p) { return atom(p) && term1(p); }
+bool term() { return atom() && term1(); }
 
 // atom = number / open expression close
-bool atom(parser *p) {
-  return number(p) || (open(p) && expression(p) && close(p));
-}
+bool atom() { return number() || (open() && expression() && close()); }
 
 // number1 = (digit) number1?
-bool number1(parser *p) { return digit(p) && (number1(p) || true); }
+bool number1() { return digit() && (number1() || true); }
 
-// number = #integer digit+ @scan gap
-bool number(parser *p) {
-  return mark(p,integer) && number1(p) &&
-  act(p,0,scan(length(p),start(p))) && gap(p);
-}
+// number = #integer digit+ @number gap
+bool number() { return mark(integer) && number1() && act0(number) && gap(); }
 
 // plus = #operator '+' gap
-bool plus(parser *p) { return mark(p,operator) && text(p,"+") && gap(p); }
+bool plus() { return mark(operator) && text("+") && gap(); }
 
 // minus = #operator '-' gap
-bool minus(parser *p) { return mark(p,operator) && text(p,"-") && gap(p); }
+bool minus() { return mark(operator) && text("-") && gap(); }
 
 // times = #operator '*' gap
-bool times(parser *p) { return mark(p,operator) && text(p,"*") && gap(p); }
+bool times() { return mark(operator) && text("*") && gap(); }
 
 // over = #operator '/' gap
-bool over(parser *p) { return mark(p,operator) && text(p,"/") && gap(p); }
+bool over() { return mark(operator) && text("/") && gap(); }
 
 // open = #bracket '(' gap
-bool open(parser *p) { return mark(p,bracket) && text(p,"(") && gap(p); }
+bool open() { return mark(bracket) && text("(") && gap(); }
 
 // close = #bracket ')' gap
-bool close(parser *p) { return mark(p,bracket) && text(p,")") && gap(p); }
+bool close() { return mark(bracket) && text(")") && gap(); }
 
 // digit = '0..9'
-bool digit(parser *p) { return range(p,'0','9'); }
+bool digit() { return range('0','9'); }
 
 // gap1 = (' ' gap1)?
-bool gap1(parser *p) { return (text(p," ") && gap1(p)) || true; }
+bool gap1() { return ((text(" ") && gap1()) || true); }
 
 // gap = (' ')* @
-bool gap(parser *p) { return gap1(p) && drop(p,0); }
+bool gap() { return gap1() && drop(0); }
 
 // eol = #newline 13? 10 @
-bool eol(parser *p) {
-  return mark(p,newline) && (text(p,"\r") || true) && text(p,"\n") &&
-  drop(p,0);
+bool eol() {
+    return mark(newline) && (CODE(13) || true) && CODE(10) && drop(0);
 }
 
 // </pecan>. End of generated functions.

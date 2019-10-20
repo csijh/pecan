@@ -243,12 +243,12 @@ Error in tests/Parser.txt, line 240: expecting atom, newline
 x = .
     ^
 ==========
--- Incomplete dot dot
+-- Dot outside of range.
 x = 0.
 ..........
-Error in tests/Parser.txt, line 247: expecting dot
+Error in tests/Parser.txt, line 247: expecting atom, newline
 x = 0.
-      ^
+    ^
 ==========
 -- Drop action
 x = @3
@@ -352,31 +352,33 @@ List exp = exp* exp+ exp? end...
   Empty
 ==========
 -- Ranges
-r1 = 0..127
+r1 = '\\0..\\127'
 r2 = 'a..z'
 ..........
-List r1 = 0..127...
-  Rule r1 = 0..127
+List r1 = '\\0..\\127'...
+  Rule r1 = '\\0..\\127'
     Id r1
-    Codes 0..127
+    Range '\\0..\\127'
   Rule r2 = 'a..z'
     Id r2
     Range 'a..z'
   Empty
 ==========
--- Illegal spaces in code range
-r = 0 .. 127
+-- Illegal spaces in code range (allowed until Binder)
+r = '\\0 .. \\127'
 ..........
-Error in tests/Parser.txt, line 368: expecting atom, newline, operator
-r = 0 .. 127
-      ^
+List r = '\\0 .. \\127'...
+  Rule r = '\\0 .. \\127'
+    Id r
+    Set '\\0 .. \\127'
+  Empty
 ==========
 -- Literal id
-"x" = %x
+`x` = %x
 ..........
-List "x" = %x...
-  Rule "x" = %x
-    Id "x"
+List `x` = %x...
+  Rule `x` = %x
+    Id `x`
     Tag %x
   Empty
 ==========
@@ -463,23 +465,23 @@ List assignment = left #equals "=" right...
 x = y /
 z / /
 ..........
-Error in tests/Parser.txt, line 464: expecting atom, newline
+Error in tests/Parser.txt, line 466: expecting atom, newline
 z / /
     ^
 ==========
 -- Unicode letters and digits and numbers (using test file escape conventions)
 x = abc\960\1636
-z = 1114111 / 0ffff
+z = '\\1114111' / '\\0ffff'
 ..........
 List x = abc\960\ \1636...
   Rule x = abc\960\ \1636
     Id x
     Id abc\960\ \1636
-  Rule z = 1114111 / 0ffff
+  Rule z = '\\1114111' / '\\0ffff'
     Id z
-    Or 1114111 / 0ffff
-      Code 1114111
-      Code 0ffff
+    Or '\\1114111' / '\\0ffff'
+      Set '\\1114111'
+      Set '\\0ffff'
   Empty
 ==========
 -- Strings, character sets, unicode
@@ -505,8 +507,8 @@ List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
 ==========
 -- Actions, tests, numbers and errors
 x = %x @0x @1x @ @x
-y = 0 1 2 10 12 123
-z = 0ffff 01ABCDEF23 0FG
+y = '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
+z = '\\0ffff' '\\01ABCDEF23' '\\0FG'
 u = #err ''
 ..........
 List x = %x @0x @1x @ @x...
@@ -518,22 +520,21 @@ List x = %x @0x @1x @ @x...
       Act @1x
       Act @
       Act @x
-  Rule y = 0 1 2 10 12 123
+  Rule y = '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
     Id y
-    And 0 1 2 10 12 123
-      Code 0
-      Code 1
-      Code 2
-      Code 10
-      Code 12
-      Code 123
-  Rule z = 0ffff 01ABCDEF23 0FG
+    And '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
+      Set '\\0'
+      Set '\\1'
+      Set '\\2'
+      Set '\\10'
+      Set '\\12'
+      Set '\\123'
+  Rule z = '\\0ffff' '\\01ABCDEF23' '\\0FG'
     Id z
-    And 0ffff 01ABCDEF23 0FG
-      Code 0ffff
-      Code 01ABCDEF23
-      Code 0F
-      Id G
+    And '\\0ffff' '\\01ABCDEF23' '\\0FG'
+      Set '\\0ffff'
+      Set '\\01ABCDEF23'
+      Set '\\0FG'
   Rule u = #err ''
     Id u
     And #err ''
@@ -589,7 +590,7 @@ x =
  -- comment
  y
 ..........
-Error in tests/Parser.txt, line 589: expecting atom
+Error in tests/Parser.txt, line 590: expecting atom
  -- comment
  ^
 ==========
@@ -652,7 +653,7 @@ List end = #end <>...
 x = y
 ?
 ..........
-Error in tests/Parser.txt, line 653: expecting end of text, id, newline
+Error in tests/Parser.txt, line 654: expecting end of text, id, newline
 ?
 ^
 ==========
@@ -672,7 +673,7 @@ List x = <abc> y / z...
 -- Incomplete splitter
 x = <abc
 ..........
-Error in tests/Parser.txt, line 673: expecting greater than sign
+Error in tests/Parser.txt, line 674: expecting greater than sign
 x = <abc
         ^
 ==========
@@ -694,19 +695,19 @@ List a-b = xy-...
     Id xy-
   Empty
 ==========
--- Backslash in quotes (using test file escape conventions)
-bs = '\\'
+-- Backslash in quotes (using escape conventions)
+bs = '\\92'
 ..........
-List bs = '\\'...
-  Rule bs = '\\'
+List bs = '\\92'...
+  Rule bs = '\\92'
     Id bs
-    Set '\\'
+    Set '\\92'
   Empty
 ==========
 -- Empty tag name
 x = y %
 ..........
-Error in tests/Parser.txt, line 707: expecting name
+Error in tests/Parser.txt, line 708: expecting name
 x = y %
        ^
 ==========

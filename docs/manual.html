@@ -34,10 +34,10 @@
 <li><a href="#repetition">Repetition</a></li>
 <li><a href="#lookahead">Lookahead</a></li>
 <li><a href="#text">Text</a></li>
+<li><a href="#errors">Errors</a></li>
 <li><a href="#actions">Actions</a></li>
 <li><a href="#tokens">Tokens</a></li>
 <li><a href="#literals">Literals</a></li>
-<li><a href="#errors">Errors</a></li>
 </ul>
 </li>
 <li><a href="#testing">Testing</a></li>
@@ -111,22 +111,23 @@ an alias or equivalent, so that the program can be run just by typing:</p>
 
 <p>To run tests on a grammar, type a command of the form:</p>
 
-<pre>pecan [-t | -trace] [line] testfile
+<pre>pecan [-t | -trace] [line] tests
 </pre>
 
 <p>To generate a bytecode version of a grammar, type a command with one of the
 forms:</p>
 
 <pre>pecan grammar -c program
+
 pecan grammar -b program
 </pre>
 
 <p>The option <code>-c program</code> indicates that the grammar is to be
 compiled to a set of recursive descent functions. The option <code>-b
 program</code> indicates that the grammar is to be compiled into a bytecode
-array. Either way, the file is a template program in the desired target
-programming language, into which the result of the compilation is embedded, to
-form a parser or application program.</p>
+array. Either way, the program is a template in the desired target programming
+language, into which the result of the compilation is embedded, to form a parser
+or application program.</p>
 
 <h2 id="intro">Background</h2>
 
@@ -278,10 +279,11 @@ PEG notation available to decide between alternatives. The approach gives
 programmers the expressiveness to make parsers efficient without relying on
 obscure automatic optimisations, and parsers normally run without the space
 overhead of such techniques as the PEG packrat algorithm. The syntax of Pecan
-grammars is explained below, and there is a Pecan grammar for the Pecan
-language, with tests, in the file:</p>
+grammars is explained below. For reference, there is a Pecan grammar for the
+Pecan language, with tests, in the files:</p>
 
-<p class="indent"><a href="pecan.txt">pecan.txt</a></p>
+<p class="indent"><a href="pecan.txt">pecan.txt</a><br/>
+<a href="pecan-test.txt">pecan-test.txt</a></p>
 
 <p>As with PEG grammars, any parsing expression within a grammar represents a
 matching operation which succeeds or fails when applied at a particular position
@@ -309,12 +311,10 @@ than sign followed by a greater than sign, matches the end of the input.</p>
 
 <p>An identifier introduced by a rule starts with a letter and continues with
 letters, digits, hyphens or underscores. The text of a grammar is assumed to be
-encoded using UTF-8, so Unicode letter and digit characters can be
-included.</p>
-
-<p>There is also a literal form of identifier, consisting of characters in
-single or double quotes, which is allowed only in token-based parsers and which
-is described further in the section on literals below.</p>
+encoded using UTF-8, so Unicode letter and digit characters can be included.
+There is also a literal form of identifier, consisting of arbitrary characters
+in backquotes, which is described further in the section on literal names
+below.</p>
 
 <p>In place of a rule, an inclusion may be used:</p>
 
@@ -512,10 +512,6 @@ ignored. A see operation <code>[x]</code> is equivalent to <code>x&amp;
 x</code>, so actions and error reporting are only performed if <code>x</code>
 succeeds.</p>
 
-<p>The fact that actions are not performed during speculative parsing restricts
-the possible context sensitive aspects of a parser. Context sensitivity is
-discussed further in the section on token parsers.</p>
-
 <h3 id="text">Text</h3>
 
 <p>Text notations are used to match input characters. Single quotes indicate
@@ -561,42 +557,19 @@ is used. If the intended meaning is a single character, it is better to write
 <code>'éè'</code> is a choice between two characters, it is better to write
 <code>"é" / "è"</code> to avoid problems.</p>
 
-<p>There is no escape convention within single or double quotes, because common
-escape conventions, apart from being complicated and error prone, don't support
-decimal or variable-length character codes well. Instead, to represent control
-characters, or to represent Unicode characters using plain text, integers are
-used. An integer on its own represents a single character, using its decimal
-character code. For example:</p>
-
-<pre>pi = 960
-newline = 13? 10
-</pre>
-
-<p>If an integer is used which starts with a zero digit, then the character
-code is in hexadecimal, using <code>a</code> to <code>f</code> or
-<code>A</code> to <code>F</code>, e.g.</p>
-
-<pre>pi = 03C0
-newline = 0d? 0a
-</pre>
-
-<p>There are two ways to form a range of characters:</p>
+<p>A range of characters can be expressed using two dots:</p>
 
 <pre>letter = 'a..z'
-ascii = 0..127
 </pre>
 
-<p>The first is a variation of the set notation, with a single character either
-side of two dots. The second is two numerical character codes either side of two
-dots. These are both atomic tokens, with no spaces either side of the dots.</p>
+<p>There must be one character (code point) either side of the two dots.</p>
 
 <p>Common sets of characters can be specified using Unicode general categories.
 The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
 No, Pc, Pd, Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided.
-The name <code>Uc</code> represents all Unicode code points. It is equivalent to
-<code>0..1114111</code>. The others are the standard two-letter abbreviations
-for the Unicode general categories which partition all the code points. For
-example:</p>
+The name <code>Uc</code> represents all Unicode code points. The others are the
+standard two-letter abbreviations for the Unicode general categories which
+partition all the code points. For example:</p>
 
 <pre>letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
@@ -641,140 +614,38 @@ fail = ''
 end = &lt;>
 </pre>
 
-<h3 id="actions">Actions</h3>
+<p>There is a numerical escape convention within sets, strings, ranges and
+splitters, to represent control characters or Unicode characters using plain
+text. A backslash followed by digits represents a single character, using its
+decimal character code. For example:</p>
 
-<p>Actions allow a parser to operate on values or data structures, using a
-stack, to produce an output. An action is a symbol which consists of the
-<code>@</code> character followed by a number followed by a name. If there is no
-number, it is assumed to be zero. The name follows the same rules as an
-identifier. In particular, it can be a literal name, as discussed in the section
-on literals. For example:</p>
-
-<pre>sum = term (plus term @2add)*
+<pre>pi = '\960'
+newline = '\13'? '\10'
+any = '\0..\1114111'
 </pre>
 
-<p>Suppose that the <code>term</code> rule pushes a single item onto the stack,
-and the <code>plus</code> rule doesn't affect the stack. The <code>@2add</code>
-symbol in the <code>sum</code> rule indicates that two items should be popped
-off the stack, the <code>add</code> action should be performed, which creates a
-new item, and the new item should be pushed onto the stack. A parser as a whole
-ends with a single item on the stack, which is the output from the parsing
-process.</p>
+<p>If the first digit is zero, then the character code is in hexadecimal, using
+<code>a</code> to <code>f</code> or <code>A</code> to <code>F</code>, e.g.</p>
 
-<p>Defining an action as a stack-based operation allows it to be expressed as a
-self-contained symbol at a specific point in a grammar. That in turn allows
-actions to take part in grammar transformations which move actions away from
-their arguments. For example, the above rule can be transformed to these rules,
-where the two arguments to the <code>add</code> action are separated:</p>
-
-<pre>sum = term more*
-more = plus term @2add
+<pre>pi = '\03C0'
+newline = '\0d'? '\0a'
+any = '\0..\10ffff'
 </pre>
 
-<p>The stack is provided and manipulated by external code when a parser is
-generated from the grammar. An action symbol such as <code>@2add</code> is
-translated into the execution of a fragment of external code. The parser could
-be part of a calculator, in which case the <code>add</code> action might add two
-numbers. Alternatively, the parser might become part of a compiler, in which
-case the <code>add</code> action might combine two expression trees into a
-larger tree. When executing a grammar symbolically for testing, the name of the
-action is simply printed out.</p>
+<p>Escape sequences are variable length. A decimal sequence ends when a
+non-digit is encountered, and a hex sequence ends when a non-hex digit is
+encountered. For simplicity and uniformity, ad-hoc escapes such as
+<code>\r</code>, <code>\n</code> are not supported. In fact, to avoid ambiguity,
+if a backslash is followed by a non-digit, it is reported as an error. The
+ad-hoc escapes can be achieved numerically instead. Here are some examples:</p>
 
-<p>An action has access to the characters or tokens from the input which have
-been matched since the previous action. For example:</p>
-
-<pre>number = digit+ @number
+<pre>'\r'       &#8594;   '\13'
+'\n'       &#8594;   '\10'
+'\\'       &#8594;   '\92'
+'\''       &#8594;   '\39'
+"\""       &#8594;   "\34"
+"\u03c03"  &#8594;   "\03c0\033"
 </pre>
-
-<p>The action <code>@number</code> creates a new item from the digits which
-have just been matched, and pushes it onto the stack. There is a further
-convention which allows matched characters to be discarded. For example:</p>
-
-<pre>spaces = ' '+ @
-</pre>
-
-<p>An <code>@</code> sign on its own causes any recently matched characters (or
-tokens) to be discarded by the parser, without any external code being
-executed.</p>
-
-<p>Recently matched characters are available to an action, no matter what arity
-it has. However, for an action like <code>@2add</code> which combines output
-items, it is common to ignore them. If there are any such characters, and they
-are ignored by an action, they are implicitly discarded. Also, a discard with
-non-zero arity such as <code>@2</code> is allowed. This discards two output
-items, as well as any outstanding matched characters.</p>
-
-<p>There are severe consistency restrictions on actions. Every expression or
-rule must produce or consume a fixed number of output items. Each alternative in
-a choice must create or consume the same number of output items. Within a
-repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>, the
-inner expression <code>x</code> must have no net effect on the number of output
-items.</p>
-
-<p>The first rule in a grammar must produce a single output item overall.
-However, if it doesn't, the error is reported only when attempting to generate a
-parser from the grammar. That means, during development and testing, a grammar
-with no actions is legal, and also any self-contained fragment of a grammar is
-legal.</p>
-
-<p>The compensation for these severe restrictions is that Pecan can carry out
-strong consistency checks on grammars, ensuring that there can be no stack
-handling errors such as underflow during parsing, and that a fixed number of
-output items is produced overall.</p>
-
-<p>Scanners are normally thought of as producing a sequence of tokens. But in
-Pecan, even a scanner must produce a fixed number of output items. A scanner
-can be defined like this:</p>
-
-<pre>tokens = @tokens token+ end
-token = id @1id / number @1number / ...
-</pre>
-
-<p>The <code>@tokens</code> action creates an output item representing the list
-or array of tokens to be generated, initially empty. Each action such as
-<code>@1id</code> takes the recently matched characters, creates a token from
-them, and adds it to the list. The list is the only output from the scanner.</p>
-
-<p>In a token-based parser, there are often variable-length sequences, which
-need to be dealt with in a similar way. For example, a comma-separated list of
-identifiers can be expressed by:</p>
-
-<pre>ids = @list id @2id ("," id @2id)* @1end
-</pre>
-
-<p>The <code>id</code> rule is assumed to push a single item onto the output
-stack. The <code>@list</code> action creates an empty list. The
-<code>@2id</code> action pops the list and most recent id, adds the id to the
-list, and pushes the resulting list back on the stack. The <code>@1end</code>
-action does anything necessary to finalize the list.</p>
-
-<p>The external code in a generated parser may choose a different implementation
-with the same overall effect. For example, <code>@list</code> may mark a
-position in the output stack, <code>@2id</code> may do nothing, so that ids
-accumulate on the stack, and <code>@1end</code> may use the marked stack
-position to create an array out of the accumulated ids. Alternatively,
-<code>@list</code> could create a linked list, each subsequent
-<code>@2id</code> could chain the next id onto the end of the list, and
-<code>@1end</code> could do nothing.</p>
-
-<p>Techniques like this for handling variable-length lists can easily lead to a
-left hand alternative which begins with an action, for example:</p>
-
-<pre>@a x / y
-</pre>
-
-<p>The action <code>@a</code> is performed whether or not <code>x</code>
-succeeds. This is not completely intuitive, and probably not what was intended.
-It is not reported during development, so that transformations remain valid, but
-is reported as a warning when compilation is requested. A similar situation
-arises with error markers:</p>
-
-<pre>#m x / y
-</pre>
-
-<p>However, the fact that the marker takes effect even if <code>x</code> fails
-is normal, so that if parsing as a whole fails without progressing beyond this
-point, the marker is reported as one of the things expected.</p>
 
 <h3 id="errors">Errors</h3>
 
@@ -854,6 +725,143 @@ number, or a space, could also have allowed parsing to continue is not reported.
 That is because individual digits and spaces in the rules haven't been given
 markers.</p>
 
+<h3 id="actions">Actions</h3>
+
+<p>Actions allow a parser to operate on values or data structures, using a
+stack, to produce an output. An action is a symbol which consists of the
+<code>@</code> character followed by a number followed by a name. If there is no
+number, it is assumed to be zero. The name follows the same rules as an
+identifier. In particular, it can be a literal name, as discussed in the section
+on literals. For example:</p>
+
+<pre>sum = term (plus term @2add)*
+</pre>
+
+<p>Suppose that the <code>term</code> rule pushes a single item onto the stack,
+and the <code>plus</code> rule doesn't affect the stack. The <code>@2add</code>
+symbol in the <code>sum</code> rule indicates that two items should be popped
+off the stack, the <code>add</code> action should be performed, which creates a
+new item, and the new item should be pushed onto the stack. A parser as a whole
+ends with a single item on the stack, which is the output from the parsing
+process.</p>
+
+<p>Defining an action as a stack-based operation allows it to be expressed as a
+self-contained symbol at a specific point in a grammar. That in turn allows
+actions to take part in grammar transformations which move actions away from
+their arguments. For example, the above rule can be transformed to these rules,
+where the two arguments to the <code>add</code> action are separated:</p>
+
+<pre>sum = term more*
+more = plus term @2add
+</pre>
+
+<p>The stack is provided and manipulated by external code when a parser is
+generated from the grammar. An action symbol such as <code>@2add</code> is
+translated into the execution of a fragment of external code. The parser could
+be part of a calculator, in which case the <code>add</code> action might add two
+numbers. Alternatively, the parser might become part of a compiler, in which
+case the <code>add</code> action might combine two expression trees into a
+larger tree. When executing a grammar symbolically for testing, the name of the
+action is simply printed out.</p>
+
+<p>An action has access to the characters or tokens from the input which have
+been matched since the previous action. For example:</p>
+
+<pre>number = digit+ @number
+</pre>
+
+<p>The action <code>@number</code> creates a new item from the digits which
+have just been matched, and pushes it onto the stack. There is a further
+convention which allows matched characters to be discarded. For example:</p>
+
+<pre>spaces = ' '+ @
+</pre>
+
+<p>An <code>@</code> sign on its own causes any recently matched characters (or
+tokens) to be discarded by the parser, without any external code being
+executed.</p>
+
+<p>Recently matched characters are available to an action, no matter what arity
+it has. However, for an action like <code>@2add</code> which combines output
+items, it is common to ignore them. If there are any such characters, and they
+are ignored by an action, they are implicitly discarded. Also, a discard with
+non-zero arity such as <code>@2</code> is allowed. This discards two output
+items, as well as any outstanding matched characters.</p>
+
+<p>There are severe consistency restrictions on actions. Every expression or
+rule must produce or consume a fixed number of output items. Each alternative in
+a choice must create or consume the same number of output items. Within a
+repetition, i.e. <code>x*</code> or <code>x+</code> or <code>x?</code>, the
+inner expression <code>x</code> must have no net effect on the number of output
+items.</p>
+
+<p>The compensation for these severe restrictions is that Pecan can carry out
+strong consistency checks on grammars, ensuring that every expression produces a
+fixed and known number of output items overall, and needs a known number of
+items to be on the stack before it is executed.</p>
+
+<p>The first rule in a grammar must produce a single output item overall, and
+must not need any items on the stack before execution, so that it cannot cause
+the output stack to underflow. However, if this is not the case, the error is
+reported only when attempting to generate a parser from the grammar. That means,
+during development and testing, a grammar with no actions is legal, and also any
+self-contained fragment of a grammar is legal.</p>
+
+<p>Scanners are normally thought of as producing a sequence of tokens. But in
+Pecan, even a scanner must produce a fixed number of output items. A scanner
+can be defined like this:</p>
+
+<pre>tokens = @tokens token+ end
+token = number @1number / id @1id / ...
+</pre>
+
+<p>The <code>@tokens</code> action creates an output item representing the list
+or array of tokens to be generated, initially empty. Each action such as
+<code>@1number</code> takes the recently matched characters, creates a token
+from them, and adds it to the list. The list is the only output from the
+scanner.</p>
+
+<p>In a token-based parser, there are often variable-length sequences, which
+need to be dealt with in a similar way. For example, a comma-separated list of
+identifiers can be expressed by:</p>
+
+<pre>ids = @list id @2id ("," id @2id)* @1end
+</pre>
+
+<p>The <code>id</code> rule is assumed to push a single item onto the output
+stack. The <code>@list</code> action creates an empty list. The
+<code>@2id</code> action pops the list and most recent id, adds the id to the
+list, and pushes the resulting list back on the stack. The <code>@1end</code>
+action does anything necessary to finalize the list.</p>
+
+<p>The external code in a generated parser may choose a different implementation
+with the same overall effect. For example, <code>@list</code> may mark a
+position in the output stack, <code>@2id</code> may do nothing, so that ids
+accumulate on the stack, and <code>@1end</code> may use the marked stack
+position to create an array out of the accumulated ids. Alternatively,
+<code>@list</code> could create a linked list, each subsequent
+<code>@2id</code> could chain the next id onto the end of the list, and
+<code>@1end</code> could do nothing.</p>
+
+<p>Techniques like this for handling variable-length lists can easily lead to a
+left hand alternative which begins with an action, for example:</p>
+
+<pre>@a x / y
+</pre>
+
+<p>The action <code>@a</code> is performed whether or not <code>x</code>
+succeeds. This is not completely intuitive, and probably not what was intended.
+It is not reported during development, so that transformations remain valid, but
+is reported as a warning when compilation is requested. A similar situation
+arises with error markers:</p>
+
+<pre>#m x / y
+</pre>
+
+<p>However, the fact that the marker takes effect even if <code>x</code> fails
+is normal, so that if parsing as a whole fails without progressing beyond this
+point, the marker is reported as one of the things expected.</p>
+
 <h3 id="tokens">Tokens</h3>
 
 <p>Support is provided for parsers where the input consists of tokens produced
@@ -877,50 +885,62 @@ end = &lt;>
 <code>%over</code>.</p>
 
 <p>In token-based parsers, text matching notations are not allowed, except for
-<code>''</code>, <code>""</code> and <code>&lt;></code>. However, the set and
-string notations are reused for literal identifiers.</p>
+<code>''</code>, <code>""</code> and <code>&lt;></code>.</p>
+
+<p>A tag represents a call to an external function to find the type of the
+current token. This allows a limited form of context dependence while parsing.
+For example, it is well known that parsing of the C language requires typedef
+names to be recognised separately from other identifiers, and that typedef
+constructs have to be parsed to provide that information. This can be achieved
+by classifying both types of token as identifiers in the scanner. Then, in the
+parser, the actions carry out sufficient symbol table construction to represent
+typedef constructs. Then, when the external tag function is executed, it uses
+the symbol table to decide whether to return an identifier tag or typedef
+tag.</p>
 
 <h3 id="literals">Literals</h3>
 
 <p>The names used in identifiers, actions, markers and tags normally consist of
 a letter followed by letters, digits, hyphens or underscores. Literal names can
 be used as an alternative. A literal name consists of one or more characters
-inside double quotes, or inside single quotes, as with the string and set
-notations. This helps to make grammars more readable when a separate scanner and
-parser are being designed. For example, a scanner might contain:</p>
+inside backquotes. The numerical escapes described earlier are also available.
+This helps to make grammars more readable when a separate scanner and parser are
+being designed. For example, a scanner might contain:</p>
 
-<pre>ge = ">=" @1">="
+<pre>ge = ">=" @1`>=`
 </pre>
 
-<p>The names of the actions are being used as token tags, so <code>@1">="</code>
-creates a token and sets its tag to <code>>=</code>. When compiling the scanner,
-each character in the literal name is converted to an alphanumeric form, e.g.
-<code>>=</code> becomes <code>GtEq</code>, so that it forms a valid identifier
-in the target programming language. The literal notation avoids the need to
-invent an identifier name for the tag for each token with a fixed spelling.</p>
+<p>The names of the actions are used as token tags, so <code>@1`>=`</code>
+creates a token and sets its tag to <code>>=</code>. Each  character in the
+literal name is automatically converted to an alphanumeric form, e.g.
+<code>@1`>=`</code> becomes, and is completely equivalent to,
+<code>@1GtEq</code>. Then, when scanner is compiled, the action name becomes a
+valid identifier or constant in the target programming language. The literal
+notation avoids the need to invent a name for the tag for each token with a
+fixed spelling.</p>
 
 <p>In the corresponding token-based parser, the tag name produced can be matched
 by a tag with the same literal name. For example:</p>
 
-<pre>ge = #op %">="
+<pre>ge = #op %`>=`
 </pre>
 
-<p>The same translation to alphanumeric form is used so, in the compiled parser,
-the tag <code>%">="</code> becomes identifier <code>GtEq</code> and the parser
-matches up with the scanner.</p>
+<p>The same translation to alphanumeric form is used, so the tag
+<code>%`>=`</code> is equivalent to <code>%GtEq</code> and the compiled parser
+matches up with the compiled scanner.</p>
 
 <p>To improve the readability of a token-based parser further, e.g. so that it
 corresponds closely to a published grammar, literal names can also be used for
 identifiers. For example:</p>
 
-<pre>comparison = expression ">=" expression
+<pre>comparison = expression `>=` expression
 ...
-">=" = #op %">="
+`>=` = #op %`>=`
 </pre>
 
-<p>For an alphanumeric literal, the quotes have no effect, so <code>"int"</code>
+<p>For an alphanumeric literal, the quotes have no effect, so <code>`int`</code>
 is equivalent to <code>int</code>, making the quotes unnecessary, but using
-<code>"int"</code> may still be desirable to emphasize that the identifier
+<code>`int`</code> may still be desirable to emphasize that the identifier
 stands for a keyword token with a fixed spelling.</p>
 
 <p>When a grammar is compiled to produce a parser, custom adjustments can be
@@ -943,10 +963,10 @@ are displayed. If a line number is given, only the single test that starts on
 that line of the test file is executed.</p>
 
 <p>A test file contains a number of sections separated by lines consisting of
-three or more equal signs. If a section contains a line of three or more minus
-signs as a separator, then it is a test with sample input and expected output.
-If a section has no minus sign separator, it is a grammar or grammar fragment
-which is used for subsequent tests, until another grammar is given. For
+three or more equal signs. If a section contains a line of three or more dots as
+a separator, then it is a test with sample input and expected output. If a
+section has no minus sign separator, it is a grammar or self-contained grammar
+fragment which is used for subsequent tests, until another grammar is given. For
 example:</p>
 
 <pre>// Match one digit
@@ -957,14 +977,14 @@ number = ("0".."9") @number
 number 2
 ==========
 42
-----------
+..........
 number 4
 ==========
 // Match any number of digits
 number = ("0".."9") @number
 ==========
 42
-----------
+..........
 number 42
 </pre>
 
@@ -984,7 +1004,7 @@ separated by white space:</p>
 list = %number @value (%comma %number @value @2and)*
 ==========
 number comma number comma number
-----------
+..........
 value
 value
 and
@@ -1007,28 +1027,40 @@ pecan -trace 24 tests.txt
 ...
 </pre>
 
-<p>A section of the test file can consist of a single line. If the line starts
-with <code>//</code>, the section is ignored as a comment. Otherwise, if the
-line doesn't contain an equal sign, it has a special meaning. It is the name of
-a file containing a grammar to be used for subsequent tests. This supports the
-common case where the grammar is in one file and its tests are in another:</p>
+<p>A grammar in a test file can have an inclusion. For example, a file
+<code>tests.txt</code> of tests for a grammar in <code>grammar.txt</code> can
+start with:</p>
 
-<pre>// The next section imports the grammar file.
+<pre>{grammar.txt}
 ==========
-grammar.txt
-==========
-// First test
 ...
 </pre>
 
-<p>A single-line section can alternatively be the name of a secondary test file
-to execute, allowing a suite of tests to be split across several files:</p>
+<p>The grammar fragment containing the inclusion can specify a particular rule
+to test, add <code>&lt;></code> to ensure that the rule parses all of the input
+supplied in each test. It may also provide definitions for any undefined
+identifiers in the grammar file, which could be necessary if the grammar file
+contains one module of a modular grammar, which depends on another module. For
+example, a test file could begin:</p>
 
-<pre>// Do testing in stages.
+<pre>start = expression &lt;>
+{expressions.txt}
+statement = ...
 ==========
-stage1.txt
+...
+</pre>
+
+<p>The expression rule is the one to be tested, each test provides a complete
+expression, and the file <code>expressions.txt</code> has a forward reference to
+a module defining statements.</p>
+
+<p>If a grammar fragment consists of a single line which is an inclusion, then
+the included file can be another test file, rather than just a grammar, allowing
+tests to be grouped:</p>
+
+<pre>{group1.txt}
 ==========
-stage2.txt
+{group2.txt}
 ==========
 ...
 </pre>
@@ -1037,26 +1069,11 @@ stage2.txt
 representing a subfile of tests. That is because a grammar file is equivalent to
 a test file which sets up a grammar, but contains no tests.</p>
 
-<p>Test files can use the UTF-8 encoding, but there is also an escape convention
-which allows control characters or Unicode characters to be included as plain
-text. A backslash followed by digits represents a character by its decimal code,
-or by its hex code if the code starts with zero. Two backslashes are used to
-represent a single backslash. A backslash followed by any other character
-removes that character. In particular, a backslash followed by a space can be
-used as a separator, and a backslash followed by a newline can be used to cancel
-the newline. For example, given that <code>960</code> is the decimal code for
-the character &#960;, then:</p>
-
-<ul style="list-style-type:none;">
-<li><code style="display:inline-block;width:5em;">\960x</code>
-is &#960; followed by x</li>
-<li><code style="display:inline-block;width:5em;">\960\ 5</code>
-is &#960; followed by the digit <code>5</code></li>
-<li><code style="display:inline-block;width:5em;">\\960x</code>
-is the five characters <code>\960x</code></li>
-<li><code style="display:inline-block;width:5em;">...\13\</code>
-is a line ending in CR instead of LF</li>
-</ul>
+<p>Test files can use the UTF-8 encoding, but the numerical escape convention
+can also be used anywhere in the input or output of a test. In addition to using
+a backslash followed by digits to represent a character code in decimal or hex,
+a backslash followed by a newline removes the newline. For example, a line
+ending <code>\13\</code> becomes a line ending with CR instead of LF.</p>
 
 <h2 id="checks">Consistency checks</h2>
 
@@ -1068,20 +1085,17 @@ no rule name clashes with a category name.</p>
 <p>A grammar is checked to see if it represents a text parser or a token parser.
 A text parser must contain no tags. A token parser must not contain text
 matchers, i.e. strings, splitters, sets, ranges or numbers, with the exception
-of <code>""</code> or <code>''</code> or <code>&lt;></code>. However, a token
-parser may reuse the string or set notations to form literal identifiers, but
-there must be a rule defining each such identifier.</p>
+of <code>""</code> or <code>''</code> or <code>&lt;></code>.</p>
 
-<p>There are also checks on ranges. For a range of the form <code>'a..z'</code>
-there is a check that there is a single code point either side of the
-<code>..</code> and that the range is non-empty. A range of the form
-<code>0..31</code> must also be non-empty.</p>
+<p>There are also checks on sets and ranges. Sets must contain distinct
+characters, and a range must have a single code point either side of the
+<code>..</code> and the range must be non-empty.</p>
 
 <p>Many parsing expressions are
 equivalent, which considerably reduces the number of cases that need be
 discussed. For example:</p>
 
-<pre>32        &#8801;  ' '
+<pre>'\32'     &#8801;  ' '
 'a'       &#8801;  "a"
 "ab"      &#8801;  ['a' 'b']
 'ab'      &#8801;  'a' / 'b'
@@ -1093,7 +1107,9 @@ x+        &#8801;  x x*
 [x]       &#8801;  x&amp; x
 x&        &#8801;  x!!
 ''        &#8801;  ""!
-&lt;ab>      &#8801;  (&lt;> / 0..96 / 97 &lt;> / 97 0..97)&
+&lt;bd>      &#8801;  &lt;> / ('\0..a' / 'b' &lt;d>)&amp;
+&lt;b>       &#8801;  &lt;> / '\0..a'&amp;
+&lt;>        &#8801;  Uc!
 </pre>
 
 <p>The core features remaining are:</p>
@@ -1279,13 +1295,13 @@ calculated for each expression in the grammar.</p>
 <p>Both alternatives in a choice expression must have the same net effect. For
 example, this rule causes an error:</p>
 
-<pre>token = ('0'..'9')+ @token / ' '+
+<pre>token = ('0..9')+ @token / ' '+
 </pre>
 
 <p>The first alternative adds one item to the stack, but the second adds
 nothing. On the other hand, this rule is legal:</p>
 
-<pre>token = ('0'..'9')+ @1token / ' '+
+<pre>token = ('0..9')+ @1token / ' '+
 </pre>
 
 <p>The <code>@1token</code> action pops an item from the stack, presumably a
@@ -1297,7 +1313,7 @@ effect.</p>
 <p>A repeated expression must have zero net effect. For example, suppose the
 grammar contains:</p>
 
-<pre>tokens = (('0'..'9')+ @token)*
+<pre>tokens = (('0..9')+ @token)*
 </pre>
 
 <p>The inner expression causes one output item to be pushed on the stack. This
@@ -1305,7 +1321,7 @@ is reported as an error, because <code>tokens</code> as a whole pushes an
 unknown number of items onto the stack. On the other hand, this definition is
 allowed:</p>
 
-<pre>tokens = (('0'..'9')+ @1token)*
+<pre>tokens = (('0..9')+ @1token)*
 </pre>
 
 <p>The inner expression pops a previous list item, adds a token to it, and
@@ -1326,7 +1342,7 @@ error.</p>
 <p>A second check is that the stack never underflows. To check this, for each
 expression, the number of items which need to be on the stack when the
 expression is executed is calculated. For example, the expression
-<code>('0'..'9')+ @1token</code> needs one item to be on the stack. There are
+<code>('0..9')+ @1token</code> needs one item to be on the stack. There are
 situations where the needed number can't be calculated, for example:</p>
 
 <pre>x = 'a' / 'b' @2c x @d
@@ -1510,33 +1526,33 @@ is for <code>x&amp;</code>, <code>not</code> is for <code>x!</code>,
 for <code>&lt;></code>. Explicit definitions of these formats can be given to
 change the case or spelling of the function names generated, or to produce
 different inline code. The default format for each of the functions is to
-specialize the support format by filling in the function name. For example, if
-the support format is <code>"%s(p)"</code> then the default go format is
+specialize the call format by filling in the function name. For example, if
+the call format is <code>"%s(p)"</code> then the default go format is
 <code>"go(p)"</code> and the default alt format is
 <code>"alt(p,%e)"</code>.</p></li>
 
 <li><p><code><b>text</b>, <b>set</b>, <b>split</b>:</code> the formats for the
-main text matchers. The defaults are obtained from the support format by adding
-an extra double-quoted string argument to the call. For example, if the support
+main text matchers. The defaults are obtained from the call format by adding
+an extra double-quoted string argument to the call. For example, if the call
 format is <code>"%s(p)"</code> then the default set format is
 <code>'set(p,"%s")'</code>. For example, a Pecan set <code>'+-*/'</code> would
 cause <code>set(p,"+-*/")</code> to be printed.</p></li>
 
-<li><p><code><b>range</b>:</code> the format for printing a range of the form
-<code>'a..z'</code> or <code>0..127</code>. The two characters can be printed
-using <code>%c</code>, or their codes can be printed using a numerical specifier
-such as <code>%d</code>. The default adds two character arguments in single
-quotes to the support format, e.g. <code>"range(p,'%c','%c')"</code>.</p></li>
+<li><p><code><b>range</b>:</code> the format for printing a range such as
+<code>'a..z'</code>. The two characters can be printed using <code>%c</code>, or
+their codes can be printed using a numerical specifier such as <code>%d</code>.
+The default adds two character arguments in single quotes to the call format,
+e.g. <code>"range(p,'%c','%c')"</code>.</p></li>
 
 <li><p><code><b>cat</b>, <b>mark</b>:</code> the formats for printing a category
 such as <code>Nd</code> or an error marker such as <code>#id</code>. The name is
 available as a string. The default format strings add a string argument to the
-support format, e.g. <code>"cat(p,%s)"</code> and
+call format, e.g. <code>"cat(p,%s)"</code> and
 <code>"mark(p,%s)"</code>.</p></li>
 
 <li><p><code><b>drop</b>:</code> the format for printing a drop symbol such as
 <code>@</code> or <code>@2</code>. The default is to add a numerical argument
-representing the arity to the support format, e.g.
+representing the arity to the call format, e.g.
 <code>"drop(p,%d)"</code>.</p></li>
 
 <li><p><code><b>act</b>, <b>act0</b>, ...:</code> the format for printing

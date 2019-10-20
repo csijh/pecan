@@ -54,7 +54,6 @@ class Run {
     }
 
     // pecan grammar [-b | -c] output
-    // Read grammar file and program file.
     private void runCompile(String[] args) {
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-b") || args[i].equals("-c")) {
@@ -69,31 +68,52 @@ class Run {
         if (sourcefile == null) usage();
         String text = Source.readFile(sourcefile);
         Source grammar = new Source(text, sourcefile, 1);
+        fill(grammar, outfile);
+    }
 
+    // Read template program, extract parameters, compile grammar, write program
+    // back out with compiled grammar inserted.
+    private void fill(Source grammar, String outfile) {
         List<String> lines = null;
         Path p = Paths.get(outfile);
-        try { lines = Files.readAllLines(p, StandardCharsets.UTF_8); }
+        PrintStream out = null;
+        try {
+            lines = Files.readAllLines(p, StandardCharsets.UTF_8);
+            out = new PrintStream(new File(outfile));
+        }
         catch (Exception e) { throw new Error(e); }
-
-
-
-
-        String code;
-        if (bytecode) code = null; // TODO
-        else {
-            code = new Compiler().run(grammar);
+        boolean skipping = false, reading = false;
+        Pretty pretty = new Pretty();
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (skipping && line.indexOf("</pecan>") >= 0) skipping = false;
+            if (! skipping) out.println(line);
+            if (reading && line.indexOf('=') < 0) {
+                if (line.indexOf('>') < 0) err(i+1, outfile, "expecting >");
+                reading = false;
+                skipping = true;
+                pretty.fillDefaults(i+1, outfile);
+                Compiler compiler = new Compiler();
+                compiler.formats(pretty);
+                String functions = new Compiler().run(grammar);
+                out.println();
+                out.println(functions);
+            }
+            if (reading) pretty.readLine(i+1, outfile, line);
+            if (! reading && ! skipping && line.indexOf("<pecan") >= 0) {
+                if (line.indexOf("<pecan>") >= 0) {
+                    if (! bytecode) err(i+1, outfile, "expecting attributes");
+                    skipping = true;
+                    // PRINT BYTES
+                }
+                else {
+                    if (bytecode) err(i+1, outfile, "expecting <pecan>");
+                    reading = true;
+                }
+            }
         }
-        /*
-        int n = grammar.indexOf("===");
-        if (n >= 0) grammar = grammar.substring(0, n);
-        Generator gen = new Generator();
-        String code = gen.run(grammar);
-        if (code.startsWith("Error: ")) {
-            System.err.println(code.substring(7));
-            System.exit(1);
-        }
-        insert(code);
-        */
+        if (skipping) err(lines.size(), outfile, "expecting <pecan>");
+        out.close();
     }
 
     // Insert the code into the output file.
@@ -106,7 +126,7 @@ class Run {
             out = new PrintStream(new File(outfile));
         }
         catch (Exception e) { throw new Error(e); }
-        boolean skipping = false, done = false;
+        boolean skipping = false;
         for (String line : lines) {
             if (line.indexOf("</pecan>") >= 0) skipping = false;
             if (! skipping) out.println(line);
@@ -125,6 +145,11 @@ class Run {
             "    pecan [-t | -trace] [line] tests\n" +
             "Or:\n" +
             "    pecan grammar -o output\n");
+        System.exit(1);
+    }
+
+    private void err(int n, String f, String s) {
+        System.err.println("Error on line " + n + " of " + f + ": " + s);
         System.exit(1);
     }
 }

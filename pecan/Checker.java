@@ -102,7 +102,7 @@ class Checker implements Testable {
         case Cat: case Range: case Code: case Codes: scanMatch(node); break;
         case Success: scanSuccess(node); break;
         case Fail: scanFail(node); break;
-        case Split: case End: scanSplit(node); break;
+        case Split: case Eot: scanSplit(node); break;
         case Has: scanHas(node); break;
         case Not: scanNot(node); break;
         default: assert false : "Unexpected node type " + node.op(); break;
@@ -156,7 +156,7 @@ class Checker implements Testable {
         node.set(EE);
     }
 
-    // Split or End, a lookahead.
+    // Split or Eot, a lookahead.
     private void scanSplit(Node node) {
         if (switchTest) return;
         node.set(SN);

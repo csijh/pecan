@@ -76,7 +76,7 @@ class Generator implements Testable {
             case Range:     encodeRange(node);      break;
             case Splitter:  encodeSplitter(node);   break;
             case Set:       encodeSet(node);        break;
-            case End:       encodeEnd(node);        break;
+            case Eot:       encodeEot(node);        break;
         }
         if (node.LEN() != pc - node.PC()) changed = true;
         node.LEN(pc - node.PC());
@@ -226,9 +226,9 @@ class Generator implements Testable {
         add(SET, bytes(node.name()));
     }
 
-    // {<>}  =  END
-    private void encodeEnd(Node node) {
-        add(END);
+    // {<>}  =  EOT
+    private void encodeEot(Node node) {
+        add(EOT);
     }
 
     private byte[] bytes(String s) {

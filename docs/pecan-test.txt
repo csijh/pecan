@@ -1,0 +1,667 @@
+{pecan.txt}
+==========
+-- Single rule
+x = y
+..........
+id x
+id y
+rule
+empty
+list
+==========
+-- Inclusion
+{other.txt}
+x = y
+..........
+string {other.txt}
+include
+id x
+id y
+rule
+empty
+list
+list
+==========
+-- Choice
+x = y / z
+..........
+id x
+id y
+id z
+or
+rule
+empty
+list
+==========
+-- Bracket
+x = (y / z)
+..........
+id x
+bracket (
+id y
+id z
+or
+bracket )
+bracketed
+rule
+empty
+list
+==========
+-- Empty grammar
+..........
+Error in pecan-test.txt, line 51: expecting id, newline
+
+^
+==========
+-- Expecting =
+x
+..........
+Error in pecan-test.txt, line 57: expecting equals
+x
+ ^
+==========
+-- Two rules, normal \n line endings
+x = x
+y = y
+..........
+id x
+id x
+rule
+id y
+id y
+rule
+empty
+list
+list
+==========
+-- Windows \r\n line endings
+x=x\13\10\
+y=y\13\10\
+..........
+id x
+id x
+rule
+id y
+id y
+rule
+empty
+list
+list
+==========
+-- Blank lines
+
+
+x = x
+..........
+id x
+id x
+rule
+empty
+list
+==========
+-- Trailing spaces
+x = x    \10
+         \10
+y = y    \10
+..........
+id x
+id x
+rule
+id y
+id y
+rule
+empty
+list
+list
+==========
+-- Trailing blank lines
+x = x
+y = y
+
+
+..........
+id x
+id x
+rule
+id y
+id y
+rule
+empty
+list
+list
+==========
+-- No final newline
+x = x
+y = y\
+..........
+id x
+id x
+rule
+id y
+id y
+rule
+empty
+list
+list
+==========
+-- No final newline
+x = x
+-- comment\
+..........
+id x
+id x
+rule
+empty
+list
+==========
+-- Varied comments and empty lines
+-- initial comment
+
+x = y
+
+-- middle comment
+y = z
+
+-- end comment
+..........
+id x
+id y
+rule
+id y
+id z
+rule
+empty
+list
+list
+==========
+-- Illegal end of line comment
+x = y -- comment
+..........
+Error in pecan-test.txt, line 178: expecting atom, newline, operator
+x = y -- comment
+      ^
+==========
+-- Unexpected character
+x = |y|
+..........
+Error in pecan-test.txt, line 185: expecting atom, newline
+x = |y|
+    ^
+==========
+-- Incomplete string
+x = "abc
+..........
+Error in pecan-test.txt, line 192: expecting quote
+x = "abc
+        ^
+==========
+-- Incomplete set
+x = 'abc
+..........
+Error in pecan-test.txt, line 199: expecting quote
+x = 'abc
+        ^
+==========
+-- Expecting atom
+x = /
+..........
+Error in pecan-test.txt, line 206: expecting atom, newline
+x = /
+    ^
+==========
+-- Missing close bracket
+x = (y
+y = z
+..........
+Error in pecan-test.txt, line 213: expecting atom, bracket, operator
+x = (y
+      ^
+==========
+-- Dot in the wrong place
+x = .
+..........
+Error in pecan-test.txt, line 221: expecting atom, newline
+x = .
+    ^
+==========
+-- Dot outside of a range
+x = 0.
+..........
+Error in pecan-test.txt, line 228: expecting atom, newline
+x = 0.
+    ^
+==========
+-- Discard action
+x = @3
+..........
+id x
+act @3
+rule
+empty
+list
+==========
+-- Long id and id extending category name
+longIdentifier = longIdentifier
+x = Ndx
+..........
+id longIdentifier
+id longIdentifier
+rule
+id x
+id Ndx
+rule
+empty
+list
+list
+==========
+-- Definition of category
+Nd = "x"
+..........
+Error in pecan-test.txt, line 258: expecting id, newline
+Nd = "x"
+^
+==========
+-- Tag
+x = %x
+..........
+id x
+tag %x
+rule
+empty
+list
+==========
+-- Bad tag
+x = %
+..........
+Error in pecan-test.txt, line 274: expecting name
+x = %
+     ^
+==========
+-- Marker
+x = #m
+..........
+id x
+mark #m
+rule
+empty
+list
+==========
+-- Bad marker
+x = 'x' #3
+..........
+Error in pecan-test.txt, line 290: expecting name
+x = 'x' #3
+         ^
+==========
+-- Brackets
+exp = (exp) end
+exp = [exp] end
+..........
+id exp
+bracket (
+id exp
+bracket )
+bracketed
+id end
+and
+rule
+id exp
+bracket [
+id exp
+bracket ]
+see
+id end
+and
+rule
+empty
+list
+list
+==========
+-- Continuation lines
+x =
+y /
+z
+x =
+(
+a) [
+c]
+x
+= y
+/ z
+x
+= y (a
+) [c
+]
+..........
+id x
+id y
+id z
+or
+rule
+id x
+bracket (
+id a
+bracket )
+bracketed
+bracket [
+id c
+bracket ]
+see
+and
+rule
+id x
+id y
+id z
+or
+rule
+id x
+id y
+bracket (
+id a
+bracket )
+bracketed
+bracket [
+id c
+bracket ]
+see
+and
+and
+rule
+empty
+list
+list
+list
+list
+==========
+-- The + * ? postfix operators
+exp = exp* exp+ exp? end
+..........
+id exp
+id exp
+postop *
+any
+id exp
+postop +
+some
+id exp
+postop ?
+opt
+id end
+and
+and
+and
+rule
+empty
+list
+==========
+-- Ranges
+r1 = '\\0..\\127'
+r2 = 'a..z'
+..........
+id r1
+range '\\0..\\127'
+rule
+id r2
+range 'a..z'
+rule
+empty
+list
+list
+==========
+-- Literal id
+`->` = %arrow
+..........
+id `->`
+tag %arrow
+rule
+empty
+list
+==========
+-- Error marker
+assignment = left #equals "=" right
+..........
+id assignment
+id left
+mark #equals
+string "="
+id right
+and
+and
+and
+rule
+empty
+list
+==========
+-- Double operator
+x = y /
+z / /
+..........
+Error in pecan-test.txt, line 437: expecting atom, newline
+z / /
+    ^
+==========
+-- Actions, tests, escapes and errors
+x = %x @0x @1x @ @x
+y = '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
+z = '\\0ffff' '\\01ABCDEF23' '\\0FG'
+u = #err ''
+..........
+id x
+tag %x
+act @0x
+act @1x
+act @
+act @x
+and
+and
+and
+and
+rule
+id y
+set '\\0'
+set '\\1'
+set '\\2'
+set '\\10'
+set '\\12'
+set '\\123'
+and
+and
+and
+and
+and
+rule
+id z
+set '\\0ffff'
+set '\\01ABCDEF23'
+set '\\0FG'
+and
+and
+rule
+id u
+mark #err
+set ''
+and
+rule
+empty
+list
+list
+list
+list
+==========
+-- Unicode letters and digits in identifiers, maximum codes
+x = abcπ
+y = d123٤
+z = '\\1114111\\0ffff'
+..........
+id x
+id abc\960
+rule
+id y
+id d123\1636
+rule
+id z
+set '\\1114111\\0ffff'
+rule
+empty
+list
+list
+list
+==========
+-- Strings, character sets, unicode
+x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
+y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
+pi = "\960"
+..........
+id x
+string "abc"
+string " !#$%^&*()_-=+[]`{};:'@#~"
+and
+rule
+id y
+set 'abc'
+set ' !#$%^&*()_-=+[]`{};:"@#~'
+and
+rule
+id pi
+string "\960"
+rule
+empty
+list
+list
+list
+==========
+-- Brackets and operators
+x = (y / z) / y?
+x = (y/z)+ / y*
+x = y z w ! / y
+x = [y z] / w
+..........
+id x
+bracket (
+id y
+id z
+or
+bracket )
+bracketed
+id y
+postop ?
+opt
+or
+rule
+id x
+bracket (
+id y
+id z
+or
+bracket )
+bracketed
+postop +
+some
+id y
+postop *
+any
+or
+rule
+id x
+id y
+id z
+id w
+postop !
+not
+and
+and
+id y
+or
+rule
+id x
+bracket [
+id y
+id z
+and
+bracket ]
+see
+id w
+or
+rule
+empty
+list
+list
+list
+list
+==========
+-- Dividers
+keyword = <do> keyword1 / keyword2
+keyword1 = "break" / "case" / "catch" / "continue" / "default"
+keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
+..........
+id keyword
+split <do>
+id keyword1
+and
+id keyword2
+or
+rule
+id keyword1
+string "break"
+string "case"
+string "catch"
+string "continue"
+string "default"
+or
+or
+or
+or
+rule
+id keyword2
+string "do"
+string "else"
+string "for"
+string "if"
+string "switch"
+string "while"
+or
+or
+or
+or
+or
+rule
+empty
+list
+list
+list
+==========
+-- End of input
+end = #end <>
+..........
+id end
+mark #end
+split <>
+and
+rule
+empty
+list
+==========
+-- Underscore
+a_b = xy_
+..........
+id a_b
+id xy_
+rule
+empty
+list
+==========
+-- Hyphen
+a-b = xy-
+..........
+id a-b
+id xy-
+rule
+empty
+list
+==========
+-- Illegal ad-hoc escape (escaped using test file conventions)
+bs = '\\n'
+..........
+Error in pecan-test.txt, line 663: expecting digit
+bs = '\\n'
+       ^
