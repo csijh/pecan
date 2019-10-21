@@ -16,30 +16,6 @@ class Node {
     private static String[] charMap = new String[128];
     static { fillCharMap(); }
 
-    public static void main(String[] args) {
-        Source s = new Source("127 'a' @add @2add 'a..z' 0..127 '<='", "file");
-        Node n = new Node(Code, s, 0, 3);
-        assert(n.name().equals("127"));
-        assert(n.charCode() == 127);
-        n = new Node(Char, s, 4, 7);
-        assert(n.name().equals("a"));
-        assert(n.charCode() == 97);
-        n = new Node(Act, s, 8, 12);
-        assert(n.name().equals("add"));
-        assert(n.arity() == 0);
-        n = new Node(Act, s, 13, 18);
-        assert(n.name().equals("add"));
-        assert(n.arity() == 2);
-        n = new Node(Range, s, 19, 25);
-        assert(n.low() == 97);
-        assert(n.high() == 97+25);
-        n = new Node(Codes, s, 26, 32);
-        assert(n.low() == 0);
-        assert(n.high() == 127);
-        n = new Node(Id, s, 33, 37);
-        assert(n.name().equals("<="));
-    }
-
 // ---------- The annotation fields and methods -------------------------------
 
     private int flags;
@@ -135,32 +111,39 @@ class Node {
     void source(Source s) { source = s; }
 
     // The name is the text, without decoration, e.g. #x -> x, %x -> x,
-    // @2add -> add, "ab" -> ab, 'ab' -> ab, <ab> -> ab, 'a..z' -> a..z
+    // @2add -> add, "ab" -> ab, <ab> -> ab, 'a..z' -> a..z, '\960' ->\960
     String name() {
         int s = start, e = end;
         switch (op) {
         case Rule: return left().name();
         case Mark:
-            if (source.charAt(s + 1) == '"') return source.substring(s+2, e-1);
-            if (source.charAt(s + 1) == '\'') return source.substring(s+2, e-1);
+            if (source.charAt(s + 1) == '`') return source.substring(s+2, e-1);
             return source.substring(s + 1, e);
         case Tag:
-            if (source.charAt(s + 1) == '"') return source.substring(s+2, e-1);
-            if (source.charAt(s + 1) == '\'') return source.substring(s+2, e-1);
+            if (source.charAt(s + 1) == '`') return source.substring(s+2, e-1);
             return source.substring(s + 1, e);
         case Act:
             int n = s + 1;
             while (Character.isDigit(source.charAt(n))) n++;
-            if (source.charAt(s + 1) == '"') return source.substring(n+1, e-1);
-            if (source.charAt(s + 1) == '\'') return source.substring(n+1, e-1);
+            if (source.charAt(s + 1) == '`') return source.substring(n+1, e-1);
             return source.substring(n, e);
         case String: case Set: case Split: case Char: case Range: case Temp:
             return source.substring(s + 1, e - 1);
         case Id:
-            if (source.charAt(start) == '"') return source.substring(s+1, e-1);
-            if (source.charAt(start) == '\'') return source.substring(s+1, e-1);
+            if (source.charAt(start) == '`') return source.substring(s+1, e-1);
             return text();
         default: return text();
+        }
+    }
+
+    // Get the next character from literal text with possible escapes.
+    private int next(String s, int i) {
+        int ch = name.codePointAt(i);
+        if (ch != '\\') return ch;
+        int b = ++i, e = b;
+        if (name.charAt(b) != '0') {
+            while(Character.isDigit(name.charAt(e))) e++;
+            return Integer.parseInt(name.substring(b,e));
         }
     }
 
@@ -184,9 +167,6 @@ class Node {
         switch(op) {
         case Char:
             return name().codePointAt(0);
-        case Code:
-            if (name().charAt(0) != '0') return Integer.parseInt(name());
-            else return Integer.parseInt(name(), 16);
         case Id:
             return ref().charCode();
         case Rule:
@@ -200,8 +180,6 @@ class Node {
         switch(op) {
         case Range:
             return name().codePointAt(0);
-        case Codes:
-            return Integer.parseInt(text().substring(0,text().indexOf('.')));
         }
         return -1;
     }
@@ -212,8 +190,6 @@ class Node {
         case Range:
             int n = Character.charCount(name().codePointAt(0));
             return name().substring(n+2).codePointAt(0);
-        case Codes:
-            return Integer.parseInt(text().substring(text().indexOf("..")+2));
         }
         return -1;
     }
@@ -351,5 +327,30 @@ class Node {
             case '}': charMap[ch] = "Cc"; break;
             case '~': charMap[ch] = "Ti"; break;
         }
+    }
+
+    public static void main(String[] args) {
+        Source s = new Source("'a' '\\127' @add @2add 'a..z' '<='", "file");
+        Node n = new Node(Char, s, 0, 3);
+        assert(n.name().equals("a"));
+        assert(n.charCode() == 97);
+        n = new Node(Char, s, 4, 10);
+        assert(n.name().equals("\\127"));
+        /*
+        n = new Node(Act, s, 8, 12);
+        assert(n.name().equals("add"));
+        assert(n.arity() == 0);
+        n = new Node(Act, s, 13, 18);
+        assert(n.name().equals("add"));
+        assert(n.arity() == 2);
+        n = new Node(Range, s, 19, 25);
+        assert(n.low() == 97);
+        assert(n.high() == 97+25);
+        n = new Node(Codes, s, 26, 32);
+        assert(n.low() == 0);
+        assert(n.high() == 127);
+        n = new Node(Id, s, 33, 37);
+        assert(n.name().equals("<="));
+        */
     }
 }

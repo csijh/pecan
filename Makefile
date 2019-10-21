@@ -3,6 +3,7 @@ Category = pecan/Category.java
 Source = pecan/Source.java
 Op = pecan/Op.java
 Node = pecan/Node.java $(Op)
+Testable = pecan/Testable.java
 Test = pecan/Test.java
 Parser = pecan/Parser.java $(Test) $(Node) $(Category)
 Binder = pecan/Binder.java $(Parser)

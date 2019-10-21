@@ -10,7 +10,6 @@ import static java.lang.Character.*;
 
 /* Carry out binding:
 Replace empty String by Success, empty Set by Fail, empty Split by Eot.
-Replace String or Set by Id in a token-based parser
 Replace String or Set with single character by Char.
 Replace unnamed Act by Drop.
 Check for missing or duplicate definitions.
@@ -82,8 +81,6 @@ class Binder implements Testable {
         case Cat: scanCat(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;
-        case Code: scanCode(node); break;
-        case Codes: scanRange(node); break;
         case String: case Char: scanString(node); break;
         case Split: scanSplit(node); break;
         case Set: scanSet(node); break;
@@ -114,15 +111,6 @@ class Binder implements Testable {
         Node rule = rules.get(name);
         if (rule == null) err(node, "undefined identifier");
         node.ref(rule);
-    }
-
-    // Find the character code represented by a number, and check in range.
-    // Check not token input.
-    private void scanCode(Node node) {
-        if (switchTest) return;
-        int ch = node.charCode();
-        if (ch > 1114111) err(node, "code too big");
-        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
     }
 
     // Set "" to Success, "->" to Id if token input, "x" to Char.

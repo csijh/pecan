@@ -21,7 +21,6 @@ public enum Op {
     Has,       // Positive lookahead, e&
     Not,       // Negative lookahead, e!
     Mark,      // Error annotation, x #e
-    Code,      // Character code, 127
     String,    // Character sequence, "abc"
     Set,       // Choice of characters, 'abc'
     Split,     // Lookahead for text less than or equal to string, <...>
@@ -30,7 +29,6 @@ public enum Op {
     Fail,      // Always fail, ''
     Eot,       // End of text or tokens, <>
     Range,     // Character range, 'x..y'
-    Codes,     // Code range, 0..127
     Cat,       // Unicode category, e.g. Lu
     Tag,       // Match a type of token.
     Drop,      // Drop unused matched characters, @ or @3
