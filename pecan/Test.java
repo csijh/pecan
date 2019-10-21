@@ -27,26 +27,18 @@ expected output.
 If a section contains only one part, then it represents a grammar to be used for
 subsequent tests. The grammar may contain inclusions. If the grammar is a single
 line consisting of just an inclusion, the target file may be another test file,
-rather than just a grammar.
+rather than just a grammar. If the grammar is a single comment line, it is
+ignored.
 
 Line endings in a test file are converted to \n when it is read in. To allow the
 test file to contain control characters or unicode characters as plain text,
-\nnn represents a character by its decimal code, or by its hex code if the code
-starts with zero, \\ represents a single backslash, and a \ followed by any
-other character removes the character. In particular, \ followed by a space can
-be used as a separator, and \ followed by a newline can be used to cancel the
-newline. For example, given that 960 is the decimal code for the character pi,
-then:
-
-   \960x      is pi followed by x
-   \960\ 5    is pi followed by the digit 5
-   \\960x     is the five characters \960x
-   ...\13\    is a line ending in CR instead of LF
-*/
+numerical escapes are supported, so \nnn represents a character by its decimal
+code, or by its hex code if the first digit is zero. */
 
 public class Test {
-    private Source input;
-    private String output;
+    private Source in;
+    private Source out;
+    private boolean grammar, trace;
 
     // No testing of the test class.
     public static void main(String[] args) { }
@@ -73,7 +65,8 @@ public class Test {
         boolean unitTest = file == null && line == 0;
         String name = object.getClass().getSimpleName();
         if (file == null) file = "tests/"+ name +".txt";
-        List<Test> tests = makeTests(file, readFile(file), trace);
+        Source source = new Source(new File(file));
+        List<Test> tests = makeTests(file, source, trace);
         int n = runTests(object, tests, line);
         report(unitTest, name, line, n);
     }
@@ -86,37 +79,26 @@ public class Test {
         System.exit(1);
     }
 
-    // Read a UTF8 file as a list of lines.
-    private static List<String> readFile(String fileName) {
-        Path path = Paths.get(fileName);
-        try { return Files.readAllLines(path, StandardCharsets.UTF_8); }
-        catch (Exception e) {
-            System.err.println("Error: can't read " + fileName + " " + e);
-            System.exit(1);
-            return null;
-        }
-    }
-
     // Divide the lines from a file into sections, and the sections into test
     // objects. If a section is a single line inclusion, include another test
     // file, else convert it into a test.
-    private static List<Test> makeTests(
-        String file, List<String> lines, boolean trace
-    ) {
+    private static List<Test> makeTests(String file, Source s, boolean trace) {
+        List<Source> lines = s.lines();
         List<Test> tests = new ArrayList<Test>();
         int start = 0;
         String grammar = null;
         for (int i = 0; i <= lines.size(); i++) {
             if (i < lines.size() && ! lines.get(i).startsWith("====")) continue;
-            String line = lines.get(start);
-            if (i == start + 1 && line.matches("\\{.*\\}")) {
+            Source line = lines.get(start);
+            if (i == start + 1 && line.startsWith("{") && line.endsWith("}")) {
                 String file2 = line.substring(1, line.length() - 1);
-                file2 = Source.relativeFile(file, file2);
-                tests.addAll(makeTests(file2, readFile(file2), trace));
+                file2 = s.relativePath(file2);
+                Source source = new Source(new File(file2));
+                tests.addAll(makeTests(file2, source, trace));
             }
             else if (i != start + 1 || ! line.startsWith("--")) {
                 Test t = makeTest(file, lines, start, i);
-                if (trace) t.input.trace(true);
+                if (trace) t.trace = true;
                 tests.add(t);
             }
             start = i + 1;
@@ -124,21 +106,22 @@ public class Test {
         return tests;
     }
 
-    // Create s test object from a range of lines.
-    private static Test makeTest(String f, List<String> lines, int s, int e) {
+    //--------------------------------------------------------------------
+
+    // Create a test object from a range of lines.
+    private static Test makeTest(String f, List<Source> lines, int s, int e) {
         int divider = -1;
         for (int i = s; i < e && divider < 0; i++) {
             if (lines.get(i).startsWith("....")) divider = i;
         }
         if (divider < 0) divider = e;
-        String in = "", out = "";
-        for (int i = s; i < divider; i++) in += lines.get(i) + "\n";
-        if (divider != e) in = unescape(in);
-        for (int i = divider + 1; i < e; i++) out += lines.get(i) + "\n";
         Test test = new Test();
-        test.input = new Source(in, f, s + 1);
-        test.output = out;
-        if (divider == e) test.input.grammar(true);
+        if (divider > s) test.in = lines.get(s).extend(lines.get(divider-1));
+        else test.in = new Source("");
+        if (divider < e) test.out = lines.get(divider+1).extend(lines.get(e-1));
+        else test.out = new Source("");
+        if (divider != e) test.in = test.in.unescape();
+        if (divider == e) test.grammar = true;
         return test;
     }
 
@@ -147,12 +130,17 @@ public class Test {
     private static int runTests(Testable object, List<Test> tests, int line) {
         int passed = 0;
         for (Test test : tests) {
-            if (! test.input.grammar() &&
-                line > 0 && test.input.firstLine() != line) continue;
-            Object obj = object.run(test.input);
-            String out = obj.toString();
-            String message = test.check(out);
-            if (! test.input.grammar() && message == null) passed++;
+            if (! test.grammar &&
+                line > 0 && test.in.lineNumber(0) != line) continue;
+            String message;
+            if (test.trace) object.tracing(true);
+            if (test.grammar) message = object.grammar(test.in);
+            else {
+                Object obj = object.run(test.in);
+                String out = obj.toString();
+                message = test.check(out);
+                if (message == null) passed++;
+            }
             if (message != null) {
                 System.err.println(message);
                 System.exit(1);
@@ -175,7 +163,7 @@ public class Test {
         else System.out.println(
             "Pass " + n + " tests.");
     }
-
+/*
     // Interpret escape characters in a string.
     static String unescape(String text) {
         String out = "";
@@ -203,7 +191,7 @@ public class Test {
         }
         return out;
     }
-
+*/
     // Check for a decimal or hex digit.
     private static boolean digit(char ch, boolean hex) {
         if (Character.isDigit(ch)) return true;
@@ -237,13 +225,13 @@ public class Test {
     // error message, or null for success.
     private String check(String out) {
         out = escape(out);
-        int lineNo = input.firstLine();
-        String fileName = input.fileName();
-        if (out.equals(output)) return null;
+        int lineNo = in.lineNumber(0);
+        String path = in.path();
+        if (out.equals(out)) return null;
         String result = "";
-        result += "Fail test on line " + lineNo + " of " + fileName + ":\n";
+        result += "Fail test on line " + lineNo + " of " + path + ":\n";
         result += "---------- Expected ----------\n";
-        result += output;
+        result += out;
         result += "---------- Actual ----------\n";
         result += out;
         return result;

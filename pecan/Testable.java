@@ -12,7 +12,7 @@ interface Testable {
     Object run(Source in);
 
     // Call to set up a default grammar for subsequent tests.
-    default void grammar(Source g) {}
+    default String grammar(Source g) { return null; }
 
     // Call to switch on tracing.
     default void tracing(boolean on) {}

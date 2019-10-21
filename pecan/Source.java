@@ -1,6 +1,7 @@
 // Pecan 1.0 source. Free and open source. See licence.txt.
 
 package pecan;
+import java.util.*;
 import java.io.*;
 import java.nio.file.*;
 import java.nio.charset.*;
@@ -69,10 +70,20 @@ class Source {
         normalize();
     }
 
+    // Extend the text to include the given text.
+    Source extend(Source src) {
+        assert(src.bytes == bytes);
+        int s = start, e = end;
+        if (src.start < s) s = src.start;
+        if (src.end > e) e = src.end;
+        return new Source(bytes, s, e);
+    }
+
     // Get the file path where the text originated.
     String path() {
         if (bytes.length == 0 || bytes[0] != '&') return null;
-        int n = nextNewline(1);
+        int n;
+        for (n = 1; n < bytes.length; n++) if (bytes[n] == '\n') break;
         return new String(bytes, 1, n-1, StandardCharsets.UTF_8);
     }
 
@@ -96,6 +107,24 @@ class Source {
     int charAt(int p) {
         next(p, temp);
         return temp.value;
+    }
+
+    boolean startsWith(String s) {
+        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
+        if (length() < bs.length) return false;
+        for (int j = 0; j < bs.length; j++) {
+            if (bs[j] != bytes[start+j]) return false;
+        }
+        return true;
+    }
+
+    boolean endsWith(String s) {
+        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
+        if (length() < bs.length) return false;
+        for (int j = 0; j < bs.length; j++) {
+            if (bs[j] != bytes[end - bs.length + j]) return false;
+        }
+        return true;
     }
 
     // Find the position of a substring.
@@ -165,6 +194,20 @@ class Source {
         ch.length = n - p;
     }
 
+    // Procude a list of lines, including newlines, from a source.
+    List<Source> lines() {
+        List<Source> list = new ArrayList<>();
+        int s = start;
+        for (int e = 0; e < end; e++) {
+            if (bytes[e] == '\n') {
+                list.add(new Source(bytes, s, e+1));
+                s = e+1;
+            }
+        }
+        if (end > s) list.add(new Source(bytes, s, end));
+        return list;
+    }
+
     // Find the line number of the line containing p.
     int lineNumber(int p) {
         assert(start <= p && p < end);
@@ -190,14 +233,6 @@ class Source {
         line.source = new Source(bytes, s, e);
     }
 
-    // Get the index of the next newline in the whole text.
-    private int nextNewline(int p) {
-        for (int i = p; i < bytes.length; i++) {
-            if (bytes[i] == '\n') return i;
-        }
-        return -1;
-    }
-
     // Return the length, in bytes.
     int length() { return end - start; }
 
@@ -211,6 +246,36 @@ class Source {
     String substring(int s, int e) {
         assert(s >= 0 && s <= e && e <= end - start);
         return new String(bytes, start+s, e-s, StandardCharsets.UTF_8);
+    }
+
+    // Return an unescaped version of this source.
+    Source unescape() {
+        byte[] bs = new byte[end - start];
+        int out = 0;
+        for (int i = start; i < end; i++) {
+            byte b = bytes[i];
+            if (b != '\\') { bs[out++] = b; continue; }
+            escape(i, temp);
+            int v = temp.value;
+            if (v < 128) bs[out++] = (byte) temp.value;
+            else if (v < 0x0800) {
+                bs[out++] = (byte) (0xC0 | (v >> 6));
+                bs[out++] = (byte) (0x80 | (v & 0x3F));
+            }
+            else if (v < 0x10000) {
+                bs[out++] = (byte) (0xE0 | (v >> 12));
+                bs[out++] = (byte) (0x80 | ((v >> 6) & 0x3F));
+                bs[out++] = (byte) (0x80 | (v & 0x3F));
+            }
+            else {
+                bs[out++] = (byte) (0xF0 | (v >> 18));
+                bs[out++] = (byte) (0x80 | ((v >> 12) & 0x3F));
+                bs[out++] = (byte) (0x80 | ((v >> 6) & 0x3F));
+                bs[out++] = (byte) (0x80 | (v & 0x3F));
+            }
+            i = i + temp.length - 1;
+        }
+        return new Source(bs, 0, out);
     }
 
     // Create an error message, based on a text range.
