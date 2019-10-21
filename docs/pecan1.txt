@@ -12,21 +12,19 @@ term = factor (term @2and)?
 factor = #atom atom (repeat / lookahead)*
 repeat = opt @2opt / any @2any / some @2some
 lookahead = has @2has / not @2not
-atom = bracketed / try / id / act / mark / tag /
-    codes / code / range / set / string / split
+atom = bracketed / see / id / act / mark / tag /
+    range / set / string / split
 
 -- Atoms
 bracketed = open expression close @3bracketed
-try = sopen expression sclose @3try
+see = sopen expression sclose @3see
 id = letter alpha* @id blank
 act = '@' digits? name? @act blank
 mark = "#" #name name @mark blank
 tag = "%" #name name @tag blank
-codes = [digits '.'] #dot '.' digits @codes blank
-code = digits @code blank
-range = ["'" noquote ".."] noquote #quote "'" @range blank
-set = "'" noquote* #quote "'" @set blank
-string = '"' nodquote* #quote '"' @string blank
+range = ["'" noquote ".."] noquote #squote "'" @range blank
+set = "'" noquote* #squote "'" @set blank
+string = '"' nodquote* #dquote '"' @string blank
 split = '<' noangle* #gt '>' @split blank
 equals = #equals "=" gap
 slash = #operator "/" gap
@@ -49,7 +47,8 @@ newline = #newline endline @
 
 -- Character sets and sequences
 space = ' '
-visible = ' ..~'
+visible = escape / ' ..~'
+escape = '\92' #digit digit+
 alpha = letter / '0..9' / '-'
 letter = 'a..z' / 'A..Z' / '_'
 name = letter alpha*
@@ -57,7 +56,7 @@ digits = '0' / ('1..9' '0..9'*)
 noquote = "'"! visible
 nodquote = '"'! visible
 noangle = '>'! visible
-endline = 13? 10
+endline = '\13'? '\10'
 
 ==========
 -- Single rule
@@ -351,7 +350,7 @@ id exp
 bracket [
 id exp
 bracket ]
-try
+see
 id end
 and
 rule
@@ -388,7 +387,7 @@ bracketed
 bracket [
 id c
 bracket ]
-try
+see
 and
 rule
 list
@@ -407,7 +406,7 @@ bracketed
 bracket [
 id c
 bracket ]
-try
+see
 and
 and
 rule
@@ -581,7 +580,7 @@ id y
 id z
 and
 bracket ]
-try
+see
 id w
 or
 rule

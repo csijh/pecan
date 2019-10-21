@@ -28,9 +28,14 @@ The length of a source string, and positions within it, are in bytes. Positions
 are assumed to be on code point boundaries. */
 
 class Source {
-    static class Char { int value, length; }
     private byte[] bytes;
     private int start, end;
+
+    // Structure to hold the value and byte-length of a UTF-8 character.
+    static class Char { int value, length; }
+
+    // Structure to hold the line number, column and start/end of a line.
+    static class Line { int row, col, start, end; Source source; }
 
     // Construct a Source directly from its fields.
     private Source(byte[] bs, int s, int e) { bytes = bs; start = s; end = e; }
@@ -86,10 +91,45 @@ class Source {
     // Return the text as a string.
     String text() { return substring(0, end - start); }
 
-    // Get the next character (value and byte-length) at position p.
+    // Get the next character at position p.
+    static Char temp = new Char();
+    int charAt(int p) {
+        next(p, temp);
+        return temp.value;
+    }
+
+    // Find the position of a substring.
+    int indexOf(String s) {
+        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
+        int pos = -1;
+        for (int i = start; pos < 0 && i < end - bs.length; i++) {
+            boolean reject = false;
+            for (int j = 0; ! reject && j < bs.length; j++) {
+                if (bs[j] != bytes[i+j]) reject = true;
+            }
+            if (! reject) pos = i;
+        }
+        return pos;
+    }
+
+    // Find the last position of a substring.
+    int lastIndexOf(String s) {
+        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
+        int pos = -1;
+        for (int i = end - bs.length; pos < 0 && i >= start; i--) {
+            boolean reject = false;
+            for (int j = 0; ! reject && j < bs.length; j++) {
+                if (bs[j] != bytes[i+j]) reject = true;
+            }
+            if (! reject) pos = i;
+        }
+        return pos;
+    }
+
+    // Get the next character at position p, with byte-length.
     // Handle numerical escapes.
     void next(int p, Char ch) {
-        assert(start <= p && p < end);
+        assert(0 <= p && p < length());
         p += start;
         int v = bytes[p];
         if (v == '\\') { escape(p,ch); return; }
@@ -125,6 +165,31 @@ class Source {
         ch.length = n - p;
     }
 
+    // Find the line number of the line containing p.
+    int lineNumber(int p) {
+        assert(start <= p && p < end);
+        p += start;
+        int r = 0, s = 0, e = 0;
+        for (int i = 0; i < p; i++) if (bytes[i] == '\n') { r++; s = i+1; }
+        if (bytes.length == 0 || bytes[0] != '&') r++;
+        return r;
+    }
+
+    // Find the row number, start and end of the line containing p.
+    void line(int p, Line line) {
+        assert(start <= p && p < end);
+        p += start;
+        int r = 0, s = 0, e = 0;
+        for (int i = 0; i < p; i++) if (bytes[i] == '\n') { r++; s = i+1; }
+        for (e = p; e < bytes.length; e++) if (bytes[e] == '\n') break;
+        if (bytes.length == 0 || bytes[0] != '&') r++;
+        line.row = r;
+        line.col = p - s;
+        line.start = s;
+        line.end = e;
+        line.source = new Source(bytes, s, e);
+    }
+
     // Get the index of the next newline in the whole text.
     private int nextNewline(int p) {
         for (int i = p; i < bytes.length; i++) {
@@ -133,29 +198,11 @@ class Source {
         return -1;
     }
 
-    // Normalize text. Convert line endings to \n, delete trailing spaces,
-    // delete trailing lines, complain about missing last newline, complain
-    // about control characters.
-    private void normalize() {
-        bytes[end++] = '\n';
-        int out = start;
-        for (int i = start; i < end; i++) {
-            byte b = bytes[i];
-            if (b != '\r' && b != '\n') { bytes[out++] = b; continue; }
-            if (b == '\r' && bytes[i + 1] == '\n') i++;
-            while (out >= start && bytes[out - 1] == ' ') out--;
-            bytes[out++] = '\n';
-        }
-        while (out > start && bytes[out - 1] == '\n') out--;
-        bytes[out++] = '\n';
-        end = out;
-    }
-
     // Return the length, in bytes.
     int length() { return end - start; }
 
     // Construct a substring, between two given byte-positions.
-    Source subsource(int s, int e) {
+    Source sub(int s, int e) {
         assert(s >= 0 && s <= e && e <= end - start);
         Source sub = new Source(bytes, start + s, start + e);
         return sub;
@@ -179,7 +226,6 @@ class Source {
         int col = s - startRow[1];
         String s1;
         String path = path();
-        if (path == null) { startRow[0]++; endRow[0]++; }
         if (path == null) s1 = "Error on ";
         else s1 = "Error in " + path + ", ";
         if (endRow[0] == startRow[0]) {
@@ -202,10 +248,29 @@ class Source {
     private void row(int[] row, int p) {
         int r = 0, s = 0, e = 0;
         for (int i = 0; i < p; i++) if (bytes[i] == '\n') { r++; s = i+1; }
+        if (bytes.length == 0 || bytes[0] != '&') r++;
         row[0] = r;
         row[1] = s;
         for (e = p; e < bytes.length; e++) if (bytes[e] == '\n') break;
         row[2] = e;
+    }
+
+    // Normalize text. Convert line endings to \n, delete trailing spaces,
+    // delete trailing lines, complain about missing last newline, complain
+    // about control characters.
+    private void normalize() {
+        bytes[end++] = '\n';
+        int out = start;
+        for (int i = start; i < end; i++) {
+            byte b = bytes[i];
+            if (b != '\r' && b != '\n') { bytes[out++] = b; continue; }
+            if (b == '\r' && bytes[i + 1] == '\n') i++;
+            while (out >= start && bytes[out - 1] == ' ') out--;
+            bytes[out++] = '\n';
+        }
+        while (out > start && bytes[out - 1] == '\n') out--;
+        bytes[out++] = '\n';
+        end = out;
     }
 
     private void err(String message) {
@@ -229,7 +294,7 @@ class Source {
         s.next(5,ch);
         assert(ch.value == 0x3c0 && ch.length == 5);
         s = new Source("&file\nLine one\nLine two\n");
-        s = s.subsource(6,24);
+        s = s.sub(6,24);
         String out =
             "Error in file, line 1: message\n" +
             "Line one\n" +
