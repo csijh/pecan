@@ -54,7 +54,7 @@ class Checker implements Testable {
         Checker checker = new Checker();
         checker.switchTest = true;
         for (Op op : Op.values()) {
-            Node node = new Node(op, null, 0, 1);
+            Node node = new Node(op, null, null);
             checker.scanNode(node);
         }
         checker.switchTest = false;
@@ -83,7 +83,7 @@ class Checker implements Testable {
 
     // The main switch. Check if any of the flags change.
     private void scanNode(Node node) {
-        node.unset(Changed);
+        int flags = node.flags();
         switch(node.op()) {
         case Error: case Temp: break;
         case List: case Empty: scanList(node); break;
@@ -99,7 +99,7 @@ class Checker implements Testable {
         case Some: scanSome(node); break;
         case See: scanSee(node); break;
         case Tag: case Char: case String: case Set: scanMatch(node); break;
-        case Cat: case Range: case Code: case Codes: scanMatch(node); break;
+        case Cat: case Range: scanMatch(node); break;
         case Success: scanSuccess(node); break;
         case Fail: scanFail(node); break;
         case Split: case Eot: scanSplit(node); break;
@@ -107,7 +107,7 @@ class Checker implements Testable {
         case Not: scanNot(node); break;
         default: assert false : "Unexpected node type " + node.op(); break;
         }
-        if (node.has(Changed)) changed = true;
+        if (node.flags() != flags) changed = true;
     }
 
     // Scan List or Include node.
@@ -164,7 +164,7 @@ class Checker implements Testable {
         node.set(WF);
     }
 
-    // Tag, Char, String, Set, Cat, Range, Code, Codes.
+    // Tag, Char, String, Set, Cat, Range.
     // A string has implicit backtracking, e.g. "xy" == ['x' 'y']
     private void scanMatch(Node node) {
         if (switchTest) return;
@@ -354,10 +354,8 @@ class Checker implements Testable {
 
     // Report an error.
     private void err(Node r, String m) {
-        int s = r.start();
-        int e = r.end();
-        root = new Node(Error, r.source(), 0, 0);
-        root.note(r.source().error(s, e, m));
+        root = new Node(Error, r.source());
+        root.note(r.source().error(m));
     }
 
     // Annotate each node with its flags.
@@ -366,7 +364,6 @@ class Checker implements Testable {
         if (node.right() != null) annotate(node.right());
         String s = "";
         for (Node.Flag f : Node.Flag.values()) {
-            if (f == Changed) continue;
             if (f == WF) continue;
             if (! node.has(f)) continue;
             if (! s.equals("")) s += ",";

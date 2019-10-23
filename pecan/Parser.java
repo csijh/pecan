@@ -56,7 +56,8 @@ class Parser implements Testable {
         if (! ok) {
             Node err = new Node(Error, s.sub(in, in));
             if (marked < in) markers.clear();
-            err.note(s.error(in, in, message()));
+            Source point = s.sub(in, in);
+            err.note(point.error(message()));
             return err;
         }
         assert(save == 0);

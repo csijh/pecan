@@ -145,7 +145,7 @@ public class Test {
             if (message != null) err(message);
             return false;
         }
-        if (line > 0 && original.lineNumber(in) != line) return false;
+        if (line > 0 && in.lineNumber() != line) return false;
         if (trace) object.tracing(true);
         Object obj = object.run(in);
         message = check(obj.toString());
@@ -237,7 +237,7 @@ public class Test {
 //        String s1 = escape(s);
         String s1 = s;
         String s2 = out.text();
-        int lineNo = original.lineNumber(in);
+        int lineNo = in.lineNumber();
         String path = in.path();
         if (s1.equals(s2)) return null;
         String result = "";

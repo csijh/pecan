@@ -17,12 +17,12 @@ List x = ''...
   Empty
 ==========
 -- Character code: succeeds and progresses or fails without progressing
-x = 42
+x = '\42'
 ..........
-List x = 42...
-  Rule x = 42 FN,SP
+List x = '\42'...
+  Rule x = '\42' FN,SP
     Id x FN,SP
-    Code 42 FN,SP
+    Char '\42' FN,SP
   Empty
 ==========
 -- Strings: FN,SP
@@ -106,14 +106,14 @@ x = a y
 -- Text input and token input
 x = [%a] 'b'
 ..........
-Error in tests/Checker.txt, line 107: undefined identifier
+Error in tests/Checker.txt, line 107: text matcher in a token parser
 x = [%a] 'b'
          ^^^
 ==========
 -- See: FN,SP,FP
 x = [%a] %b
 ..........
-List x = [%a] %b... TokenInput
+List x = [%a] %b... TI
   Rule x = [%a] %b FN,SP,FP
     Id x FN,SP,FP
     And [%a] %b FN,SP,FP
@@ -125,7 +125,7 @@ List x = [%a] %b... TokenInput
 -- Positive lookahead: SN,FN
 x = (%a)& %b
 ..........
-List x = (%a)& %b... TokenInput
+List x = (%a)& %b... TI
   Rule x = (%a)& %b FN,SP
     Id x FN,SP
     And (%a)& %b FN,SP
@@ -137,7 +137,7 @@ List x = (%a)& %b... TokenInput
 -- Negative lookahead: SN,FN
 x = (%a)! %b
 ..........
-List x = (%a)! %b... TokenInput
+List x = (%a)! %b... TI
   Rule x = (%a)! %b FN,SP
     Id x FN,SP
     And (%a)! %b FN,SP
@@ -146,7 +146,7 @@ List x = (%a)! %b... TokenInput
       Tag %b FN,SP
   Empty
 ==========
--- Action on left of choice (legal in Pecan 5, warning when compiling)
+-- Action on left of choice (legal now, but warn when compiling)
 x = @a 'a' / 'b'
 ..........
 List x = @a 'a' / 'b'...

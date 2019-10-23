@@ -202,6 +202,6 @@ class Binder implements Testable {
     // Report an error.
     private void err(Node r, String m) {
         root = new Node(Error, r.source());
-        root.note(source.error(r.source(), m));
+        root.note(r.source().error(m));
     }
 }

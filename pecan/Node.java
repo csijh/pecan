@@ -21,7 +21,7 @@ class Node {
     private String note = "";
 
     // Flag and count constants.
-    public static enum Flag { CH, TI, SN, FN, SP, FP, WF, AA, EE, AB; }
+    public static enum Flag { TI, SN, FN, SP, FP, WF, AA, EE, AB; }
     public static enum Count { NET, NEED, PC, LEN; }
 
     // Construct a node from a source, with any number of subnodes.
@@ -165,7 +165,7 @@ class Node {
     // Print the source text of a node on one line, e.g. when tracing.
     String trace(Source original) {
         int end = source.length();
-        int lineNumber = original.lineNumber(source);
+        int lineNumber = source.lineNumber();
         int newline = source.indexOf("\n");
         if (newline < 0) {
             return "P" + lineNumber + ": " + source.text();

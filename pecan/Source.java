@@ -45,7 +45,8 @@ class Source {
         end = bytes.length;
     }
 
-    // Read in a Source from a UTF-8 file. The text is prefixed by "&path\n"
+    // Read in a Source from a UTF-8 file. The text is prefixed by "&path\n".
+    // and spare bytes filled with '\0'.
     Source(File file) {
         InputStream is = null;
         try { is = new FileInputStream(file); }
@@ -64,6 +65,7 @@ class Source {
         catch (Exception e) { err("can't read ", e); }
         if (r != flen) err("can't read " + path, null);
         end = start + flen;
+        for (int i = end; i < bytes.length; i++) bytes[i] = '\0';
         normalize();
     }
 
@@ -276,33 +278,41 @@ class Source {
         return list;
     }
 
-    // Find the line number of the given subsource.
-    int lineNumber(Source sub) {
-        check(sub.bytes == bytes);
-        check(start <= sub.start && sub.end <= end);
+    // Find the start of the file.
+    private int fileStart() {
+        if (bytes.length == 0 || bytes[0] != '&') return 0;
+        int s = 0;
+        while (bytes[s] != '\n') s++;
+        return s + 1;
+    }
+
+    // Find the end of the file.
+    private int fileEnd() {
+        int e = bytes.length;
+        while (e > 0 && bytes[e-1] == '\0') e--;
+        return e;
+    }
+
+    // Find the line number within the surrounding file.
+    int lineNumber() {
+        int fs = fileStart(), fe = fileEnd();
+        check(fs <= start && end <= fe);
         int r = 1;
-        for (int i = start; i < sub.start; i++) if (bytes[i] == '\n') r++;
+        for (int i = fs; i < start; i++) if (bytes[i] == '\n') r++;
         return r;
     }
 
-    // Create an error message, based on a subsource.
-    String error(Source sub, String message) {
-        check(bytes == sub.bytes);
-        check(start <= sub.start && sub.end <= end);
-        return error(sub.start - start, sub.end - start, message);
-    }
-
-    // Create an error message, based on a text range.
-    String error(int s, int e, String message) {
-        check(0 <= s && s <= e && e <= length());
-        s = start + s;
-        e = start + e;
+    // Create an error message referring to this, within its file.
+    String error(String message) {
+        int fs = fileStart(), fe = fileEnd();
+        check(fs <= start && end <= fe);
+        int s = start;
+        int e = end;
         int[] startRow = new int[3], endRow = new int[3];
         row(startRow, s);
         row(endRow, e);
         if (! message.equals("")) message = " " + message;
         int sl = startRow[1], ll = startRow[2] - sl;
-        if (sl + ll > end) ll = end - sl;
         String line = new String(bytes, sl, ll, StandardCharsets.UTF_8);
         int col = s - startRow[1];
         String s1;
@@ -383,33 +393,33 @@ class Source {
             "Error in file, line 1: message\n" +
             "Line one\n" +
             "^";
-        assert(s.error(0,0,"message").equals(out));
+        assert(s.sub(0,0).error("message").equals(out));
         out =
             "Error in file, line 2: message\n" +
             "Line two\n" +
             "     ^^^";
-        assert(s.error(14,17,"message").equals(out));
+        assert(s.sub(14,17).error("message").equals(out));
         out =
             "Error in file, lines 1 to 2: message\n" +
             "Line one...\n" +
             "     ^^^";
-        assert(s.error(5,16,"message").equals(out));
+        assert(s.sub(5,16).error("message").equals(out));
         s = new Source("Line one\nLine two\n");
         out =
             "Error on line 2: message\n" +
             "Line two\n" +
             "     ^^^";
-        assert(s.error(14,17,"message").equals(out));
+        assert(s.sub(14,17).error("message").equals(out));
         out =
             "Error on line 3: message\n" +
             "\n" +
             "^";
-        assert(s.error(18,18,"message").equals(out));
+        assert(s.sub(18,18).error("message").equals(out));
         s = new Source("");
         out =
             "Error on line 1: message\n" +
             "\n" +
             "^";
-        assert(s.error(0,0,"message").equals(out));
+        assert(s.sub(0,0).error("message").equals(out));
     }
 }
