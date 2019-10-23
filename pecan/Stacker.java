@@ -5,6 +5,7 @@ package pecan;
 import java.util.*;
 import java.io.*;
 import static pecan.Op.*;
+import static pecan.Node.Count.*;
 
 /* This pass checks that output handling is consistent, that a fixed number of
 output items is produced for any given node, and that a fixed number of output
@@ -53,7 +54,7 @@ class Stacker implements Testable {
         Stacker stacker = new Stacker();
         stacker.switchTest = true;
         for (Op op : Op.values()) {
-            Node node = new Node(op, null, 0, 1);
+            Node node = new Node(op, null, null);
             stacker.scanNode(node);
         }
         stacker.switchTest = false;
@@ -76,8 +77,8 @@ class Stacker implements Testable {
     private void clear(Node node) {
         if (node.left() != null) clear(node.left());
         if (node.right() != null) clear(node.right());
-        node.NET(UNKNOWN);
-        node.NEED(0);
+        node.set(NET, UNKNOWN);
+        node.set(NEED, 0);
     }
 
     // Traverse the tree, bottom up, and check each node.
@@ -95,20 +96,20 @@ class Stacker implements Testable {
     private void clearZero(Node node) {
         if (node.left() != null) clearZero(node.left());
         if (node.right() != null) clearZero(node.right());
-        node.NET(0);
-        node.NEED(0);
+        node.set(NET, 0);
+        node.set(NEED, 0);
     }
 
     // The main switch. Check if any of the values change.
     private void scanNode(Node node) {
-        int oldNet = node.NET();
-        int oldNeed = node.NEED();
+        int oldNet = node.get(NET);
+        int oldNeed = node.get(NEED);
         switch(node.op()) {
         case Error: case Temp: break;
         case List: case Empty: scanZero(node); break;
         case Mark: case Tag: case Char: case String: scanZero(node); break;
-        case Set: case Cat: case Range: case Code: scanZero(node); break;
-        case Codes: case Split: case Eot: case Has: scanZero(node); break;
+        case Set: case Cat: case Range: scanZero(node); break;
+        case Split: case Eot: case Has: scanZero(node); break;
         case Not: case Success: case Fail: scanZero(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;
@@ -122,93 +123,94 @@ class Stacker implements Testable {
         case See: scanSee(node); break;
         default: assert false : "Unexpected node type " + node.op(); break;
         }
-        if (oldNet != UNKNOWN && node.NET() != oldNet) {
+        if (oldNet != UNKNOWN && node.get(NET) != oldNet) {
             err(node, "inconsistent net number of output items produced");
         }
-        if (node.NEED() >= 100) {
+        if (node.get(NEED) >= 100) {
             err(node, "outputs may underflow");
         }
-        if (node.NET() != oldNet || node.NEED() != oldNeed) changed = true;
-
+        if (node.get(NET) != oldNet || node.get(NEED) != oldNeed) {
+            changed = true;
+        }
     }
 
     // Scan node not involving actions.
     private void scanZero(Node node) {
         if (switchTest) return;
-        node.NET(0);
-        node.NEED(0);
+        node.set(NET, 0);
+        node.set(NEED, 0);
     }
 
     private void scanRule(Node node) {
         if (switchTest) return;
-        node.NET(node.right().NET());
-        node.NEED(node.right().NEED());
+        node.set(NET, node.right().get(NET));
+        node.set(NEED, node.right().get(NEED));
     }
 
     private void scanId(Node node) {
         if (switchTest) return;
-        node.NET(node.ref().NET());
-        node.NEED(node.ref().NEED());
+        node.set(NET, node.ref().get(NET));
+        node.set(NEED, node.ref().get(NEED));
     }
 
     // @a, @1a, @2a, ...
     private void scanAct(Node node) {
         if (switchTest) return;
-        node.NET(1 - node.arity());
-        node.NEED(node.arity());
+        node.set(NET, 1 - node.arity());
+        node.set(NEED, node.arity());
     }
 
     // @, @1, @2, ...
     private void scanDrop(Node node) {
         if (switchTest) return;
-        node.NET(- node.arity());
-        node.NEED(node.arity());
+        node.set(NET, - node.arity());
+        node.set(NEED, node.arity());
     }
 
     // x y
     private void scanAnd(Node node) {
         if (switchTest) return;
-        int xNET = node.left().NET();
-        int yNET = node.right().NET();
-        int xNEED = node.left().NEED();
-        int yNEED = node.right().NEED();
+        int xNET = node.left().get(NET);
+        int yNET = node.right().get(NET);
+        int xNEED = node.left().get(NEED);
+        int yNEED = node.right().get(NEED);
         if (xNET != UNKNOWN && yNET != UNKNOWN) {
-            node.NET(xNET + yNET);
-            node.NEED(Math.max(xNEED, yNEED - xNET));
+            node.set(NET, xNET + yNET);
+            node.set(NEED, Math.max(xNEED, yNEED - xNET));
         }
     }
 
     // x / y
     private void scanOr(Node node) {
         if (switchTest) return;
-        int xNET = node.left().NET();
-        int yNET = node.right().NET();
-        int xNEED = node.left().NEED();
-        int yNEED = node.right().NEED();
+        int xNET = node.left().get(NET);
+        int yNET = node.right().get(NET);
+        int xNEED = node.left().get(NEED);
+        int yNEED = node.right().get(NEED);
         if (xNET != UNKNOWN && yNET != UNKNOWN && xNET != yNET) {
             err(node, "alternatives have different net outputs");
         }
-        if (xNET != UNKNOWN) node.NET(xNET);
-        if (yNET != UNKNOWN) node.NET(yNET);
-        node.NEED(Math.max(xNEED, yNEED));
+        if (xNET != UNKNOWN) node.set(NET, xNET);
+        if (yNET != UNKNOWN) node.set(NET, yNET);
+        node.set(NEED, Math.max(xNEED, yNEED));
     }
 
     // x?, x*, x+
     private void scanRepeat(Node node) {
         if (switchTest) return;
-        int xNET = node.left().NET();
+        int xNET = node.left().get(NET);
         if (xNET != UNKNOWN && xNET != 0) {
             err(node, "subrule has non-zero net output");
         }
-        node.NET(0);
-        node.NEED(node.left().NEED());
+        node.set(NET, 0);
+        node.set(NEED, node.left().get(NEED));
     }
 
     // [x]
     private void scanSee(Node node) {
         if (switchTest) return;
-        node.NET(node.left().NET());
-        node.NEED(node.left().NEED());
+        node.set(NET, node.left().get(NET));
+        node.set(NEED, node.left().get(NEED));
     }
 
     // Find a lowest level invalid node to report.
@@ -216,15 +218,13 @@ class Stacker implements Testable {
         if (node.left() != null) check(node.left());
         if (node.right() != null) check(node.right());
         if (root.op() == Error) return;
-        if (node.NET() == UNKNOWN) err(node, "variable net output");
+        if (node.get(NET) == UNKNOWN) err(node, "variable net output");
     }
 
     // Report an error.
     private void err(Node r, String m) {
-        int s = r.start();
-        int e = r.end();
-        root = new Node(Error, r.source(), 0, 0);
-        root.note(r.source().error(s, e, m));
+        root = new Node(Error, r.source());
+        root.note(r.source().error(m));
     }
 
     // Annotate each node with non-zero values.
@@ -232,7 +232,7 @@ class Stacker implements Testable {
         if (node.left() != null) annotate(node.left());
         if (node.right() != null) annotate(node.right());
         String s = "";
-        int net = node.NET(), need = node.NEED();
+        int net = node.get(NET), need = node.get(NEED);
         if (need != 0) s += "NEED=" + need;
         if (net != 0) {
             if (s.length() != 0) s += ",";
