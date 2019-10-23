@@ -22,6 +22,7 @@ Check whether the grammar has text or tokens as input. */
 
 class Binder implements Testable {
     private boolean switchTest;
+    private Source source;
     private Node root;
     private HashMap<String,Node> rules = new HashMap<String,Node>();
     private Map<String,Integer> arities = new HashMap<String,Integer>();
@@ -33,7 +34,7 @@ class Binder implements Testable {
         Binder binder = new Binder();
         binder.switchTest = true;
         for (Op op : Op.values()) {
-            Node node = new Node(op, null, 0, 1);
+            Node node = new Node(op, null, null);
             binder.scanNode(node);
         }
         binder.switchTest = false;
@@ -41,7 +42,8 @@ class Binder implements Testable {
     }
 
     // Run the binder on the given source, check type of input.
-    public Node run(Source source) {
+    public Node run(Source src) {
+        source = src;
         Parser parser = new Parser();
         root = parser.run(source);
         if (root.op() == Error) return root;
@@ -53,13 +55,13 @@ class Binder implements Testable {
     }
 
     // Collect information. Put the rules in a map, ignoring duplicates for now.
-    // Check whether the parser is token-based or text-based.
+    // Check whether the parser is token-based.
     private void collect(Node node) {
         if (node.op() == Rule) {
             String id = node.left().name();
             if (rules.get(id) == null) rules.put(id, node);
         }
-        if (node.op() == Tag) root.set(TokenInput);
+        if (node.op() == Tag) root.set(TI);
         if (node.left() != null) collect(node.left());
         if (node.right() != null) collect(node.right());
     }
@@ -93,12 +95,13 @@ class Binder implements Testable {
     // Check not token input.
     private void scanCat(Node node) {
         if (switchTest) return;
-        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
+        if (root.has(TI)) err(node, "text matcher in a token parser");
     }
 
     // Check that a rule name is not a duplicate.
     private void scanRule(Node node) {
         if (switchTest) return;
+        if (! checkEscapes(node.left())) return;
         String name = node.left().name();
         Node first = rules.get(name);
         if (node != first) err(node.left(), name + " is already defined");
@@ -107,37 +110,39 @@ class Binder implements Testable {
     // Bind an id to its defining rule, creating a cross-reference.
     private void scanId(Node node) {
         if (switchTest) return;
+        if (! checkEscapes(node)) return;
         String name = node.name();
         Node rule = rules.get(name);
         if (rule == null) err(node, "undefined identifier");
         node.ref(rule);
     }
 
-    // Set "" to Success, "->" to Id if token input, "x" to Char.
+    // Set "" to Success, "x" to Char.
     private void scanString(Node node) {
         if (switchTest) return;
+        if (! checkEscapes(node)) return;
         int n = node.name().codePointCount(0, node.name().length());
         if (n == 0) node.op(Success);
-        else if (root.has(TokenInput)) { node.op(Id); scanId(node); }
         else if (n == 1) node.op(Char);
+        if (n > 0 && root.has(TI)) err(node, "text matcher in a token parser");
     }
 
     // Set <> to Eot. If non-empty, check not token input.
     private void scanSplit(Node node) {
         if (switchTest) return;
+        if (! checkEscapes(node)) return;
         int n = node.name().length();
-        if (n == 0) { node.op(Eot); return; }
-        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
+        if (n == 0) node.op(Eot);
+        else if (root.has(TI)) err(node, "text matcher in a token parser");
     }
 
-    // Set '' to Fail, '->' to id if token input, 'x' to Char, and
-    // check that the set consists of distinct characters.
+    // Set '' to Fail, 'x' to Char, and check distinct characters.
     private void scanSet(Node node) {
         if (switchTest) return;
+        if (! checkEscapes(node)) return;
         String name = node.name();
         int n = name.codePointCount(0, name.length());
         if (n == 0) node.op(Fail);
-        else if (root.has(TokenInput)) { node.op(Id); scanId(node); }
         else if (n == 1) node.op(Char);
         else for (int i = 0; i<name.length(); ) {
             int c1 = name.codePointAt(i);
@@ -149,19 +154,22 @@ class Binder implements Testable {
                 err(node, "set contains duplicate character");
             }
         }
+        if (n > 0 && root.has(TI)) err(node, "text matcher in a token parser");
     }
 
     // Check that a range is non-empty. Check not token input.
     private void scanRange(Node node) {
         if (switchTest) return;
-        if (root.has(TokenInput)) err(node, "text matcher in a token parser");
+        if (! checkEscapes(node)) return;
+        if (root.has(TI)) err(node, "text matcher in a token parser");
         int low = node.low(), high = node.high();
         if (high < low) err(node, "empty range");
     }
 
-    // Check that actions with the same name have the same arities?
+    // Turn @ or @2 to Drop, check consistent arities (?)
     private void scanAct(Node node) {
         if (switchTest) return;
+        if (! checkEscapes(node)) return;
         String text = node.text();
         String name = node.name();
         if (name.length() == 0) { node.op(Drop); return; }
@@ -174,11 +182,26 @@ class Binder implements Testable {
         }
     }
 
+    // Check that any escapes in the text are 0..1114111
+    private boolean checkEscapes(Node node) {
+        Source s = node.source();
+        boolean ok = true;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == '\\') {
+                int len = s.rawLength(i);
+                int code = s.rawChar(i, len);
+                if (code < 0 || code > 1114111) {
+                    err(node, "code too big");
+                    ok = false;
+                }
+            }
+        }
+        return ok;
+    }
+
     // Report an error.
     private void err(Node r, String m) {
-        int s = r.start();
-        int e = r.end();
-        root = new Node(Error, r.source(), 0, 0);
-        root.note(r.source().error(s, e, m));
+        root = new Node(Error, r.source());
+        root.note(source.error(r.source(), m));
     }
 }

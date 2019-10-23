@@ -72,7 +72,21 @@ class Source {
 
     // Get the text as a string.
     String text() { return substring(0, end - start); }
+
+    // Get the text as a string.
     public String toString() { return text(); }
+
+    // Get the text as an unescaped string.
+    String rawText() {
+        StringBuilder sb = new StringBuilder();
+        int n = 0, cn = 0;
+        while (n < length()) {
+            cn = rawLength(n);
+            sb.appendCodePoint(rawChar(n, cn));
+            n += cn;
+        }
+        return sb.toString();
+    }
 
     // Construct a subsource, between two given byte-positions.
     Source sub(int s, int e) {
@@ -83,8 +97,11 @@ class Source {
     // Construct a subsource covering two other subsources.
     Source sub(Source s1, Source s2) {
         check(s1.bytes == bytes && s2.bytes == bytes);
-        check(start <= s1.start && s1.end <= s2.start && s2.end <= end);
-        return new Source(bytes, s1.start, s2.end);
+        check(start <= s1.start && s1.end <= end);
+        check(start <= s2.start && s2.end <= end);
+        int b = Math.min(s1.start, s2.start);
+        int e = Math.max(s1.end, s2.end);
+        return new Source(bytes, b, e);
     }
 
     // Return a substring.
@@ -96,6 +113,11 @@ class Source {
     // Get the next character at position p.
     int charAt(int p) {
         return nextChar(p, nextLength(p));
+    }
+
+    // Get the next character at position p, interpreting escapes.
+    int rawCharAt(int p) {
+        return rawChar(p, rawLength(p));
     }
 
     // Get the next byte, for ASCII comparisons.
@@ -124,28 +146,24 @@ class Source {
         return c;
     }
 
-    // Get the length of the next numerical escape sequence (backslash followed
-    // by decimal or hex digits possibly followed by backslash space or
-    // backslash newline).
-    int escapeLength(int p) {
-        check(0 <= p && p < length() && bytes[start+p] == '\\');
+    // Get the length of the next character, interpreting escapes.
+    int rawLength(int p) {
+        check(0 <= p && p < length());
+        if (bytes[start+p] != '\\') return nextLength(p);
         int k = start + p + 1;
-        if (bytes[k] == '\n') { return nextLength(p+2); }
         if (bytes[k] == '0') {
             while ("0123456789ABCDEFabcdef".indexOf(bytes[k]) >= 0) k++;
         }
         else while ('0' <= bytes[k] && bytes[k] <= '9') k++;
-        if (k <= end - 2 && bytes[k] == '\\' &&
-            (bytes[k+1] == ' ' || bytes[k+2] == '\n')) k += 2;
         return k - start - p;
     }
 
-    // Get the next character corresponding to a numerical escape.
-    int escapeChar(int p, int length) {
-        check(0 <= p && p < length() && bytes[start+p] == '\\');
+    // Get the next character, given its length, interpreting escapes.
+    int rawChar(int p, int length) {
+        check(0 <= p && p < length());
+        if (bytes[start+p] != '\\') return nextChar(p, length);
         int k = start + p + 1;
         length--;
-        if (bytes[k+length-2] == '\\') length = length - 2;
         int v = 0;
         if (bytes[k] == '0') {
             for (int i = k; i < k + length; i++) {
@@ -267,6 +285,13 @@ class Source {
         return r;
     }
 
+    // Create an error message, based on a subsource.
+    String error(Source sub, String message) {
+        check(bytes == sub.bytes);
+        check(start <= sub.start && sub.end <= end);
+        return error(sub.start - start, sub.end - start, message);
+    }
+
     // Create an error message, based on a text range.
     String error(int s, int e, String message) {
         check(0 <= s && s <= e && e <= length());
@@ -350,8 +375,8 @@ class Source {
         assert(s.substring(s.length()-2, s.length()).equals("}\n"));
         s = new Source("a\\92b\\03c0x");
         assert(s.nextLength(1) == 1 && s.nextChar(1,1) == '\\');
-        assert(s.escapeLength(1) == 3 && s.escapeChar(1,3) == 92);
-        assert(s.escapeLength(5) == 5 && s.escapeChar(5,5) == 0x3c0);
+        assert(s.rawLength(1) == 3 && s.rawChar(1,3) == 92);
+        assert(s.rawLength(5) == 5 && s.rawChar(5,5) == 0x3c0);
         s = new Source("&file\nLine one\nLine two\n");
         s = s.sub(6,24);
         String out =

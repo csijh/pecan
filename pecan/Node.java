@@ -70,14 +70,17 @@ class Node {
     int get(Count c) { return counts[c.ordinal()]; }
     void set(Count c, int n) { counts[c.ordinal()] = n; }
 
-    // Get the name of a node, i.e. the text without quotes etc.
+    // Get the name of a node, i.e. the text without quotes, escapes etc.
     String name() {
-        String s = text();
+        String s = source.rawText();
         char ch = s.charAt(0);
         if (ch == '#' || ch == '%' || ch == '@') s = s.substring(1);
         if (ch == '@') {
-            while ('0' <= s.charAt(0) && s.charAt(0) <= '9') s = s.substring(1);
+            while (s.length() > 0 && '0' <= s.charAt(0) && s.charAt(0) <= '9') {
+                s = s.substring(1);
+            }
         }
+        if (s.length() == 0) return s;
         ch = s.charAt(0);
         if ("\"'`<{".indexOf(ch) >= 0) s = s.substring(1, s.length() - 1);
         return s;
@@ -86,22 +89,21 @@ class Node {
     // For a character, extract the value, i.e. Unicode code point.
     int charCode() {
         assert(op == Char);
-        return source.charAt(1);
+        return source.rawCharAt(1);
     }
 
     // For a range, extract the low end.
     int low() {
         assert(op == Range);
-        return source.charAt(1);
+        return source.rawCharAt(1);
     }
 
     // For a range, extract the high end.
-//    static Source.Char temp = new Source.Char();
     int high() {
         assert(op == Range);
-        int len = source.nextLength(1);
+        int len = source.rawLength(1);
         int n = 1 + len + 2;
-        return source.charAt(n);
+        return source.rawCharAt(n);
     }
 
     // For an action or drop, extract the arity.
@@ -109,7 +111,7 @@ class Node {
         assert(op == Act || op == Drop);
         String s = text();
         int n = 1;
-        while ('0' <= s.charAt(n) && s.charAt(n) <= '9') n++;
+        while (s.length() > n && '0' <= s.charAt(n) && s.charAt(n) <= '9') n++;
         if (n == 1) return 0;
         return Integer.parseInt(s.substring(1, n));
     }
@@ -250,7 +252,7 @@ class Node {
         assert(n.name().equals("a"));
         assert(n.charCode() == 97);
         n = new Node(Char, s.sub(4, 10));
-        assert(n.name().equals("\\127"));
+        assert(n.name().equals("\177"));
         n = new Node(Act, s.sub(11, 15));
         assert(n.name().equals("add"));
         assert(n.arity() == 0);

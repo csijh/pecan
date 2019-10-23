@@ -42,7 +42,7 @@ List x = %t...
 ==========
 -- Some brackets
 exp = (exp) END
-END = 10
+END = '\10'
 ..........
 List exp = (exp) END...
   Rule exp = (exp) END
@@ -50,9 +50,9 @@ List exp = (exp) END...
     And (exp) END
       Id exp
       Id END
-  Rule END = 10
+  Rule END = '\10'
     Id END
-    Code 10
+    Char '\10'
   Empty
 ==========
 -- Set with duplicate character
@@ -62,21 +62,21 @@ Error in tests/Binder.txt, line 59: set contains duplicate character
 s = 'abcdefcghi'
     ^^^^^^^^^^^^
 ==========
--- Number too big
-m = 1114111
-n = 1114112
+-- Code too big
+m = '\1114111'
+n = '\1114112'
 ..........
 Error in tests/Binder.txt, line 67: code too big
-n = 1114112
-    ^^^^^^^
+n = '\1114112'
+    ^^^^^^^^^^
 ==========
--- Number too big
-m = 010ffff
-n = 0110000
+-- Code too big
+m = '\010ffff'
+n = '\0110000'
 ..........
 Error in tests/Binder.txt, line 75: code too big
-n = 0110000
-    ^^^^^^^
+n = '\0110000'
+    ^^^^^^^^^^
 ==========
 -- Unicode, 195101 = last letter.
 char = "\195101"
@@ -127,19 +127,19 @@ s = 'b..a'
     ^^^^^^
 ==========
 -- Bad range
-s = 33..32
+s = '\33..\32'
 ..........
 Error in tests/Binder.txt, line 130: empty range
-s = 33..32
-    ^^^^^^
+s = '\33..\32'
+    ^^^^^^^^^^
 ==========
 -- Just OK range
-s = 33..33
+s = '\33..\33'
 ..........
-List s = 33..33...
-  Rule s = 33..33
+List s = '\33..\33'...
+  Rule s = '\33..\33'
     Id s
-    Codes 33..33
+    Range '\33..\33'
   Empty
 ==========
 -- Ranges with three dots
@@ -283,13 +283,6 @@ Error in tests/Binder.txt, line 280: expecting id, newline
 Lu = 'x'
 ^
 ==========
--- Number too big
-big = 1114112
-..........
-Error in tests/Binder.txt, line 287: code too big
-big = 1114112
-      ^^^^^^^
-==========
 -- Empty string, set, splitter
 x = "" '' <>
 ..........
@@ -329,6 +322,6 @@ List x = @ @1 @2 @3...
 -- Text and tokens
 x = "a" %b
 ..........
-Error in tests/Binder.txt, line 330: undefined identifier
+Error in tests/Binder.txt, line 323: text matcher in a token parser
 x = "a" %b
     ^^^

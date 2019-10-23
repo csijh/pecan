@@ -636,20 +636,14 @@ any = '\0..\10ffff'
 
 <p>Escape sequences are variable length. A decimal sequence ends when a
 non-digit is encountered, and a hex sequence ends when a non-hex digit is
-encountered. An escape sequence may optionally be followed by a backslash and a
-space to separate it from the next character. For example <code>"&#960;3"</code>
-can be written in plain text using an escape sequence as:</p>
+encountered. If an escape sequence is to be followed by a digit, that digit can
+be escaped or the construct can be split, e.g. <code>"&#960;3"</code> can be
+escaped as <code>"\960\51"</code> or <code>("\960" "3")</code>.
 
-<pre>pi3 = "\960\ 3"
-</pre>
-
-<p>This separator convention is not strictly necessary because the same effect
-can be obtained in other ways, e.g <code>pi3</code> can be defined as
-<code>"\960\51"</code> or <code>"\960" "3"</code>, but it helps when generating
-escapes automatically. For simplicity and uniformity, ad-hoc escapes such as
-<code>\r</code>, <code>\n</code> are not supported. Ad-hoc escapes can be
-achieved numerically instead. Here are some examples of common escapes and how
-to represent them in Pecan:</p>
+<p>For simplicity and uniformity, ad-hoc escapes such as <code>\r</code>,
+<code>\n</code> are not supported. Ad-hoc escapes can be achieved numerically
+instead. Here are some examples of common escapes and how to represent them in
+Pecan:</p>
 
 <pre>'\r'   &#8594;   '\13'
 '\n'   &#8594;   '\10'
@@ -658,9 +652,8 @@ to represent them in Pecan:</p>
 "\""   &#8594;   "\34"
 </pre>
 
-<p>To avoid ambiguity, if a backslash is followed by a non-digit (other than in
-a separator at the end of an escape sequence), it is reported as an error.</p>
-
+<p>To avoid ambiguity, if a backslash is followed by a non-digit, it is reported
+as an error.</p>
 
 <h3 id="errors">Errors</h3>
 
@@ -699,7 +692,7 @@ and <code>"-"</code> both fail, so the error message produced becomes:</p>
 the input. It records something that the parser is expecting at that point. If
 progress is made past that input position, the markers are cleared. When the
 parser encounters an error, the set of things that the parser was expecting at
-that point can be reported. Duplicates are removed, for example suppose the rule
+that point is reported. Duplicates are removed, for example suppose the rule
 is changed to:</p>
 
 <pre>sum = number (#operator "+" number / #operator "-" number)
@@ -713,7 +706,8 @@ is changed to:</p>
 </pre>
 
 <p>During testing, the order in which markers are reported is alphabetical. When
-a grammar is compiled, the order is determined by the external code.</p>
+a grammar is compiled, the order is determined by the external code, and the
+text produced can be customised.</p>
 
 <p>One way to ensure that all the items which could possibly allow parsing to
 continue are reported is to write separate rules to describe low level features
