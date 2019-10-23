@@ -36,6 +36,7 @@ numerical escapes are supported, so \nnn represents a character by its decimal
 code, or by its hex code if the first digit is zero. */
 
 public class Test {
+    private Source original;
     private Source in;
     private Source out;
     private boolean grammar, trace;
@@ -88,16 +89,19 @@ public class Test {
         int start = 0;
         String grammar = null;
         for (int i = 0; i <= lines.size(); i++) {
-            if (i < lines.size() && ! lines.get(i).startsWith("====")) continue;
+            if (i < lines.size() && lines.get(i).startsWith("====")<0) continue;
             Source line = lines.get(start);
-            if (i == start + 1 && line.startsWith("{") && line.endsWith("}")) {
-                String file2 = line.substring(1, line.length() - 1);
+            if (i == start + 1 &&
+                line.startsWith("{") > 0 &&
+                line.endsWith("}\n") > 0)
+            {
+                String file2 = line.substring(1, line.length() - 2);
                 file2 = s.relativePath(file2);
                 Source source = new Source(new File(file2));
                 tests.addAll(makeTests(file2, source, trace));
             }
-            else if (i != start + 1 || ! line.startsWith("--")) {
-                Test t = makeTest(file, lines, start, i);
+            else if (i != start + 1 || line.startsWith("--") < 0) {
+                Test t = makeTest(file, s, lines, start, i);
                 if (trace) t.trace = true;
                 tests.add(t);
             }
@@ -106,21 +110,21 @@ public class Test {
         return tests;
     }
 
-    //--------------------------------------------------------------------
-
     // Create a test object from a range of lines.
-    private static Test makeTest(String f, List<Source> lines, int s, int e) {
+    private static Test makeTest(
+        String f, Source src, List<Source> lines, int s, int e)
+    {
         int divider = -1;
         for (int i = s; i < e && divider < 0; i++) {
-            if (lines.get(i).startsWith("....")) divider = i;
+            if (lines.get(i).startsWith("....") > 0) divider = i;
         }
         if (divider < 0) divider = e;
         Test test = new Test();
-        if (divider > s) test.in = lines.get(s).extend(lines.get(divider-1));
-        else test.in = new Source("");
-        if (divider < e) test.out = lines.get(divider+1).extend(lines.get(e-1));
-        else test.out = new Source("");
-        if (divider != e) test.in = test.in.unescape();
+        test.original = src;
+        if (divider == s) test.in = lines.get(s).sub(0,0);
+        else test.in = src.sub(lines.get(s), lines.get(divider-1));
+        if (divider == e) test.in = lines.get(e).sub(0,0);
+        else test.out = src.sub(lines.get(divider+1), lines.get(e-1));
         if (divider == e) test.grammar = true;
         return test;
     }
@@ -129,24 +133,30 @@ public class Test {
     // one test that starts on that line. Return the number of tests passed.
     private static int runTests(Testable object, List<Test> tests, int line) {
         int passed = 0;
-        for (Test test : tests) {
-            if (! test.grammar &&
-                line > 0 && test.in.lineNumber(0) != line) continue;
-            String message;
-            if (test.trace) object.tracing(true);
-            if (test.grammar) message = object.grammar(test.in);
-            else {
-                Object obj = object.run(test.in);
-                String out = obj.toString();
-                message = test.check(out);
-                if (message == null) passed++;
-            }
-            if (message != null) {
-                System.err.println(message);
-                System.exit(1);
-            }
-        }
+        for (Test test : tests) if (test.run(object, line)) passed++;
         return passed;
+    }
+
+    // Carry out the test. Return true if the test counts as passed.
+    private boolean run(Testable object, int line) {
+        String message;
+        if (grammar) {
+            message = object.grammar(in);
+            if (message != null) err(message);
+            return false;
+        }
+        if (line > 0 && original.lineNumber(in) != line) return false;
+        if (trace) object.tracing(true);
+        Object obj = object.run(in);
+        message = check(obj.toString());
+        if (message != null) err(message);
+        return true;
+    }
+
+    // Print message and exit.
+    private void err(String message) {
+        System.err.println(message);
+        System.exit(1);
     }
 
     private static void report(boolean unitTest, String name, int line, int n) {
@@ -210,7 +220,7 @@ public class Test {
                 i++;
                 continue;
             }
-            if (ch == '\\') { out += "\\\\"; continue; }
+            if (ch == '\\') { out += "\\92"; continue; }
             if (ch >= ' ' && ch <= '~') { out += ch; continue; }
             if (ch == '\n') { out += ch; continue; }
             out += "\\" + (int) ch;
@@ -223,17 +233,19 @@ public class Test {
 
     // Check the given actual output against the expected output. Return an
     // error message, or null for success.
-    private String check(String out) {
-        out = escape(out);
-        int lineNo = in.lineNumber(0);
+    private String check(String s) {
+//        String s1 = escape(s);
+        String s1 = s;
+        String s2 = out.text();
+        int lineNo = original.lineNumber(in);
         String path = in.path();
-        if (out.equals(out)) return null;
+        if (s1.equals(s2)) return null;
         String result = "";
         result += "Fail test on line " + lineNo + " of " + path + ":\n";
         result += "---------- Expected ----------\n";
-        result += out;
+        result += s2;
         result += "---------- Actual ----------\n";
-        result += out;
+        result += s1;
         return result;
     }
 }

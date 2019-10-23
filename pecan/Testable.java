@@ -17,6 +17,9 @@ interface Testable {
     // Call to switch on tracing.
     default void tracing(boolean on) {}
 
+    // Call to switch on escapes in input.
+    default void escaping(boolean on) {}
+
     // No testing.
     public static void main(String[] args) {}
 }

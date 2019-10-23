@@ -7,10 +7,10 @@ import static pecan.Op.*;
 /* A Node represents any parsing expression, together with source text and
 annotation information.
 
-A node has an op, up to two subnodes, a source string, some flags, some
-counts, and a note to describe the results of testing. If the left subnode is
-null, the right subnode represents a cross-reference link instead of a child.
-For more information about annotations, see the classes which handle them. */
+A node has an op, up to two subnodes, a source string, some flags, some counts,
+and a temporary note. If the left subnode is null, the right subnode represents
+a cross-reference link instead of a child. For more information about
+annotations, see the classes which handle them. */
 
 class Node {
     private Op op;
@@ -53,9 +53,12 @@ class Node {
 
     // Set the fields.
     void op(Op o) { op = o; }
-    void left(Node x) { assert(x != null && ref() != null); left = x; }
-    void right(Node y) { assert(y != null && left != null); right = y; }
-    void ref(Node r) { assert(r != null && left != null); right = r; }
+    void left(Node x) {
+        assert((right == null) || ((x == null) == (left == null)));
+        left = x;
+    }
+    void right(Node y) { assert(left != null); right = y; }
+    void ref(Node r) { assert(left == null); right = r; }
     void source(Source s) { source = s; }
     void flags(int fs) { flags = fs; }
     void note(String s) { note = s; }
@@ -76,7 +79,7 @@ class Node {
             while ('0' <= s.charAt(0) && s.charAt(0) <= '9') s = s.substring(1);
         }
         ch = s.charAt(0);
-        if ("\"'`<".indexOf(ch) >= 0) s = s.substring(1, s.length() - 1);
+        if ("\"'`<{".indexOf(ch) >= 0) s = s.substring(1, s.length() - 1);
         return s;
     }
 
@@ -93,11 +96,11 @@ class Node {
     }
 
     // For a range, extract the high end.
-    static Source.Char temp = new Source.Char();
+//    static Source.Char temp = new Source.Char();
     int high() {
         assert(op == Range);
-        source.next(1, temp);
-        int n = 1 + temp.length + 2;
+        int len = source.nextLength(1);
+        int n = 1 + len + 2;
         return source.charAt(n);
     }
 
@@ -158,9 +161,9 @@ class Node {
     }
 
     // Print the source text of a node on one line, e.g. when tracing.
-    String trace() {
+    String trace(Source original) {
         int end = source.length();
-        int lineNumber = source.lineNumber(0);
+        int lineNumber = original.lineNumber(source);
         int newline = source.indexOf("\n");
         if (newline < 0) {
             return "P" + lineNumber + ": " + source.text();
@@ -178,7 +181,7 @@ class Node {
     }
 
 /*
-// TODO move this stuff to Source.
+// TODO move this stuff to Source or Pretty.
 
     private static String[] charMap = new String[128];
     static { fillCharMap(); }

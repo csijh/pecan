@@ -548,14 +548,16 @@ single_quote = "'"
 </pre>
 
 <p>Grammar files are assumed to use the UTF-8 encoding, and any Unicode
-characters can be used in set or string quotes. However, in sets, each code
-point is treated as a separate character. Where graphemes might be involved,
-care needs to be taken. For example, <code>'é'</code> is visually ambiguous
-because it could contain one or two code points, depending on whether a combiner
-is used. If the intended meaning is a single character, it is better to write
-<code>"é"</code> to cover both possibilities. Similarly, if the intention of
-<code>'éè'</code> is a choice between two characters, it is better to write
-<code>"é" / "è"</code> to avoid problems.</p>
+characters can be used in set or string quotes. However, Pecan does not handle
+normalization or graphemes, so care needs to be taken. For example,
+<code>'é'</code> is visually ambiguous because it could contain one or two code
+points, depending on whether a combiner is used to add the accent. In Pecan
+sets, each code point is treated as a separate character, so if <code>é</code>
+consists of two code points, then <code>'é'</code> represents a choice between
+those two code points. If the intended meaning is a single character, it is
+better to write <code>"é"</code> in case there are two code points. Similarly,
+if the intention of <code>'éè'</code> is a choice between two characters, it is
+better to write <code>"é" / "è"</code> to avoid problems.</p>
 
 <p>A range of characters can be expressed using two dots:</p>
 
@@ -614,10 +616,10 @@ fail = ''
 end = &lt;>
 </pre>
 
-<p>There is a numerical escape convention within sets, strings, ranges and
-splitters, to represent control characters or Unicode characters using plain
-text. A backslash followed by digits represents a single character, using its
-decimal character code. For example:</p>
+<p>There is a numerical escape convention within sets, strings, ranges,
+splitters and literal names (see later), to represent control characters or
+Unicode characters using plain text. A backslash followed by digits represents a
+single character, using its decimal character code. For example:</p>
 
 <pre>pi = '\960'
 newline = '\13'? '\10'
@@ -634,18 +636,31 @@ any = '\0..\10ffff'
 
 <p>Escape sequences are variable length. A decimal sequence ends when a
 non-digit is encountered, and a hex sequence ends when a non-hex digit is
-encountered. For simplicity and uniformity, ad-hoc escapes such as
-<code>\r</code>, <code>\n</code> are not supported. In fact, to avoid ambiguity,
-if a backslash is followed by a non-digit, it is reported as an error. The
-ad-hoc escapes can be achieved numerically instead. Here are some examples:</p>
+encountered. An escape sequence may optionally be followed by a backslash and a
+space to separate it from the next character. For example <code>"&#960;3"</code>
+can be written in plain text using an escape sequence as:</p>
 
-<pre>'\r'       &#8594;   '\13'
-'\n'       &#8594;   '\10'
-'\\'       &#8594;   '\92'
-'\''       &#8594;   '\39'
-"\""       &#8594;   "\34"
-"\u03c03"  &#8594;   "\03c0\033"
+<pre>pi3 = "\960\ 3"
 </pre>
+
+<p>This separator convention is not strictly necessary because the same effect
+can be obtained in other ways, e.g <code>pi3</code> can be defined as
+<code>"\960\51"</code> or <code>"\960" "3"</code>, but it helps when generating
+escapes automatically. For simplicity and uniformity, ad-hoc escapes such as
+<code>\r</code>, <code>\n</code> are not supported. Ad-hoc escapes can be
+achieved numerically instead. Here are some examples of common escapes and how
+to represent them in Pecan:</p>
+
+<pre>'\r'   &#8594;   '\13'
+'\n'   &#8594;   '\10'
+'\\'   &#8594;   '\92'
+'\''   &#8594;   '\39'
+"\""   &#8594;   "\34"
+</pre>
+
+<p>To avoid ambiguity, if a backslash is followed by a non-digit (other than in
+a separator at the end of an escape sequence), it is reported as an error.</p>
+
 
 <h3 id="errors">Errors</h3>
 
@@ -1069,11 +1084,10 @@ tests to be grouped:</p>
 representing a subfile of tests. That is because a grammar file is equivalent to
 a test file which sets up a grammar, but contains no tests.</p>
 
-<p>Test files can use the UTF-8 encoding, but the numerical escape convention
-can also be used anywhere in the input or output of a test. In addition to using
-a backslash followed by digits to represent a character code in decimal or hex,
-a backslash followed by a newline removes the newline. For example, a line
-ending <code>\13\</code> becomes a line ending with CR instead of LF.</p>
+<p>Test files can use the UTF-8 encoding. They are normalized to avoid visual
+ambiguity problems, by changing all line endings to <code>\n</code>, removing
+trailing spaces at the ends of lines, and removing trailing blank lines at the
+very end of the test file.</p>
 
 <h2 id="checks">Consistency checks</h2>
 
@@ -1105,7 +1119,7 @@ x?        &#8801;  x / ""
 x*        &#8801;  xs  where  xs = (x xs)?
 x+        &#8801;  x x*
 [x]       &#8801;  x&amp; x
-x&        &#8801;  x!!
+x&amp;        &#8801;  x!!
 ''        &#8801;  ""!
 &lt;bd>      &#8801;  &lt;> / ('\0..a' / 'b' &lt;d>)&amp;
 &lt;b>       &#8801;  &lt;> / '\0..a'&amp;
@@ -1507,14 +1521,14 @@ style="white-space:nowrap">" || "</code>, <code>"true"</code> and
 <li><p><code><b>call</b>:</code> the format for making a call to a parsing
 function, and the default for the formats below. If an explicit parsing state is
 needed, for example, this could be set to <code>"%s(p)"</code>. The default is
-<code>"%s()"</code>.</p>
+<code>"%s()"</code>.</p></li>
 
 <li><p><code><b>id</b>:</code> the format for generating a call for the
 occurrence of an identifier. Along with the <code>rule</code> format, this can
 be used to adjust identifier names. For example, an id format
 <code>"P%s()"</code> would cause an occurrence of an identifier
 <code>term</code> to be compiled as <code>Pterm()</code>. The default is to use
-the call format.</p>
+the call format.</p></li>
 
 <li><p><code><b>go</b>, <b>ok</b>, <b>alt</b>, <b>opt</b>, <b>see</b>,
 <b>has</b>, <b>not</b>, <b>tag</b>, <b>eot</b>:</code> the formats for various

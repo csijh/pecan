@@ -62,19 +62,6 @@ List x = x...
     Id y
   Empty
 ==========
--- Windows \r\n line endings (using test file escape conventions)
-x=x\13\10\
-y=y\13\10\
-..........
-List x=x\13...
-  Rule x=x
-    Id x
-    Id x
-  Rule y=y
-    Id y
-    Id y
-  Empty
-==========
 -- Lines containing only spaces are comments
 
 
@@ -84,20 +71,6 @@ List x = x...
   Rule x = x
     Id x
     Id x
-  Empty
-==========
--- Trailing spaces (using test file escape conventions)
-x = x    \10\
-         \10\
-y = y    \10\
-..........
-List x = x    ...
-  Rule x = x
-    Id x
-    Id x
-  Rule y = y
-    Id y
-    Id y
   Empty
 ==========
 -- Trailing blank line
@@ -129,29 +102,6 @@ List x = x...
     Id y
   Empty
 ==========
--- No final newline
-x = x
-y = y\
-..........
-List x = x...
-  Rule x = x
-    Id x
-    Id x
-  Rule y = y
-    Id y
-    Id y
-  Empty
-==========
--- No final newline
-x = x
--- comment\
-..........
-List x = x...
-  Rule x = x
-    Id x
-    Id x
-  Empty
-==========
 -- Varied comments and empty lines
 -- initial comment
 
@@ -174,21 +124,21 @@ List x = y...
 -- Scanner error
 x = |y|
 ..........
-Error in tests/Parser.txt, line 175: expecting atom, newline
+Error in tests/Parser.txt, line 125: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
 ..........
-Error in tests/Parser.txt, line 182: expecting quote
+Error in tests/Parser.txt, line 132: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
 ..........
-Error in tests/Parser.txt, line 189: expecting quote
+Error in tests/Parser.txt, line 139: expecting quote
 x = 'abc
         ^
 ==========
@@ -217,14 +167,14 @@ List x = "a"...
 -- Expecting equals
 x
 ..........
-Error in tests/Parser.txt, line 218: expecting equals
+Error in tests/Parser.txt, line 168: expecting equals
 x
  ^
 ==========
 -- Expecting atom
 x = /
 ..........
-Error in tests/Parser.txt, line 225: expecting atom, newline
+Error in tests/Parser.txt, line 175: expecting atom, newline
 x = /
     ^
 ==========
@@ -232,21 +182,21 @@ x = /
 x = (y
 y = z
 ..........
-Error in tests/Parser.txt, line 232: expecting atom, bracket, operator
+Error in tests/Parser.txt, line 182: expecting atom, bracket, operator
 x = (y
       ^
 ==========
 -- Dot in the wrong place
 x = .
 ..........
-Error in tests/Parser.txt, line 240: expecting atom, newline
+Error in tests/Parser.txt, line 190: expecting atom, newline
 x = .
     ^
 ==========
 -- Dot outside of range.
 x = 0.
 ..........
-Error in tests/Parser.txt, line 247: expecting atom, newline
+Error in tests/Parser.txt, line 197: expecting atom, newline
 x = 0.
     ^
 ==========
@@ -271,7 +221,7 @@ List x = %x...
 -- Bad marker
 x = 'x' #3
 ..........
-Error in tests/Parser.txt, line 272: expecting name
+Error in tests/Parser.txt, line 222: expecting name
 x = 'x' #3
          ^
 ==========
@@ -352,25 +302,25 @@ List exp = exp* exp+ exp? end...
   Empty
 ==========
 -- Ranges
-r1 = '\\0..\\127'
+r1 = '\0..\127'
 r2 = 'a..z'
 ..........
-List r1 = '\\0..\\127'...
-  Rule r1 = '\\0..\\127'
+List r1 = '\0..\127'...
+  Rule r1 = '\0..\127'
     Id r1
-    Range '\\0..\\127'
+    Range '\0..\127'
   Rule r2 = 'a..z'
     Id r2
     Range 'a..z'
   Empty
 ==========
 -- Illegal spaces in code range (allowed until Binder)
-r = '\\0 .. \\127'
+r = '\0 .. \127'
 ..........
-List r = '\\0 .. \\127'...
-  Rule r = '\\0 .. \\127'
+List r = '\0 .. \127'...
+  Rule r = '\0 .. \127'
     Id r
-    Set '\\0 .. \\127'
+    Set '\0 .. \127'
   Empty
 ==========
 -- Literal id
@@ -465,26 +415,26 @@ List assignment = left #equals "=" right...
 x = y /
 z / /
 ..........
-Error in tests/Parser.txt, line 466: expecting atom, newline
+Error in tests/Parser.txt, line 416: expecting atom, newline
 z / /
     ^
 ==========
--- Unicode letters and digits and numbers (using test file escape conventions)
-x = abc\960\1636
-z = '\\1114111' / '\\0ffff'
+-- Unicode letters and digits and numbers
+x = abcπ٤
+z = '\1114111' / '\0ffff'
 ..........
-List x = abc\960\ \1636...
-  Rule x = abc\960\ \1636
+List x = abcπ٤...
+  Rule x = abcπ٤
     Id x
-    Id abc\960\ \1636
-  Rule z = '\\1114111' / '\\0ffff'
+    Id abcπ٤
+  Rule z = '\1114111' / '\0ffff'
     Id z
-    Or '\\1114111' / '\\0ffff'
-      Set '\\1114111'
-      Set '\\0ffff'
+    Or '\1114111' / '\0ffff'
+      Set '\1114111'
+      Set '\0ffff'
   Empty
 ==========
--- Strings, character sets, unicode
+-- Strings, character sets, Unicode
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
 pi = "\960"
@@ -507,8 +457,8 @@ List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
 ==========
 -- Actions, tests, numbers and errors
 x = %x @0x @1x @ @x
-y = '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
-z = '\\0ffff' '\\01ABCDEF23' '\\0FG'
+y = '\0' '\1' '\2' '\10' '\12' '\123'
+z = '\0ffff' '\01ABCDEF23' '\0FG'
 u = #err ''
 ..........
 List x = %x @0x @1x @ @x...
@@ -520,21 +470,21 @@ List x = %x @0x @1x @ @x...
       Act @1x
       Act @
       Act @x
-  Rule y = '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
+  Rule y = '\0' '\1' '\2' '\10' '\12' '\123'
     Id y
-    And '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
-      Set '\\0'
-      Set '\\1'
-      Set '\\2'
-      Set '\\10'
-      Set '\\12'
-      Set '\\123'
-  Rule z = '\\0ffff' '\\01ABCDEF23' '\\0FG'
+    And '\0' '\1' '\2' '\10' '\12' '\123'
+      Set '\0'
+      Set '\1'
+      Set '\2'
+      Set '\10'
+      Set '\12'
+      Set '\123'
+  Rule z = '\0ffff' '\01ABCDEF23' '\0FG'
     Id z
-    And '\\0ffff' '\\01ABCDEF23' '\\0FG'
-      Set '\\0ffff'
-      Set '\\01ABCDEF23'
-      Set '\\0FG'
+    And '\0ffff' '\01ABCDEF23' '\0FG'
+      Set '\0ffff'
+      Set '\01ABCDEF23'
+      Set '\0FG'
   Rule u = #err ''
     Id u
     And #err ''
@@ -590,13 +540,12 @@ x =
  -- comment
  y
 ..........
-Error in tests/Parser.txt, line 590: expecting atom
+Error in tests/Parser.txt, line 540: expecting atom
  -- comment
  ^
 ==========
 -- String with supplementary unicode character 195101 (=2fa1d, last letter)
--- Represented as two chars, upper/lower surrogates.
-range = "\55422\56861" / '\55422\56861'
+range = "\195101" / '\195101'
 ..........
 List range = "\195101" / '\195101'...
   Rule range = "\195101" / '\195101'
@@ -653,7 +602,7 @@ List end = #end <>...
 x = y
 ?
 ..........
-Error in tests/Parser.txt, line 654: expecting end of text, id, newline
+Error in tests/Parser.txt, line 603: expecting end of text, id, newline
 ?
 ^
 ==========
@@ -673,7 +622,7 @@ List x = <abc> y / z...
 -- Incomplete splitter
 x = <abc
 ..........
-Error in tests/Parser.txt, line 674: expecting greater than sign
+Error in tests/Parser.txt, line 623: expecting greater than sign
 x = <abc
         ^
 ==========
@@ -695,19 +644,19 @@ List a-b = xy-...
     Id xy-
   Empty
 ==========
--- Backslash in quotes (using escape conventions)
-bs = '\\92'
+-- Backslash in quotes
+bs = '\92'
 ..........
-List bs = '\\92'...
-  Rule bs = '\\92'
+List bs = '\92'...
+  Rule bs = '\92'
     Id bs
-    Set '\\92'
+    Set '\92'
   Empty
 ==========
 -- Empty tag name
 x = y %
 ..........
-Error in tests/Parser.txt, line 708: expecting name
+Error in tests/Parser.txt, line 657: expecting name
 x = y %
        ^
 ==========

@@ -6,9 +6,7 @@ import java.util.*;
 import static pecan.Category.*;
 import static pecan.Op.*;
 import static pecan.Parser.Marker.*;
-import java.nio.*;
-import java.nio.file.*;
-import java.nio.charset.*;
+import java.io.*;
 
 /* Parse a Pecan source text, assumed to be in UTF-8 format, producing a tree.
 
@@ -37,7 +35,10 @@ class Parser implements Testable {
     private int start, in, out, look, marked, save;
     private Op Postop = Temp, Bracket = Temp, Bracketed = Temp, Include = Temp;
 
+    // Test Source and Node as well as Parser.
     public static void main(String[] args) {
+        Source.main(null);
+        Node.main(null);
         Test.run(new Parser(), args);
     }
 
@@ -53,7 +54,7 @@ class Parser implements Testable {
         start = in = out = look = marked = save = 0;
         boolean ok = grammar();
         if (! ok) {
-            Node err = new Node(Error, s, in, in);
+            Node err = new Node(Error, s.sub(in, in));
             if (marked < in) markers.clear();
             err.note(s.error(in, in, message()));
             return err;
@@ -338,20 +339,19 @@ class Parser implements Testable {
         return OPT(DO() && space() && spaces());
     }
 
-    // visible = escape / (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+    // literal = escape / visible
+    private boolean literal() {
+        return ALT((DO() && escape()) || (OR() && visible()));
+    }
+
+    // literals = literal* = (literal literals)?
+    private boolean literals() {
+        return OPT(DO() && literal() && literals());
+    }
+
+    // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
     private boolean visible() {
-        if (in >= input.length()) return false;
-        int save = in;
-        boolean b = escape();
-        if (b || in > save) return b;
-        int ch = input.codePointAt(in);
-        Category cat = Category.get(ch);
-        if (cat != Cn && cat != Cc && cat != Co &&
-            cat != Cs && cat != Zl && cat != Zp) {
-            in += Character.charCount(ch);
-            return true;
-        }
-        return false;
+        return NOT(DO() && CATS(Cc,Cn,Co,Cs,Zl,Zp)) && CATS(Uc);
     }
 
     // visibles = visible* = (visible visibles)&
@@ -371,7 +371,7 @@ class Parser implements Testable {
 
     // alpha = letter / Nd / '-' / '_'
     private boolean alpha() {
-        return letter() || CAT(Nd) || CHAR('-') || CHAR('_');
+        return letter() || CATS(Nd) || CHAR('-') || CHAR('_');
     }
 
     // alphas = alpha* = (alpha alphas)?
@@ -381,14 +381,7 @@ class Parser implements Testable {
 
     // letter = Lu / Ll / Lt / Lm / Lo
     private boolean letter() {
-        if (in >= input.length()) return false;
-        int ch = input.codePointAt(in);
-        Category cat = Category.get(ch);
-        boolean ok = (
-            cat == Lu || cat == Ll || cat == Lt || cat == Lm || cat == Lo
-        );
-        if (ok) in += Character.charCount(ch);
-        return ok;
+        return CATS(Lu, Ll, Lt, Lm, Lo);
     }
 
     // name = letter alphas / '`' nobquotes #quote '`'
@@ -426,9 +419,9 @@ class Parser implements Testable {
         );
     }
 
-    // noquote = "'"! visible
+    // noquote = "'"! literal
     private boolean noquote() {
-        return NOT(DO() && CHAR('\'')) && visible();
+        return NOT(DO() && CHAR('\'')) && literal();
     }
 
     // noquotes = noquote* = (noquote noquotes)?
@@ -436,24 +429,24 @@ class Parser implements Testable {
         return OPT(DO() && noquote() && noquotes());
     }
 
-    // nodquotes = ('"'! visible)* = (... nodquotes)?
+    // nodquotes = ('"'! literal)* = (... nodquotes)?
     private boolean nodquotes() {
-        return OPT(DO() && NOT(DO() && CHAR('"')) && visible() && nodquotes());
+        return OPT(DO() && NOT(DO() && CHAR('"')) && literal() && nodquotes());
     }
 
-    // nobquotes = ('`'! visible)* = (... nobquotes)?
+    // nobquotes = ('`'! literal)* = (... nobquotes)?
     private boolean nobquotes() {
-        return OPT(DO() && NOT(DO() && CHAR('`')) && visible() && nobquotes());
+        return OPT(DO() && NOT(DO() && CHAR('`')) && literal() && nobquotes());
     }
 
-    // noangles = ('>'! visible)* = (... noangles)?
+    // noangles = ('>'! literal)* = (... noangles)?
     private boolean noangles() {
-        return OPT(DO() && NOT(DO() && CHAR('>')) && visible() && noangles());
+        return OPT(DO() && NOT(DO() && CHAR('>')) && literal() && noangles());
     }
 
-    // nocurlies = ('}'! visible)* = (... nocurlies)?
+    // nocurlies = ('}'! literal)* = (... nocurlies)?
     private boolean nocurlies() {
-        return OPT(DO() && NOT(DO() && CHAR('}')) && visible() && nocurlies());
+        return OPT(DO() && NOT(DO() && CHAR('}')) && literal() && nocurlies());
     }
 
     // endline = '\13'? '\10'
@@ -520,46 +513,51 @@ class Parser implements Testable {
         return true;
     }
 
-    // Nd
-    private boolean CAT(Category c) {
+    // Choice of categories, e.g. Lu / Ll / Lt / Lm / Lo
+    private boolean CATS(Category... cs) {
         if (in >= input.length()) return false;
-        int ch = input.codePointAt(in);
+        int len = input.nextLength(in);
+        int ch = input.nextChar(in, len);
         Category cat = Category.get(ch);
-        if (cat != c) return false;
-        in += Character.charCount(ch);
+        boolean ok = false;
+        for (Category c : cs) if (cat == c || c == Uc) ok = true;
+        if (! ok) return false;
+        in += len;
         return true;
     }
 
     // Check if a character (ascii) appears next in the input.
     private boolean CHAR(char ch) {
         if (in >= input.length()) return false;
-        if (input.charAt(in) != ch) return false;
-        in++;
+        int len = input.nextLength(in);
+        int code = input.nextChar(in, len);
+        if (code != ch) return false;
+        in += len;
         return true;
     }
 
-    // Check if a character (ascii) in a given range appears next in the input.
+    // Check if a character in a given range appears next in the input.
     private boolean RANGE(char first, char last) {
         if (in >= input.length()) return false;
-        if (input.charAt(in) < first || input.charAt(in) > last) return false;
-        in++;
+        int len = input.nextLength(in);
+        int code = input.nextChar(in, len);
+        if (code < first || code > last) return false;
+        in += len;
         return true;
     }
 
-    // Check for the given (ascii) string next in the input.
+    // Check for the given string next in the input.
     private boolean STRING(String s) {
-        if (in + s.length() > input.length()) return false;
-        for (int i = 0; i < s.length(); i++) {
-            if (input.charAt(in + i) != s.charAt(i)) return false;
-        }
-        in += s.length();
+        int n = input.startsWith(s, in);
+        if (n < 0) return false;
+        in += n;
         return true;
     }
 
     // Check if a character (ascii) in a given range appears next in the input.
     private boolean SET(String s) {
         if (in >= input.length()) return false;
-        char ch = input.charAt(in);
+        int ch = input.charAt(in);
         boolean found = false;
         for (int i = 0; i < s.length() && ! found; i++) {
             if (ch == s.charAt(i)) found = true;
@@ -571,7 +569,7 @@ class Parser implements Testable {
     // Return the next character in the input.
     private char NEXT() {
         if (in >= input.length()) return '\0';
-        return input.charAt(in);
+        return (char) input.charAt(in);
     }
 
     private boolean EOT() {
@@ -591,7 +589,7 @@ class Parser implements Testable {
         if (out >= output.length) {
             output = Arrays.copyOf(output, output.length * 2);
         }
-        output[out++] = new Node(op, input, start, in);
+        output[out++] = new Node(op, input.sub(start, in));
         start = in;
         return true;
     }
@@ -602,20 +600,20 @@ class Parser implements Testable {
         start = in;
         Node x = output[--out];
         if (op == Include) {
-            String file = Source.relativeFile(input.fileName(), x.name());
-            String s = Source.readFile(file);
-            Source source2 = new Source(s, file);
+//System.out.println("Inc " + x.name());
+            String file = input.relativePath(x.name());
+            Source s2 = new Source(new File(file));
             Parser parser2 = new Parser();
-            Node g = parser2.run(source2);
+            Node g = parser2.run(s2);
             if (g.op() == Error) {
                 System.out.println(g.note());
                 System.exit(1);
             }
-            Node include = new Node(Include, g, input, x.start(), x.end());
+            Node include = new Node(Include, g, x.source());
             output[out++] = include;
             return true;
         }
-        Node y = new Node(op, x, input, x.start(), x.end());
+        Node y = new Node(op, x, x.source());
         output[out++] = y;
         return true;
     }
@@ -626,7 +624,7 @@ class Parser implements Testable {
         start = in;
         Node y = output[--out];
         Node x = output[--out];
-        Node r = new Node(op, x, y, input, x.start(), y.end());
+        Node r = new Node(op, x, y, input.sub(x.source(), y.source()));
         output[out++] = r;
         return true;
     }
@@ -638,7 +636,7 @@ class Parser implements Testable {
         Node close = output[--out];
         Node x = output[--out];
         Node open = output[--out];
-        Node y = new Node(op, x, input, open.start(), close.end());
+        Node y = new Node(op, x, input.sub(open.source(), close.source()));
         output[out++] = y;
         return true;
     }
@@ -661,7 +659,8 @@ class Parser implements Testable {
         if (r == null) return null;
         Op op = r.op();
         r.left(prune(r.left()));
-        r.right(prune(r.right()));
+        if (r.left() == null) r.ref(prune(r.ref()));
+        else r.right(prune(r.right()));
         if (r.right() != null && r.right().op() == Temp) r.right(null);
         if (op == Temp) return r.left();
         return r;

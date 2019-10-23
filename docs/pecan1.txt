@@ -42,20 +42,20 @@ sclose = #bracket "]" @bracket blank
 blank = space* [endline space* '=/)]' &]? @
 gap = space* (newline space*)? @
 skip = (space / comment / newline)* @
-comment = "--" visible* newline
+comment = "--" (' ..~')* newline
 newline = #newline endline @
 
 -- Character sets and sequences
 space = ' '
-visible = escape / ' ..~'
+literal = escape / ' ..~'
 escape = '\92' #digit digit+
 alpha = letter / '0..9' / '-'
 letter = 'a..z' / 'A..Z' / '_'
 name = letter alpha*
 digits = '0' / ('1..9' '0..9'*)
-noquote = "'"! visible
-nodquote = '"'! visible
-noangle = '>'! visible
+noquote = "'"! literal
+nodquote = '"'! literal
+noangle = '>'! literal
 endline = '\13'? '\10'
 
 ==========
