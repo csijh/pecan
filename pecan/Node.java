@@ -163,7 +163,7 @@ class Node {
     }
 
     // Print the source text of a node on one line, e.g. when tracing.
-    String trace(Source original) {
+    String trace() {
         int end = source.length();
         int lineNumber = source.lineNumber();
         int newline = source.indexOf("\n");

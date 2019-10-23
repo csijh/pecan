@@ -268,7 +268,7 @@ class Source {
     List<Source> lines() {
         List<Source> list = new ArrayList<>();
         int s = start;
-        for (int e = 0; e < end; e++) {
+        for (int e = s; e < end; e++) {
             if (bytes[e] == '\n') {
                 list.add(new Source(bytes, s, e+1));
                 s = e+1;

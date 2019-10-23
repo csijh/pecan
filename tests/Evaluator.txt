@@ -66,7 +66,7 @@ lt <
 -- Error marker not reached
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ==========
 xyx
 ..........
@@ -81,7 +81,7 @@ add
 -- Error marker reached, but no error
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ==========
 z
 ..........
@@ -92,7 +92,7 @@ add
 -- Error marker reached, and reported
 tokens = @tokens (token @2add)+ end
 token = "x" @x / "y" @y / #err "z" @z
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ==========
 
 ..........
@@ -144,7 +144,7 @@ sum = term ("+" @ term @2add / "-" @ term @2subtract)*
 term = atom ("*" @ atom @2multiply / "/" @ atom @2divide)*
 atom = number / "(" @ sum ")" @
 number = ('0..9')+ @number
-end = 13? 10 @
+end = '\13'? '\10' @
 ==========
 2+2
 ..........
@@ -161,10 +161,10 @@ Error in tests/Evaluator.txt, line 158: expecting end
 x
  ^
 ==========
-x\
+x%
 ..........
 Error in tests/Evaluator.txt, line 164: expecting end
-x
+x%
  ^
 ==========
 -- An action at the start of a left hand alternative happens whether the

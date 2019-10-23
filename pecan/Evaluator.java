@@ -31,7 +31,7 @@ public class Evaluator implements Testable {
         Evaluator evaluator = new Evaluator();
         evaluator.switchTest = true;
         for (Op op : Op.values()) {
-            Node node = new Node(op, null, 0, 1);
+            Node node = new Node(op, null, null);
             evaluator.parse(node);
         }
         evaluator.switchTest = false;
@@ -40,26 +40,24 @@ public class Evaluator implements Testable {
 
     // Set up a grammar from its source, or run it on the given source.
     public String run(Source source) {
-        if (source.grammar()) return setup(source);
-        else {
-            if (grammar == null) {
-                System.err.println("Error: No grammar has been set up");
-                System.exit(1);
-            }
-            prepare(source);
-            return runParser();
+        if (grammar == null) {
+            System.err.println("Error: No grammar has been set up");
+            System.exit(1);
         }
+        prepare(source);
+        return runParser();
     }
 
-    // Set up a grammar for subsequent tests
-    private String setup(Source source) {
+    // Set up a grammar for subsequent tests.
+    public String grammar(Source source) {
         Stacker stacker = new Stacker();
         grammar = stacker.run(source);
-        charInput = ! grammar.has(TokenInput);
-        tracing = source.trace();
+        charInput = ! grammar.has(TI);
         if (grammar.op() == Error) return grammar.note();
-        else return "";
-    }
+        else return null;
+     }
+
+    public void tracing(boolean on) { tracing = on; }
 
     // Get the Evaluator ready to run, with the given input.
     private void prepare(Source s) {
@@ -87,7 +85,7 @@ public class Evaluator implements Testable {
                 else s += ", ";
                 s += mark;
             }
-            output.append(source.error(in, in, s));
+            output.append(source.sub(in,in).error(s));
             output.append("\n");
         }
         return output.toString();
@@ -114,11 +112,9 @@ public class Evaluator implements Testable {
             case Fail: parseFail(node); break;
             case Eot: parseEot(node); break;
             case Char: parseChar(node); break;
-            case Code: parseCode(node); break;
             case String: parseString(node); break;
             case Set: parseSet(node); break;
             case Range: parseRange(node); break;
-            case Codes: parseRange(node); break;
             case Split: parseSplit(node); break;
             case Cat: parseCat(node); break;
             case Mark: parseMark(node); break;
@@ -275,21 +271,6 @@ public class Evaluator implements Testable {
             ok = (ch == node.charCode());
             if (ok) in += Character.charCount(ch);
             if (tracing) traceInput();
-        }
-    }
-
-    // Parse 127
-    private void parseCode(Node node) {
-        if (switchTest) return;
-        if (in >= input.length()) ok = false;
-        else {
-            int ch = input.codePointAt(in);
-            ok = (ch == node.charCode());
-            if (ok) {
-                int n = Character.charCount(ch);
-                in += n;
-                if (tracing) traceInput();
-            }
         }
     }
 

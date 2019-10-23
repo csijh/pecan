@@ -11,7 +11,7 @@ over = #operator '/' @
 open = #bracket '(' @
 close = #bracket ')' @
 digit = #digit '0..9'
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ==========
 2
 ..........

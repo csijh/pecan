@@ -123,7 +123,7 @@ public class Test {
         test.original = src;
         if (divider == s) test.in = lines.get(s).sub(0,0);
         else test.in = src.sub(lines.get(s), lines.get(divider-1));
-        if (divider == e) test.in = lines.get(e).sub(0,0);
+        if (divider == e) test.out = lines.get(e).sub(0,0);
         else test.out = src.sub(lines.get(divider+1), lines.get(e-1));
         if (divider == e) test.grammar = true;
         return test;
@@ -173,35 +173,7 @@ public class Test {
         else System.out.println(
             "Pass " + n + " tests.");
     }
-/*
-    // Interpret escape characters in a string.
-    static String unescape(String text) {
-        String out = "";
-        for (int i=0; i<text.length(); i++) {
-            char ch = text.charAt(i);
-            if (ch != '\\') { out += ch; continue; }
-            if (++i >= text.length()) return out;
-            ch = text.charAt(i);
-            if (ch == '\\') { out += "\\"; continue; }
-            if (! Character.isDigit(ch)) continue;
-            boolean hex = ch == '0';
-            int end;
-            for (end = i; end < text.length(); end++) {
-                if (! digit(text.charAt(end), hex)) break;
-            }
-            int base = hex ? 16 : 10;
-            int n = Integer.parseInt(text.substring(i, end), base);
-            if (Character.charCount(n) == 1) {
-                out += (char) n;
-            }
-            else {
-                out += new String(Character.toChars(n));
-            }
-            i = end - 1;
-        }
-        return out;
-    }
-*/
+
     // Check for a decimal or hex digit.
     private static boolean digit(char ch, boolean hex) {
         if (Character.isDigit(ch)) return true;

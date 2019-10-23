@@ -1,7 +1,7 @@
 -- Tutorial step 11: (some error reporting)
 sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = (#digit '0..9')+ @number
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ==========
 2
 ..........

@@ -12,7 +12,7 @@ open = #bracket '(' gap
 close = #bracket ')' gap
 digit = '0..9'
 gap = (' ')* @
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ==========
 2
 ..........
