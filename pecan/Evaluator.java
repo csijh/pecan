@@ -62,8 +62,6 @@ public class Evaluator implements Testable {
     // Get the Evaluator ready to run, with the given input.
     private void prepare(Source s) {
         source = s;
-        if (s == null) System.out.println("PREPARE s null");
-        if (grammar == null) System.out.println("PREPARE g null");
         input = source.text();
         ok = true;
         start = in = out = marked = lookahead = 0;

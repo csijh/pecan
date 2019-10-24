@@ -600,7 +600,6 @@ class Parser implements Testable {
         start = in;
         Node x = output[--out];
         if (op == Include) {
-//System.out.println("Inc " + x.name());
             String file = input.relativePath(x.name());
             Source s2 = new Source(new File(file));
             Parser parser2 = new Parser();

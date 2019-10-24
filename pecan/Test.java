@@ -67,7 +67,7 @@ public class Test {
         String name = object.getClass().getSimpleName();
         if (file == null) file = "tests/"+ name +".txt";
         Source source = new Source(new File(file));
-        List<Test> tests = makeTests(file, source, trace);
+        List<Test> tests = makeTests(source, trace);
         int n = runTests(object, tests, line);
         report(unitTest, name, line, n);
     }
@@ -83,48 +83,49 @@ public class Test {
     // Divide the lines from a file into sections, and the sections into test
     // objects. If a section is a single line inclusion, include another test
     // file, else convert it into a test.
-    private static List<Test> makeTests(String file, Source s, boolean trace) {
-        List<Source> lines = s.lines();
+    private static List<Test> makeTests(Source s, boolean trace) {
         List<Test> tests = new ArrayList<Test>();
-        int start = 0;
-        String grammar = null;
-        for (int i = 0; i <= lines.size(); i++) {
-            if (i < lines.size() && ! lines.get(i).startsWith("====")) continue;
-            Source line = lines.get(start);
-            if (i == start + 1 && line.startsWith("{") && line.endsWith("}\n"))
-            {
-                String file2 = line.substring(1, line.length() - 2);
-                file2 = s.relativePath(file2);
-                Source source = new Source(new File(file2));
-                tests.addAll(makeTests(file2, source, trace));
-            }
-            else if (i != start + 1 || ! line.startsWith("--")) {
-                Test t = makeTest(file, s, lines, start, i);
-                if (trace) t.trace = true;
-                tests.add(t);
-            }
-            start = i + 1;
+        int start = 0, end = s.indexOf("=====");
+        while (end >= 0) {
+            makeTest(tests, s.sub(start, end), trace);
+            start = s.indexOf("\n", end) + 1;
+            if (start >= s.length()) end = -1;
+            else end = s.indexOf("=====", start);
+        }
+        if (start < s.length()) {
+            makeTest(tests, s.sub(start, s.length()), trace);
         }
         return tests;
     }
 
     // Create a test object from a range of lines.
-    private static Test makeTest(
-        String f, Source src, List<Source> lines, int s, int e)
-    {
-        int divider = -1;
-        for (int i = s; i < e && divider < 0; i++) {
-            if (lines.get(i).startsWith("....")) divider = i;
+    private static void makeTest(List<Test> tests, Source s, boolean trace) {
+        int d = s.indexOf(".....");
+        if (d >= 0) {
+            Test t = new Test();
+            t.in = s.sub(0, d);
+            int eol = s.indexOf("\n", d) + 1;
+            t.out = s.sub(eol, s.length());
+            t.trace = trace;
+            tests.add(t);
+            return;
         }
-        if (divider < 0) divider = e;
-        Test test = new Test();
-        test.original = src;
-        if (divider == s) test.in = lines.get(s).sub(0,0);
-        else test.in = src.sub(lines.get(s), lines.get(divider-1));
-        if (divider == e) test.out = lines.get(e).sub(0,0);
-        else test.out = src.sub(lines.get(divider+1), lines.get(e-1));
-        if (divider == e) test.grammar = true;
-        return test;
+        int eol = s.indexOf("\n");
+        if (eol == s.length() - 1) {
+            if (s.startsWith("--")) return;
+            if (s.startsWith("{") && s.endsWith("}\n")) {
+                String file2 = s.substring(1, s.length() - 2);
+                file2 = s.relativePath(file2);
+                Source source2 = new Source(new File(file2));
+                tests.addAll(makeTests(source2, trace));
+                return;
+            }
+        }
+        Test t = new Test();
+        t.in = s.sub(0, s.length());
+        t.out = s.sub(s.length(), s.length());
+        t.grammar = true;
+        tests.add(t);
     }
 
     // Run tests from a given file on a given object. If line > 0, run just the

@@ -1,5 +1,5 @@
 -- Pecan grammar for Pecan grammars.
--- Removed (a) categories (b) inclusions (c) literal names (d) hex
+-- Removed (a) categories (b) inclusions (c) literal names
 -- Made suitable for pecan-paper.
 
 -- Rules
@@ -19,7 +19,7 @@ atom = bracketed / see / id / act / mark / tag /
 bracketed = open expression close @3bracketed
 see = sopen expression sclose @3see
 id = letter alpha* @id blank
-act = '@' digits? name? @act blank
+act = '@' decimal? name? @act blank
 mark = "#" #name name @mark blank
 tag = "%" #name name @tag blank
 range = ["'" noquote ".."] noquote #squote "'" @range blank
@@ -48,11 +48,12 @@ newline = #newline endline @
 -- Character sets and sequences
 space = ' '
 literal = escape / ' ..~'
-escape = '\92' #digit digit+
+escape = '\92' #digit (hex / decimal)
 alpha = letter / '0..9' / '-'
 letter = 'a..z' / 'A..Z' / '_'
 name = letter alpha*
-digits = '0' / ('1..9' '0..9'*)
+hex = '0' ('0..9' / 'a..f' / 'A..F')*
+decimal = '0' / ('1..9' '0..9'*)
 noquote = "'"! literal
 nodquote = '"'! literal
 noangle = '>'! literal
@@ -96,7 +97,7 @@ list
 -- Empty grammar
 ..........
 Error in pecan1.txt, line 98: expecting id, newline
-
+..........
 ^
 ==========
 -- Expecting =
@@ -120,7 +121,7 @@ id y
 rule
 list
 ==========
--- Windows \r\n line endings
+-- Windows line endings
 x=x\13\10\
 y=y\13\10\
 ..........

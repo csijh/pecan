@@ -66,8 +66,7 @@ class Run {
             else usage();
         }
         if (sourcefile == null) usage();
-        String text = Source.readFile(sourcefile);
-        Source grammar = new Source(text, sourcefile, 1);
+        Source grammar = new Source(new File(sourcefile));
         fill(grammar, outfile);
     }
 

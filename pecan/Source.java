@@ -244,9 +244,15 @@ class Source {
 
     // Find the position of a substring.
     int indexOf(String s) {
+        return indexOf(s, 0);
+    }
+
+    // Find the position of a substring.
+    int indexOf(String s, int p) {
+        check (0 <= p && p <= length());
         byte[] bs = s.getBytes(UTF_8);
         int pos = -1;
-        for (int i = start; pos < 0 && i < end - bs.length; i++) {
+        for (int i = start + p; pos < 0 && i <= end - bs.length; i++) {
             boolean reject = false;
             for (int j = 0; ! reject && j < bs.length; j++) {
                 if (bs[j] != bytes[i+j]) reject = true;
@@ -300,56 +306,59 @@ class Source {
     }
 
     // Find the line number within the surrounding file.
-    int lineNumber() {
+    int lineNumber() { return lineNumber(0); }
+
+    // Find the line number at p within the surrounding file.
+    int lineNumber(int p) {
+        check (0 <= p && p <= length());
         int fs = fileStart(), fe = fileEnd();
         check(fs <= start && end <= fe);
         int r = 1;
-        for (int i = fs; i < start; i++) if (bytes[i] == '\n') r++;
+        for (int i = fs; i < start+p; i++) if (bytes[i] == '\n') r++;
         return r;
     }
 
-    // Create an error message referring to this, within its file.
+    // Find the start of the line containing p.
+    private int startLine(int fs, int p) {
+        while (p > fs && bytes[p-1] != '\n') p--;
+        return p;
+    }
+
+    // Find the end of the line containing p.
+    private int endLine(int p, int fe) {
+        while (p < fe && bytes[p] != '\n') p++;
+        return p;
+    }
+
+    // Create an error message referring to this text, within its file.
     String error(String message) {
         int fs = fileStart(), fe = fileEnd();
         check(fs <= start && end <= fe);
         int s = start;
         int e = end;
-        int[] startRow = new int[3], endRow = new int[3];
-        row(startRow, s);
-        row(endRow, e);
+        int row = lineNumber(0), endRow = lineNumber(length());
+        int startLine = startLine(fs, start), endLine = endLine(start, fe);
         if (! message.equals("")) message = " " + message;
-        int sl = startRow[1], ll = startRow[2] - sl;
-        String line = new String(bytes, sl, ll, UTF_8);
-        int col = s - startRow[1];
+        String line = new String(bytes, startLine, endLine-startLine, UTF_8);
+        int col = s - startLine;
         String s1;
         String path = path();
         if (path == null) s1 = "Error on ";
         else s1 = "Error in " + path + ", ";
-        if (endRow[0] == startRow[0]) {
-            String s2 = "line " + startRow[0] + ":";
+        if (endRow == row) {
+            String s2 = "line " + row + ":";
             message = s1 + s2 + message + "\n" + line + "\n";
         } else {
-            String s2 = "lines " + startRow[0] + " ";
-            String s3 = "to " + endRow[0] + ":";
+            String s2 = "lines " + row + " ";
+            String s3 = "to " + endRow + ":";
             message = s1 + s2 + s3 + message + "\n" + line + "...\n";
             s = col;
-            e = startRow[2] - startRow[1];
+            e = endLine - startLine;
         }
         for (int i = 0; i < col; i++) message += ' ';
         for (int i = 0; i < (e-s); i++) message += '^';
         if (e == s) message += '^';
         return message;
-    }
-
-    // Find the row number, start and end of the line containing p.
-    private void row(int[] row, int p) {
-        int r = 0, s = 0, e = 0;
-        for (int i = 0; i < p; i++) if (bytes[i] == '\n') { r++; s = i+1; }
-        if (bytes.length == 0 || bytes[0] != MARK) r++;
-        row[0] = r;
-        row[1] = s;
-        for (e = p; e < bytes.length; e++) if (bytes[e] == '\n') break;
-        row[2] = e;
     }
 
     // Normalize text. Convert line endings to \n, delete trailing spaces,

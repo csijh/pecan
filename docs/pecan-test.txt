@@ -50,7 +50,7 @@ list
 -- Empty grammar
 ..........
 Error in pecan-test.txt, line 51: expecting id, newline
-
+..........
 ^
 ==========
 -- Expecting =
@@ -74,7 +74,7 @@ empty
 list
 list
 ==========
--- Windows \r\n line endings
+-- Windows line endings
 x=x\13\10\
 y=y\13\10\
 ..........

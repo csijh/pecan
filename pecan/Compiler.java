@@ -411,6 +411,7 @@ public class Compiler implements Testable {
         int ch = node.charCode();
         String s;
         if (' ' <= ch && ch <= '~') s = "" + (char) ch;
+        else if (ch <= 0xff) s = String.format("\\%03o", ch);
         else if (ch <= 0xffff) s = String.format("\\u%04x", ch);
         else s = String.format("\\U%08x", ch);
         printT(TEXT, s);

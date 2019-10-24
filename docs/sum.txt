@@ -1,14 +1,6 @@
-sum = gap expression eol
-expression = term (plus term @2add / minus term @2subtract)*
-term = atom (times atom @2multiply / over atom @2divide)*
-atom = number / open expression close
-number = #integer digit+ @number gap
-plus = #operator '+' gap
-minus = #operator '-' gap
-times = #operator '*' gap
-over = #operator '/' gap
-open = #bracket '(' gap
-close = #bracket ')' gap
-digit = '0..9'
-gap = (' ')* @
-eol = #newline 13? 10 @
+-- From the calculator tutorial, step 1.
+digit = '0..9' @number
+==========
+2
+..........
+number 2
