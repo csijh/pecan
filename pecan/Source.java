@@ -4,14 +4,13 @@ package pecan;
 import java.util.*;
 import java.io.*;
 import java.nio.file.*;
-import java.nio.charset.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /* A Source string is a substring of the text from a UTF-8 file, or just a UTF-8
 string. In the case of text from a file, the path name is retained, to support
 the generation of error messages. The text is normalized, i.e. line endings are
 converted to '\n', trailing spaces and trailing blank lines are removed, and a
 final newline is added if necessary.
-TODO: check well-formed UTF-8, ban control characters.
 
 The Source class is in many ways a replacement for String. Source strings are
 stored using byte arrays. Methods are provided for handling UTF-8 text (as an
@@ -35,28 +34,33 @@ class Source {
     private byte[] bytes;
     private int start, end;
 
+    // Invalid UTF-8 byte to mark filename prefix or unused bytes.
+    private static byte MARK = (byte) 0xFF;
+
     // Construct a Source directly from its fields.
     private Source(byte[] bs, int s, int e) { bytes = bs; start = s; end = e; }
 
     // Construct a Source from a String.
     Source(String s) {
-        bytes = s.getBytes(StandardCharsets.UTF_8);
+        bytes = s.getBytes(UTF_8);
         start = 0;
         end = bytes.length;
+        String e = checkUTF_8(bytes, start, end);
+        if (e != null) err("Error: string contains " + e, null);
     }
 
-    // Read in a Source from a UTF-8 file. The text is prefixed by "&path\n".
-    // and spare bytes filled with '\0'.
+    // Read in a Source from a UTF-8 file. Prefix the text by "&path\n" and fill
+    // spare bytes.
     Source(File file) {
         InputStream is = null;
         try { is = new FileInputStream(file); }
         catch (Exception e) { err("can't read ", e); }
         int flen = (int) file.length();
         String path = file.getPath();
-        byte[] pathBytes = path.getBytes(StandardCharsets.UTF_8);
+        byte[] pathBytes = path.getBytes(UTF_8);
         int plen = pathBytes.length;
         bytes = new byte[1 + plen + 1 + flen + 2];
-        bytes[0] = '&';
+        bytes[0] = MARK;
         System.arraycopy(pathBytes, 0, bytes, 1, plen);
         bytes[plen + 1] = '\n';
         start = plen + 2;
@@ -65,8 +69,10 @@ class Source {
         catch (Exception e) { err("can't read ", e); }
         if (r != flen) err("can't read " + path, null);
         end = start + flen;
-        for (int i = end; i < bytes.length; i++) bytes[i] = '\0';
+        for (int i = end; i < bytes.length; i++) bytes[i] = MARK;
         normalize();
+        String e = checkUTF_8(bytes, start, end);
+        if (e != null) err("Error: file contains " + e, null);
     }
 
     // Return the length, in bytes.
@@ -109,7 +115,7 @@ class Source {
     // Return a substring.
     String substring(int s, int e) {
         check(s >= 0 && s <= e && e <= end - start);
-        return new String(bytes, start+s, e-s, StandardCharsets.UTF_8);
+        return new String(bytes, start+s, e-s, UTF_8);
     }
 
     // Get the next character at position p.
@@ -184,10 +190,10 @@ class Source {
 
     // Get the file path where the text originated.
     String path() {
-        if (bytes.length == 0 || bytes[0] != '&') return null;
+        if (bytes.length == 0 || bytes[0] != MARK) return null;
         int n;
         for (n = 1; n < bytes.length; n++) if (bytes[n] == '\n') break;
-        return new String(bytes, 1, n-1, StandardCharsets.UTF_8);
+        return new String(bytes, 1, n-1, UTF_8);
     }
 
     // Find a file path, relative to the path of this source (for inclusions).
@@ -204,41 +210,41 @@ class Source {
 
     // Check whether the text starts with a given string, returning the number
     // of bytes matched or -1.
-    int startsWith(String s) {
-        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
-        if (length() < bs.length) return -1;
-        for (int j = 0; j < bs.length; j++) {
-            if (bs[j] != bytes[start+j]) return -1;
-        }
-        return bs.length;
+    boolean startsWith(String s) {
+        return match(s, 0) > 0;
     }
 
-    // Check whether the text at p starts with a given string, returning the
-    // number of bytes matched or -1.
-    int startsWith(String s, int p) {
+    // Check whether the text at p starts with a given string.
+    boolean startsWith(String s, int p) {
+        return match(s, p) > 0;
+    }
+
+    // Check whether the text ends with a given string.
+    boolean endsWith(String s) {
+        byte[] bs = s.getBytes(UTF_8);
+        return match(bs, length() - bs.length) > 0;
+    }
+
+    // Match a string at position p, returning the number of bytes matched or 0.
+    int match(String s, int p) {
         check (0 <= p && p <= length());
-        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
-        if (length() - p < bs.length) return -1;
-        for (int j = 0; j < bs.length; j++) {
-            if (bs[j] != bytes[start+p+j]) return -1;
-        }
-        return bs.length;
+        byte[] bs = s.getBytes(UTF_8);
+        return match(bs, p);
     }
 
-    // Check whether the text ends with a given string, returning the number
-    // of bytes matched or -1.
-    int endsWith(String s) {
-        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
-        if (length() < bs.length) return -1;
+    // Match a byte array at position p, returning the number of bytes matched.
+    int match(byte[] bs, int p) {
+        check (0 <= p && p <= length());
+        if (length() - p < bs.length) return 0;
         for (int j = 0; j < bs.length; j++) {
-            if (bs[j] != bytes[end - bs.length + j]) return -1;
+            if (bs[j] != bytes[start+p+j]) return 0;
         }
         return bs.length;
     }
 
     // Find the position of a substring.
     int indexOf(String s) {
-        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
+        byte[] bs = s.getBytes(UTF_8);
         int pos = -1;
         for (int i = start; pos < 0 && i < end - bs.length; i++) {
             boolean reject = false;
@@ -252,7 +258,7 @@ class Source {
 
     // Find the last position of a substring.
     int lastIndexOf(String s) {
-        byte[] bs = s.getBytes(StandardCharsets.UTF_8);
+        byte[] bs = s.getBytes(UTF_8);
         int pos = -1;
         for (int i = end - bs.length; pos < 0 && i >= start; i--) {
             boolean reject = false;
@@ -280,7 +286,7 @@ class Source {
 
     // Find the start of the file.
     private int fileStart() {
-        if (bytes.length == 0 || bytes[0] != '&') return 0;
+        if (bytes.length == 0 || bytes[0] != MARK) return 0;
         int s = 0;
         while (bytes[s] != '\n') s++;
         return s + 1;
@@ -289,7 +295,7 @@ class Source {
     // Find the end of the file.
     private int fileEnd() {
         int e = bytes.length;
-        while (e > 0 && bytes[e-1] == '\0') e--;
+        while (e > 0 && bytes[e-1] == MARK) e--;
         return e;
     }
 
@@ -313,7 +319,7 @@ class Source {
         row(endRow, e);
         if (! message.equals("")) message = " " + message;
         int sl = startRow[1], ll = startRow[2] - sl;
-        String line = new String(bytes, sl, ll, StandardCharsets.UTF_8);
+        String line = new String(bytes, sl, ll, UTF_8);
         int col = s - startRow[1];
         String s1;
         String path = path();
@@ -339,7 +345,7 @@ class Source {
     private void row(int[] row, int p) {
         int r = 0, s = 0, e = 0;
         for (int i = 0; i < p; i++) if (bytes[i] == '\n') { r++; s = i+1; }
-        if (bytes.length == 0 || bytes[0] != '&') r++;
+        if (bytes.length == 0 || bytes[0] != MARK) r++;
         row[0] = r;
         row[1] = s;
         for (e = p; e < bytes.length; e++) if (bytes[e] == '\n') break;
@@ -363,6 +369,100 @@ class Source {
         end = out;
     }
 
+    // Check that a, b form a valid character code (8 to 11 bits).
+    // Byte values are passed as int to represent them as unsigned.
+    private static boolean check2(int a, int b) {
+        return ((0xC2 <= a && a <= 0xDF) && (0x80 <= b && b <= 0xBF));
+    }
+
+    // Check that a, b, c are valid (12..16 bits) excluding surrogates.
+    // Byte values are passed as int to represent them as unsigned.
+    private static boolean check3(int a, int b, int c) {
+        if (a == 0xE0) {
+            if ((0xA0 <= b && b <= 0xBF) && (0x80 <= c && c <= 0xBF)) return true;
+        }
+        else if ((0xE1 <= a && a <= 0xEC) || a == 0xEE || a == 0xEF) {
+            if ((0x80 <= b && b <= 0xBF) && (0x80 <= c && c <= 0xBF)) return true;
+        }
+        else if (a == 0xED) {
+            if ((0x80 <= b && b <= 0x9F) && (0x80 <= c && c <= 0xBF)) return true;
+        }
+        return false;
+    }
+
+    // Check that a, b, c, d are valid (17..21 bits up to 1114111).
+    // Byte values are passed as int to represent them as unsigned.
+    private static boolean check4(int a, int b, int c, int d) {
+        if (a == 0xF0) {
+            if ((0x90 <= b && b <= 0xBF) &&
+            (0x80 <= c && c <= 0xBF) &&
+            (0x80 <= d && d <= 0xBF)) return true;
+        }
+        else if (0xF1 <= a && a <= 0xF3) {
+            if ((0x80 <= b && b <= 0xBF) &&
+            (0x80 <= c && c <= 0xBF) &&
+            (0x80 <= d && d <= 0xBF)) return true;
+        }
+        else if (a == 0xF4) {
+            if ((0x80 <= b && b <= 0x8F) &&
+            (0x80 <= c && c <= 0xBF) &&
+            (0x80 <= d && d <= 0xBF)) return true;
+        }
+        return false;
+    }
+
+    // Check that a byte array contains valid, control-free UTF-8 text.
+    // Return an error message or null. Use int for unsigned byte values.
+    private static String checkUTF_8(byte[] bs, int start, int end) {
+        int a, b, c, d;
+        for (int i = start; i < end; i++) {
+            a = bs[i] & 0xFF;
+            if (' ' <= a && a <= '~') continue;
+            if (a == '\r' || a == '\n') continue;
+            if (a == '\0') return "nulls";
+            if (a == '\t') return "tabs";
+            if (a < 0x80) return "control characters";
+            b = bs[++i] & 0xFF;
+            if (check2(a, b)) continue;
+            c = bs[++i] & 0xFF;
+            if (check3(a, b, c)) continue;
+            d = bs[++i] & 0xFF;
+            if (check4(a, b, c, d)) continue;
+            return "invalid UTF-8";
+        }
+        return null;
+    }
+
+    private static void testCheck2() {
+        assert(check2(0xC2, 0x80));   // 8 bits
+        assert(check2(0xC2, 0xBF));
+        assert(check2(0xDF, 0x80));   // 11 bits
+        assert(check2(0xDF, 0xBF));
+        assert(! check2(0xC0, 0xBF)); // < 8 bits
+        assert(! check2(0xC1, 0xBF));
+        assert(! check2(0xC2, 0x7F)); // bad 2nd byte
+        assert(! check2(0xC2, 0xC0));
+        assert(! check2(0xE0, 0xBF)); // > 11 bits
+    }
+
+    private static void testCheck3() {
+        assert(check3(0xE0, 0xA0, 0x80));   // 12 bits
+        assert(check3(0xE0, 0xBF, 0xBF));
+        assert(check3(0xE8, 0x80, 0x80));   // 15 bits
+        assert(check3(0xEF, 0xBF, 0xBF));
+        assert(! check3(0xE0, 0x9F, 0xBF)); // < 12 bits
+        assert(! check3(0xED, 0xA0, 0x80)); // UTF-16 surrogates
+        assert(! check3(0xED, 0xBF, 0xBF)); // UTF-16 surrogates
+        assert(! check3(0xF0, 0x80, 0x80)); // > 15 bits
+    }
+
+    private static void testCheck4() {
+        assert(check4(0xF0, 0x90, 0x80, 0x80));   // 16 bits
+        assert(check4(0xF4, 0x8F, 0xBF, 0xBF));   // limit 1114111
+        assert(! check4(0xF0, 0x8F, 0xBF, 0xBF)); // < 16 bits
+        assert(! check4(0xF4, 0x90, 0x80, 0x80)); // > limit
+    }
+
     // Like assert, but always switched on.
     private void check(boolean b) {
         if (!b) throw new Error("Check failed");
@@ -375,11 +475,14 @@ class Source {
     }
 
     public static void main(String[] args) {
+        testCheck2();
+        testCheck3();
+        testCheck4();
         Source s = new Source("abc");
         assert(s.bytes.length == 3 && s.start == 0 && s.end == 3);
         assert(s.substring(0,3).equals("abc"));
         s = new Source(new File("pecan/Source.java"));
-        assert(s.bytes[0] == '&');
+        assert(s.bytes[0] == MARK);
         assert(s.path().equals("pecan/Source.java"));
         assert(s.substring(0,2).equals("//"));
         assert(s.substring(s.length()-2, s.length()).equals("}\n"));
@@ -388,6 +491,7 @@ class Source {
         assert(s.rawLength(1) == 3 && s.rawChar(1,3) == 92);
         assert(s.rawLength(5) == 5 && s.rawChar(5,5) == 0x3c0);
         s = new Source("&file\nLine one\nLine two\n");
+        s.bytes[0] = MARK;
         s = s.sub(6,24);
         String out =
             "Error in file, line 1: message\n" +

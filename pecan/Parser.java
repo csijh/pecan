@@ -549,10 +549,9 @@ class Parser implements Testable {
 
     // Check for the given string next in the input.
     private boolean STRING(String s) {
-        int n = input.startsWith(s, in);
-        if (n < 0) return false;
+        int n = input.match(s, in);
         in += n;
-        return true;
+        return (n > 0);
     }
 
     // Check if a character (ascii) in a given range appears next in the input.

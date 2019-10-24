@@ -5,9 +5,10 @@ package pecan;
 import java.util.*;
 import java.io.*;
 import java.nio.file.*;
-import java.nio.charset.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static pecan.Op.*;
 import static pecan.Node.Flag.*;
+import static pecan.Node.Count.*;
 
 /* Compile a Pecan grammar into a given target language, using a simplified
 custom approach to pretty-printing. The approach is informed by, but doesn't
@@ -124,7 +125,7 @@ public class Compiler implements Testable {
         Compiler compiler = new Compiler();
         compiler.switchTest = true;
         for (Op op : Op.values()) {
-            Node node = new Node(op, null, 0, 1);
+            Node node = new Node(op, null, null);
             compiler.compile(node);
         }
         compiler.switchTest = false;
@@ -180,11 +181,9 @@ public class Compiler implements Testable {
             case Fail: compileFail(node); break;
             case Eot: compileEot(node); break;
             case Char: compileChar(node); break;
-            case Code: compileCode(node); break;
             case String: compileString(node); break;
             case Set: compileSet(node); break;
             case Range: compileRange(node); break;
-            case Codes: compileCodes(node); break;
             case Split: compileSplit(node); break;
             case Cat: compileCat(node); break;
             case Mark: compileMark(node); break;
@@ -193,7 +192,7 @@ public class Compiler implements Testable {
             default: throw new Error("Not implemented " + node.op());
         }
         int end = output.length();
-        node.LEN(end - start);
+        node.set(LEN, end - start);
         indent = saveIndent;
     }
 
@@ -233,7 +232,7 @@ public class Compiler implements Testable {
     // Compile x = p
     private void compileRule(Node node) {
         if (switchTest) return;
-        boolean fit = node.LEN() <= margin - cursor;
+        boolean fit = node.get(LEN) <= margin - cursor;
         if (fit) printT(RULE1, node.left().name(), node.right());
         else printT(RULE, node.left().name(), node.right());
         newline(0);
@@ -263,7 +262,7 @@ public class Compiler implements Testable {
         print(OR);
         Node next = node.right();
         if (next.op() == Or) next = next.left();
-        boolean fit = next.LEN() <= margin - cursor;
+        boolean fit = next.get(LEN) <= margin - cursor;
         if (! fit) newline(0);
         compileBracket(And, node.right());
     }
@@ -274,7 +273,7 @@ public class Compiler implements Testable {
     // has a line per alternative.
     private void compileComplexOr(Node node) {
         boolean needOK = false;
-        boolean fit = node.LEN() <= margin - cursor;
+        boolean fit = node.get(LEN) <= margin - cursor;
         print(ALT, "(");
         if (! fit) newline(+1);
         print("(");
@@ -319,7 +318,7 @@ public class Compiler implements Testable {
         print(AND);
         Node next = node.right();
         if (next.op() == And) next = next.left();
-        boolean fit = next.LEN() <= margin - cursor;
+        boolean fit = next.get(LEN) <= margin - cursor;
         if (! fit) newline(0);
         compileBracket(Or, node.right());
     }
@@ -327,7 +326,7 @@ public class Compiler implements Testable {
     // Compile p?
     private void compileOpt(Node node) {
         if (switchTest) return;
-        boolean fit = node.LEN() <= margin - cursor;
+        boolean fit = node.get(LEN) <= margin - cursor;
         if (node.left().has(FP)) {
             print(OPT, "(");
             if (! fit) newline(+1);
@@ -346,7 +345,7 @@ public class Compiler implements Testable {
     // Compile [p] when p has no actions or errors.
     private void compileSee(Node node) {
         if (switchTest) return;
-        boolean fit = node.LEN() <= margin - cursor;
+        boolean fit = node.get(LEN) <= margin - cursor;
         print(SEE, "(");
         if (! fit) newline(+1);
         printT(CALL, GO);
@@ -359,7 +358,7 @@ public class Compiler implements Testable {
     // Compile p&
     private void compileHas(Node node) {
         if (switchTest) return;
-        boolean fit = node.LEN() <= margin - cursor;
+        boolean fit = node.get(LEN) <= margin - cursor;
         print(HAS, "(");
         if (! fit) newline(+1);
         printT(CALL, GO);
@@ -372,7 +371,7 @@ public class Compiler implements Testable {
     // Compile p!
     private void compileNot(Node node) {
         if (switchTest) return;
-        boolean fit = node.LEN() <= margin - cursor;
+        boolean fit = node.get(LEN) <= margin - cursor;
         print(NOT, "(");
         if (! fit) newline(+1);
         printT(CALL, GO);
@@ -412,12 +411,6 @@ public class Compiler implements Testable {
         printT(TEXT, node.name());
     }
 
-    // Compile 127
-    private void compileCode(Node node) {
-        if (switchTest) return;
-        print("CODE(" + node.name() + ")");
-    }
-
     // Compile "abc"
     private void compileString(Node node) {
         if (switchTest) return;
@@ -437,12 +430,6 @@ public class Compiler implements Testable {
         char c1 = node.name().charAt(0);
         char c2 = node.name().charAt(node.name().length() - 1);
         printT(RANGE, c1, c2);
-    }
-
-    // Compile 0..127
-    private void compileCodes(Node node) {
-        if (switchTest) return;
-        print("CODES(" + node.low() + "," + node.high() + ")");
     }
 
     // Compile <abc>
@@ -578,7 +565,7 @@ public class Compiler implements Testable {
         Path p = Paths.get(file);
         PrintStream out = null;
         try {
-            lines = Files.readAllLines(p, StandardCharsets.UTF_8);
+            lines = Files.readAllLines(p, UTF_8);
             out = new PrintStream(new File(file));
         }
         catch (Exception e) { throw new Error(e); }

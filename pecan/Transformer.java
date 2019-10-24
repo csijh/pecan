@@ -30,7 +30,7 @@ class Transformer {
         if (node.right() != null) expandSee(node.right());
         if (node.op() == See && (node.has(AA) || node.has(EE))) {
             Node x = node.left();
-            Node hasX = new Node(Has, x, x.source(), x.start(), x.end());
+            Node hasX = new Node(Has, x, x.source());
             node.op(And);
             node.left(hasX);
             node.right(x);
@@ -68,32 +68,21 @@ class Transformer {
     // Lift x = ...p*... to x1 = (p x1)?. Nodes are shared, so no longer form a
     // tree. The source description of the x rule is unchanged.
     private void liftAny(Set<String> names, Node list, Node loop) {
+        Node p = loop.left();
         String x = list.left().left().name();
         String x1 = findName(names, x);
-        Node p = loop.left();
-        int s = p.start(), e = p.end();
-        String pText = p.source().substring(s,e);
-        String text = x1 + " = (" + pText + " " + x1 + ")?";
-        int n0 = 0, n1 = x1.length(), n2 = n1 + 3, n3 = n2 + 1;
-        int n4 = n3 + pText.length(), n5 = n4 + 1 + x1.length(), n6 = n5 + 2;
-        Source src = new Source(text);
-        Node id = new Node(Id, src, n0, n1);
+        Node id = new Node(Id, x1);
         id.flags(loop.flags());
-        Node p1 = p.copy(p.op(), src, n3, n4);
-        Node and = new Node(And, p1, id, src, n3, n5);
-        Node opt = new Node(Opt, and, src, n2, n6);
-        Node newRule = new Node(Rule, id, opt, src, n0, n6);
+        Node p1 = new Node(p.op(), p.left(), p.right(), p.source());
+        Node and = new Node(And, "", p1, " ", id, "");
+        Node opt = new Node(Opt, "(", and, ")?");
+        Node newRule = new Node(Rule, "", id, " = ", opt, "");
         loop.op(Id);
-        loop.source(src);
-        loop.start(n0);
-        loop.end(n1);
+        loop.source(new Source(x1));
         loop.right(null);
         loop.left(null);
         loop.ref(newRule);
-        Node oldList = new Node(
-            List, list.left(), list.right(),
-            list.source(), list.start(), list.end()
-        );
+        Node oldList = new Node(List, list.left(), list.right(), list.source());
         list.left(newRule);
         list.right(oldList);
     }
@@ -101,30 +90,22 @@ class Transformer {
     // Lift x = ...p+... to x1 = p x1?. Nodes are shared, so no longer form a
     // tree. The source description of the x rule is unchanged.
     private void liftSome(Set<String> names, Node list, Node loop) {
+        Node p = loop.left();
         String x = list.left().left().name();
         String x1 = findName(names, x);
-        Node p = loop.left();
-        int s = p.start(), e = p.end();
-        String pText = p.source().substring(s,e);
-        String text = x1 + " = (" + pText + ") " + x1 + "?";
-        Source src = new Source(text);
-        Node id = new Node(Id, src, 0, x1.length());
-        int optS = text.length() - 1 - x1.length(), optE = text.length();
-        Node opt = new Node(Opt, id, src, optS, optE);
-        int andS = x1.length() + 3, andE = text.length();
-        Node and = new Node(And, p, opt, src, andS, andE);
-        Node newRule = new Node(Rule, id, and, src, 0, text.length());
+        Node id = new Node(Id, x1);
+        id.flags(loop.flags());
+        Source p1S = new Source("(" + p.source().text() + ")");
+        Node p1 = new Node(p.op(), p.left(), p.right(), p1S);
+        Node opt = new Node(Opt, "", id, "?");
+        Node and = new Node(And, "", p1, " ", opt, "");
+        Node newRule = new Node(Rule, "", id, " = ", and, "");
         loop.op(Id);
-        loop.source(src);
-        loop.start(0);
-        loop.end(x1.length());
+        loop.source(new Source(x1));
         loop.right(null);
         loop.left(null);
         loop.ref(newRule);
-        Node oldList = new Node(
-            List, list.left(), list.right(),
-            list.source(), list.start(), list.end()
-        );
+        Node oldList = new Node(List, list.left(), list.right(), list.source());
         list.left(newRule);
         list.right(oldList);
     }
@@ -143,14 +124,13 @@ class Transformer {
     // Currently only expandSee is tested.
     public static void main(String[] args) {
         Transformer trans = new Transformer();
-        Source src = new Source("  x = [y] z");
-        Node nx = new Node(Id, src, 2, 3);
-        Node ny = new Node(Id, src, 7, 8);
-        Node nz = new Node(Id, src, 10, 11);
-        Node see = new Node(See, ny, src, 6, 9);
+        Node nx = new Node(Id, "x");
+        Node ny = new Node(Id, "y");
+        Node nz = new Node(Id, "z");
+        Node see = new Node(See, "[", ny, "]");
         see.set(AA);
-        Node and = new Node(And, see, nz, src, 6, 11);
-        Node rule = new Node(Rule, nx, and, src, 2, 11);
+        Node and = new Node(And, "", see, " ", nz, "");
+        Node rule = new Node(Rule, "", nx, " = ", and, "");
         trans.expandSee(see);
         assert(rule.text().equals("x = [y] z"));
         assert(rule.right().op() == And);

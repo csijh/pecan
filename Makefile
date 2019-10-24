@@ -14,9 +14,9 @@ Simplifier = pecan/Simplifier.java $(Stacker)
 Code = pecan/Code.java
 Pretty = pecan/Pretty.java
 Transformer = pecan/Transformer.java
-Compiler = pecan/Compiler.java $(Stacker)
+Compiler = pecan/Compiler.java $(Stacker) $(Transformer)
 Generator = pecan/Generator.java $(Stacker)
-Run = pecan/Run.java $(Evaluator)
+Run = pecan/Run.java $(Evaluator) $(Compiler)
 # Analyser = pecan/Analyser.java $(Stacker)
 #Opcode Generator Evaluator:
 

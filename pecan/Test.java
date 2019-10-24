@@ -89,18 +89,16 @@ public class Test {
         int start = 0;
         String grammar = null;
         for (int i = 0; i <= lines.size(); i++) {
-            if (i < lines.size() && lines.get(i).startsWith("====")<0) continue;
+            if (i < lines.size() && ! lines.get(i).startsWith("====")) continue;
             Source line = lines.get(start);
-            if (i == start + 1 &&
-                line.startsWith("{") > 0 &&
-                line.endsWith("}\n") > 0)
+            if (i == start + 1 && line.startsWith("{") && line.endsWith("}\n"))
             {
                 String file2 = line.substring(1, line.length() - 2);
                 file2 = s.relativePath(file2);
                 Source source = new Source(new File(file2));
                 tests.addAll(makeTests(file2, source, trace));
             }
-            else if (i != start + 1 || line.startsWith("--") < 0) {
+            else if (i != start + 1 || ! line.startsWith("--")) {
                 Test t = makeTest(file, s, lines, start, i);
                 if (trace) t.trace = true;
                 tests.add(t);
@@ -116,7 +114,7 @@ public class Test {
     {
         int divider = -1;
         for (int i = s; i < e && divider < 0; i++) {
-            if (lines.get(i).startsWith("....") > 0) divider = i;
+            if (lines.get(i).startsWith("....")) divider = i;
         }
         if (divider < 0) divider = e;
         Test test = new Test();

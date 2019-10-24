@@ -38,8 +38,8 @@ class Node {
         String sy = (y == null) ? "" : y.text();
         source = new Source(b + sx + m + sy + a);
     }
-    Node(Op op, String b, Node x, String a) { this(op, b, x, "", null, ""); }
-    Node(Op op, String a) { this(op, "", null, "", null, ""); }
+    Node(Op op, String b, Node x, String a) { this(op, b, x, "", null, a); }
+    Node(Op op, String a) { this(op, a, null, "", null, ""); }
 
     // Get the fields.
     Op op() { return op; }
