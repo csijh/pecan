@@ -148,7 +148,7 @@ x = "a"
 List x = "a"...
   Rule x = "a"
     Id x
-    String "a"
+    Text "a"
   Empty
 ==========
 -- Two rules
@@ -158,10 +158,10 @@ y = "b"
 List x = "a"...
   Rule x = "a"
     Id x
-    String "a"
+    Text "a"
   Rule y = "b"
     Id y
-    String "b"
+    Text "b"
   Empty
 ==========
 -- Expecting equals
@@ -348,11 +348,11 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
       Any ("+" term @2add / "-" term @2sub)*
         Or "+" term @2add / "-" term @2sub
           And "+" term @2add
-            String "+"
+            Text "+"
             Id term
             Act @2add
           And "-" term @2sub
-            String "-"
+            Text "-"
             Id term
             Act @2sub
       Split <>
@@ -363,11 +363,11 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
       Any ("*" factor @2mul / "/" factor @2div)*
         Or "*" factor @2mul / "/" factor @2div
           And "*" factor @2mul
-            String "*"
+            Text "*"
             Id factor
             Act @2mul
           And "/" factor @2div
-            String "/"
+            Text "/"
             Id factor
             Act @2div
   Rule factor = primary ("^" factor @2pow)?
@@ -376,7 +376,7 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
       Id primary
       Opt ("^" factor @2pow)?
         And "^" factor @2pow
-          String "^"
+          Text "^"
           Id factor
           Act @2pow
   Rule primary = number / "(" exp ")"
@@ -384,9 +384,9 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
     Or number / "(" exp ")"
       Id number
       And "(" exp ")"
-        String "("
+        Text "("
         Id exp
-        String ")"
+        Text ")"
   Rule number = digit+ @number
     Id number
     And digit+ @number
@@ -407,7 +407,7 @@ List assignment = left #equals "=" right...
     And left #equals "=" right
       Id left
       Mark #equals
-      String "="
+      Text "="
       Id right
   Empty
 ==========
@@ -443,8 +443,8 @@ List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
   Rule x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
     Id x
     And "abc" " !#$%^&*()_-=+[]`{};:'@#~"
-      String "abc"
-      String " !#$%^&*()_-=+[]`{};:'@#~"
+      Text "abc"
+      Text " !#$%^&*()_-=+[]`{};:'@#~"
   Rule y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
     Id y
     And 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
@@ -452,7 +452,7 @@ List x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"...
       Set ' !#$%^&*()_-=+[]`{};:"@#~'
   Rule pi = "\960"
     Id pi
-    String "\960"
+    Text "\960"
   Empty
 ==========
 -- Actions, tests, numbers and errors
@@ -551,7 +551,7 @@ List range = "\195101" / '\195101'...
   Rule range = "\195101" / '\195101'
     Id range
     Or "\195101" / '\195101'
-      String "\195101"
+      Text "\195101"
       Set '\195101'
   Empty
 ==========
@@ -571,20 +571,20 @@ List keyword = <df> keyword1 / keyword2...
   Rule keyword1 = "break" / "case" / "catch" / "continue" / "default"
     Id keyword1
     Or "break" / "case" / "catch" / "continue" / "default"
-      String "break"
-      String "case"
-      String "catch"
-      String "continue"
-      String "default"
+      Text "break"
+      Text "case"
+      Text "catch"
+      Text "continue"
+      Text "default"
   Rule keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
     Id keyword2
     Or "do" / "else" / "for" / "if" / "switch" / "while"
-      String "do"
-      String "else"
-      String "for"
-      String "if"
-      String "switch"
-      String "while"
+      Text "do"
+      Text "else"
+      Text "for"
+      Text "if"
+      Text "switch"
+      Text "while"
   Empty
 ==========
 -- End-of-file

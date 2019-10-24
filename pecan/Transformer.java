@@ -95,10 +95,10 @@ class Transformer {
         String x1 = findName(names, x);
         Node id = new Node(Id, x1);
         id.flags(loop.flags());
-        Source p1S = new Source("(" + p.source().text() + ")");
+        Source p1S = new Source(p.source().text());
         Node p1 = new Node(p.op(), p.left(), p.right(), p1S);
         Node opt = new Node(Opt, "", id, "?");
-        Node and = new Node(And, "", p1, " ", opt, "");
+        Node and = new Node(And, "(", p1, ") ", opt, "");
         Node newRule = new Node(Rule, "", id, " = ", and, "");
         loop.op(Id);
         loop.source(new Source(x1));

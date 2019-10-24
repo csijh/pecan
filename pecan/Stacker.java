@@ -107,7 +107,7 @@ class Stacker implements Testable {
         switch(node.op()) {
         case Error: case Temp: break;
         case List: case Empty: scanZero(node); break;
-        case Mark: case Tag: case Char: case String: scanZero(node); break;
+        case Mark: case Tag: case Char: case Text: scanZero(node); break;
         case Set: case Cat: case Range: scanZero(node); break;
         case Split: case Eot: case Has: scanZero(node); break;
         case Not: case Success: case Fail: scanZero(node); break;

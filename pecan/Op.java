@@ -21,7 +21,7 @@ public enum Op {
     Has,       // Positive lookahead, e&
     Not,       // Negative lookahead, e!
     Mark,      // Error annotation, x #e
-    String,    // Character sequence, "abc"
+    Text,      // Character sequence, "abc"
     Set,       // Choice of characters, 'abc'
     Split,     // Lookahead for text less than or equal to string, <...>
     Char,      // Single character, "a" or 'a'

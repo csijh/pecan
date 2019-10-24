@@ -9,8 +9,8 @@ import static pecan.Node.Flag.*;
 import static java.lang.Character.*;
 
 /* Carry out binding:
-Replace empty String by Success, empty Set by Fail, empty Split by Eot.
-Replace String or Set with single character by Char.
+Replace empty Text by Success, empty Set by Fail, empty Split by Eot.
+Replace Text or Set with single character by Char.
 Replace unnamed Act by Drop.
 Check for missing or duplicate definitions.
 Create cross-references from ids to their definitions.
@@ -83,7 +83,7 @@ class Binder implements Testable {
         case Cat: scanCat(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;
-        case String: case Char: scanString(node); break;
+        case Text: case Char: scanText(node); break;
         case Split: scanSplit(node); break;
         case Set: scanSet(node); break;
         case Range: scanRange(node); break;
@@ -118,7 +118,7 @@ class Binder implements Testable {
     }
 
     // Set "" to Success, "x" to Char.
-    private void scanString(Node node) {
+    private void scanText(Node node) {
         if (switchTest) return;
         if (! checkEscapes(node)) return;
         int n = node.name().codePointCount(0, node.name().length());

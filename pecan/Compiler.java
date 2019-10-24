@@ -181,7 +181,7 @@ public class Compiler implements Testable {
             case Fail: compileFail(node); break;
             case Eot: compileEot(node); break;
             case Char: compileChar(node); break;
-            case String: compileString(node); break;
+            case Text: compileText(node); break;
             case Set: compileSet(node); break;
             case Range: compileRange(node); break;
             case Split: compileSplit(node); break;
@@ -405,14 +405,19 @@ public class Compiler implements Testable {
         printT(CALL, EOT);
     }
 
-    // Compile 'a' or "a"
+    // Compile 'a' or '\10' or "a"
     private void compileChar(Node node) {
         if (switchTest) return;
-        printT(TEXT, node.name());
+        int ch = node.charCode();
+        String s;
+        if (' ' <= ch && ch <= '~') s = "" + (char) ch;
+        else if (ch <= 0xffff) s = String.format("\\u%04x", ch);
+        else s = String.format("\\U%08x", ch);
+        printT(TEXT, s);
     }
 
     // Compile "abc"
-    private void compileString(Node node) {
+    private void compileText(Node node) {
         if (switchTest) return;
         printT(TEXT, node.name());
     }

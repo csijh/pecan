@@ -112,7 +112,7 @@ public class Evaluator implements Testable {
             case Fail: parseFail(node); break;
             case Eot: parseEot(node); break;
             case Char: parseChar(node); break;
-            case String: parseString(node); break;
+            case Text: parseText(node); break;
             case Set: parseSet(node); break;
             case Range: parseRange(node); break;
             case Split: parseSplit(node); break;
@@ -275,7 +275,7 @@ public class Evaluator implements Testable {
     }
 
     // Parse "abc"
-    private void parseString(Node node) {
+    private void parseText(Node node) {
         if (switchTest) return;
         int length = node.text().length() - 2;
         String text = node.text().substring(1, length+1);

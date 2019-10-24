@@ -143,7 +143,7 @@ open = #bracket '(' gap
 close = #bracket ')' gap
 digit = #digit '0..9'
 gap = (' ')* @
-end = #newline 13? 10 @
+end = #newline '\13'? '\10' @
 ..........
 // sum = gap expression end
 bool sum() { return gap() && expression() && end(); }
@@ -206,7 +206,8 @@ bool gap1() { return ((text(" ") && gap1()) || true); }
 // gap = (' ')* @
 bool gap() { return gap1() && drop(0); }
 
-// end = #newline 13? 10 @
+// end = #newline '\13'? '\10' @
 bool end() {
-    return mark(newline) && (CODE(13) || true) && CODE(10) && drop(0);
+    return mark(newline) && (text("\u000d") || true) && text("\u000a") &&
+    drop(0);
 }

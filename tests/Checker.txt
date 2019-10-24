@@ -33,7 +33,7 @@ List x = "a" "ab"...
     Id x FN,SP,FP
     And "a" "ab" FN,SP,FP
       Char "a" FN,SP
-      String "ab" FN,SP
+      Text "ab" FN,SP
   Empty
 ==========
 -- Sets: SP or FN

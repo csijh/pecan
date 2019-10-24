@@ -207,7 +207,7 @@ class Parser implements Testable {
     private boolean string() {
         return (
             CHAR('"') && nodquotes() && MARK(QUOTE) &&
-            CHAR('"') && ACT(String) && blank()
+            CHAR('"') && ACT(Text) && blank()
         );
     }
 
@@ -222,7 +222,7 @@ class Parser implements Testable {
     // include = "{" nocurlies #bracket "}" @string blank
     private boolean include() {
         return CHAR('{') && nocurlies() && MARK(BRACKET) && CHAR('}') &&
-        ACT(String) && blank();
+        ACT(Text) && blank();
     }
 
     // equals = #equals "=" gap
