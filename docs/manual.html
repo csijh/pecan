@@ -919,14 +919,12 @@ being designed. For example, a scanner might contain:</p>
 <pre>ge = ">=" @1`>=`
 </pre>
 
-<p>The names of the actions are used as token tags, so <code>@1`>=`</code>
-creates a token and sets its tag to <code>>=</code>. Each  character in the
-literal name is automatically converted to an alphanumeric form, e.g.
-<code>@1`>=`</code> becomes, and is completely equivalent to,
-<code>@1GtEq</code>. Then, when scanner is compiled, the action name becomes a
-valid identifier or constant in the target programming language. The literal
-notation avoids the need to invent a name for the tag for each token with a
-fixed spelling.</p>
+<p>Each character in a literal name is automatically converted to an
+alphanumeric form, e.g. <code>@1`>=`</code> is equivalent to
+<code>@1GtEq</code>. Then, when the scanner is compiled, the action name
+<code>GtEq</code> is a valid identifier or constant in the target programming
+language. If action names are used as token tags, this notation avoids the need
+to invent tag names for tokens with fixed spellings.</p>
 
 <p>In the corresponding token-based parser, the tag name produced can be matched
 by a tag with the same literal name. For example:</p>
@@ -936,7 +934,7 @@ by a tag with the same literal name. For example:</p>
 
 <p>The same translation to alphanumeric form is used, so the tag
 <code>%`>=`</code> is equivalent to <code>%GtEq</code> and the compiled parser
-matches up with the compiled scanner.</p>
+thus matches up with the compiled scanner.</p>
 
 <p>To improve the readability of a token-based parser further, e.g. so that it
 corresponds closely to a published grammar, literal names can also be used for
@@ -954,7 +952,7 @@ stands for a keyword token with a fixed spelling.</p>
 
 <p>When a grammar is compiled to produce a parser, custom adjustments can be
 specified for each different type of name, to prevent name clashes. The same
-adjustment should be specified for actions in the scanner and for tags in the
+adjustment should be specified for actions in the scanner as for tags in the
 parser, so that the generated tag names correspond.</p>
 
 <h2 id="testing">Testing</h2>
@@ -1244,7 +1242,7 @@ produced are non-empty, so that continual progress is made through the
 characters in the input. For example:</p>
 
 <pre>id = letter+ @identifier
-letter = 'a' .. 'z'
+letter = 'a..z'
 </pre>
 
 <p>Here, it is clear that by the time the accept action
@@ -1371,12 +1369,32 @@ which always work correctly in practice, but which don't pass the checks.</p>
 
 <p>A grammar can be compiled either to a set of recursive functions, or to a
 bytecode array, in almost any desired target programming language. Compilation
-to recursive functions is usually preferred, but compilation to bytecode has
-greater language independence, and can be used in more dynamic situations, e.g.
-where Pecan is used as a library and grammars need to be compiled without
-involving files.</p>
+to recursive functions is more intuitive, but compilation to bytecode can be
+used in more dynamic situations, e.g. where grammars need to be executed 'live'
+without external compilation and dynamic loading.</p>
 
 <h3 id="functions">Recursive functions</h3>
+
+<p>A grammar is compiled into recursive functions using a command of the
+form:</p>
+
+<pre>pecan grammar -c program
+</pre>
+
+<p>The option <code>-c program</code> specifies a template program file. The
+file must already exist, and can be written in any desired target programming
+language. It must contain a placeholder such as:</p>
+
+<pre>// &lt;pecan ...
+// >
+...
+// &lt;/pecan>
+</pre>
+
+<p>The placeholder begins with a commented out open tag <code>&lt;pecan></code>,
+with attributes as described below, and ends with a commented out close tag
+<code>&lt;/pecan></code>. Lines in between the two tags, if any, are removed,
+and the result of compiling the grammar is inserted in their place.</p>
 
 <p>Very few restrictions are placed on the target programming language when
 compiling to recursive functions. The main assumption is that the language has
@@ -1390,86 +1408,72 @@ then, only if <code>x</code> succeeds, continuing with <code>y</code>. A choice
 progressed or not before deciding whether to try <code>y</code> instead. So, in
 general, <code>x / y</code> is compiled into something like:</p>
 
-<pre>alt((go() &amp;&amp; x()) || (ok() &amp;&amp; y()))
+<pre>alt((go() &amp;&amp; tx) || (ok() &amp;&amp; ty))
 </pre>
 
-<p>The <code>go</code> function pushes the current input position on a stack
-before <code>x</code> is executed, the <code>ok</code> function checks for
-progress, and the <code>alt</code> function pops the saved position off the
-stack after the choice has been completed.</p>
-
-<p>The <code>go</code> function is also used in the compilation of other Pecan
+<p>Here <code>tx</code>, <code>ty</code> represent the translations of
+<code>x</code>, <code>y</code>. The <code>go</code> function pushes the current
+input position on a stack before <code>tx</code> is executed, the
+<code>ok</code> function checks for progress, and the <code>alt</code> function
+pops the saved position off the stack after the choice has been completed. The
+<code>go</code> function is also used in the compilation of other Pecan
 features. For example, an expression <code>x&amp;</code> is compiled to:</p>
 
-<pre>has(go() &amp;&amp; x())
+<pre>has(go() &amp;&amp; tx)
 </pre>
 
 <p>The <code>has</code> function pops the position saved by <code>go</code> and
-backtracks to it, before returning the result of <code>x()</code>.</p>
+backtracks to it, before returning the result of <code>tx</code>.</p>
 
 <p>This general approach, using a background stack for progress checking, allows
 every parsing expression to be compiled into a boolean expression, with only the
 <code>&amp;&amp;</code> and <code>||</code> operators being used to combine
 expressions.</p>
 
-<p>A grammar is compiled into recursive functions using a command of the
-form:</p>
-
-<pre>pecan grammar -c program
-</pre>
-
-<p>The option <code>-c program</code> specifies a template program file. The
-file must already exist, and can be written in any desired target programming
-language. It must contain a placeholder such as:</p>
+<p>The open tag <code>&lt;pecan...></code> of the placeholder includes
+attributes. The attributes specify details of how to generate functions in the
+target language for the given application:</p>
 
 <pre>// &lt;pecan
 //     comment = "// %s"
-//     rule    = "bool %s(parser *p) {%n  return %e;%n}"
+//     rule    = "bool %l(parser *p) { %n%treturn %r; %n}"
 //     call    = "%s(p)"
 // >
 ...
 // &lt;/pecan>
 </pre>
 
-<p>The placeholder begins with a commented out open tag <code>&lt;pecan></code>
-with attributes, and ends with a commented out close tag
-<code>&lt;/pecan></code>. Lines in between the two tags, if any, are removed,
-and the result of compiling the grammar is inserted in their place.</p>
+<p>This example is suitable for C as a target language, where a pointer to a
+parsing state is to be passed to every parsing function. Each attribute must be
+on a separate line, and consists of one of the attribute names described below,
+followed by an equal sign followed by a string in single or double quotes. The
+whole attribute may be preceded or followed by comment characters. Each
+attribute string is a format string in a printf style specifying the text to be
+generated for a specific Pecan feature.</p>
 
-<p>The attributes in the <code>&lt;pecan></code> start tag specify details of
-how to generate functions in the target language. The above example would be
-suitable for C as a target language. Each attribute must be on a separate line,
-and consists of one of the attribute names described below, followed by an equal
-sign followed by a string in single or double quotes. The whole attribute may be
-preceded or followed by comment characters. Each attribute string is a format
-string in a printf style specifying the text to be generated for a specific
-Pecan feature.</p>
+<p>In a format string, the percent character is the only special character, used
+for specifiers. There are no backslash escape conventions. Each specifier
+determines what to extract and print from the current construct.</p>
 
-<p>In a format string, there are no backslash escape conventions. The percent
-character is used for specifiers. The specifier <code>%n</code> indicates that a
-newline is to be printed. The specifier <code>%e</code> indicates that a parsing
-expression is to be compiled and printed. A string can be printed with
-<code>%s</code> to copy it verbatim, or <code>%t</code> to translate underscores
-or hyphens in non-literal names to <a
-href="https://en.wikipedia.org/wiki/Camel_case">camel case</a>, or
-<code>%f</code> to additionally capitalize the first letter. A character can be
-printed directly using <code>%c</code>, or its integer code can be printed using
-<code>%d</code> for decimal, <code>%o</code> for octal, or <code>%x</code> for
-hexadecimal. A fixed number of digits can be specified for <code>%d</code>,
-<code>%o</code> or <code>%x</code>, e.g. <code>%4x</code>.</p>
+<p>The specifier <code>%n</code> followed by spaces indicates that if an
+expression does not fit on the current line, a newline and indent are printed,
+and any space at the end of the previous line is deleted. The specifier
+<code>%t</code> increases the indent, temporarily. The specifiers
+<code>%l</code>, <code>%r</code> indicate that a left or right subexpression is
+to be compiled and printed. The specifier <code>%s</code> indicates that a
+string or name should be printed. Identifier names with hyphens or underscores
+are translated to <a href="https://en.wikipedia.org/wiki/Camel_case">camel
+case</a>. The specifier <code>%S</code> indicates additionally that the first
+letter of names should be upper case. A character can be printed directly using
+<code>%c</code>, or its integer code can be printed using <code>%d</code> for
+decimal, <code>%o</code> for octal, or <code>%x</code> for hexadecimal. A fixed
+number of digits can be specified for <code>%d</code>, <code>%o</code> or
+<code>%x</code>, e.g. <code>%4x</code>. When printing a range, two character or
+numeric specifiers are used to refer to the low and high characters, e.g. the
+format for a range might be <code>"range('%c','%c')"</code>.</p>
 
-<p>Unlike printf format strings, items to be printed are primarily matched up by
-type rather than by sequence. For example, in the format string for a rule, a
-specifier <code>%s</code> indicates that the name of the identifier is to be
-printed, and <code>%e</code> indicates that the right hand expression of the
-rule is to be printed, regardless of the order the specifiers appear in, or how
-many times they appear, or whether they appear at all. An exception to this is
-where two characters are available in the format for a range. In that case,
-sequencing is used, i.e. the first specifier encountered relates to the low end
-of the range, and the second to the upper end.</p>
-
-<p>Spaces at the beginning of a line represent an indent to be applied to
-anything generated from that line. For example, the spaces before
+<p>Spaces at the beginning of a line in a format represent an indent to be
+applied to anything generated from that line. For example, the spaces before
 <code>return</code> above represent an indent applied to the entire body of the
 function generated by the <code>%e</code> specifier. The number of spaces in the
 first indent encountered is used as the amount for any further indenting which
@@ -1479,94 +1483,74 @@ may be added during compilation and pretty printing.</p>
 
 <ul>
 
+<li><p><code><b>declare</b>:</code> the format for generating a forward
+declaration of a function. The format string might be <code
+style="white-space:nowrap">"bool %s();"</code> for example. The default is
+<code>""</code> so that no forward declarations are generated.</p></li>
+
 <li><p><code><b>comment</b>:</code> the format for generating each line of a
 comment before each function generated. The format string might be <code
 style="white-space:nowrap">"// %s"</code> or <code
-style="white-space:nowrap">"/* %s */"</code> for example. The comment generated
-contains the text of the Pecan rule that the function corresponds to. The
-default is to have no comments.</p></li>
+style="white-space:nowrap">"/* %s */"</code> for example. The <code>%s</code>
+refers to the source text of the Pecan rule that the function corresponds to.
+The default is <code>""</code> so that no comments are generated.</p></li>
 
-<li><p><code><b>escape1</b>, <b>escape2</b>, <b>escape4</b>:</code> formats to
-change the way <code>%c</code> and <code>%s</code> work by printing escape
-sequences instead of UTF-8. The escape1 format is for control characters in the
-ASCII range, the escape2 format for characters beyond ASCII up to hex FFFF, and
-escape4 for the remainder of the Unicode character set. The defaults are
-<code>"\%3o"</code>, <code>"\u%4x"</code>, and <code>"\U%8x"</code>. These
-work in C and several other languages. (In C, these escape sequences have a
-length limit. Using <code>"\%2o"</code> or <code>"\x%2x"</code> for example,
-would not be safe because digits could follow.)</p></li>
-
-<li><p><code><b>rule</b>:</code> the format for a function generated from a
-rule <code>id = e</code>. The two items available as parameters are the name
-of the identifier as a string, and the right hand side as an expression. There
-is no default.</p></li>
-
-<li><p><code><b>rule1</b>:</code> an alternative format for a rule, if it fits
-on one line. The default is to use the <code>rule</code> format
-exclusively.</p></li>
+<li><p><code><b>define</b>:</code> the format for a function definition
+generated from a rule <code>id = e</code>. The specifier <code>%s</code> refers
+to the identifier name, and <code>%e</code> to the right hand side expression.
+The default is <code style="white-space:pre"
+>"bool %s() {%n  return %e;%n}"</code>.</p></li>
 
 <li><p><code><b>and</b>, <b>or</b>, <b>true</b>, <b>false</b>:</code> the
 formats for the boolean operators and constants. The defaults are <code
-style="white-space:nowrap">" &amp;&amp; "</code>, <code
-style="white-space:nowrap">" || "</code>, <code>"true"</code> and
+style="white-space:nowrap">"&amp;&amp;"</code>, <code
+style="white-space:nowrap">"||"</code>, <code>"true"</code> and
 <code>"false"</code>.</p></li>
 
 <li><p><code><b>call</b>:</code> the format for making a call to a parsing
-function, and the default for the formats below. If an explicit parsing state is
-needed, for example, this could be set to <code>"%s(p)"</code>. The default is
-<code>"%s()"</code>.</p></li>
+function. This affects all the supporting functions, which are <code>go</code>,
+<code>ok</code>, <code>alt</code> for choices, <code>opt(x)</code> for
+<code>x?</code>, <code>see(x)</code> for <code>[x]</code>, <code>has(x)</code>
+for <code>x&amp;</code>, <code>not(x)</code> for <code>x!</code>,
+<code>tag(t)</code> for <code>%t</code>, <code>eot()</code> for
+<code>&lt;></code>, <code>string("x")</code> for <code>"x"</code>,
+<code>set("x")</code> for <code>'x'</code>, <code>split("x")</code> for
+<code>&lt;x></code>, <code>range('a','z')</code> for a range such as
+<code>'a..z'</code>, <code>cat(Nd)</code> for a category such as
+<code>Nd</code>, <code>mark(m)</code> for <code>#m</code>, and
+<code>drop(2)</code> for a drop action such as <code>@2</code>. The call format
+can be used to add an argument to every call, e.g. <code>"%s(p)"</code> causes
+<code>go(p)</code>, <code>ok(p)</code> etc. to be generated. It can also be used
+to make a uniform change to the names of all the support functions, e.g.
+<code>%S()</code> would cause <code>Go()</code>, <code>Ok()</code> and so on to
+be generated. The default is <code>%s()</code>.</p></li>
 
-<li><p><code><b>id</b>:</code> the format for generating a call for the
-occurrence of an identifier. Along with the <code>rule</code> format, this can
-be used to adjust identifier names. For example, an id format
-<code>"P%s()"</code> would cause an occurrence of an identifier
-<code>term</code> to be compiled as <code>Pterm()</code>. The default is to use
-the call format.</p></li>
-
-<li><p><code><b>go</b>, <b>ok</b>, <b>alt</b>, <b>opt</b>, <b>see</b>,
-<b>has</b>, <b>not</b>, <b>tag</b>, <b>eot</b>:</code> the formats for various
-support functions. The <code>go</code>, <code>ok</code> and <code>alt</code>
-functions are for choices as explained above. The function <code>opt</code> is
-for <code>x?</code>, <code>see</code> is for <code>[x]</code>, <code>has</code>
-is for <code>x&amp;</code>, <code>not</code> is for <code>x!</code>,
-<code>tag</code> is for <code>%x</code>, and <code>eot</code> (end of text) is
-for <code>&lt;></code>. Explicit definitions of these formats can be given to
-change the case or spelling of the function names generated, or to produce
-different inline code. The default format for each of the functions is to
-specialize the call format by filling in the function name. For example, if
-the call format is <code>"%s(p)"</code> then the default go format is
-<code>"go(p)"</code> and the default alt format is
-<code>"alt(p,%e)"</code>.</p></li>
-
-<li><p><code><b>text</b>, <b>set</b>, <b>split</b>:</code> the formats for the
-main text matchers. The defaults are obtained from the call format by adding
-an extra double-quoted string argument to the call. For example, if the call
-format is <code>"%s(p)"</code> then the default set format is
-<code>'set(p,"%s")'</code>. For example, a Pecan set <code>'+-*/'</code> would
-cause <code>set(p,"+-*/")</code> to be printed.</p></li>
-
-<li><p><code><b>range</b>:</code> the format for printing a range such as
-<code>'a..z'</code>. The two characters can be printed using <code>%c</code>, or
-their codes can be printed using a numerical specifier such as <code>%d</code>.
-The default adds two character arguments in single quotes to the call format,
-e.g. <code>"range(p,'%c','%c')"</code>.</p></li>
-
-<li><p><code><b>cat</b>, <b>mark</b>:</code> the formats for printing a category
-such as <code>Nd</code> or an error marker such as <code>#id</code>. The name is
-available as a string. The default format strings add a string argument to the
-call format, e.g. <code>"cat(p,%s)"</code> and
-<code>"mark(p,%s)"</code>.</p></li>
-
-<li><p><code><b>drop</b>:</code> the format for printing a drop symbol such as
-<code>@</code> or <code>@2</code>. The default is to add a numerical argument
-representing the arity to the call format, e.g.
-<code>"drop(p,%d)"</code>.</p></li>
+<li><p><code><b>id</b>:</code> the format for generating a call to represent the
+occurrence of an identifier. This can be used to add an argument or adjust
+identifier names. For example, an id format <code>"p%S(p)"</code> would cause an
+occurrence of an identifier <code>term</code> to be compiled as
+<code>pTerm(p)</code>. The default is to use the call format.</p></li>
 
 <li><p><code><b>act</b>, <b>act0</b>, ...:</code> the format for printing
 actions, and formats to override it for specific arities. The default for the
-act format depends on the call format, e.g. <code>"act%d(p,%s)"</code> where the
-numerical parameter is the arity and the string parameter is the name of the
-action. The defaults for specific arities are to use the act format.</p></li>
+act format depends on the call format, e.g. <code>"act%d(%s)"</code> where the
+<code>%d</code> refers to the arity and <code>%s</code> refers to the name of
+the action. The defaults for specific arities are to use the act
+format.</p></li>
+
+<li><p><code><b>tab</b></code>: the spacing for <code>%t</code> specifiers and
+for indenting generally. The default is <code
+style="white-space:pre">"  "</code> (two spaces).</p></li>
+
+<li><p><code><b>escape1</b>, <b>escape2</b>, <b>escape4</b>:</code> formats to
+change the way string or character literals are printed in calls to
+<code>text</code>, <code>set</code>, <code>split</code> or
+<code>range</code> calls, by printing escape sequences instead of UTF-8. The
+<b>escape1</b> format is for one-byte control characters, <b>escape2</b> is for
+two-byte Unicode characters, and <b>escape4</b> is for four-byte Unicode
+characters. The defaults are <code>"\u%4x"</code>, <code>"\u%4x"</code>,
+<code>"\U%8x"</code>. For example, a string <code>"ab&#x03c0;"</code> is
+translated as <code>string("ab\u03c0")</code>.</p></li>
 
 </ul>
 
@@ -1574,8 +1558,8 @@ action. The defaults for specific arities are to use the act format.</p></li>
 compilation to Java could be specified by:</p>
 
 <pre>// &lt;pecan
-//     comment = "// %s"
-//     rule    = "  boolean %s() {%n    return %e;%n  }"
+//     comment = "%t// %s"
+//     rule    = "%tboolean %s() { %n%t%treturn %e; %n%t}"
 //     call    = "%s()"
 // >
 </pre>
@@ -1583,21 +1567,23 @@ compilation to Java could be specified by:</p>
 <p>This establishes an indent for all the methods generated, and passes no
 arguments to parsing functions because the state is implicitly made available by
 the surrounding object.</p>
-
+<!--
 <p>For <code>go</code>, <code>ok</code>, <code>alt</code>, the format
 can be the empty string <code>""</code> to switch off the special treatment of
 choices. That would suit a functional language such as Haskell, for example,
 where custom operators can be defined with lazy evaluation, so the resulting
 code would be equivalent to using a parser combinator library.</p>
+-->
 
-<p>The default act format treats action names as enumerated constants. Instead,
-the act format could be specified as <code>"%s()"</code> so that each action has
-its own function with implicit arity. Alternatively, the formats for actions of
-each arity could be specified as:</p>
+<p>The default act format <code>"act%d(%s)"</code> treats action names as
+enumerated constants. Instead, the act format could be specified as
+<code>"%s()"</code> so that each action has its own function with implicit
+arity. Alternatively, the formats for actions of each arity could be specified
+as:</p>
 
 <pre>// &lt;pecan
 //   ...
-//   act0 = "act(0,%s(string()))"
+//   act0 = "act(0,%s(text()))"
 //   act1 = "act(1,%s(top(0)))"
 //   act2 = "act(2,%s(top(1),top(0)))"
 //   ...
@@ -1606,7 +1592,7 @@ each arity could be specified as:</p>
 
 <p>Then the handling of the output stack is covered by the generated code and
 only pure external action functions need to be provided. Here
-<code>string()</code> forms a string from the recently matched characters,
+<code>text()</code> forms a string from the recently matched characters,
 <code>top(n)</code> returns the n'th item from the top of the output stack and
 <code>act(n,x)</code> pops n items from the output stack, pushes
 <code>x</code>, and discards any recently matched characters.</p>

@@ -14,9 +14,7 @@ compilation, particularly the FP flag.
 
 The source text of nodes is only preserved to the extent that (a) a rule node
 has text which serves as a comment for its compiled function and (b) atomic
-nodes still have the right text so that they are compiled correctly.
-
-The tree structure of rules is not preserved. Nodes may becomes shared. */
+nodes still have the right text so that they are compiled correctly. */
 
 // TODO: liftSome
 // TODO: replace string in rule (assuming all nodes same source)
@@ -33,7 +31,7 @@ class Transformer {
             Node hasX = new Node(Has, x, x.source());
             node.op(And);
             node.left(hasX);
-            node.right(x);
+            node.right(x.deepCopy());
         }
     }
 
@@ -68,46 +66,46 @@ class Transformer {
     // Lift x = ...p*... to x1 = (p x1)?. Nodes are shared, so no longer form a
     // tree. The source description of the x rule is unchanged.
     private void liftAny(Set<String> names, Node list, Node loop) {
-        Node p = loop.left();
         String x = list.left().left().name();
         String x1 = findName(names, x);
         Node id = new Node(Id, x1);
         id.flags(loop.flags());
-        Node p1 = new Node(p.op(), p.left(), p.right(), p.source());
-        Node and = new Node(And, "", p1, " ", id, "");
+        Node p = loop.left();
+        Node and;
+        if (p.op() == Or) and = new Node(And, "(", p, ") ", id, "");
+        else and = new Node(And, "", p, " ", id, "");
+        and.set(FP);
         Node opt = new Node(Opt, "(", and, ")?");
-        Node newRule = new Node(Rule, "", id, " = ", opt, "");
+        Node newRule = new Node(Rule, "", id.deepCopy(), " = ", opt, "");
         loop.op(Id);
         loop.source(new Source(x1));
         loop.right(null);
         loop.left(null);
         loop.ref(newRule);
-        Node oldList = new Node(List, list.left(), list.right(), list.source());
-        list.left(newRule);
-        list.right(oldList);
+        Node list2 = new Node(List, newRule, list.right(), list.source());
+        list.right(list2);
     }
 
     // Lift x = ...p+... to x1 = p x1?. Nodes are shared, so no longer form a
     // tree. The source description of the x rule is unchanged.
     private void liftSome(Set<String> names, Node list, Node loop) {
-        Node p = loop.left();
         String x = list.left().left().name();
         String x1 = findName(names, x);
         Node id = new Node(Id, x1);
         id.flags(loop.flags());
-        Source p1S = new Source(p.source().text());
-        Node p1 = new Node(p.op(), p.left(), p.right(), p1S);
+        Node p = loop.left();
         Node opt = new Node(Opt, "", id, "?");
-        Node and = new Node(And, "(", p1, ") ", opt, "");
-        Node newRule = new Node(Rule, "", id, " = ", and, "");
+        Node and;
+        if (p.op() == Or) and = new Node(And, "(", p, ") ", opt, "");
+        else and = new Node(And, "", p, " ", opt, "");
+        Node newRule = new Node(Rule, "", id.deepCopy(), " = ", and, "");
         loop.op(Id);
         loop.source(new Source(x1));
         loop.right(null);
         loop.left(null);
         loop.ref(newRule);
-        Node oldList = new Node(List, list.left(), list.right(), list.source());
-        list.left(newRule);
-        list.right(oldList);
+        Node list2 = new Node(List, newRule, list.right(), list.source());
+        list.right(list2);
     }
 
     // Given x, try x1, x2, ...

@@ -1,4 +1,4 @@
--- A Pecan grammar for the Pecan language itself, with tests.
+-- A Pecan grammar for the Pecan language itself.
 
 -- A grammar is a sequence of rules, possibly with inclusions.
 pecan = skip rules #end <>
@@ -9,8 +9,7 @@ rule = #id id equals expression newline @2rule skip
 -- An expression breaks down into terms, factors and atoms.
 expression = term (slash expression @2or)?
 term = factor (term @2and)?
-factor = #atom atom postops
-postops = postop*
+factor = #atom atom postop*
 postop = opt @2opt / any @2any / some @2some / has @2has / not @2not
 atom = bracketed / see / act / mark / tag / split / range / set /
     string / category / id
@@ -20,7 +19,7 @@ atom = bracketed / see / act / mark / tag / split / range / set /
 bracketed = open expression close @3bracketed
 see = sopen expression sclose @3see
 id = (cat alpha!)! name @id blank
-act = '@' decimals name? @act blank
+act = '@' '0..9'* name? @act blank
 mark = "#" #name name @mark blank
 tag = "%" #name name @tag blank
 range = ["'" noquote ".."] noquote #quote "'" @range blank
@@ -49,7 +48,7 @@ cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
 blank = spaces [endline spaces '=/)]' &]? @
 gap = spaces (newline spaces)? @
 skip = ((space / comment / newline) @)*
-comment = "--" visibles newline
+comment = "--" visible* newline
 newline = #newline endline @
 
 -- Rules for character sets and sequences.
@@ -58,18 +57,15 @@ spaces = space*
 literal = escape / visible
 literals = literal*
 visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
-visibles = visible*
 escape = backslash #digit digits
 backslash = '\92'
 alpha = letter / Nd / '-' / '_'
 alphas = alpha*
 letter = Lu / Ll / Lt / Lm / Lo
 name = letter alphas / '`' nobquotes #quote '`'
-decimal = '0..9'
-decimals = decimal*
-hex = decimal / 'ABCDEFabcdef'
+hex = '0..9' / 'ABCDEFabcdef'
 hexes = hex*
-digits = ('1..9' decimals) / '0' hexes
+digits = ('1..9' '0..9'*) / '0' hexes
 noquote = "'"! literal
 noquotes = noquote*
 nodquotes = ('"'! literal)*

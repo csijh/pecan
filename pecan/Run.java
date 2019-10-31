@@ -8,7 +8,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.charset.*;
 
-/* Read in a file of tests and run them:
+/* Read in a file of tests and run them, in response to a command line:
 
     pecan [-t | -trace] [line] testfile
     pecan grammar [-b | -c] output
@@ -67,26 +67,66 @@ class Run {
         }
         if (sourcefile == null) usage();
         Source grammar = new Source(new File(sourcefile));
-        fill(grammar, outfile);
+        List<String> lines = read(outfile);
+        Formats formats = extract(lines);
+        Compiler compiler = new Compiler();
+        compiler.formats(formats);
+        String functions = compiler.run(grammar);
+        write(outfile, lines, functions);
     }
 
-    // Read template program, extract parameters, compile grammar, write program
-    // back out with compiled grammar inserted.
-    private void fill(Source grammar, String outfile) {
+    // Read template program.
+    private List<String> read(String outfile) {
         List<String> lines = null;
         Path p = Paths.get(outfile);
-        PrintStream out = null;
-        try {
-            lines = Files.readAllLines(p, StandardCharsets.UTF_8);
-            out = new PrintStream(new File(outfile));
-        }
+        try { lines = Files.readAllLines(p, StandardCharsets.UTF_8); }
         catch (Exception e) { throw new Error(e); }
-        boolean skipping = false, reading = false;
-        Pretty pretty = new Pretty();
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            if (skipping && line.indexOf("</pecan>") >= 0) skipping = false;
-            if (! skipping) out.println(line);
+        return lines;
+    }
+
+    // Extract print format attributes from the template program.
+    private Formats extract(List<String> lines) {
+        Formats formats = new Formats();
+        boolean reading = false;
+        int i;
+        for (i = 1; i <= lines.size(); i++) {
+            String line = lines.get(i-1);
+            if (reading && line.indexOf('>') >= 0) break;
+            if (reading) formats.readLine(i, outfile, line);
+            if (! reading && line.indexOf("<pecan") >= 0) {
+                if (line.indexOf("<pecan>") < 0) reading = true;
+                else err(i, outfile, "expecting attributes");
+            }
+        }
+        formats.fillDefaults(i, outfile);
+        return formats;
+    }
+
+    // Write out template file with inserted code. Make sure a crash during
+    // writing is very unlikely.
+    private void write(String outfile, List<String> lines, String functions) {
+        PrintStream out = null;
+        try { out = new PrintStream(new File(outfile)); }
+        catch (Exception e) { throw new Error(e); }
+        boolean skip = false, tag = false;
+        for (int i = 1; i <= lines.size(); i++) {
+            String line = lines.get(i-1);
+            if (skip && line.indexOf("</pecan>") >= 0) skip = false;
+            if (skip) continue;
+            out.println(line);
+            if (line.indexOf("<pecan") >= 0) tag = true;
+            if (tag && line.indexOf(">") >= 0) {
+                tag = false;
+                skip = true;
+                out.println();
+                out.println(functions);
+            }
+        }
+    }
+/*
+    // compile grammar, write program
+    // back out with compiled grammar inserted.
+    private void fill(Source grammar, String outfile) {
             if (reading && line.indexOf('=') < 0) {
                 if (line.indexOf('>') < 0) err(i+1, outfile, "expecting >");
                 reading = false;
@@ -94,7 +134,7 @@ class Run {
                 pretty.fillDefaults(i+1, outfile);
                 Compiler compiler = new Compiler();
                 compiler.formats(pretty);
-                String functions = new Compiler().run(grammar);
+                String functions = compiler.run(grammar);
                 out.println();
                 out.println(functions);
             }
@@ -136,7 +176,7 @@ class Run {
         }
         out.close();
     }
-
+*/
     // Give a usage message and stop.
     private static void usage() {
         System.err.println(

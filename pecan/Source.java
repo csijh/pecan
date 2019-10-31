@@ -11,6 +11,7 @@ string. In the case of text from a file, the path name is retained, to support
 the generation of error messages. The text is normalized, i.e. line endings are
 converted to '\n', trailing spaces and trailing blank lines are removed, and a
 final newline is added if necessary.
+TODO remove BOM
 
 The Source class is in many ways a replacement for String. Source strings are
 stored using byte arrays. Methods are provided for handling UTF-8 text (as an

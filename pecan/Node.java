@@ -8,9 +8,9 @@ import static pecan.Op.*;
 annotation information.
 
 A node has an op, up to two subnodes, a source string, some flags, some counts,
-and a temporary note. If the left subnode is null, the right subnode represents
-a cross-reference link instead of a child. For more information about
-annotations, see the classes which handle them. */
+and a temporary note also used to store a print format. If the left subnode is
+null, the right subnode represents a cross-reference link instead of a child.
+For more information about annotations, see the classes which handle them. */
 
 class Node {
     private Op op;
@@ -41,7 +41,16 @@ class Node {
     Node(Op op, String b, Node x, String a) { this(op, b, x, "", null, a); }
     Node(Op op, String a) { this(op, a, null, "", null, ""); }
 
-    // Get the fields.
+    // Make a deep copy of a node.
+    Node deepCopy() {
+        Node copy = new Node(op, left, right, source);
+        if (left != null) copy.left = left.deepCopy();
+        if (right != null) copy.right = right.deepCopy();
+        copy.flags = flags;
+        return copy;
+    }
+
+    // Get the fields. Formats share the note field.
     Op op() { return op; }
     Node left() { return left; }
     Node right() { return left == null ? null : right; }
@@ -50,6 +59,7 @@ class Node {
     String text() { return source.text(); }
     int flags() { return flags; }
     String note() { return note; }
+    String format() { return note; }
 
     // Set the fields.
     void op(Op o) { op = o; }
@@ -62,6 +72,7 @@ class Node {
     void source(Source s) { source = s; }
     void flags(int fs) { flags = fs; }
     void note(String s) { note = s; }
+    void format(String s) { note = s; }
 
     // Get or set a flag or a count.
     boolean has(Flag f) { return (flags & (1 << f.ordinal())) != 0; }
@@ -71,6 +82,7 @@ class Node {
     void set(Count c, int n) { counts[c.ordinal()] = n; }
 
     // Get the name of a node, i.e. the text without quotes, escapes etc.
+    // TODO hyphens and literal names.
     String name() {
         String s = source.rawText();
         char ch = s.charAt(0);
@@ -90,6 +102,13 @@ class Node {
     int charCode() {
         assert(op == Char);
         return source.rawCharAt(1);
+    }
+
+    // For a range, return the low end (i = 0) or high end (i > 0).
+    int end(int i) {
+        assert(op == Range);
+        if (i == 0) return low();
+        return high();
     }
 
     // For a range, extract the low end.
