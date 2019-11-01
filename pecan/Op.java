@@ -31,7 +31,7 @@ public enum Op {
     Range,     // Character range, 'x..y'
     Cat,       // Unicode category, e.g. Lu
     Tag,       // Match a type of token.
-    Drop,      // Drop unused matched characters, @ or @3
+    Drop,      // Drop unused matched characters, e.g. @ or @3
     Act;       // Carry out an action, e.g. @2add
 
     public static void main(String[] args) { }

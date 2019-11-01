@@ -37,8 +37,8 @@ class Parser implements Testable {
 
     // Test Source and Node as well as Parser.
     public static void main(String[] args) {
-        Source.main(null);
-        Node.main(null);
+        if (args.length == 0) Category.main(args);
+        if (args.length == 0) Node.main(args);
         Test.run(new Parser(), args);
     }
 

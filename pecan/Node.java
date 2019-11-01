@@ -24,10 +24,8 @@ class Node {
     public static enum Flag { TI, SN, FN, SP, FP, WF, AA, EE, AB; }
     public static enum Count { NET, NEED, PC, LEN; }
 
-    // Construct a node from a source, with any number of subnodes.
-    Node(Op o, Node x, Node y, Source s) {
-        op = o; left = x; right = y; source = s;
-    }
+    // Construct a node with any number of subnodes and a source,
+    Node(Op o, Node x, Node y, Source s) { op=o; left=x; right=y; source=s; }
     Node(Op o, Node x, Source s) { this(o, x, null, s); }
     Node(Op o, Source s) { this(o, null, null, s); }
 
@@ -41,7 +39,7 @@ class Node {
     Node(Op op, String b, Node x, String a) { this(op, b, x, "", null, a); }
     Node(Op op, String a) { this(op, a, null, "", null, ""); }
 
-    // Make a deep copy of a node.
+    // Make a deep copy of a node (during transforms).
     Node deepCopy() {
         Node copy = new Node(op, left, right, source);
         if (left != null) copy.left = left.deepCopy();
@@ -82,7 +80,7 @@ class Node {
     void set(Count c, int n) { counts[c.ordinal()] = n; }
 
     // Get the name of a node, i.e. the text without quotes, escapes etc.
-    // TODO hyphens and literal names.
+    // Adapt identifiers and literals, as for compiling, to detect name clashes.
     String name() {
         String s = source.rawText();
         char ch = s.charAt(0);
@@ -94,7 +92,9 @@ class Node {
         }
         if (s.length() == 0) return s;
         ch = s.charAt(0);
-        if ("\"'`<{".indexOf(ch) >= 0) s = s.substring(1, s.length() - 1);
+        if ("\"'<{`".indexOf(ch) >= 0) s = s.substring(1, s.length() - 1);
+        if (ch == '`') s = translateLiteral(s);
+        else if (s.indexOf('-') >= 0) s = translateId(s);
         return s;
     }
 
@@ -201,20 +201,28 @@ class Node {
         return s;
     }
 
-/*
-// TODO move this stuff to Source or Pretty.
-
-    private static String[] charMap = new String[128];
-    static { fillCharMap(); }
-
-    // Translate the name of an id, tag, mark or action to make it suitable as a
-    // target language identifier. This includes translating hyphens in ordinary
-    // identifers as well as non-alpha characters in literal names.
-    String translate() {
-        String name = name();
+    // Translate an identifier name, replacing hyphens by camel case.
+    String translateId(String s) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < name.length(); ) {
-            int ch = name.codePointAt(i);
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch != '-') { sb.append(ch); continue; }
+            if (i >= s.length() - 1) { sb.append("Mi"); break; }
+            ch = s.charAt(++i);
+            if ('a'<=ch && ch<='z') sb.append(Character.toUpperCase(ch));
+            else sb.append("Mi");
+        }
+        return sb.toString();
+    }
+
+    private static String[] charMap;
+
+    // Translate a literal name into a target language identifier.
+    String translateLiteral(String s) {
+        if (charMap == null) fillCharMap();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); ) {
+            int ch = s.codePointAt(i);
             if (ch < 128) sb.append(charMap[ch]);
             else sb.append("U" + ch);
             i += Character.charCount(ch);
@@ -225,6 +233,7 @@ class Node {
     // For each visible ascii character, define how it is translated when it
     // appears in a literal name.
     private static void fillCharMap() {
+        charMap  = new String[128];
         for (char ch = 'a'; ch <= 'z'; ch++) charMap[ch] = "" + ch;
         for (char ch = 'A'; ch <= 'Z'; ch++) charMap[ch] = "" + ch;
         for (char ch = '0'; ch <= '9'; ch++) charMap[ch] = "" + ch;
@@ -264,25 +273,28 @@ class Node {
             case '~': charMap[ch] = "Ti"; break;
         }
     }
-*/
+
     public static void main(String[] args) {
-        Source s = new Source("'a' '\\127' @add @2mul 'a..z' `<=`");
-        Node n = new Node(Char, s.sub(0,3));
+        Op.main(null);
+        Source.main(null);
+        Node n = new Node(Char, new Source("'a'"));
         assert(n.name().equals("a"));
         assert(n.charCode() == 97);
-        n = new Node(Char, s.sub(4, 10));
+        n = new Node(Char, new Source("'\\127'"));
         assert(n.name().equals("\177"));
-        n = new Node(Act, s.sub(11, 15));
+        n = new Node(Act, new Source("@add"));
         assert(n.name().equals("add"));
         assert(n.arity() == 0);
-        n = new Node(Act, s.sub(16, 21));
+        n = new Node(Act, new Source("@2mul"));
         assert(n.name().equals("mul"));
         assert(n.arity() == 2);
-        n = new Node(Range, s.sub(22, 28));
+        n = new Node(Range, new Source("'a..z'"));
         assert(n.name().equals("a..z"));
         assert(n.low() == 97);
         assert(n.high() == 97+25);
-        n = new Node(Id, s.sub(29, 33));
-        assert(n.name().equals("<="));
+        n = new Node(Id, new Source("one-two"));
+        assert(n.name().equals("oneTwo"));
+        n = new Node(Id, new Source("`<=`"));
+        assert(n.name().equals("LtEq"));
     }
 }

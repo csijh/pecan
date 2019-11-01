@@ -68,11 +68,18 @@ class Run {
         if (sourcefile == null) usage();
         Source grammar = new Source(new File(sourcefile));
         List<String> lines = read(outfile);
-        Formats formats = extract(lines);
-        Compiler compiler = new Compiler();
-        compiler.formats(formats);
-        String functions = compiler.run(grammar);
-        write(outfile, lines, functions);
+        if (bytecode) {
+            Generator generator = new Generator();
+            String bytes = generator.run(grammar);
+            write(outfile, lines, bytes);
+        }
+        else {
+            Formats formats = extract(lines);
+            Compiler compiler = new Compiler();
+            compiler.formats(formats);
+            String functions = compiler.run(grammar);
+            write(outfile, lines, functions);
+        }
     }
 
     // Read template program.

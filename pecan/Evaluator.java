@@ -118,7 +118,7 @@ public class Evaluator implements Testable {
             case Mark: parseMark(node); break;
             case Drop: parseDrop(node); break;
             case Act: parseAct(node); break;
-            default: throw new Error("Not implemented " + node.op());
+            default: assert false : "Unexpected node type " + node.op(); break;
         }
     }
 

@@ -4,7 +4,9 @@
 <title>Pecan Manual</title>
 <style>
   body { font-size: 120%; }
-  pre, .indent { margin-left:40px; }
+  pre, table, .indent { margin-left:40px; }
+  table, th, td { border: 1px solid black; border-collapse: collapse; }
+  table.char td:nth-child(2) { text-align: right; padding-right: 10px; }
 </style>
 </head>
 <body>
@@ -34,6 +36,7 @@
 <li><a href="#repetition">Repetition</a></li>
 <li><a href="#lookahead">Lookahead</a></li>
 <li><a href="#text">Text</a></li>
+<li><a href="#escapes">Escapes</a></li>
 <li><a href="#errors">Errors</a></li>
 <li><a href="#actions">Actions</a></li>
 <li><a href="#tokens">Tokens</a></li>
@@ -616,9 +619,35 @@ fail = ''
 end = &lt;>
 </pre>
 
-<p>There is a numerical escape convention within sets, strings, ranges,
-splitters and literal names (see later), to represent control characters or
-Unicode characters using plain text. A backslash followed by digits represents a
+<h3 id="escapes">Escapes</h3>
+
+<p>There are escape conventions within sets, strings, ranges, splitters and
+literal names (see later), to include control characters, or to represent
+Unicode characters using plain text. A summary of the escape conventions
+is:</p>
+
+<table class="char">
+<tr><th>Escape</th><th>Code</th><th>Character</th>
+<tr><td><code>\b</code></td><td>8</td><td>backspace</td>
+<tr><td><code>\f</code></td><td>12</td><td>formfeed</td>
+<tr><td><code>\n</code></td><td>10</td><td>newline</td>
+<tr><td><code>\r</code></td><td>13</td><td>return</td>
+<tr><td><code>\t</code></td><td>9</td><td>tab</td>
+<tr><td><code>\"</code></td><td>34</td><td>double quote</td>
+<tr><td><code>\'</code></td><td>39</td><td>single quote</td>
+<tr><td><code>\\</code></td><td>92</td><td>backslash</td>
+</table>
+
+<p></p>
+
+<table>
+<tr><th>Escape</th><th>Meaning</th>
+<tr><td><code>\ddd...</code></td><td>character with decimal code</td>
+<tr><td><code>\0xxx...</code></td><td>character with hexadecimal code</td>
+<tr><td><code>\&amp;</code></td><td>optional terminator</td>
+</table>
+
+<p>A numerical escape is a backslash followed by digits, used to represent a
 single character, using its decimal character code. For example:</p>
 
 <pre>pi = '\960'
@@ -631,29 +660,14 @@ any = '\0..\1114111'
 
 <pre>pi = '\03C0'
 newline = '\0d'? '\0a'
-any = '\0..\10ffff'
+any = '\0..\010ffff'
 </pre>
 
-<p>Escape sequences are variable length. A decimal sequence ends when a
-non-digit is encountered, and a hex sequence ends when a non-hex digit is
-encountered. If an escape sequence is to be followed by a digit, that digit can
-be escaped or the construct can be split, e.g. <code>"&#960;3"</code> can be
-escaped as <code>"\960\51"</code> or <code>("\960" "3")</code>.
-
-<p>For simplicity and uniformity, ad-hoc escapes such as <code>\r</code>,
-<code>\n</code> are not supported. Ad-hoc escapes can be achieved numerically
-instead. Here are some examples of common escapes and how to represent them in
-Pecan:</p>
-
-<pre>'\r'   &#8594;   '\13'
-'\n'   &#8594;   '\10'
-'\\'   &#8594;   '\92'
-'\''   &#8594;   '\39'
-"\""   &#8594;   "\34"
-</pre>
-
-<p>To avoid ambiguity, if a backslash is followed by a non-digit, it is reported
-as an error.</p>
+<p>Numerical escape sequences are variable length. A decimal sequence ends when
+a non-digit is encountered, and a hex sequence ends when a non-hex digit is
+encountered. If an escape sequence is to be followed by a digit, it can be
+terminated by <code>\&amp;</code>, e.g. <code>"&#960;3"</code> can be escaped as
+<code>"\960\&amp;3"</code>.</p>
 
 <h3 id="errors">Errors</h3>
 

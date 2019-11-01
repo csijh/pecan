@@ -17,15 +17,15 @@ as used in grammars. Its ordinal is the same as its Java type code, as in
 Character.getType. One further constant is added, namely Uc representing all
 Unicode characters. Each category has a bitset giving its ascii content.
 
-The main method generates two arrays of bytes, as binary files table1.bin and
-table2.bin. They are read in and used as a two-stage table for looking up the
-general category of a character. The main method may need to be run twice, not
-while the class is packaged in a jar file, to generate the files.
+The main method with no command line arguments carries out tests. The main
+method with argument -g generates two arrays of bytes, as binary files
+table1.bin and table2.bin. They are read in and used as a two-stage table for
+looking up the general category of a character.
 
 The files are generated from UnicodeData.txt, which has been copied from the
 Unicode standard at http://www.unicode.org/Public/12.0.0/ucd/UnicodeData.txt.
 The use of multi-stage tables is described in Chapter 5 of the Unicode standard.
-The files can also be used by parsers written in other languages.
+The files can also be used by parsers generated or written in other languages.
 
 The first array contains unsigned bytes which are indexes of blocks in the
 second table. The second array consists of all the distinct 256-byte blocks from
@@ -81,14 +81,10 @@ enum Category {
         table2 = readBytes(Category.class.getResourceAsStream("table2.bin"));
     }
 
-    // Read the files and check that the ordinals correspond to
-    // Character.getType.
+    // Read the files.
     static {
         try { readFiles(); }
         catch (Exception err) { }
-        for (Category cat : Category.values()) {
-            if (cat.ordinal() != type(cat)) throw new Error("Bad");
-        }
     }
 
     // Type 17 is unallocated in Java. Use it for Uc.
@@ -129,6 +125,33 @@ enum Category {
         throw new Error("Unknown category");
     }
 
+    public static void main(String[] args) {
+        try {
+            if (args.length == 0) test();
+            else if (args.length == 1 && args[0].equals("-g")) generate();
+            else throw new Error("use: java pecan.Category [-g]");
+        }
+        catch (Exception e) { throw new Error(e); }
+    }
+
+    // Check that the ordinals correspond to Character.getType. Check the
+    // generated tables against the Java library, for some early characters
+    // where the Unicode version isn't a problem.
+    private static void test() {
+        for (Category cat : Category.values()) {
+            if (cat.ordinal() != type(cat)) throw new Error("Bad sequence");
+        }
+        if (table1 == null) {
+            throw new Error(
+                "Files not found: use java pecan.Category -g to generate.");
+        }
+        for (int ch = 0; ch < 512; ch++) {
+            Category cat1 = get(ch);
+            Category cat2 = values()[Character.getType(ch)];
+            if (cat1 != cat2) throw new Error("Bad tables " + ch);
+        }
+    }
+
     private static final int UNICODES = 1114112;
     private static final byte unassigned = (byte) Cn.ordinal();
     private static byte[] genTable;
@@ -138,7 +161,7 @@ enum Category {
     private static byte[][] genTable2;
     private static int nblocks;
 
-    public static void main(String[] args) throws Exception {
+    public static void generate() throws Exception {
         genTable = new byte[UNICODES];
         genTable1 = new byte[UNICODES / 256];
         genTable2 = new byte[256][256];
@@ -150,7 +173,6 @@ enum Category {
         sc.close();
         while (next < UNICODES) genTable[next++] = unassigned;
         build();
-        check();
         write();
     }
 
@@ -180,20 +202,6 @@ enum Category {
             genTable1[i] = (byte) nblocks;
             genTable2[nblocks++] = block;
             block = new byte[256];
-        }
-    }
-
-    // Check the generated tables against the Java library, for some early
-    // characters where the Unicode version isn't a problem.
-    private static void check() {
-        if (table1 == null) {
-            System.out.println("Run again to check generated files");
-            return;
-        }
-        for (int ch = 0; ch < 512; ch++) {
-            Category cat1 = get(ch);
-            Category cat2 = values()[Character.getType(ch)];
-            if (cat1 != cat2) throw new Error("Bad tables " + ch);
         }
     }
 

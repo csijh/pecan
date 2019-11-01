@@ -39,7 +39,7 @@ public class Test {
     private Source original;
     private Source in;
     private Source out;
-    private boolean grammar, trace;
+    private boolean grammar, trace, raw;
 
     // No testing of the test class.
     public static void main(String[] args) { }

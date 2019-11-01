@@ -1,4 +1,4 @@
-// Pecan 1.0 source. Free and open source. See licence.txt.
+// Pecan 1.0 source text. Free and open source. See licence.txt.
 
 package pecan;
 import java.util.*;
@@ -8,16 +8,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /* A Source string is a substring of the text from a UTF-8 file, or just a UTF-8
 string. In the case of text from a file, the path name is retained, to support
-the generation of error messages. The text is normalized, i.e. line endings are
-converted to '\n', trailing spaces and trailing blank lines are removed, and a
-final newline is added if necessary.
-TODO remove BOM
+the generation of error messages. The text is normalized to remove all visual
+ambiguity, i.e. BOMs are removed, line endings are converted to '\n', trailing
+spaces and trailing blank lines are removed, tabs are expanded to four spaces,
+and a final newline is added to file text if necessary. Invalid UTF-8 bytes and
+unexpected control characters are reported.
 
 The Source class is in many ways a replacement for String. Source strings are
 stored using byte arrays. Methods are provided for handling UTF-8 text (as an
 alternative to using String.codePointAt, Character.charCount etc.) and for
-handling Pecan's numerical escapes. If a subsource is preceded by a backslash
-and a newline, then escapes are translated automatically.
+handling Pecan's escapes.
 
 There is a method for generating an accurate error message with path name, line
 number and column information from a source fragment.
@@ -35,8 +35,9 @@ class Source {
     private byte[] bytes;
     private int start, end;
 
-    // Invalid UTF-8 byte to mark filename prefix or unused bytes.
+    // Invalid UTF-8 byte to mark filename prefix or unused bytes. BOM sequence.
     private static byte MARK = (byte) 0xFF;
+    private static byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
     // Construct a Source directly from its fields.
     private Source(byte[] bs, int s, int e) { bytes = bs; start = s; end = e; }
@@ -46,12 +47,13 @@ class Source {
         bytes = s.getBytes(UTF_8);
         start = 0;
         end = bytes.length;
+        normalize();
         String e = checkUTF_8(bytes, start, end);
         if (e != null) err("Error: string contains " + e, null);
     }
 
-    // Read in a Source from a UTF-8 file. Prefix the text by "&path\n" and fill
-    // spare bytes.
+    // Read in a Source from a UTF-8 file. Prefix the text by MARK + "path\n".
+    // Add a final newline (removed by normalize if not needed).
     Source(File file) {
         InputStream is = null;
         try { is = new FileInputStream(file); }
@@ -60,7 +62,7 @@ class Source {
         String path = file.getPath();
         byte[] pathBytes = path.getBytes(UTF_8);
         int plen = pathBytes.length;
-        bytes = new byte[1 + plen + 1 + flen + 2];
+        bytes = new byte[1 + plen + 1 + flen + 1];
         bytes[0] = MARK;
         System.arraycopy(pathBytes, 0, bytes, 1, plen);
         bytes[plen + 1] = '\n';
@@ -70,7 +72,7 @@ class Source {
         catch (Exception e) { err("can't read ", e); }
         if (r != flen) err("can't read " + path, null);
         end = start + flen;
-        for (int i = end; i < bytes.length; i++) bytes[i] = MARK;
+        bytes[end++] = '\n';
         normalize();
         String e = checkUTF_8(bytes, start, end);
         if (e != null) err("Error: file contains " + e, null);
@@ -155,25 +157,43 @@ class Source {
         return c;
     }
 
-    // Get the length of the next character, interpreting escapes.
+    // Get the length of the next character, interpreting escapes, including a
+    // possible following \& in grammars or \ newline in test input.
     int rawLength(int p) {
         check(0 <= p && p < length());
-        if (bytes[start+p] != '\\') return nextLength(p);
-        int k = start + p + 1;
-        if (bytes[k] == '0') {
-            while ("0123456789ABCDEFabcdef".indexOf(bytes[k]) >= 0) k++;
+        int len;
+        if (bytes[start+p] != '\\') len = nextLength(p);
+        else {
+            int k = start + p + 1;
+            if (bytes[k] < '0' || bytes[k] > '9') len = 2;
+            else if (bytes[k] == '0') {
+                while ("0123456789ABCDEFabcdef".indexOf(bytes[k]) >= 0) k++;
+            }
+            else while ('0' <= bytes[k] && bytes[k] <= '9') k++;
         }
-        else while ('0' <= bytes[k] && bytes[k] <= '9') k++;
+        if (bytes[k] == '\\' && bytes[k+1] == '&') k += 2;
+        else if (bytes[k] == '\\' && bytes[k+1] == '\n') k += 2;
         return k - start - p;
     }
 
-    // Get the next character, given its length, interpreting escapes.
+    // Get the next character, given its (correct) length, interpreting escapes.
     int rawChar(int p, int length) {
         check(0 <= p && p < length());
         if (bytes[start+p] != '\\') return nextChar(p, length);
         int k = start + p + 1;
         length--;
         int v = 0;
+        switch (bytes[k]) {
+            case 'b': return '\b';
+            case 'f': return '\f';
+            case 'n': return '\n';
+            case 'r': return '\r';
+            case 't': return '\t';
+            case '"': return '"';
+            case '\'': return '\'';
+            case '\\': return '\\';
+        }
+        if (length >= 2 && bytes[k+length-2] == '\\') length = length - 2;
         if (bytes[k] == '0') {
             for (int i = k; i < k + length; i++) {
                 int d = bytes[i];
@@ -301,9 +321,7 @@ class Source {
 
     // Find the end of the file.
     private int fileEnd() {
-        int e = bytes.length;
-        while (e > 0 && bytes[e-1] == MARK) e--;
-        return e;
+        return bytes.length;
     }
 
     // Find the line number within the surrounding file.
@@ -362,21 +380,39 @@ class Source {
         return message;
     }
 
-    // Normalize text. Convert line endings to \n, delete trailing spaces,
-    // delete trailing lines, add missing last newline.
+    // Normalize text. Remove BOM, expand tabs, convert line endings to \n,
+    // delete trailing spaces, delete trailing lines. Truncate the array to the
+    // length of the text.
     private void normalize() {
-        bytes[end++] = '\n';
         int out = start;
+        byte[] bs = bytes;
         for (int i = start; i < end; i++) {
+            if (out >= bs.length) bs = Arrays.copyOf(bs, bs.length + 100);
+            if (i < bytes.length - 3 &&
+                bytes[i] == BOM[0] &&
+                bytes[i+1] == BOM[1] &&
+                bytes[i+2] == BOM[2]) {
+                i += 2;
+                continue;
+            }
             byte b = bytes[i];
-            if (b != '\r' && b != '\n') { bytes[out++] = b; continue; }
+            if (b == '\t') {
+                if (bs == bytes) bs = Arrays.copyOf(bs, bs.length + 100);
+                else if (out > bs.length - 4) {
+                    bs = Arrays.copyOf(bs, bs.length + 100);
+                }
+                for (int j = 0; j < 4; j++) bs[out++] = ' ';
+                continue;
+            }
+            if (b != '\r' && b != '\n') { bs[out++] = b; continue; }
             if (b == '\r' && bytes[i + 1] == '\n') i++;
-            while (out >= start && bytes[out - 1] == ' ') out--;
-            bytes[out++] = '\n';
+            while (out >= start && bs[out - 1] == ' ') out--;
+            bs[out++] = '\n';
         }
-        while (out > start && bytes[out - 1] == '\n') out--;
-        bytes[out++] = '\n';
+        while (out >= start+2 && bs[out-1] == '\n' && bs[out-2] == '\n') out--;
         end = out;
+        if (out < bs.length) bs = Arrays.copyOf(bs, out);
+        bytes = bs;
     }
 
     // Check that a, b form a valid character code (8 to 11 bits).
@@ -484,23 +520,47 @@ class Source {
         System.exit(1);
     }
 
-    public static void main(String[] args) {
+    // Test UTF-8 checking functions.
+    private static void testUTF_8() {
         testCheck2();
         testCheck3();
         testCheck4();
+    }
+
+    // Check sources from strings, including BOM, tabs.
+    private static void testStrings() {
         Source s = new Source("abc");
         assert(s.bytes.length == 3 && s.start == 0 && s.end == 3);
         assert(s.substring(0,3).equals("abc"));
-        s = new Source(new File("pecan/Source.java"));
+        s = new Source("\uFEFFabc");
+        assert(s.bytes.length == 3 && s.start == 0 && s.end == 3);
+        assert(s.substring(0,3).equals("abc"));
+        s = new Source("\ta\n\t\tb\nc\td");
+        assert(s.bytes.length == 22);
+        assert(s.text().equals("    a\n        b\nc    d"));
+    }
+
+    // Test character and escape handling.
+    private static void testEscapes() {
+        Source s = new Source("a\\92b\u03c0c\\03c0\\&d");
+        assert(s.nextLength(1) == 1 && s.nextChar(1,1) == '\\');
+        assert(s.nextLength(5) == 2 && s.nextChar(5,2) == 0x3c0);
+        assert(s.rawLength(1) == 3 && s.rawChar(1,3) == 92);
+        assert(s.rawLength(8) == 7 && s.rawChar(8,7) == 0x3c0);
+    }
+
+    // Test a real file, this one.
+    private static void testFile() {
+        Source s = new Source(new File("pecan/Source.java"));
         assert(s.bytes[0] == MARK);
         assert(s.path().equals("pecan/Source.java"));
         assert(s.substring(0,2).equals("//"));
         assert(s.substring(s.length()-2, s.length()).equals("}\n"));
-        s = new Source("a\\92b\\03c0x");
-        assert(s.nextLength(1) == 1 && s.nextChar(1,1) == '\\');
-        assert(s.rawLength(1) == 3 && s.rawChar(1,3) == 92);
-        assert(s.rawLength(5) == 5 && s.rawChar(5,5) == 0x3c0);
-        s = new Source("&file\nLine one\nLine two\n");
+    }
+
+    // Test the generation of accurate error messages, from a fake file.
+    private static void testMessages() {
+        Source s = new Source("&file\nLine one\nLine two\n");
         s.bytes[0] = MARK;
         s = s.sub(6,24);
         String out =
@@ -535,5 +595,13 @@ class Source {
             "\n" +
             "^";
         assert(s.sub(0,0).error("message").equals(out));
+    }
+
+    public static void main(String[] args) {
+        testUTF_8();
+        testStrings();
+        testEscapes();
+        testFile();
+        testMessages();
     }
 }

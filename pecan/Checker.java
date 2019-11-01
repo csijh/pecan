@@ -85,27 +85,27 @@ class Checker implements Testable {
     private void scanNode(Node node) {
         int flags = node.flags();
         switch(node.op()) {
-        case Error: case Temp: break;
-        case List: case Empty: scanList(node); break;
-        case Rule: scanRule(node); break;
-        case Id: scanId(node); break;
-        case Act: scanAct(node); break;
-        case Drop: scanAct(node); break;
-        case Mark: scanMark(node); break;
-        case And: scanAnd(node); break;
-        case Or: scanOr(node); break;
-        case Opt: scanOpt(node); break;
-        case Any: scanAny(node); break;
-        case Some: scanSome(node); break;
-        case See: scanSee(node); break;
-        case Tag: case Char: case Text: case Set: scanMatch(node); break;
-        case Cat: case Range: scanMatch(node); break;
-        case Success: scanSuccess(node); break;
-        case Fail: scanFail(node); break;
-        case Split: case Eot: scanSplit(node); break;
-        case Has: scanHas(node); break;
-        case Not: scanNot(node); break;
-        default: assert false : "Unexpected node type " + node.op(); break;
+            case Error: case Temp: break;
+            case List: case Empty: scanList(node); break;
+            case Rule: scanRule(node); break;
+            case Id: scanId(node); break;
+            case Act: scanAct(node); break;
+            case Drop: scanAct(node); break;
+            case Mark: scanMark(node); break;
+            case And: scanAnd(node); break;
+            case Or: scanOr(node); break;
+            case Opt: scanOpt(node); break;
+            case Any: scanAny(node); break;
+            case Some: scanSome(node); break;
+            case See: scanSee(node); break;
+            case Tag: case Char: case Text: case Set: scanMatch(node); break;
+            case Cat: case Range: scanMatch(node); break;
+            case Success: scanSuccess(node); break;
+            case Fail: scanFail(node); break;
+            case Split: case Eot: scanSplit(node); break;
+            case Has: scanHas(node); break;
+            case Not: scanNot(node); break;
+            default: assert false : "Unexpected node type " + node.op(); break;
         }
         if (node.flags() != flags) changed = true;
     }

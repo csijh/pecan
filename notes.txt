@@ -1,54 +1,19 @@
 TODO:
-- in test files, allow a one-liner which specifies an entry point.
-- in test files, when one test is picked out, make sure any previously set up
-    grammar is used.
++ BOM
++ full set of escapes
++ literal names (node.name()) and camels for hyphens
+- edge cases in in/out for tests (escapes?)
+- in compiler, 'or' versus 'and' when go()&&... (too many brackets?)
+- is there a lift optimisation for markers?
+- analyse NEED properly
+- transformer - redo Checker
+- transformer - what about source?
+
 - extend the calculator tutorial to include bytecode generation.
 - extend the manual to include a discussion of the C interpreter.
-- have an optimisation tutorial combining recursive ascent and bifurcation.
-- indent for inserted bytecode?
-
-Improvements to syntax
-----------------------
-
-With tokens, %x not immediately followed by action is implicitly %x @
-(actually works already, but needs stressing).
-
-Replace:   @startlist (x @2add)* @1endlist
-by:        { (x ^)* } @*list
-
-The {} brackets are to be followed immediately by a variable-arg action @*...
-    (and an @*... must immediately follow a {...})
-The expression inside is stack-checked because of ^, but can generate
-    any number of items.
-Implemented by pushing a marker on the stack at '{' and doing nothing at ^ and
-    using the marker at '}'
-
-Normally, @action cannot be at the beginning of a choice, but an exception can
-be made for {. The implementation is like:
-
-   @a x   ==   (@a s)& x
-
-where x starts with s, i.e. an implicit lookahead until x is committed.
 
 Improvements to bytecode interpreter
 ------------------------------------
-Don't bother with frame. Implement hard failure as exception, so return is just
-true/false. Pre-compute failure sets. Add switch. Allow grammars without
+Pre-compute failure sets. Add switch. Allow grammars without
 actions to be interpreted, using implicit variable arguments.  Check for
 tail-call optimizations.
-
-----------
-x y / x z ==? x (y / z)
-
-What if x succeeds and y soft-fails?
-
-'a' 'b' / 'a' 'c'   ==?   'a' ('b' / 'c')
-input ac
-
-----------
-Let's try again to use || for OR and && for AND.
-A parser function p succeeds, or fails (consuming input), or mismatches.
-A parse function must return 'true' if it fails so that p || q works.
-But it must return 'false' if it fails so that p && q works.
-So, we need some kind of exception mechanism for lookahead.
-But, how does a matcher "x" know whether to return false or throw an exception?

@@ -45,6 +45,13 @@ class Compiler implements Testable {
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
         if (root.op() == Error) return "Error: " + root.note();
+        int net = root.left().get(NET);
+        if (net != 1) {
+            return "Error: first rule produces " + net + " items\n";
+        }
+        if (root.left().get(NEED) > 0) {
+            return "Error: first rule can cause underflow\n";
+        }
         Transformer transformer = new Transformer();
         transformer.expandSee(root);
         transformer.lift(root);
@@ -97,7 +104,7 @@ class Compiler implements Testable {
             case Mark: compileMark(node); break;
             case Drop: compileDrop(node); break;
             case Act: compileAct(node); break;
-            default: throw new Error("Not implemented " + node.op());
+            default: assert false : "Unexpected node type " + node.op(); break;
         }
     }
 

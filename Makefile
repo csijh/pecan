@@ -2,9 +2,9 @@
 Category = pecan/Category.java
 Source = pecan/Source.java
 Op = pecan/Op.java
-Node = pecan/Node.java $(Op)
+Node = pecan/Node.java $(Op) $(Source)
 Testable = pecan/Testable.java
-Test = pecan/Test.java
+Test = pecan/Test.java $(Testable)
 Parser = pecan/Parser.java $(Test) $(Node) $(Category)
 Binder = pecan/Binder.java $(Parser)
 Checker = pecan/Checker.java $(Binder)
