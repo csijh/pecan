@@ -58,7 +58,7 @@ class Binder implements Testable {
     // Check whether the parser is token-based.
     private void collect(Node node) {
         if (node.op() == Rule) {
-            String id = node.left().name();
+            String id = node.left().rawText();
             if (rules.get(id) == null) rules.put(id, node);
         }
         if (node.op() == Tag) root.set(TI);
@@ -102,7 +102,7 @@ class Binder implements Testable {
     private void scanRule(Node node) {
         if (switchTest) return;
         if (! checkEscapes(node.left())) return;
-        String name = node.left().name();
+        String name = node.left().rawText();
         Node first = rules.get(name);
         if (node != first) err(node.left(), name + " is already defined");
     }
@@ -111,7 +111,7 @@ class Binder implements Testable {
     private void scanId(Node node) {
         if (switchTest) return;
         if (! checkEscapes(node)) return;
-        String name = node.name();
+        String name = node.rawText();
         Node rule = rules.get(name);
         if (rule == null) err(node, "undefined identifier");
         node.ref(rule);
@@ -121,7 +121,7 @@ class Binder implements Testable {
     private void scanText(Node node) {
         if (switchTest) return;
         if (! checkEscapes(node)) return;
-        int n = node.name().codePointCount(0, node.name().length());
+        int n = node.rawText().codePointCount(0, node.rawText().length());
         if (n == 0) node.op(Success);
         else if (n == 1) node.op(Char);
         if (n > 0 && root.has(TI)) err(node, "text matcher in a token parser");
@@ -131,7 +131,7 @@ class Binder implements Testable {
     private void scanSplit(Node node) {
         if (switchTest) return;
         if (! checkEscapes(node)) return;
-        int n = node.name().length();
+        int n = node.rawText().length();
         if (n == 0) node.op(Eot);
         else if (root.has(TI)) err(node, "text matcher in a token parser");
     }
@@ -140,7 +140,7 @@ class Binder implements Testable {
     private void scanSet(Node node) {
         if (switchTest) return;
         if (! checkEscapes(node)) return;
-        String name = node.name();
+        String name = node.rawText();
         int n = name.codePointCount(0, name.length());
         if (n == 0) node.op(Fail);
         else if (n == 1) node.op(Char);
@@ -171,7 +171,7 @@ class Binder implements Testable {
         if (switchTest) return;
         if (! checkEscapes(node)) return;
         String text = node.text();
-        String name = node.name();
+        String name = node.rawText();
         if (name.length() == 0) { node.op(Drop); return; }
         int arity = node.arity();
         Integer old = arities.get(name);

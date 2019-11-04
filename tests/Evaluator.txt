@@ -46,7 +46,7 @@ dots = ['.' '.'] @dots / '.' '3' @num
 ..........
 num .3
 ==========
--- String has a built-in try
+-- String has a built-in lookahead
 op = "<=" @le / "<" @lt
 ==========
 x
@@ -207,3 +207,18 @@ x = 'a' @1one
 a
 ..........
 one a
+==========
+-- Escapes in input
+x = 'a' @1one
+==========
+\97
+..........
+one a
+==========
+-- Escapes in input (escape at end of line cancels newline)
+x = "a\rb" @1one
+==========
+\97\13
+b
+..........
+one a\13b

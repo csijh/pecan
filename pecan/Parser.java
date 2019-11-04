@@ -599,7 +599,7 @@ class Parser implements Testable {
         start = in;
         Node x = output[--out];
         if (op == Include) {
-            String file = input.relativePath(x.name());
+            String file = input.relativePath(x.rawText());
             Source s2 = new Source(new File(file));
             Parser parser2 = new Parser();
             Node g = parser2.run(s2);

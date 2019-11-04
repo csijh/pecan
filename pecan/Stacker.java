@@ -10,7 +10,7 @@ import static pecan.Node.Count.*;
 /* This pass checks that output handling is consistent, that a fixed number of
 output items is produced for any given node, and that a fixed number of output
 items is needed at the start of any node. Nodes within & or ! lookaheads are
-excluded from the analysis, since actions ae switched off during them.
+excluded from the analysis, since actions are switched off during them.
 
 If the first rule of a grammar doesn't produce one item, or needs output items
 and thus causes stack underflow, reporting is delayed until compilation so that,

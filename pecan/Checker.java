@@ -17,22 +17,14 @@ progress". Nodes are annotated with the flags:
   FP   =   can fail with progress
   WF   =   well-formed
 
-These, and validity WF(x), are calculated by iterating to a fixed point, using:
+These are calculated by iterating to a fixed point.
 
-  WF(x y) = WF(x) & (SN(x) => WF(y))
-  WF(x/y) = WF(x) & WF(y)
-  WF(x?) = WF(x/"") = WF(x)
-  WF(x*) = WF(x) & ~SN(x)
-  WF(x+) = WF(xx*) = WF(x) & ~SN(x)
-  WF(x!) = WF(x)
-
-A change from version 0.4 is that some errors are now deferred and given as
-warnings just before compiling. This is for uniformity and consistency,
-especially where transformations are concerned.  Specifically, if a left hand
-alternative always progresses when it fails, so that the right hand alternative
-is inaccessible, that becomes a late warning. If there is an action at the start
-of the left hand item in a choice, as in (@a x / y), that also becomes a late
-warning. There are some further flag annotations:
+Some errors are deferred and given as warnings just before compiling. This is
+for uniformity and consistency, especially where transformations are concerned.
+Specifically, if a left hand alternative always progresses when it fails, so
+that the right hand alternative is inaccessible, that becomes a late warning. If
+there is an action at the start of the left hand item in a choice, as in (@a x /
+y), that also becomes a late warning. There are some further flag annotations:
 
   EE   =   contains marker
   AA   =   contains action (or discard)

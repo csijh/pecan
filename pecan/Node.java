@@ -79,9 +79,9 @@ class Node {
     int get(Count c) { return counts[c.ordinal()]; }
     void set(Count c, int n) { counts[c.ordinal()] = n; }
 
-    // Get the name of a node, i.e. the text without quotes, escapes etc.
+    // Get the raw text of a node, i.e. the text without quotes, escapes etc.
     // Adapt identifiers and literals, as for compiling, to detect name clashes.
-    String name() {
+    String rawText() {
         String s = source.rawText();
         char ch = s.charAt(0);
         if (ch == '#' || ch == '%') s = s.substring(1);
@@ -279,24 +279,24 @@ class Node {
         Op.main(null);
         Source.main(null);
         Node n = new Node(Char, new Source("'a'"));
-        assert(n.name().equals("a"));
+        assert(n.rawText().equals("a"));
         assert(n.charCode() == 97);
         n = new Node(Char, new Source("'\\127'"));
-        assert(n.name().equals("\177"));
+        assert(n.rawText().equals("\177"));
         n = new Node(Act, new Source("@add"));
-        assert(n.name().equals("add"));
+        assert(n.rawText().equals("add"));
         assert(n.arity() == 0);
         n = new Node(Act, new Source("@2mul"));
-        assert(n.name().equals("mul"));
+        assert(n.rawText().equals("mul"));
         assert(n.arity() == 2);
         n = new Node(Range, new Source("'a..z'"));
-        assert(n.name().equals("a..z"));
+        assert(n.rawText().equals("a..z"));
         assert(n.low() == 97);
         assert(n.high() == 97+25);
         n = new Node(Id, new Source("one-two"));
-        assert(n.name().equals("oneTwo"));
+        assert(n.rawText().equals("oneTwo"));
         n = new Node(Id, new Source("`<=`"));
-        assert(n.name().equals("LtEq"));
+        assert(n.rawText().equals("LtEq"));
         System.out.println("Node class OK");
     }
 }

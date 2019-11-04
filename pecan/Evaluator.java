@@ -62,7 +62,7 @@ public class Evaluator implements Testable {
     // Get the Evaluator ready to run, with the given input.
     private void prepare(Source s) {
         source = s;
-        input = source.text();
+        input = source.rawText();
         ok = true;
         start = in = out = marked = lookahead = 0;
         failures = new TreeSet<>();
@@ -231,7 +231,7 @@ public class Evaluator implements Testable {
     // Parse %t
     private void parseTag(Node node) {
         if (switchTest) return;
-        String tag = node.name();
+        String tag = node.rawText();
         ok = input.startsWith(tag, in);
         if (ok) {
             start = in;
@@ -275,10 +275,8 @@ public class Evaluator implements Testable {
     // Parse "abc"
     private void parseText(Node node) {
         if (switchTest) return;
-//        String text = node.name();
-//        int length = text.length();
-        int length = node.text().length() - 2;
-        String text = node.text().substring(1, length+1);
+        String text = node.rawText();
+        int length = text.length();
         ok = true;
         if (in + length > input.length()) ok = false;
         else for (int i=0; i<length; i++) {
@@ -293,10 +291,8 @@ public class Evaluator implements Testable {
     // Parse 'abc'
     private void parseSet(Node node) {
         if (switchTest) return;
-//        String text = node.name();
-//        int length = text.length();
-        int length = node.text().length() - 2;
-        String text = node.text().substring(1, length+1);
+        String text = node.rawText();
+        int length = text.length();
         ok = false;
         if (in >= input.length()) { }
         else for (int i=0; i<length; i++) {
@@ -332,7 +328,7 @@ public class Evaluator implements Testable {
     // Parse <abc>
     private void parseSplit(Node node) {
         if (switchTest) return;
-        String text = node.name();
+        String text = node.rawText();
         String rest = input.substring(in);
         ok = rest.compareTo(text) <= 0;
     }
@@ -341,7 +337,7 @@ public class Evaluator implements Testable {
     private void parseCat(Node node) {
         if (switchTest) return;
         ok = false;
-        Category cat = Category.valueOf(node.name());
+        Category cat = Category.valueOf(node.rawText());
         if (in < input.length()) {
             int ch = input.codePointAt(in);
             Category c = Category.get(ch);
@@ -377,12 +373,32 @@ public class Evaluator implements Testable {
         if (switchTest) return;
         ok = true;
         if (lookahead > 0) return;
-        String s = node.name();
+        String s = node.rawText();
         if (charInput && in > start) s += " " + input.substring(start, in);
+        s = escape(s);
         s += "\n";
         if (tracing) System.out.print("O: " + s);
         output.append(s);
         start = in;
+    }
+
+    // Convert control characters and Unicode to escapes.
+    private String escape(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); ) {
+            int ch = s.codePointAt(i);
+            i += Character.charCount(ch);
+            if (' ' <= ch && ch <= '~') sb.append((char)ch);
+            else {
+                sb.append("\\");
+                sb.append(ch);
+                if (i < s.length()) {
+                    ch = s.charAt(i);
+                    if (ch == ';' || ('0' <= ch && ch <= '9')) sb.append(';');
+                }
+            }
+        }
+        return sb.toString();
     }
 
     // Print out the input position.

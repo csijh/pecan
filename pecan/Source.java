@@ -545,7 +545,7 @@ class Source {
 
     // Test the generation of accurate error messages, from a fake file.
     private static void testMessages() {
-        Source s = new Source("&file\nLine one\nLine two\n");
+        Source s = new Source("?file\nLine one\nLine two\n");
         s.bytes[0] = MARK;
         s = s.sub(6,24);
         String out =

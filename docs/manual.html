@@ -639,7 +639,7 @@ conventions is:</p>
 <table>
 <tr><th>Escape</th><th>Meaning</th>
 <tr><td><code>\ddd...;</code></td><td>character with decimal code</td>
-<tr><td><code>\0xxx...;</code></td><td>character with hexadecimal code</td>
+<tr><td><code>\0hhh...;</code></td><td>character with hexadecimal code</td>
 </table>
 
 <p>Some conventional escape sequences are not supported, e.g. <code>\a</code>,
@@ -1057,12 +1057,12 @@ start with:</p>
 ...
 </pre>
 
-<p>The grammar fragment containing the inclusion can specify a particular rule
-to test, add <code>&lt;></code> to ensure that the rule parses all of the input
-supplied in each test. It may also provide definitions for any undefined
-identifiers in the grammar file, which could be necessary if the grammar file
-contains one module of a modular grammar, which depends on another module. For
-example, a test file could begin:</p>
+<p>The grammar fragment containing the inclusion can for example, specify a
+particular rule to test and add <code>&lt;></code> to ensure that the rule
+parses all of the input supplied in each test. It may also provide definitions
+for any undefined identifiers in the grammar file, which could be necessary if
+the grammar file contains one module of a modular grammar, which depends on
+another module. For example, a test file could begin:</p>
 
 <pre>start = expression &lt;>
 {expressions.txt}
@@ -1093,7 +1093,20 @@ a test file which sets up a grammar, but contains no tests.</p>
 <p>Test files can use the UTF-8 encoding. They are normalized to avoid visual
 ambiguity problems, by changing all line endings to <code>\n</code>, removing
 trailing spaces at the ends of lines, and removing trailing blank lines at the
-very end of the test file.</p>
+very end of the test file. Escapes are recognised in the test input, and used to
+express control characters and Unicode characters beyond ASCII in the output. To
+allow edge cases to be tested, there is a further convention that if an input
+line ends in an escape, the newline is cancelled. For example:</p>
+
+<pre>==========
+Line one\r
+Line two \n
+..........
+...
+</pre>
+
+<p>The first input line ends in a carriage return instead of a line feed, and
+the second has a trailing space.</p>
 
 <h2 id="checks">Consistency checks</h2>
 
