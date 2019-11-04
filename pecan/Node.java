@@ -84,17 +84,18 @@ class Node {
     String name() {
         String s = source.rawText();
         char ch = s.charAt(0);
-        if (ch == '#' || ch == '%' || ch == '@') s = s.substring(1);
-        if (ch == '@') {
+        if (ch == '#' || ch == '%') s = s.substring(1);
+        else if (ch == '@') {
+            s = s.substring(1);
             while (s.length() > 0 && '0' <= s.charAt(0) && s.charAt(0) <= '9') {
                 s = s.substring(1);
             }
+            if (s.length() == 0) return s;
         }
-        if (s.length() == 0) return s;
         ch = s.charAt(0);
         if ("\"'<{`".indexOf(ch) >= 0) s = s.substring(1, s.length() - 1);
-        if (ch == '`') s = translateLiteral(s);
         else if (s.indexOf('-') >= 0) s = translateId(s);
+        if (ch == '`') s = translateLiteral(s);
         return s;
     }
 
