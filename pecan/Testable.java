@@ -21,5 +21,7 @@ interface Testable {
     default void escaping(boolean on) {}
 
     // No testing.
-    public static void main(String[] args) {}
+    public static void main(String[] args) {
+        System.out.println("Testable interface OK");
+    }
 }

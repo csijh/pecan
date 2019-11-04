@@ -11,19 +11,17 @@ import java.io.*;
 /* Parse a Pecan source text, assumed to be in UTF-8 format, producing a tree.
 
 The parser is translated from the grammar rules in the comments. The grammar (a)
-has repetitions lifted to the top level as separate rules, (b) has no left-hand
-alternative starting with an action and (b) has no see construct containing
-error markers or actions. That means one rule corresponds to one function, and
-actions don't need to be delayed, just switched off during lookahead. The
-functions can be hand-maintained to keep this class self-contained and avoid
-bootstrap problems.
+has repetitions lifted to the top level as separate rules, and (b) has no see
+construct containing error markers or actions. That means one rule corresponds
+to one function. The functions can be hand-maintained to keep this class
+self-contained and avoid bootstrap problems.
 
 The grammar is concrete, i.e. it creates extra nodes for postfix operator
 symbols, brackets, and bracketed subexpressions, and then removes them at the
 end. This allows the text extent of a node to be found uniformly by combining
 the text extents of its children. For example, given an expression (x)y, the
-combination of two nodes with extents "x" and "y" is "(x)y" and not "x)y". An
-alternative, to increase the extent "x" to "(x)" wouldn't work when x is an
+combination of two nodes with extents "x" and "y" is "(x)y" and not "x)y".
+Increasing the extent of the first node to "(x)" wouldn't work when x is an
 identifier, because then the node's text would not be the name of the id. */
 
 class Parser implements Testable {
@@ -360,9 +358,10 @@ class Parser implements Testable {
         return OPT(DO() && visible() && visibles());
     }
 
-    // escape = backslash #digit digits
+    // escape = backslash (digits ';'? / 'rnqdb')
     private boolean escape() {
-        return backslash() && MARK(DIGIT) && digits();
+        return backslash() && (
+        (digits() && (CHAR(';') || true)) || SET("rnqdb"));
     }
 
     // backslash = '\'

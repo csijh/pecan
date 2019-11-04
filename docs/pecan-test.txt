@@ -74,20 +74,6 @@ empty
 list
 list
 ==========
--- Windows line endings
-x=x\13\10\
-y=y\13\10\
-..........
-id x
-id x
-rule
-id y
-id y
-rule
-empty
-list
-list
-==========
 -- Blank lines
 
 
@@ -97,21 +83,6 @@ id x
 id x
 rule
 empty
-list
-==========
--- Trailing spaces
-x = x    \10
-         \10
-y = y    \10
-..........
-id x
-id x
-rule
-id y
-id y
-rule
-empty
-list
 list
 ==========
 -- Trailing blank lines
@@ -128,30 +99,6 @@ id y
 rule
 empty
 list
-list
-==========
--- No final newline
-x = x
-y = y\
-..........
-id x
-id x
-rule
-id y
-id y
-rule
-empty
-list
-list
-==========
--- No final newline
-x = x
--- comment\
-..........
-id x
-id x
-rule
-empty
 list
 ==========
 -- Varied comments and empty lines
@@ -177,35 +124,35 @@ list
 -- Illegal end of line comment
 x = y -- comment
 ..........
-Error in pecan-test.txt, line 178: expecting atom, newline, operator
+Error in pecan-test.txt, line 125: expecting atom, newline, operator
 x = y -- comment
       ^
 ==========
 -- Unexpected character
 x = |y|
 ..........
-Error in pecan-test.txt, line 185: expecting atom, newline
+Error in pecan-test.txt, line 132: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
 ..........
-Error in pecan-test.txt, line 192: expecting quote
+Error in pecan-test.txt, line 139: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
 ..........
-Error in pecan-test.txt, line 199: expecting quote
+Error in pecan-test.txt, line 146: expecting quote
 x = 'abc
         ^
 ==========
 -- Expecting atom
 x = /
 ..........
-Error in pecan-test.txt, line 206: expecting atom, newline
+Error in pecan-test.txt, line 153: expecting atom, newline
 x = /
     ^
 ==========
@@ -213,21 +160,21 @@ x = /
 x = (y
 y = z
 ..........
-Error in pecan-test.txt, line 213: expecting atom, bracket, operator
+Error in pecan-test.txt, line 160: expecting atom, bracket, operator
 x = (y
       ^
 ==========
 -- Dot in the wrong place
 x = .
 ..........
-Error in pecan-test.txt, line 221: expecting atom, newline
+Error in pecan-test.txt, line 168: expecting atom, newline
 x = .
     ^
 ==========
 -- Dot outside of a range
 x = 0.
 ..........
-Error in pecan-test.txt, line 228: expecting atom, newline
+Error in pecan-test.txt, line 175: expecting atom, newline
 x = 0.
     ^
 ==========
@@ -257,7 +204,7 @@ list
 -- Definition of category
 Nd = "x"
 ..........
-Error in pecan-test.txt, line 258: expecting id, newline
+Error in pecan-test.txt, line 205: expecting id, newline
 Nd = "x"
 ^
 ==========
@@ -273,7 +220,7 @@ list
 -- Bad tag
 x = %
 ..........
-Error in pecan-test.txt, line 274: expecting name
+Error in pecan-test.txt, line 221: expecting name
 x = %
      ^
 ==========
@@ -289,7 +236,7 @@ list
 -- Bad marker
 x = 'x' #3
 ..........
-Error in pecan-test.txt, line 290: expecting name
+Error in pecan-test.txt, line 237: expecting name
 x = 'x' #3
          ^
 ==========
@@ -395,11 +342,11 @@ empty
 list
 ==========
 -- Ranges
-r1 = '\\0..\\127'
+r1 = '\0..\127'
 r2 = 'a..z'
 ..........
 id r1
-range '\\0..\\127'
+range '\0..\127'
 rule
 id r2
 range 'a..z'
@@ -436,14 +383,14 @@ list
 x = y /
 z / /
 ..........
-Error in pecan-test.txt, line 437: expecting atom, newline
+Error in pecan-test.txt, line 384: expecting atom, newline
 z / /
     ^
 ==========
 -- Actions, tests, escapes and errors
 x = %x @0x @1x @ @x
-y = '\\0' '\\1' '\\2' '\\10' '\\12' '\\123'
-z = '\\0ffff' '\\01ABCDEF23' '\\0FG'
+y = '\0' '\1' '\2' '\10' '\12' '\123'
+z = '\0ffff' '\01ABCDEF23' '\0FG'
 u = #err ''
 ..........
 id x
@@ -458,12 +405,12 @@ and
 and
 rule
 id y
-set '\\0'
-set '\\1'
-set '\\2'
-set '\\10'
-set '\\12'
-set '\\123'
+set '\0'
+set '\1'
+set '\2'
+set '\10'
+set '\12'
+set '\123'
 and
 and
 and
@@ -471,9 +418,9 @@ and
 and
 rule
 id z
-set '\\0ffff'
-set '\\01ABCDEF23'
-set '\\0FG'
+set '\0ffff'
+set '\01ABCDEF23'
+set '\0FG'
 and
 and
 rule
@@ -491,16 +438,16 @@ list
 -- Unicode letters and digits in identifiers, maximum codes
 x = abcπ
 y = d123٤
-z = '\\1114111\\0ffff'
+z = '\1114111\010ffff'
 ..........
 id x
-id abc\960
+id abcπ
 rule
 id y
-id d123\1636
+id d123٤
 rule
 id z
-set '\\1114111\\0ffff'
+set '\1114111\010ffff'
 rule
 empty
 list
@@ -659,9 +606,11 @@ rule
 empty
 list
 ==========
--- Illegal ad-hoc escape (escaped using test file conventions)
-bs = '\\n'
+-- Escapes
+bs = '\r\n\q\d\b\960;;'
 ..........
-Error in pecan-test.txt, line 663: expecting digit
-bs = '\\n'
-       ^
+id bs
+set '\r\n\q\d\b\960;;'
+rule
+empty
+list

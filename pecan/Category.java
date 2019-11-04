@@ -150,6 +150,7 @@ enum Category {
             Category cat2 = values()[Character.getType(ch)];
             if (cat1 != cat2) throw new Error("Bad tables " + ch);
         }
+        System.out.println("Category class OK");
     }
 
     private static final int UNICODES = 1114112;

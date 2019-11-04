@@ -7,12 +7,11 @@ import java.nio.file.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /* A Source string is a substring of the text from a UTF-8 file, or just a UTF-8
-string. In the case of text from a file, the path name is retained, to support
-the generation of error messages. The text is normalized to remove all visual
-ambiguity, i.e. BOMs are removed, line endings are converted to '\n', trailing
-spaces and trailing blank lines are removed, tabs are expanded to four spaces,
-and a final newline is added to file text if necessary. Invalid UTF-8 bytes and
-unexpected control characters are reported.
+string. In the case of text from a file, the path name is retained to support
+the generation of error messages, and the text is normalized to remove common
+visual ambiguities, i.e. BOMs are removed, line endings are converted to '\n',
+trailing spaces and trailing blank lines are removed, and a missing final
+newline is added. Invalid UTF-8 bytes are reported.
 
 The Source class is in many ways a replacement for String. Source strings are
 stored using byte arrays. Methods are provided for handling UTF-8 text (as an
@@ -35,9 +34,9 @@ class Source {
     private byte[] bytes;
     private int start, end;
 
-    // Invalid UTF-8 byte to mark filename prefix or unused bytes. BOM sequence.
-    private static byte MARK = (byte) 0xFF;
+    // BOM sequence, and invalid byte to mark filename prefix or unused bytes.
     private static byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+    private static byte MARK = (byte) 0xFF;
 
     // Construct a Source directly from its fields.
     private Source(byte[] bs, int s, int e) { bytes = bs; start = s; end = e; }
@@ -47,13 +46,10 @@ class Source {
         bytes = s.getBytes(UTF_8);
         start = 0;
         end = bytes.length;
-        normalize();
-        String e = checkUTF_8(bytes, start, end);
-        if (e != null) err("Error: string contains " + e, null);
     }
 
-    // Read in a Source from a UTF-8 file. Prefix the text by MARK + "path\n".
-    // Add a final newline (removed by normalize if not needed).
+    // Read in a Source from a UTF-8 file. Prefix the text by MARK + "path\n",
+    // and add final newline (removed by normalisation if unnecessary).
     Source(File file) {
         InputStream is = null;
         try { is = new FileInputStream(file); }
@@ -101,7 +97,7 @@ class Source {
 
     // Construct a subsource, between two given byte-positions.
     Source sub(int s, int e) {
-        check(s >= 0 && s <= e && start + e <= end);
+        check(0 <= s && s <= e && start + e <= end);
         return new Source(bytes, start + s, start + e);
     }
 
@@ -117,7 +113,7 @@ class Source {
 
     // Return a substring.
     String substring(int s, int e) {
-        check(s >= 0 && s <= e && e <= end - start);
+        check(0 <= s && s <= e && e <= end - start);
         return new String(bytes, start+s, e-s, UTF_8);
     }
 
@@ -158,21 +154,22 @@ class Source {
     }
 
     // Get the length of the next character, interpreting escapes, including a
-    // possible following \& in grammars or \ newline in test input.
+    // possible following ; in grammars or newline in test input.
     int rawLength(int p) {
         check(0 <= p && p < length());
-        int len;
-        if (bytes[start+p] != '\\') len = nextLength(p);
-        else {
-            int k = start + p + 1;
-            if (bytes[k] < '0' || bytes[k] > '9') len = 2;
-            else if (bytes[k] == '0') {
-                while ("0123456789ABCDEFabcdef".indexOf(bytes[k]) >= 0) k++;
-            }
-            else while ('0' <= bytes[k] && bytes[k] <= '9') k++;
+        int k;
+        if (bytes[start+p] != '\\') return nextLength(p);
+        k = start + p + 1;
+        if ('a' <= bytes[k] && bytes[k] <= 'z') k++;
+        else if (bytes[k] == '0') {
+            while ("0123456789ABCDEFabcdef".indexOf(bytes[k]) >= 0) k++;
+            if (bytes[k] == ';') k++;
         }
-        if (bytes[k] == '\\' && bytes[k+1] == '&') k += 2;
-        else if (bytes[k] == '\\' && bytes[k+1] == '\n') k += 2;
+        else {
+            while ('0' <= bytes[k] && bytes[k] <= '9') k++;
+            if (bytes[k] == ';') k++;
+        }
+        if (bytes[k] == '\n') k++;
         return k - start - p;
     }
 
@@ -181,19 +178,17 @@ class Source {
         check(0 <= p && p < length());
         if (bytes[start+p] != '\\') return nextChar(p, length);
         int k = start + p + 1;
-        length--;
-        int v = 0;
         switch (bytes[k]) {
-            case 'b': return '\b';
-            case 'f': return '\f';
-            case 'n': return '\n';
             case 'r': return '\r';
-            case 't': return '\t';
-            case '"': return '"';
-            case '\'': return '\'';
-            case '\\': return '\\';
+            case 'n': return '\n';
+            case 'q': return '\'';
+            case 'd': return '"';
+            case 'b': return '\\';
         }
-        if (length >= 2 && bytes[k+length-2] == '\\') length = length - 2;
+        length--;
+        if (length > 0 && bytes[k+length-1] == ';') length--;
+        if (length > 0 && bytes[k+length-1] == '\n') length--;
+        int v = 0;
         if (bytes[k] == '0') {
             for (int i = k; i < k + length; i++) {
                 int d = bytes[i];
@@ -321,7 +316,9 @@ class Source {
 
     // Find the end of the file.
     private int fileEnd() {
-        return bytes.length;
+        int n = bytes.length;
+        while (n > 0 && bytes[n-1] == MARK) n--;
+        return n;
     }
 
     // Find the line number within the surrounding file.
@@ -380,15 +377,12 @@ class Source {
         return message;
     }
 
-    // Normalize text. Remove BOM, expand tabs, convert line endings to \n,
-    // delete trailing spaces, delete trailing lines. Truncate the array to the
-    // length of the text.
+    // Normalize text. Remove BOM, convert line endings to \n, delete trailing
+    // spaces, delete trailing blank lines. Fill unused bytes with MARK.
     private void normalize() {
         int out = start;
-        byte[] bs = bytes;
         for (int i = start; i < end; i++) {
-            if (out >= bs.length) bs = Arrays.copyOf(bs, bs.length + 100);
-            if (i < bytes.length - 3 &&
+            if (i <= bytes.length - 3 &&
                 bytes[i] == BOM[0] &&
                 bytes[i+1] == BOM[1] &&
                 bytes[i+2] == BOM[2]) {
@@ -396,23 +390,14 @@ class Source {
                 continue;
             }
             byte b = bytes[i];
-            if (b == '\t') {
-                if (bs == bytes) bs = Arrays.copyOf(bs, bs.length + 100);
-                else if (out > bs.length - 4) {
-                    bs = Arrays.copyOf(bs, bs.length + 100);
-                }
-                for (int j = 0; j < 4; j++) bs[out++] = ' ';
-                continue;
-            }
-            if (b != '\r' && b != '\n') { bs[out++] = b; continue; }
+            if (b != '\r' && b != '\n') { bytes[out++] = b; continue; }
             if (b == '\r' && bytes[i + 1] == '\n') i++;
-            while (out >= start && bs[out - 1] == ' ') out--;
-            bs[out++] = '\n';
+            while (out >= start && bytes[out - 1] == ' ') out--;
+            bytes[out++] = '\n';
         }
-        while (out >= start+2 && bs[out-1] == '\n' && bs[out-2] == '\n') out--;
+        while (out >= start+2 && bytes[out-2] == '\n') out--;
         end = out;
-        if (out < bs.length) bs = Arrays.copyOf(bs, out);
-        bytes = bs;
+        for (int i = end; i < bytes.length; i++) bytes[i] = MARK;
     }
 
     // Check that a, b form a valid character code (8 to 11 bits).
@@ -425,13 +410,13 @@ class Source {
     // Byte values are passed as int to represent them as unsigned.
     private static boolean check3(int a, int b, int c) {
         if (a == 0xE0) {
-            if ((0xA0 <= b && b <= 0xBF) && (0x80 <= c && c <= 0xBF)) return true;
+            if ((0xA0<=b && b<=0xBF) && (0x80<=c && c<=0xBF)) return true;
         }
-        else if ((0xE1 <= a && a <= 0xEC) || a == 0xEE || a == 0xEF) {
-            if ((0x80 <= b && b <= 0xBF) && (0x80 <= c && c <= 0xBF)) return true;
+        else if ((0xE1<=a && a<=0xEC) || a == 0xEE || a == 0xEF) {
+            if ((0x80<=b && b<=0xBF) && (0x80<=c && c<=0xBF)) return true;
         }
         else if (a == 0xED) {
-            if ((0x80 <= b && b <= 0x9F) && (0x80 <= c && c <= 0xBF)) return true;
+            if ((0x80<=b && b<=0x9F) && (0x80<=c && c<=0xBF)) return true;
         }
         return false;
     }
@@ -457,17 +442,13 @@ class Source {
         return false;
     }
 
-    // Check that a byte array contains valid, control-free UTF-8 text.
-    // Return an error message or null. Use int for unsigned byte values.
+    // Check that a byte array contains valid UTF-8 text. Return an error
+    // message or null.
     private static String checkUTF_8(byte[] bs, int start, int end) {
         int a, b, c, d;
         for (int i = start; i < end; i++) {
             a = bs[i] & 0xFF;
-            if (' ' <= a && a <= '~') continue;
-            if (a == '\r' || a == '\n') continue;
-            if (a == '\0') return "nulls";
-            if (a == '\t') return "tabs";
-            if (a < 0x80) return "control characters";
+            if (a < 0x80) continue;
             b = bs[++i] & 0xFF;
             if (check2(a, b)) continue;
             c = bs[++i] & 0xFF;
@@ -533,20 +514,24 @@ class Source {
         assert(s.bytes.length == 3 && s.start == 0 && s.end == 3);
         assert(s.substring(0,3).equals("abc"));
         s = new Source("\uFEFFabc");
-        assert(s.bytes.length == 3 && s.start == 0 && s.end == 3);
+        s.normalize();
+        assert(s.start == 0 && s.end == 3);
         assert(s.substring(0,3).equals("abc"));
-        s = new Source("\ta\n\t\tb\nc\td");
-        assert(s.bytes.length == 22);
-        assert(s.text().equals("    a\n        b\nc    d"));
     }
 
     // Test character and escape handling.
     private static void testEscapes() {
-        Source s = new Source("a\\92b\u03c0c\\03c0\\&d");
-        assert(s.nextLength(1) == 1 && s.nextChar(1,1) == '\\');
-        assert(s.nextLength(5) == 2 && s.nextChar(5,2) == 0x3c0);
-        assert(s.rawLength(1) == 3 && s.rawChar(1,3) == 92);
-        assert(s.rawLength(8) == 7 && s.rawChar(8,7) == 0x3c0);
+        Source s = new Source("ax");
+        assert(s.nextLength(0) == 1 && s.nextChar(0,1) == 'a');
+        assert(s.rawLength(0) == 1 && s.rawChar(0,1) == 'a');
+        s = new Source("\u03c0x");
+        assert(s.nextLength(0) == 2 && s.nextChar(0,2) == '\u03c0');
+        assert(s.rawLength(0) == 2 && s.rawChar(0,2) == '\u03c0');
+        s = new Source("\\97x");
+        assert(s.nextLength(0) == 1 && s.nextChar(0,1) == '\\');
+        assert(s.rawLength(0) == 3 && s.rawChar(0,3) == 'a');
+        s = new Source("\\03c0;x");
+        assert(s.rawLength(0) == 6 && s.rawChar(0,6) == 0x3c0);
     }
 
     // Test a real file, this one.
@@ -603,5 +588,6 @@ class Source {
         testEscapes();
         testFile();
         testMessages();
+        System.out.println("Source class OK");
     }
 }

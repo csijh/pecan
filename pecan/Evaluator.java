@@ -275,6 +275,8 @@ public class Evaluator implements Testable {
     // Parse "abc"
     private void parseText(Node node) {
         if (switchTest) return;
+//        String text = node.name();
+//        int length = text.length();
         int length = node.text().length() - 2;
         String text = node.text().substring(1, length+1);
         ok = true;
@@ -291,6 +293,8 @@ public class Evaluator implements Testable {
     // Parse 'abc'
     private void parseSet(Node node) {
         if (switchTest) return;
+//        String text = node.name();
+//        int length = text.length();
         int length = node.text().length() - 2;
         String text = node.text().substring(1, length+1);
         ok = false;

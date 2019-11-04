@@ -34,5 +34,8 @@ public enum Op {
     Drop,      // Drop unused matched characters, e.g. @ or @3
     Act;       // Carry out an action, e.g. @2add
 
-    public static void main(String[] args) { }
+    // No testing.
+    public static void main(String[] args) {
+        System.out.println("Op class OK");
+    }
 }

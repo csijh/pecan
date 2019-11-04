@@ -42,7 +42,10 @@ public class Test {
     private boolean grammar, trace, raw;
 
     // No testing of the test class.
-    public static void main(String[] args) { }
+    public static void main(String[] args) {
+        Testable.main(args);
+        System.out.println("Test class OK");
+    }
 
     // Run tests on the class which the object belongs to. The command line
     // arguments can optionally contain a filename of tests, a line number to

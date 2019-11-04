@@ -47,7 +47,6 @@
 <li><a href="#checks">Consistency checks</a>
 <ul>
 <li><a href="#loop">Left recursion checking</a></li>
-<!--<li><a href="#token">Token checking</a></li>-->
 <li><a href="#output">Output checking</a></li>
 </ul>
 <li><a href="#compile">Compilation</a>
@@ -622,36 +621,36 @@ end = &lt;>
 <h3 id="escapes">Escapes</h3>
 
 <p>There are escape conventions within sets, strings, ranges, splitters and
-literal names (see later), to include control characters, or to represent
-Unicode characters using plain text. A summary of the escape conventions
-is:</p>
+literal names (see later), to include control characters, or awkward characters,
+or to represent Unicode characters using plain text. A summary of the escape
+conventions is:</p>
 
 <table class="char">
 <tr><th>Escape</th><th>Code</th><th>Character</th>
-<tr><td><code>\b</code></td><td>8</td><td>backspace</td>
-<tr><td><code>\f</code></td><td>12</td><td>formfeed</td>
-<tr><td><code>\n</code></td><td>10</td><td>newline</td>
 <tr><td><code>\r</code></td><td>13</td><td>return</td>
-<tr><td><code>\t</code></td><td>9</td><td>tab</td>
-<tr><td><code>\"</code></td><td>34</td><td>double quote</td>
-<tr><td><code>\'</code></td><td>39</td><td>single quote</td>
-<tr><td><code>\\</code></td><td>92</td><td>backslash</td>
+<tr><td><code>\n</code></td><td>10</td><td>newline</td>
+<tr><td><code>\q</code></td><td>39</td><td>single quote</td>
+<tr><td><code>\d</code></td><td>34</td><td>double quote</td>
+<tr><td><code>\b</code></td><td>92</td><td>backslash</td>
 </table>
 
 <p></p>
 
 <table>
 <tr><th>Escape</th><th>Meaning</th>
-<tr><td><code>\ddd...</code></td><td>character with decimal code</td>
-<tr><td><code>\0xxx...</code></td><td>character with hexadecimal code</td>
-<tr><td><code>\&amp;</code></td><td>optional terminator</td>
+<tr><td><code>\ddd...;</code></td><td>character with decimal code</td>
+<tr><td><code>\0xxx...;</code></td><td>character with hexadecimal code</td>
 </table>
 
-<p>A numerical escape is a backslash followed by digits, used to represent a
-single character, using its decimal character code. For example:</p>
+<p>Some conventional escape sequences are not supported, e.g. <code>\a</code>,
+<code>\b</code> for backspace, <code>\e</code>, <code>\f</code>,
+<code>\t</code>, <code>\v</code> because they are or should be obsolete, or
+<code>\\</code>, <code>\'</code>, <code>\"</code> because they cause visual
+confusion. A numerical escape is a backslash followed by digits, with an
+optional semicolon terminator. It is used to represent a single character, using
+its decimal character code. For example:</p>
 
 <pre>pi = '\960'
-newline = '\13'? '\10'
 any = '\0..\1114111'
 </pre>
 
@@ -659,15 +658,17 @@ any = '\0..\1114111'
 <code>a</code> to <code>f</code> or <code>A</code> to <code>F</code>, e.g.</p>
 
 <pre>pi = '\03C0'
-newline = '\0d'? '\0a'
 any = '\0..\010ffff'
 </pre>
 
 <p>Numerical escape sequences are variable length. A decimal sequence ends when
-a non-digit is encountered, and a hex sequence ends when a non-hex digit is
-encountered. If an escape sequence is to be followed by a digit, it can be
-terminated by <code>\&amp;</code>, e.g. <code>"&#960;3"</code> can be escaped as
-<code>"\960\&amp;3"</code>.</p>
+a non-digit is encountered, and a hex sequence ends when a non-hex-digit is
+encountered. If an escape sequence is to be followed by a digit or a semicolon,
+then it should be terminated by a semicolon, e.g.</p>
+
+<pre>pi3 = "\960;3"
+piSemicolon = "\960;;"
+</pre>
 
 <h3 id="errors">Errors</h3>
 

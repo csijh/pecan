@@ -296,5 +296,6 @@ class Node {
         assert(n.name().equals("oneTwo"));
         n = new Node(Id, new Source("`<=`"));
         assert(n.name().equals("LtEq"));
+        System.out.println("Node class OK");
     }
 }
