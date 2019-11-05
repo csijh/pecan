@@ -1,16 +1,17 @@
 TODO:
-+ BOM
-+ full set of escapes
 + literal names (node.name()) and camels for hyphens
-- edge cases in in/out for tests (escapes?)
++ edge cases in in/out for tests (escapes?)
++ transformer - redo Checker
++ transformer - what about source?
 - in compiler, 'or' versus 'and' when go()&&... (too many brackets?)
-- is there a lift optimisation for markers?
-- analyse NEED properly
-- transformer - redo Checker
-- transformer - what about source?
+- in compiler, two more warnings (see checker)
+- escape 124
 
 - extend the calculator tutorial to include bytecode generation.
 - extend the manual to include a discussion of the C interpreter.
+
+- is there a lift optimisation for markers?
+- analyse NEED properly
 
 Improvements to bytecode interpreter
 ------------------------------------

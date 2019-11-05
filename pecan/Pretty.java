@@ -14,9 +14,11 @@ specifiers in node formats can contain:
     %n    newline (and remove preceding space) if whole node doesn't fit
     %f    newline to fill the line, i.e. if the next operand doesn't fit
     %g    newline if whole group doesn't fit
+    %t    tab, if at start of line
     %l    left hand subexpression
     %r    right hand subexpression
     %s    literal name of node
+    %c
 
  */
 
@@ -104,7 +106,7 @@ class Pretty {
                 ch = f.charAt(i++);
             }
             switch (ch) {
-                case 's': printLiteral(node.name()); break;
+                case 's': printLiteral(node.rawText()); break;
                 case 'c': printChar(node.end(seq++)); break;
                 case 'n': indent = indent0; printAll(cursor0, node); break;
                 case 'f': indent = indent0; printFill(cursor, node); break;
@@ -156,7 +158,7 @@ class Pretty {
         for (int i = 0; i < tab; i++) print(" ");
         indent += tab;
     }
-
+/*
     void printf(String t, String s, int n, int n2, Node e) {
         int start = 0, i = t.indexOf('%');
         int save = indent;
@@ -190,7 +192,7 @@ class Pretty {
         indent = save;
         print(t.substring(start));
     }
-
+*/
     private void check(boolean ok, String t, char ch) {
         if (ok) return;
         throw new Error("Unexpected specifier %" + ch + " in " + t);
@@ -250,5 +252,6 @@ class Pretty {
 
     public static void main(String[] args) {
         Pretty f = new Pretty();
+        System.out.println("Pretty class OK");
     }
 }

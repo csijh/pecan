@@ -10,17 +10,16 @@ Binder = pecan/Binder.java $(Parser)
 Checker = pecan/Checker.java $(Binder)
 Stacker = pecan/Stacker.java $(Checker)
 Evaluator = pecan/Evaluator.java $(Stacker)
-Simplifier = pecan/Simplifier.java $(Stacker)
+Formats = pecan/Formats.java $(Evaluator)
+Pretty = pecan/Pretty.java $(Formats)
+Transformer = pecan/Transformer.java $(Pretty)
+Compiler = pecan/Compiler.java $(Transformer)
 Code = pecan/Code.java
-Formats = pecan/Formats.java $(Node)
-Pretty = pecan/Pretty.java $(Node)
-Pretty2 = pecan/Pretty2.java $(Node)
-Transformer = pecan/Transformer.java
-Compiler = pecan/Compiler.java $(Stacker) $(Transformer)
 Generator = pecan/Generator.java $(Stacker)
 Run = pecan/Run.java $(Evaluator) $(Compiler)
+# Simplifier = pecan/Simplifier.java $(Stacker)
 # Analyser = pecan/Analyser.java $(Stacker)
-#Opcode Generator Evaluator:
+# Opcode Generator Evaluator:
 
 %: pecan/%.java
 	javac $($@)

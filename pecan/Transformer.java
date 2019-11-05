@@ -7,16 +7,13 @@ import static pecan.Op.*;
 import static pecan.Node.Flag.*;
 
 /* Provide a collection of transform methods, to be used before compiling to a
-target language or to bytecode.
-
-The transforms aim to preserve the analysis flags that might be used to guide
-compilation, particularly the FP flag.
+target language or to bytecode. After trandforming, the ckecker may need to be
+run again to generate the right analysis flags.
 
 The source text of nodes is only preserved to the extent that (a) a rule node
 has text which serves as a comment for its compiled function and (b) atomic
 nodes still have the right text so that they are compiled correctly. */
 
-// TODO: liftSome
 // TODO: replace string in rule (assuming all nodes same source)
 
 class Transformer {
@@ -37,12 +34,12 @@ class Transformer {
 
     // Lift out loops into separate rules. Gather the names of the ids, so that
     // new names can be added without clashes. Deal with each rule in turn,
-    // passing the list node so that new rules can be inserted in front.
+    // passing the list node so that new rules can be inserted.
     void lift(Node root) {
         Node node = root;
         Set<String> names = new HashSet<>();
         while (node.op() == List) {
-            names.add(node.left().left().name());
+            names.add(node.left().left().rawText());
             node = node.right();
         }
         node = root;
@@ -66,17 +63,18 @@ class Transformer {
     // Lift x = ...p*... to x1 = (p x1)?. Nodes are shared, so no longer form a
     // tree. The source description of the x rule is unchanged.
     private void liftAny(Set<String> names, Node list, Node loop) {
-        String x = list.left().left().name();
+        String x = list.left().left().rawText();
         String x1 = findName(names, x);
         Node id = new Node(Id, x1);
-        id.flags(loop.flags());
         Node p = loop.left();
         Node and;
         if (p.op() == Or) and = new Node(And, "(", p, ") ", id, "");
         else and = new Node(And, "", p, " ", id, "");
-        and.set(FP);
         Node opt = new Node(Opt, "(", and, ")?");
-        Node newRule = new Node(Rule, "", id.deepCopy(), " = ", opt, "");
+        Node id2 = id.deepCopy();
+        Node newRule = new Node(Rule, "", id2, " = ", opt, "");
+        id.ref(newRule);
+        id2.ref(newRule);
         loop.op(Id);
         loop.source(new Source(x1));
         loop.right(null);
@@ -89,16 +87,18 @@ class Transformer {
     // Lift x = ...p+... to x1 = p x1?. Nodes are shared, so no longer form a
     // tree. The source description of the x rule is unchanged.
     private void liftSome(Set<String> names, Node list, Node loop) {
-        String x = list.left().left().name();
+        String x = list.left().left().rawText();
         String x1 = findName(names, x);
         Node id = new Node(Id, x1);
-        id.flags(loop.flags());
         Node p = loop.left();
         Node opt = new Node(Opt, "", id, "?");
         Node and;
         if (p.op() == Or) and = new Node(And, "(", p, ") ", opt, "");
         else and = new Node(And, "", p, " ", opt, "");
-        Node newRule = new Node(Rule, "", id.deepCopy(), " = ", and, "");
+        Node id2 = id.deepCopy();
+        Node newRule = new Node(Rule, "", id2, " = ", and, "");
+        id.ref(newRule);
+        id2.ref(newRule);
         loop.op(Id);
         loop.source(new Source(x1));
         loop.right(null);
@@ -138,5 +138,6 @@ class Transformer {
         assert(rule.right().left().left().left().text().equals("y"));
         assert(rule.right().left().right().op() == Id);
         assert(rule.right().left().right().text().equals("y"));
+        System.out.println("Transformer class OK");
     }
 }

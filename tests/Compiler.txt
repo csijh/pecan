@@ -1,97 +1,112 @@
--- Single matcher
+-- Late warning: first rule doesn't produce one output.
 x = 'a'
 ..........
+Error: first rule produces 0 items
+==========
+-- Late warning: first rule causes underflow.
+x = 'a' @1a @b
+..........
+Error: first rule can cause underflow
+==========
+-- Simple rule
+x = @a
+..........
 bool x();
 
-// x = 'a'
-bool x() { return string("a"); }
+// x = @a
+bool x() { return act0(a); }
 ==========
 -- Sequence
-x = 'a' 'b'
+x = 'a' @a
 ..........
 bool x();
 
-// x = 'a' 'b'
-bool x() { return string("a") && string("b"); }
+// x = 'a' @a
+bool x() { return string("a") && act0(a); }
 ==========
 -- Simple choice (LHS doesn't have FP)
-x = 'a' / 'b'
+x = 'a' @a / 'b' @b
 ..........
 bool x();
 
-// x = 'a' / 'b'
-bool x() { return string("a") || string("b"); }
+// x = 'a' @a / 'b' @b
+bool x() { return (string("a") && act0(a)) || (string("b") && act0(b)); }
 ==========
 -- General choice (LHS does have FP)
-x = 'a' 'b' / 'c'
+x = 'a' 'b' @ab / 'c' @c
 ..........
 bool x();
 
-// x = 'a' 'b' / 'c'
+// x = 'a' 'b' @ab / 'c' @c
 bool x() {
-  return alt((go() && string("a") && string("b")) || (ok() && string("c")));
+  return alt(
+    (go() && string("a") && string("b") && act0(ab)) ||
+    (ok() && string("c") && act0(c))
+  );
 }
 ==========
 -- Option
-x = 'a'?
+x = 'a'? @a
 ..........
 bool x();
 
-// x = 'a'?
-bool x() { return (string("a") || true); }
+// x = 'a'? @a
+bool x() { return (string("a") || true) && act0(a); }
 ==========
 -- Long sequence
-x = 'a' 'b' 'c' 'd' 'e' 'f' 'g'
+x = 'a' 'b' 'c' 'd' 'e' 'f' 'g' @a
 ..........
 bool x();
 
-// x = 'a' 'b' 'c' 'd' 'e' 'f' 'g'
+// x = 'a' 'b' 'c' 'd' 'e' 'f' 'g' @a
 bool x() {
   return string("a") && string("b") && string("c") && string("d") &&
-  string("e") && string("f") && string("g");
+  string("e") && string("f") && string("g") && act0(a);
 }
 ==========
 -- Long choice
-x = 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / 'g'
+x = 'a' @a / 'b' @b / 'c' @c / 'd' @d / 'e' @e / 'f' @f / 'g' @g
 ..........
 bool x();
 
-// x = 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / 'g'
+// x = 'a' @a / 'b' @b / 'c' @c / 'd' @d / 'e' @e / 'f' @f / 'g' @g
 bool x() {
-  return string("a") || string("b") || string("c") || string("d") ||
-  string("e") || string("f") || string("g");
+  return (string("a") && act0(a)) || (string("b") && act0(b)) ||
+  (string("c") && act0(c)) || (string("d") && act0(d)) ||
+  (string("e") && act0(e)) || (string("f") && act0(f)) ||
+  (string("g") && act0(g));
 }
 ==========
 -- Long complex choice
-x = 'a' '1' / 'b' / 'c' / 'd' / 'e' '2' / 'f' / 'g'
+x = 'a' '1' @a / 'b' @b / 'c' @c / 'd' @d / 'e' '2' @e / 'f' @f / 'g' @g
 ..........
 bool x();
 
-// x = 'a' '1' / 'b' / 'c' / 'd' / 'e' '2' / 'f' / 'g'
+// x = 'a' '1' @a / 'b' @b / 'c' @c / 'd' @d / 'e' '2' @e / 'f' @f / 'g' @g
 bool x() {
   return alt(
-    (go() && string("a") && string("1")) ||
-    (ok() && string("b")) ||
-    string("c") ||
-    string("d") ||
-    (string("e") && string("2")) ||
-    (ok() && string("f")) ||
-    string("g")
+    (go() && string("a") && string("1") && act0(a)) ||
+    (ok() && string("b") && act0(b)) ||
+    (string("c") && act0(c)) ||
+    (string("d") && act0(d)) ||
+    (string("e") && string("2") && act0(e)) ||
+    (ok() && string("f") && act0(f)) ||
+    (string("g") && act0(g))
   );
 }
 ==========
 -- Multiline comment
-x = 'a' '1' / 'b' /
+x = ('a' '1' / 'b' /
     'c' / 'd' / 'e' '2' /
-    'f' / 'g'
+    'f' / 'g') @a
 ..........
 bool x();
 
-// x = 'a' '1' / 'b' /
+// x = ('a' '1' / 'b' /
 //     'c' / 'd' / 'e' '2' /
-//     'f' / 'g'
+//     'f' / 'g') @a
 bool x() {
-  return alt(
+  return (alt(
     (go() && string("a") && string("1")) ||
     (ok() && string("b")) ||
     string("c") ||
@@ -99,16 +114,16 @@ bool x() {
     (string("e") && string("2")) ||
     (ok() && string("f")) ||
     string("g")
-  );
+  )) && act0(a);
 }
 ==========
 -- Simple see
-x = ['a']
+x = ['a'] @a
 ..........
 bool x();
 
-// x = ['a']
-bool x() { return see(go() && string("a")); }
+// x = ['a'] @a
+bool x() { return see(go() && string("a")) && act0(a); }
 ==========
 -- Complex see
 x = ['a' @a]
@@ -121,46 +136,38 @@ bool x() {
 }
 ==========
 -- Two rules
-x = 'a'
-y = 'b'
+x = 'a' @a
+y = 'b' @b
 ..........
 bool x();
 bool y();
 
-// x = 'a'
-bool x() { return string("a"); }
-
-// y = 'b'
-bool y() { return string("b"); }
-==========
--- Action
-x = 'a' @a
-..........
-bool x();
-
 // x = 'a' @a
 bool x() { return string("a") && act0(a); }
+
+// y = 'b' @b
+bool y() { return string("b") && act0(b); }
 ==========
 -- Lift out * loop
-x = 'a' 'b'*
+x = 'a' 'b'* @a
 ..........
 bool x();
 bool x1();
 
-// x = 'a' 'b'*
-bool x() { return string("a") && x1(); }
+// x = 'a' 'b'* @a
+bool x() { return string("a") && x1() && act0(a); }
 
 // x1 = ('b' x1)?
 bool x1() { return ((string("b") && x1()) || true); }
 ==========
 -- Lift out + loop
-x = 'a' 'b'+
+x = 'a' 'b'+ @a
 ..........
 bool x();
 bool x1();
 
-// x = 'a' 'b'+
-bool x() { return string("a") && x1(); }
+// x = 'a' 'b'+ @a
+bool x() { return string("a") && x1() && act0(a); }
 
 // x1 = 'b' x1?
 bool x1() { return string("b") && (x1() || true); }
@@ -207,10 +214,12 @@ bool expression() { return term() && expression1(); }
 
 // expression1 = ((plus term @2add / minus term @2subtract) expression1)?
 bool expression1() {
-  return (((alt(
-    (go() && plus() && term() && act2(add)) ||
-    (ok() && minus() && term() && act2(subtract))
-  )) && expression1()) || true);
+  return opt(
+    (go() && (alt(
+      (go() && plus() && term() && act2(add)) ||
+      (ok() && minus() && term() && act2(subtract))
+    )) && expression1())
+  );
 }
 
 // term = atom (times atom @2multiply / over atom @2divide)*
@@ -218,10 +227,12 @@ bool term() { return atom() && term1(); }
 
 // term1 = ((times atom @2multiply / over atom @2divide) term1)?
 bool term1() {
-  return (((alt(
-    (go() && times() && atom() && act2(multiply)) ||
-    (ok() && over() && atom() && act2(divide))
-  )) && term1()) || true);
+  return opt(
+    (go() && (alt(
+      (go() && times() && atom() && act2(multiply)) ||
+      (ok() && over() && atom() && act2(divide))
+    )) && term1())
+  );
 }
 
 // atom = number / open expression close
@@ -262,6 +273,5 @@ bool gap1() { return ((string(" ") && gap1()) || true); }
 
 // end = #newline '\13'? '\10' @
 bool end() {
-  return mark(newline) && (string("\u000d") || true) && string("\u000a") &&
-  drop(0);
+  return mark(newline) && (string("\015") || true) && string("\012") && drop(0);
 }

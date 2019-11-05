@@ -21,7 +21,7 @@ class Formats {
     enum Attribute {
         DECLARE("s"), COMMENT("s"), DEFINE("slrn"), TAB(""),
         AND(""), OR(""), TRUE(""), FALSE(""),
-        CALL("s"), ID("s"), ESCAPE1("c"), ESCAPE2("c"), ESCAPE4("c"),
+        CALL("s"), ID("s"), ESCAPE1("cd"), ESCAPE2("cd"), ESCAPE4("cd"),
         ACT("ds"), ACT0("s"), ACT1("s"), ACT2("s"), ACT3("s"), ACT4("s"),
         ACT5("s"), ACT6("s"), ACT7("s"), ACT8("s"), ACT9("s"),
         GO(""), OK(""), ALT("l"), OPT("l"), SEE("l"),
@@ -127,25 +127,15 @@ class Formats {
     public void fillDefaults(int n, String file) {
         if (get(DECLARE) == null) set(DECLARE, "");
         if (get(COMMENT) == null) set(COMMENT, "");
-        if (get(DEFINE) == null) {
-            set(DEFINE, "bool %l() { %n%treturn %r; %n}");
-        }
-        String rule = get(DEFINE);
-        int s = 0;
-        if (! rule.startsWith(" ")) s = rule.indexOf("%n ") + 2;
-        if (s >= 0) {
-            int e = s;
-            while (e < rule.length() && rule.charAt(e) == ' ') e++;
-            set(TAB, rule.substring(s,e));
-        }
+        if (get(DEFINE) == null) set(DEFINE, "");
         if (get(TAB) == null) set(TAB, "  ");
         if (get(AND) == null) set(AND, "&&");
         if (get(OR) == null) set(OR, "||");
         if (get(TRUE) == null) set(TRUE, "true");
         if (get(FALSE) == null) set(FALSE, "false");
         if (get(CALL) == null) set(CALL, "%s()");
-        if (get(ID) == null) set(ID, get(CALL));
         String f = get(CALL);
+        if (get(ID) == null) set(ID, f);
         if (get(GO) == null) set(GO, call(f, "go"));
         if (get(OK) == null) set(OK, call(f, "ok"));
         if (get(ALT) == null) set(ALT, call(f, "alt", "%l"));
@@ -173,9 +163,9 @@ class Formats {
         if (get(ACT7) == null) set(ACT7, get(ACT));
         if (get(ACT8) == null) set(ACT8, get(ACT));
         if (get(ACT9) == null) set(ACT9, get(ACT));
-        if (get(ESCAPE1) == null) set(ESCAPE1, "\\u%4x");
-        if (get(ESCAPE2) == null) set(ESCAPE2, "\\u%4x");
-        if (get(ESCAPE4) == null) set(ESCAPE4, "\\U%8x");
+        if (get(ESCAPE1) == null) set(ESCAPE1, "");
+        if (get(ESCAPE2) == null) set(ESCAPE2, "");
+        if (get(ESCAPE4) == null) set(ESCAPE4, "");
         for (Attribute t : Attribute.values()) {
             if (get(t) == null) System.out.println("null for " + t);
         }
@@ -276,5 +266,6 @@ class Formats {
     public static void main(String[] args) {
         Formats formats = new Formats();
         formats.test();
+        System.out.println("Formats class OK");
     }
 }

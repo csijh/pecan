@@ -30,9 +30,9 @@ y), that also becomes a late warning. There are some further flag annotations:
   AA   =   contains action (or discard)
   AB   =   contains action (or discard) before progressing
 
- The first two are to check whether [x] needs to be translated to x& x. The
- third is to check for @a x / y. These are conservative checks, e.g. AA and AB
- could be tracked more tightly by tracking AFN, ASN, AFP, ASP.  */
+The first two are to check whether [x] needs to be translated to x& x. The third
+is to check for @a x / y. These are conservative checks, e.g. AA and AB could be
+tracked more tightly by tracking AFN, ASN, AFP, ASP.  */
 
 class Checker implements Testable {
     private boolean switchTest;
@@ -59,11 +59,33 @@ class Checker implements Testable {
         Binder binder = new Binder();
         root = binder.run(source);
         if (root.op() == Error) return root;
+        apply(root);
+        return root;
+    }
+
+    // Apply the binder to an existing tree.
+    Node apply(Node node) {
+        root = node;
+        clear(root);
         changed = true;
         while (changed) { changed = false; scan(root); }
         check(root);
         if (root.op() != Error) annotate(root);
         return root;
+    }
+
+    // Clear the flags, in case this is a re-run.
+    private void clear(Node node) {
+        if (node.left() != null) clear(node.left());
+        if (node.right() != null) clear(node.right());
+        node.unset(SN);
+        node.unset(SP);
+        node.unset(FN);
+        node.unset(FP);
+        node.unset(WF);
+        node.unset(EE);
+        node.unset(AA);
+        node.unset(AB);
     }
 
     // Traverse the tree, bottom up, and check each node.

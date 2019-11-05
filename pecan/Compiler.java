@@ -23,22 +23,34 @@ class Compiler implements Testable {
     private Pretty pretty;
 
     // Do unit testing on previous classes, then check the switch is complete,
-    // then run the Compiler unit tests.
+    // then run the Compiler unit tests, using C-like formats.
     public static void main(String[] args) {
         if (args.length == 0) Stacker.main(args);
+        if (args.length == 0) Formats.main(args);
+        if (args.length == 0) Pretty.main(args);
+        if (args.length == 0) Transformer.main(args);
         Compiler compiler = new Compiler();
-        compiler.formats = new Formats();
-        compiler.formats.readLine(1, "file", "declare = 'bool %s();'");
-        compiler.formats.readLine(1, "file", "comment = '// %s'");
-        compiler.formats.fillDefaults(1, "file");
         compiler.switchTest = true;
         for (Op op : Op.values()) {
             Node node = new Node(op, null, null);
             compiler.compile(node);
         }
         compiler.switchTest = false;
+        Formats formats = new Formats();
+        formats.readLine(1, "file", "declare = 'bool %s();'");
+        formats.readLine(1, "file", "comment = '// %s'");
+        formats.readLine(1, "file",
+            "define = 'bool %l() { %n%treturn %r; %n}'");
+        formats.readLine(1, "file", "escape1 = '\\%3o'");
+        formats.readLine(1, "file", "escape2 = '\\u%4x'");
+        formats.readLine(1, "file", "escape4 = '\\U%8x'");
+        formats.fillDefaults(1, "file");
+        compiler.formats(formats);
         Test.run(compiler, args);
     }
+
+    // Set the print formats for compiling.
+    void formats(Formats fs) { formats = fs; }
 
     public String run(Source grammar) {
         pretty = new Pretty();
@@ -52,15 +64,18 @@ class Compiler implements Testable {
         if (root.left().get(NEED) > 0) {
             return "Error: first rule can cause underflow\n";
         }
+        if (formats.get(DEFINE).equals("")) {
+            return "Error: no print format found for definitions\n";
+        }
         Transformer transformer = new Transformer();
         transformer.expandSee(root);
         transformer.lift(root);
+        Checker checker = new Checker();
+        checker.apply(root);
         declare(root);
         compile(root);
         return pretty.text();
     }
-
-    void formats(Formats fs) { formats = fs; }
 
     // Print forward declarations for the functions.
     private void declare(Node node) {
@@ -68,7 +83,7 @@ class Compiler implements Testable {
         if (declare.equals("")) return;
         while (node.op() == List) {
             Node rule = node.left();
-            String name = rule.left().name();
+            String name = rule.left().rawText();
             printf(declare + "%n", name);
             node = node.right();
         }

@@ -2,8 +2,7 @@
 
 package pecan;
 
-/* Code constants represent bytecode ops. See Generator for translations and
-Interpreter for semantics. */
+/* Code constants represent bytecode ops. See Generator for translations. */
 
 public enum Code {
     START, STOP, GO, BACK,
@@ -26,5 +25,7 @@ public enum Code {
         return this == GO || this == BACK;
     }
 
-    public static void main(String[] args) { }
+    public static void main(String[] args) {
+        System.out.println("Code class OK");
+    }
 }
