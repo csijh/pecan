@@ -985,10 +985,11 @@ are displayed. If a line number is given, only the single test that starts on
 that line of the test file is executed.</p>
 
 <p>A test file contains a number of sections separated by lines consisting of
-five or more equal signs. If a section contains a line of five or more dots as a
-separator, then it is a test with sample input and expected output. If a section
-has no separator, it is a grammar or self-contained grammar fragment which is
-used for subsequent tests, until another grammar is given. For example:</p>
+ten or more equal signs. If a section contains a line of ten or more minus signs
+as a separator, then it is a test with sample input and expected output. If a
+section has no separator, it is a grammar or self-contained grammar fragment
+which is used for subsequent tests, until another grammar is given. For
+example:</p>
 
 <pre>// Match one digit
 number = ("0".."9") @number
@@ -1468,9 +1469,9 @@ target language for the given application:</p>
 //     declare = "bool %l(parser *p);"
 //     define  = "bool %l(parser *p) { %n%treturn %r; %n}"
 //     call    = "%s(p)"
-//     escape1 = "\%3o"
-//     escape2 = "\u%4x"
-//     escape4 = "\U%8x"
+//     escape1 = "\%03o"
+//     escape2 = "\u%04x"
+//     escape4 = "\U%08x"
 // >
 ...
 // &lt;/pecan>

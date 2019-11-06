@@ -41,9 +41,9 @@ class Compiler implements Testable {
         formats.readLine(1, "file", "comment = '// %s'");
         formats.readLine(1, "file",
             "define = 'bool %l() { %n%treturn %r; %n}'");
-        formats.readLine(1, "file", "escape1 = '\\%3o'");
-        formats.readLine(1, "file", "escape2 = '\\u%4x'");
-        formats.readLine(1, "file", "escape4 = '\\U%8x'");
+        formats.readLine(1, "file", "escape1 = '\\%03o'");
+        formats.readLine(1, "file", "escape2 = '\\u%04x'");
+        formats.readLine(1, "file", "escape4 = '\\U%08x'");
         formats.fillDefaults(1, "file");
         compiler.formats(formats);
         Test.run(compiler, args);
@@ -54,6 +54,12 @@ class Compiler implements Testable {
 
     public String run(Source grammar) {
         pretty = new Pretty();
+        pretty.tab(formats.get(TAB));
+        pretty.escapes(
+            formats.get(ESCAPE1),
+            formats.get(ESCAPE2),
+            formats.get(ESCAPE4)
+        );
         Stacker stacker = new Stacker();
         Node root = stacker.run(grammar);
         if (root.op() == Error) return "Error: " + root.note();

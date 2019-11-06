@@ -1,7 +1,7 @@
 // The FIRST:START:FOLLOW sets are shown.
 // Single rule
 x = @start 'a'
-..........
+----------
 RULE x  a::
   AND @start 'a'  a::
     Act @start  ::a
@@ -11,7 +11,7 @@ RULE x  a::
 x = @start y
 y = z
 z = 'a'
-..........
+----------
 RULE x  a::
   AND @start y  a::
     Act @start  ::a
@@ -26,7 +26,7 @@ x = @start u? v w
 u = 'u'
 v = 'v'
 w = 'w'
-..........
+----------
 RULE x  uv::
   AND @start u? v w  uv::
     Act @start  ::uv
@@ -45,7 +45,7 @@ a = @start "x" "y"
 b = ["x"] "y"
 c = "x"& "y"
 d = "x"! "y"
-..........
+----------
 RULE a  x::
   AND @start "x" "y"  x::
     Act @start  ::x

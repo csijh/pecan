@@ -104,19 +104,21 @@ class Formats {
         for (String s : parts) {
             if (s.startsWith("%")) {
                 if (s.length() < 2) return bad + s;
-                if (s.length() > 3) return bad + s;
-                if (s.length() == 3) {
-                    char digit = s.charAt(1);
-                    if (digit < '0' || digit > '9') return bad + s;
-                    char letter = s.charAt(2);
-                    if ("dox".indexOf(letter) < 0) return bad + s;
-                    if (it.allowed.indexOf('d') < 0) return ban + s;
-                } else {
+                else if (s.length() == 2) {
                     char letter = s.charAt(1);
                     if ("nlrstfcdox".indexOf(letter) < 0) return bad + s;
                     if (letter == 't' || letter == 'f') letter = 's';
                     if (letter == 'o' || letter == 'x') letter = 'd';
                     if (it.allowed.indexOf(letter) < 0) return ban + s;
+                }
+                else {
+                    for (int i = 1; i < s.length() - 1; i++) {
+                        char digit = s.charAt(i);
+                        if (digit < '0' || digit > '9') return bad + s;
+                    }
+                    char letter = s.charAt(s.length() - 1);
+                    if ("dox".indexOf(letter) < 0) return bad + s;
+                    if (it.allowed.indexOf('d') < 0) return ban + s;
                 }
             }
         }
@@ -209,6 +211,7 @@ class Formats {
                 start = i;
             }
             i++;
+            if (i < n && Character.isDigit(format.charAt(i))) i++;
             if (i < n && Character.isDigit(format.charAt(i))) i++;
             if (i < n && Character.isLetter(format.charAt(i))) i++;
             String spec = format.substring(start, i);

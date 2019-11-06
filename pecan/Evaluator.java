@@ -23,6 +23,7 @@ public class Evaluator implements Testable {
     private int start, in, out, marked, lookahead;
     private TreeSet<String> failures;
     private StringBuffer output;
+    private int outCount;
 
     // Do unit testing on the Stacker class, then check the switch is complete,
     // then run the Evaluator unit tests.
@@ -67,6 +68,7 @@ public class Evaluator implements Testable {
         start = in = out = marked = lookahead = 0;
         failures = new TreeSet<>();
         output = new StringBuffer();
+        outCount = 0;
     }
 
     // Run the parser
@@ -364,7 +366,9 @@ public class Evaluator implements Testable {
         ok = true;
         int a = node.arity();
         if (lookahead > 0) return;
-        if (a > 0 && tracing) System.out.println("O: DROP " + a);
+        if (a > 0 && tracing) {
+            System.out.println("O" + (++outCount) + ": DROP " + a);
+        }
         start = in;
     }
 
@@ -377,7 +381,7 @@ public class Evaluator implements Testable {
         if (charInput && in > start) s += " " + input.substring(start, in);
         s = escape(s);
         s += "\n";
-        if (tracing) System.out.print("O: " + s);
+        if (tracing) System.out.print("O" + (++outCount) + ": " + s);
         output.append(s);
         start = in;
     }

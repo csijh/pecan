@@ -12,7 +12,7 @@
 <img src="../pecan.png" width="300" height="65" />
 <hr/>
 
-<h1>A calculator</h1>
+<h1>Developing a grammar</h1>
 
 <p>Suppose we want to implement a calculator where the user can type in a sum
 such as <kbd>6+3*(10+2)</kbd> and get the answer <samp>42</samp>. A calculator
@@ -50,7 +50,7 @@ this:</p>
 <pre>{sum.txt}
 ==========
 2
-..........
+----------
 value 2
 </pre>
 
@@ -93,18 +93,18 @@ digits. To see if this works, add another test to the file
 <pre>{sum.txt}
 ==========
 2
-..........
+----------
 value 2
 ==========
 42
-..........
+----------
 value 42
 </pre>
 
 <p>Over time, the test file can contain various parser fragments or parser
 versions and their tests, representing the entire history of development. For
-the calculator, we are discarding previous versions of the parser, but keeping
-all the tests to make sure they still work:</p>
+the calculator, we are keeping only the current version of the parser, but we
+are keeping all the tests to make sure they still work:</p>
 
 <pre>pecan sum-test.txt
 Pass 2 tests.
@@ -132,15 +132,15 @@ than to text from the input. Add a third test to the file:</p>
 <pre>{sum.txt}
 ==========
 2
-..........
+----------
 value 2
 ==========
 42
-..........
+----------
 value 42
 ==========
 2+40
-..........
+----------
 value 2
 value 40
 add
@@ -153,11 +153,11 @@ Running the tests gives:</p>
 
 <pre>pecan sum-test.txt
 Fail test on line 11 of sum-test.txt:
-.......... Expected ..........
+---------- Expected ----------
 value 2
 value 40
 add
-.......... Actual ..........
+---------- Actual ----------
 value 2
 </pre>
 
@@ -174,7 +174,7 @@ P2: '0..9'
 I1: 2|+40
 P2: '0..9'
 P2: @value
-O: value 2
+O1: value 2
 Fail test on line 11 of sum-test.txt:
 ---------- Expected ----------
 value 2
@@ -189,12 +189,12 @@ number of a single test in the test file. This makes sure only one test is run.
 The <code style="white-space: nowrap">-trace</code> (or <code
 style="white-space: nowrap">-t</code>) option switches on trace output. Although
 verbose, this can sometimes be used to resolve difficult issues. Each line in
-the trace starts with <code>I</code>, <code>P</code> or <code>O</code>. A line
-starting with <code>I</code> reports a change in the input position, giving an
-input line number and marking the position in that line with a vertical bar. A
-line starting with <code>P</code> reports a change in the current parse
-expression being executed, displaying a parser line number and the expression. A
-line starting with <code>O</code> reports an output action.</p>
+the trace starts with <code>I</code>, <code>P</code> or <code>O</code> and a
+line number, representing information about a change in the input position,
+parser expression, or output.  A line starting with <code>I</code> marks a
+change of input position with a vertical bar. A line starting with
+<code>P</code> reports the current parse expression being executed. A line
+starting with <code>O</code> reports an output action.</p>
 
 <p>The trace shows that the parser has a choice <code>number / number '+'
 ...</code>, and the first alternative succeeds, so the second alternative isn't
@@ -307,20 +307,18 @@ that all the input is used:</p>
 
 <pre>sum = number ('+' @ number @2add)? end
 number = ('0..9')+ @value
-end = '\13'? '\10' @
+end = '\r'? '\n' @
 </pre>
 
-<p>A number such as <code>13</code> is the decimal code for a character, in this
-case the carriage return control character <code>\r</code> also known as
-<code>CR</code> or <code>CTRL+M</code> or <code>0D</code> (hexadecimal), and
-<code>10</code> stands for the line feed control character <code>\n</code> also
-known as <code>LF</code> or <code>CTRL+J</code> or <code>0A</code>
-(hexadecimal).</p>
+<p>The carriage return character <code>\r</code> is also known as
+<code>\13</code> (decimal) or <code>\0D</code> (hexadecimal), and the line feed
+character <code>\n</code> is also known as <code>\10</code> (decimal) or
+<code>\0A</code> (hexadecimal).</p>
 
 <p>Pecan normalizes the line endings of the test file when it is read in, so
-they are all <code>'\10'</code>, but the <code>end</code> definition covers the two
-most common line ending conventions, which would make the final parser work on
-most common platforms, without normalizing the input.</p>
+they are all <code>'\n'</code>, but the <code>end</code> definition covers the
+two most common line ending conventions, so the final compiled parser will work
+on most common platforms, without normalizing the input.</p>
 
 <p>The <code>@</code> action discards the end-of-line character or characters
 after matching them. Another test can be added to our file to make sure that the
@@ -329,7 +327,7 @@ parser reports an error if the end of the input isn't reached.</p>
 <pre>...
 ==========
 2+40%
-..........
+----------
 Error in sum-test.txt, line 17:
 2+40%
     ^
@@ -353,7 +351,7 @@ failure occurs.</p>
 
 <pre>sum = number ('+' @ number @2add)* end
 number = ('0..9')+ @value
-end = '\13'? '\10' @
+end = '\r'? '\n' @
 </pre>
 
 <p>All we've done is to replace the <code>?</code> operator by the
@@ -364,7 +362,7 @@ rather than one or more times. We can add a test:</p>
 <pre>...
 ==========
 2+10+12+18
-..........
+----------
 value 2
 value 10
 add
@@ -388,7 +386,7 @@ Pass 5 tests.
 
 <pre>sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = ('0..9')+ @value
-end = '\13'? '\10' @
+end = '\r'? '\n' @
 </pre>
 
 <p>A number can be followed by any number of clauses. Each clause is either a
@@ -398,7 +396,7 @@ subtraction:</p>
 <pre>...
 ==========
 2-10+53-3
-..........
+----------
 value 2
 value 10
 subtract
@@ -422,7 +420,7 @@ Pass 6 tests.
 Here is the one in our current test file:</p>
 
 <pre>2+40%
-..........
+----------
 Error in sum-test.txt, line 17:
 2+40%
     ^
@@ -434,8 +432,8 @@ things which would allow further parsing. If the list were generated
 automatically, it might read:</p>
 
 <pre>2+40%
-..........
-Error... expecting '0','1','2','3','4','5','6','7','8','9','+','-','\13','\10'
+----------
+Error... expecting '0','1','2','3','4','5','6','7','8','9','+','-','\r','\n'
 2+40%
     ^
 </pre>
@@ -445,7 +443,7 @@ form a summary. To do that, we can add error handlers to the parser:</p>
 
 <pre>sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = (#digit '0..9')+ @value
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>If we run the Pecan program on our test file, we get this:</p>
@@ -476,7 +474,7 @@ where there is no number after an operator:</p>
 <pre>...
 ==========
 2+
-..........
+----------
 Error in sum-test.txt, line 43: expecting digit
 2+
   ^
@@ -497,15 +495,15 @@ sure it is accurate.</p>
 because there is no handler for them. Although it is often reasonable to leave
 out relatively unimportant items from the 'expected' list, the operators ought
 to be reported in our case. For uniformity, let's make sure that whenever a
-character is matched in the input, there is a marker associated with it. We can
-rewrite the parser as:</p>
+character is matched in the input, there is a marker associated with it which
+reports its absence. We can rewrite the parser as:</p>
 
 <pre>sum = number (plus number @2add / minus number @2subtract)* end
 number = digit+ @value
 plus = #operator '+' @
 minus = #operator '-' @
 digit = #digit '0..9'
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>Each expression where a character is recognised has been pulled out into its
@@ -541,9 +539,11 @@ Error in sum-test.txt, line 17: expecting digit, newline, operator
 </pre>
 
 <p>This shows that operators are now being reported. If we upgrade the error
-message in the test file, the tests pass. The error handler
+message in the test file, the tests pass. Note that the error handler
 <code>#operator</code> is encountered twice while parsing, once for each
-operator, but is only reported once.</p>
+operator, but is only reported once. Also note that the error markers are
+reported in alphabetical order. In the compiled parser, a different order can be
+specified.</p>
 
 <h3>Step 13</h3>
 
@@ -557,7 +557,7 @@ minus = #operator '-' @
 times = #operator '*' @
 over = #operator '/' @
 digit = #digit '0..9'
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>Using the two separate rules <code>sum</code> and <code>term</code> means
@@ -568,7 +568,7 @@ this is working:</p>
 <pre>...
 ==========
 5*8+12/6
-..........
+----------
 value 5
 value 8
 multiply
@@ -602,7 +602,7 @@ over = #operator '/' @
 open = #bracket '(' @
 close = #bracket ')' @
 digit = #digit '0..9'
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>Running the existing tests shows up a slight problem:</p>
@@ -624,7 +624,7 @@ can add a simple test for brackets:</p>
 <pre>...
 ==========
 2*(20+1)
-..........
+----------
 value 2
 value 20
 value 1
@@ -671,7 +671,7 @@ over = #operator '/' @
 open = #bracket '(' @
 close = #bracket ')' @
 digit = #digit '0..9'
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>Let's run the tests again:</p>
@@ -702,7 +702,7 @@ open = #bracket '(' gap
 close = #bracket ')' gap
 digit = #digit '0..9'
 gap = (#space ' ')* @
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>A test can be added:</p>
@@ -710,7 +710,7 @@ end = #newline '\13'? '\10' @
 <pre>...
 ==========
  2 * ( 20 + 1 )
-..........
+----------
 value 2
 value 20
 value 1
@@ -739,9 +739,10 @@ anywhere, it seems rather fussy to mention them.</p>
 <p>Rather than change the error messages to add <code>space</code> as an extra
 expected item, let's decide that error messages will look cleaner if spaces are
 not reported. Also, there are no circumstances where one or more digits have
-been matched, and a further digit is required. So let's remove the marker
-<code>#digit</code> from the digit rule and put a marker <code>#integer</code>
-on the number rule instead. The grammar becomes:</p>
+been matched, and a further digit is required, so it is tidier not to report
+digits individually either. So let's remove the marker <code>#digit</code> from
+the digit rule and put a marker <code>#integer</code> on the number rule
+instead. The grammar becomes:</p>
 
 <pre>sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
@@ -756,7 +757,7 @@ open = #bracket '(' gap
 close = #bracket ')' gap
 digit = '0..9'
 gap = (' ')* @
-end = #newline '\13'? '\10' @
+end = #newline '\r'? '\n' @
 </pre>
 
 <p>Running the tests again shows that there are error messages that need to
@@ -767,8 +768,9 @@ Pass 10 tests.
 </pre>
 
 <p>Although there are many more features that could be added, let's stop and say
-we have successfully developed an arithmetic expression parser.</p>
+we have successfully developed a grammar for arithmetic expressions.</p>
 
+<!--
 <h3>Step 18</h3>
 
 <p>It is time to compile the grammar, in order to create a real calculator
@@ -821,6 +823,6 @@ user, then prints out the result:</p>
 <p>In this case, the actions form an evaluator, but it would be just as easy to
 specify a tree node class instead of <code>int</code> and to provide action
 methods which build a parse tree.</p>
-
+-->
 </body>
 </html>

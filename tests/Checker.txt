@@ -1,6 +1,6 @@
 -- Empty string: succeeds without progressing
 x = ""
-..........
+----------
 List x = ""...
   Rule x = "" SN
     Id x SN
@@ -9,7 +9,7 @@ List x = ""...
 ==========
 -- Empty set: fails without progressing
 x = ''
-..........
+----------
 List x = ''...
   Rule x = '' FN
     Id x FN
@@ -18,7 +18,7 @@ List x = ''...
 ==========
 -- Character code: succeeds and progresses or fails without progressing
 x = '\42'
-..........
+----------
 List x = '\42'...
   Rule x = '\42' FN,SP
     Id x FN,SP
@@ -27,7 +27,7 @@ List x = '\42'...
 ==========
 -- Strings: FN,SP
 x = "a" "ab"
-..........
+----------
 List x = "a" "ab"...
   Rule x = "a" "ab" FN,SP,FP
     Id x FN,SP,FP
@@ -38,7 +38,7 @@ List x = "a" "ab"...
 ==========
 -- Sets: SP or FN
 x = 'a' 'ab'
-..........
+----------
 List x = 'a' 'ab'...
   Rule x = 'a' 'ab' FN,SP,FP
     Id x FN,SP,FP
@@ -49,7 +49,7 @@ List x = 'a' 'ab'...
 ==========
 -- Empty string then empty string: SN
 x = "" ""
-..........
+----------
 List x = "" ""...
   Rule x = "" "" SN
     Id x SN
@@ -60,7 +60,7 @@ List x = "" ""...
 ==========
 -- Normal rule without recursion
 x = 'a'
-..........
+----------
 List x = 'a'...
   Rule x = 'a' FN,SP
     Id x FN,SP
@@ -69,7 +69,7 @@ List x = 'a'...
 ==========
 -- Simple left recursive rule
 x = x 'a'
-..........
+----------
 Error in tests/Checker.txt, line 71: potential infinite loop
 x = x 'a'
 ^
@@ -78,7 +78,7 @@ x = x 'a'
 x = y "abc"
 z = "123"
 y = x "ABC"
-..........
+----------
 Error in tests/Checker.txt, line 78: potential infinite loop
 x = y "abc"
 ^
@@ -86,7 +86,7 @@ x = y "abc"
 -- Mutual recursion masked by optional expression
 x = "a" ? y
 y = "A" ? x "ABC"
-..........
+----------
 Error in tests/Checker.txt, line 87: potential infinite loop
 x = "a" ? y
 ^
@@ -98,21 +98,21 @@ y = "A" ? x "ABC"
 a = b
 b = c
 c = "a" ?
-..........
+----------
 Error in tests/Checker.txt, line 95: potential infinite loop
 x = a y
 ^
 ==========
 -- Text input and token input
 x = [%a] 'b'
-..........
+----------
 Error in tests/Checker.txt, line 107: text matcher in a token parser
 x = [%a] 'b'
          ^^^
 ==========
 -- See: FN,SP,FP
 x = [%a] %b
-..........
+----------
 List x = [%a] %b... TI
   Rule x = [%a] %b FN,SP,FP
     Id x FN,SP,FP
@@ -124,7 +124,7 @@ List x = [%a] %b... TI
 ==========
 -- Positive lookahead: SN,FN
 x = (%a)& %b
-..........
+----------
 List x = (%a)& %b... TI
   Rule x = (%a)& %b FN,SP
     Id x FN,SP
@@ -136,7 +136,7 @@ List x = (%a)& %b... TI
 ==========
 -- Negative lookahead: SN,FN
 x = (%a)! %b
-..........
+----------
 List x = (%a)! %b... TI
   Rule x = (%a)! %b FN,SP
     Id x FN,SP
@@ -148,7 +148,7 @@ List x = (%a)! %b... TI
 ==========
 -- Action on left of choice (legal now, but warn when compiling)
 x = @a 'a' / 'b'
-..........
+----------
 List x = @a 'a' / 'b'...
   Rule x = @a 'a' / 'b' FN,SP,AA,AB
     Id x FN,SP,AA,AB
@@ -161,7 +161,7 @@ List x = @a 'a' / 'b'...
 ==========
 -- Expression which succeeds without progressing, repeated in an infinite loop
 x = (@a @2b)*
-..........
+----------
 Error in tests/Checker.txt, line 163: potential infinite loop
 x = (@a @2b)*
 ^
@@ -170,7 +170,7 @@ x = (@a @2b)*
 x = #m
 y = #m 'a'
 z = ('a' #m 'b')&
-..........
+----------
 List x = #m...
   Rule x = #m SN,EE
     Id x SN,EE
@@ -194,7 +194,7 @@ exp = term ('+' term @2add / '-' term @2sub)* 'eof'
 term = factor ('*' factor @2mul / '/' factor @2div)*
 factor = primary ('^' factor @2pow)?
 primary = 'number' @number / '(' exp ')'
-..........
+----------
 List exp = term ('+' term @2add / '-' term @2sub)* 'eof'...
   Rule exp = term ('+' term @2add / '-' term @2sub)* 'eof' FN,SP,FP,AA
     Id exp FN,SP,FP,AA

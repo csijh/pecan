@@ -25,7 +25,19 @@ specifiers in node formats can contain:
 class Pretty {
     private StringBuilder output = new StringBuilder();
     private int cursor, indent, tab = 2, margin = 80;
-    private String escape1 = "\\%03o", escape2 = "\\u%04x", escape3 = "\\U%08x";
+    private String escape1, escape2, escape4;
+
+    // Set the tab size from a string of spaces.
+    void tab(String s) {
+        tab = s.length();
+    }
+
+    // Set the escape formats.
+    void escapes(String s1, String s2, String s4) {
+        escape1 = s1;
+        escape2 = s2;
+        escape4 = s4;
+    }
 
     // Ask for the text that's been printed, and reset.
     String text() {
@@ -45,20 +57,22 @@ class Pretty {
     // Print a single character, with escapes.
     private void printChar(int ch) {
         if (' ' <= ch && ch <= '~') print("" + (char)ch);
+        else if (ch <= 0xFF && escape1.equals("")) print("" + (char)ch);
         else if (ch <= 0xFF) print(String.format(escape1, ch));
+        else if (ch <= 0xFFFF && escape2.equals("")) print("" + (char)ch);
         else if (ch <= 0xFFFF) print(String.format(escape2, ch));
-        else print(String.format(escape3, ch));
+        else if (escape4.equals("")) {
+            output.appendCodePoint(ch);
+            cursor += 1;
+        }
+        else print(String.format(escape4, ch));
     }
 
     // Print literal text, with escapes.
-    // TODO: escapes.
     private void printLiteral(String s) {
         for (int i = 0; i < s.length(); ) {
             int ch = s.codePointAt(i);
-            if (' ' <= ch && ch <= '~') print("" + (char)ch);
-            else if (ch <= 0xFF) print(String.format(escape1, ch));
-            else if (ch <= 0xFFFF) print(String.format(escape2, ch));
-            else print(String.format(escape3, ch));
+            printChar(ch);
             i += Character.charCount(ch);
         }
     }

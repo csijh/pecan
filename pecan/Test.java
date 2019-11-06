@@ -19,10 +19,10 @@ can be done even when other classes are broken. For each test, the test method
 is called on the object, and its output is compared with the expected output.
 
 A file of tests is divided into sections, separated from each other by a line
-starting with four or more equal signs. Each section normally represents one
-test, and is separated into two parts by a line starting with four or more dots.
-The first part is an input string for the test, and the second part is the
-expected output.
+starting with ten or more equal signs. Each section normally represents one
+test, and is separated into two parts by a line starting with ten or more minus
+signs. The first part is an input string for the test, and the second part is
+the expected output.
 
 If a section contains only one part, then it represents a grammar to be used for
 subsequent tests. The grammar may contain inclusions. If the grammar is a single
@@ -88,12 +88,14 @@ public class Test {
     // file, else convert it into a test.
     private static List<Test> makeTests(Source s, boolean trace) {
         List<Test> tests = new ArrayList<Test>();
-        int start = 0, end = s.indexOf("=====");
+        int start = 0, end = s.indexOf("\n==========");
+        if (end >= 0) end++;
         while (end >= 0) {
             makeTest(tests, s.sub(start, end), trace);
             start = s.indexOf("\n", end) + 1;
             if (start >= s.length()) end = -1;
-            else end = s.indexOf("=====", start);
+            else end = s.indexOf("\n==========", start);
+            if (end >= 0) end++;
         }
         if (start < s.length()) {
             makeTest(tests, s.sub(start, s.length()), trace);
@@ -103,7 +105,12 @@ public class Test {
 
     // Create a test object from a range of lines.
     private static void makeTest(List<Test> tests, Source s, boolean trace) {
-        int d = s.indexOf(".....");
+        int d = -1;
+        if (s.startsWith("----------")) d = 0;
+        else {
+            d = s.indexOf("\n----------");
+            if (d >= 0) d++;
+        }
         if (d >= 0) {
             Test t = new Test();
             t.in = s.sub(0, d);

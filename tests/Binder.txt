@@ -1,6 +1,6 @@
 -- One rule
 x = "a"
-..........
+----------
 List x = "a"...
   Rule x = "a"
     Id x
@@ -9,7 +9,7 @@ List x = "a"...
 ==========
 -- One action
 x = "x" @1act
-..........
+----------
 List x = "x" @1act...
   Rule x = "x" @1act
     Id x
@@ -20,7 +20,7 @@ List x = "x" @1act...
 ==========
 -- A splitter
 x = <abc> "y" / "z"
-..........
+----------
 List x = <abc> "y" / "z"...
   Rule x = <abc> "y" / "z"
     Id x
@@ -33,7 +33,7 @@ List x = <abc> "y" / "z"...
 ==========
 -- A tag
 x = %t
-..........
+----------
 List x = %t...
   Rule x = %t
     Id x
@@ -43,7 +43,7 @@ List x = %t...
 -- Some brackets
 exp = (exp) END
 END = '\10'
-..........
+----------
 List exp = (exp) END...
   Rule exp = (exp) END
     Id exp
@@ -57,7 +57,7 @@ List exp = (exp) END...
 ==========
 -- Set with duplicate character
 s = 'abcdefcghi'
-..........
+----------
 Error in tests/Binder.txt, line 59: set contains duplicate character
 s = 'abcdefcghi'
     ^^^^^^^^^^^^
@@ -65,7 +65,7 @@ s = 'abcdefcghi'
 -- Code too big
 m = '\1114111'
 n = '\1114112'
-..........
+----------
 Error in tests/Binder.txt, line 67: code too big
 n = '\1114112'
     ^^^^^^^^^^
@@ -73,7 +73,7 @@ n = '\1114112'
 -- Code too big
 m = '\010ffff'
 n = '\0110000'
-..........
+----------
 Error in tests/Binder.txt, line 75: code too big
 n = '\0110000'
     ^^^^^^^^^^
@@ -81,7 +81,7 @@ n = '\0110000'
 -- Unicode, 195101 = last letter.
 char = "\195101"
 x = "x"
-..........
+----------
 List char = "\195101"...
   Rule char = "\195101"
     Id char
@@ -93,49 +93,49 @@ List char = "\195101"...
 ==========
 -- Bad range
 s = 'ab..c'
-..........
+----------
 Error in tests/Binder.txt, line 95: set contains duplicate character
 s = 'ab..c'
     ^^^^^^^
 ==========
 -- Bad range
 s = 'a..bc'
-..........
+----------
 Error in tests/Binder.txt, line 102: expecting quote
 s = 'a..bc'
          ^
 ==========
 -- Bad range
 s = '..a'
-..........
+----------
 Error in tests/Binder.txt, line 109: set contains duplicate character
 s = '..a'
     ^^^^^
 ==========
 -- Bad range
 s = 'a..'
-..........
+----------
 Error in tests/Binder.txt, line 116:
 s = 'a..'
         ^
 ==========
 -- Bad range
 s = 'b..a'
-..........
+----------
 Error in tests/Binder.txt, line 123: empty range
 s = 'b..a'
     ^^^^^^
 ==========
 -- Bad range
 s = '\33..\32'
-..........
+----------
 Error in tests/Binder.txt, line 130: empty range
 s = '\33..\32'
     ^^^^^^^^^^
 ==========
 -- Just OK range
 s = '\33..\33'
-..........
+----------
 List s = '\33..\33'...
   Rule s = '\33..\33'
     Id s
@@ -146,7 +146,7 @@ List s = '\33..\33'...
 s1 = '.../'
 s2 = '-...'
 s3 = '....'
-..........
+----------
 List s1 = '.../'...
   Rule s1 = '.../'
     Id s1
@@ -161,7 +161,7 @@ List s1 = '.../'...
 ==========
 -- Name clash
 x = @2add @3add
-..........
+----------
 Error in tests/Binder.txt, line 163: clashes with @2add
 x = @2add @3add
           ^^^^^
@@ -173,7 +173,7 @@ factor = primary ("^" factor @2pow)?
 primary = number / "(" exp ")"
 number = digit+ @number
 digit = '0123456789'
-..........
+----------
 List exp = term ("+" term @2add / "-" term @2sub)* <>...
   Rule exp = term ("+" term @2add / "-" term @2sub)* <>
     Id exp
@@ -235,7 +235,7 @@ List exp = term ("+" term @2add / "-" term @2sub)* <>...
 -- Unknown rule name
 x = z
 y = "a"
-..........
+----------
 Error in tests/Binder.txt, line 236: undefined identifier
 x = z
     ^
@@ -244,7 +244,7 @@ x = z
 x = "x"
 y = "y"
 x = "z"
-..........
+----------
 Error in tests/Binder.txt, line 246: x is already defined
 x = "z"
 ^
@@ -252,7 +252,7 @@ x = "z"
 -- Error markers
 string = '"' visible* #badstring '"'
 visible = "x"
-..........
+----------
 List string = '"' visible* #badstring '"'...
   Rule string = '"' visible* #badstring '"'
     Id string
@@ -269,7 +269,7 @@ List string = '"' visible* #badstring '"'...
 ==========
 -- Unicode category
 upper = Lu
-..........
+----------
 List upper = Lu...
   Rule upper = Lu
     Id upper
@@ -278,14 +278,14 @@ List upper = Lu...
 ==========
 -- Attempt to redefine category
 Lu = 'x'
-..........
+----------
 Error in tests/Binder.txt, line 280: expecting id, newline
 Lu = 'x'
 ^
 ==========
 -- Empty string, set, splitter
 x = "" '' <>
-..........
+----------
 List x = "" '' <>...
   Rule x = "" '' <>
     Id x
@@ -297,7 +297,7 @@ List x = "" '' <>...
 ==========
 -- Singleton string or set becomes Char
 x = "a" 'b'
-..........
+----------
 List x = "a" 'b'...
   Rule x = "a" 'b'
     Id x
@@ -308,7 +308,7 @@ List x = "a" 'b'...
 ==========
 -- Unnamed action becomes Drop
 x = @ @1 @2 @3
-..........
+----------
 List x = @ @1 @2 @3...
   Rule x = @ @1 @2 @3
     Id x
@@ -321,7 +321,7 @@ List x = @ @1 @2 @3...
 ==========
 -- Text and tokens
 x = "a" %b
-..........
+----------
 Error in tests/Binder.txt, line 323: text matcher in a token parser
 x = "a" %b
     ^^^
