@@ -40,10 +40,10 @@ class Compiler implements Testable {
         formats.readLine(1, "file", "declare = 'bool %s();'");
         formats.readLine(1, "file", "comment = '// %s'");
         formats.readLine(1, "file",
-            "define = 'bool %l() { %n%treturn %r; %n}'");
-        formats.readLine(1, "file", "escape1 = '\\%03o'");
-        formats.readLine(1, "file", "escape2 = '\\u%04x'");
-        formats.readLine(1, "file", "escape4 = '\\U%08x'");
+            "define = 'bool %s() { %n return %r; %n}'");
+        formats.readLine(1, "file", "escape1 = '\\%3o'");
+        formats.readLine(1, "file", "escape2 = '\\u%4x'");
+        formats.readLine(1, "file", "escape4 = '\\U%8x'");
         formats.fillDefaults(1, "file");
         compiler.formats(formats);
         Test.run(compiler, args);
@@ -70,6 +70,8 @@ class Compiler implements Testable {
         if (root.left().get(NEED) > 0) {
             return "Error: first rule can cause underflow\n";
         }
+        String e = checkChoices(root);
+        if (e != null) return e;
         if (formats.get(DEFINE).equals("")) {
             return "Error: no print format found for definitions\n";
         }
@@ -81,6 +83,28 @@ class Compiler implements Testable {
         declare(root);
         compile(root);
         return pretty.text();
+    }
+
+    // Check for and report inaccessible alternatives or actions at the start of
+    // left hand alternatives. These are not reported earlier, so that arbitrary
+    // transformations are not prevented.
+    private String checkChoices(Node node) {
+        if (node == null) return null;
+        if (node.op() == Or && ! node.left().has(FN)) {
+            return node.right().source().error(
+            "inaccessible alternative") + "\n";
+        }
+        else if (node.op() == Or && node.left().has(AB)) {
+            return node.left().source().error(
+            "left alternative starts with action") + "\n";
+        }
+        else {
+            String e = checkChoices(node.left());
+            if (e != null) return e;
+            e = checkChoices(node.right());
+            if (e != null) return e;
+        }
+        return null;
     }
 
     // Print forward declarations for the functions.
@@ -153,6 +177,8 @@ class Compiler implements Testable {
         node.left().format("%s");
         compile(node.right());
         String define = formats.get(DEFINE);
+        define = define.replace("%s","%l");
+        define = define.replace("%e","%r");
         node.format(define);
     }
 

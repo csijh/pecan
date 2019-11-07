@@ -66,13 +66,13 @@ enum category {
 // <pecan
 //   comment  = "// %s"
 //   declare  = "bool %s(parser *p);"
-//   define   = "bool %l(parser *p) { %n%treturn %r; %n}"
+//   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
 //   act0     = "act(p,0,%s(length(p),start(p)))"
 //   act2     = "act(p,2,%s(top(p,1),top(p,0)))"
-//   escape1  = "\%03o"
-//   escape2  = "\u%04x"
-//   escape4  = "\U%08x"
+//   escape1  = "\%3o"
+//   escape2  = "\u%4x"
+//   escape4  = "\U%8x"
 // >
 
 // </pecan>. End of generated functions.

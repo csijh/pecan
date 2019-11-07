@@ -19,7 +19,7 @@ class Formats {
     // Attributes, and the types of parameter their formats allow (string,
     // left, right, character, decimal, newline).
     enum Attribute {
-        DECLARE("s"), COMMENT("s"), DEFINE("slrn"), TAB(""),
+        DECLARE("s"), COMMENT("s"), DEFINE("slrnt"), TAB(""),
         AND(""), OR(""), TRUE(""), FALSE(""),
         CALL("s"), ID("s"), ESCAPE1("cd"), ESCAPE2("cd"), ESCAPE4("cd"),
         ACT("ds"), ACT0("s"), ACT1("s"), ACT2("s"), ACT3("s"), ACT4("s"),
@@ -56,6 +56,7 @@ class Formats {
         if (tag == null) report(n, file, "unrecognized attribute");
         s = checkFormat(tag, format);
         if (s != null) report(n, file, s);
+        format = normalize(format);
         set(tag, format);
     }
 
@@ -96,8 +97,8 @@ class Formats {
         return null;
     }
 
-    // Check that each specifier in a format is a generally allowed one.
-    // Also check that the specifier is allowed by a particular tag.
+    // Check that each specifier in a format is a generally allowed one. Also
+    // check that the specifier is allowed by a particular tag.
     private String checkFormat(Attribute it, String format) {
         String bad = "bad specifier ", ban = "inapplicable specifier ";
         String[] parts = split(format);
@@ -106,8 +107,7 @@ class Formats {
                 if (s.length() < 2) return bad + s;
                 else if (s.length() == 2) {
                     char letter = s.charAt(1);
-                    if ("nlrstfcdox".indexOf(letter) < 0) return bad + s;
-                    if (letter == 't' || letter == 'f') letter = 's';
+                    if ("ntlrscdox".indexOf(letter) < 0) return bad + s;
                     if (letter == 'o' || letter == 'x') letter = 'd';
                     if (it.allowed.indexOf(letter) < 0) return ban + s;
                 }
@@ -123,6 +123,22 @@ class Formats {
             }
         }
         return null;
+    }
+
+    // For a specifier with a digit count, put a zero in front to indicate
+    // leading zeros. If %n is followed by a space, make it %t.
+    private String normalize(String s) {
+        s = s.replace("%1", "%01");
+        s = s.replace("%2", "%02");
+        s = s.replace("%3", "%03");
+        s = s.replace("%4", "%04");
+        s = s.replace("%5", "%05");
+        s = s.replace("%6", "%06");
+        s = s.replace("%7", "%07");
+        s = s.replace("%8", "%08");
+        s = s.replace("%9", "%09");
+        s = s.replace("%n ", "%n%t");
+        return s;
     }
 
     // Fill in any unspecified defaults. Return null or an error message.
@@ -249,7 +265,7 @@ class Formats {
         assert(Arrays.equals(x, new String[] {"%n","abc","%d","%o","def"}));
         x = split("abc%4x%?def%");
         assert(Arrays.equals(x, new String[] {"abc","%4x","%","?def","%"}));
-        assert(checkFormat(DEFINE, "%n%l%s%t%f") == null);
+        assert(checkFormat(DEFINE, "%n%l%r%s") == null);
         assert(checkFormat(RANGE, "%c%d%o%x%4d%4o%4x") == null);
         assert(checkFormat(DROP, "%d%o%x%4d%4o%4x") == null);
         assert(checkFormat(DEFINE, "%").equals("bad specifier %"));
@@ -264,6 +280,8 @@ class Formats {
         assert(call("%s()","alt","%l").equals("alt(%l)"));
         assert(call("%s(p)","alt","%l").equals("alt(p,%l)"));
         assert(call("%s p","alt","%l").equals("alt p %l"));
+        assert(normalize("...%4x...").equals("...%04x..."));
+        assert(normalize("a %n b").equals("a %n%tb"));
     }
 
     public static void main(String[] args) {

@@ -46,8 +46,9 @@
 <li><a href="#testing">Testing</a></li>
 <li><a href="#checks">Consistency checks</a>
 <ul>
-<li><a href="#loop">Left recursion checking</a></li>
-<li><a href="#output">Output checking</a></li>
+<li><a href="#loop">Left recursion checks</a></li>
+<li><a href="#output">Output checks</a></li>
+<li><a href="#final">Final checks</a></li>
 </ul>
 <li><a href="#compile">Compilation</a>
 <ul>
@@ -995,18 +996,18 @@ example:</p>
 number = ("0".."9") @number
 ==========
 2
-..........
+----------
 number 2
 ==========
 42
-..........
+----------
 number 4
 ==========
 // Match any number of digits
 number = ("0".."9") @number
 ==========
 42
-..........
+----------
 number 42
 </pre>
 
@@ -1026,7 +1027,7 @@ separated by white space:</p>
 list = %number @value (%comma %number @value @2and)*
 ==========
 number comma number comma number
-..........
+----------
 value
 value
 and
@@ -1103,7 +1104,7 @@ line ends in an escape sequence, the newline is cancelled. For example:</p>
 <pre>==========
 Line one\r
 Line two \n
-..........
+----------
 ...
 </pre>
 
@@ -1123,12 +1124,10 @@ matchers, i.e. strings, splitters, sets, ranges or numbers, with the exception
 of <code>""</code> or <code>''</code> or <code>&lt;></code>.</p>
 
 <p>There are also checks on sets and ranges. Sets must contain distinct
-characters, and a range must have a single code point either side of the
-<code>..</code> and the range must be non-empty.</p>
+characters, and a range must be non-empty.</p>
 
-<p>Many parsing expressions are
-equivalent, which considerably reduces the number of cases that need be
-discussed. For example:</p>
+<p>Many parsing expressions are equivalent, which considerably reduces the
+number of cases that need to be discussed. For example:</p>
 
 <pre>'\32'     &#8801;  ' '
 'a'       &#8801;  "a"
@@ -1160,10 +1159,10 @@ x&amp;        &#8801;  x!!
 <code>#a</code>          markers
 </pre>
 
-<p>The main remaining checks are making sure that there is no left recursion,
-and that output items are handled consistently.</p>
+<p>The main checks are to make sure that there is no left recursion, and that
+output items are handled consistently.</p>
 
-<h3 id="loop">Left recursion checking</h3>
+<h3 id="loop">Left recursion checks</h3>
 
 <p>Pecan checks that the grammar contains no infinite loops caused by left
 recursion. The simplest example is where a rule mentions its own name at the
@@ -1210,7 +1209,7 @@ and progress or not:</p>
 <p>The way the properties are calculated for the remaining features of grammars
 (using <code>&amp;</code> for 'and' and <code>|</code> for 'or', with
 <code>&amp;</code> binding tighter, and using <code>def(id)</code> for the right
-hand expression of a rule for identifier <code>id</code>) are:</p>
+hand expression of a rule for identifier <code>id</code> are:</p>
 
 <pre>SN(id) = SN(def(id))
 SP(id) = SP(def(id))
@@ -1243,7 +1242,7 @@ FN(x!) = SN(x) | SP(x)
 FP(x!) = false
 </pre>
 
-<p>Because the rules are themselves recursive, fixed point iteration is used,
+<p>Because these rules are themselves recursive, fixed point iteration is used,
 i.e. the values are calculated repeatedly until they don't change. If all the
 values are set to <code>false</code> at the start, the only possible changes are
 from <code>false</code> to <code>true</code>, so the iteration terminates.</p>
@@ -1314,7 +1313,7 @@ end = '' @end
 <p>This does cause an error, because after recognising the end of text, the
 scanner could continue to look for more tokens.</p>
 -->
-<h3 id="output">Output checking</h3>
+<h3 id="output">Output checks</h3>
 
 <p>Actions are assumed to treat output items in a stack-like manner. Restrictive
 checks are made to guarantee consistent handling of output items. The arity of
@@ -1352,8 +1351,8 @@ grammar contains:</p>
 </pre>
 
 <p>The inner expression causes one output item to be pushed on the stack. This
-is reported as an error, because <code>tokens</code> as a whole pushes an
-unknown number of items onto the stack. On the other hand, this definition is
+is reported as an error, because the <code>tokens</code> rule as a whole pushes
+an unknown number of items onto the stack. On the other hand, this definition is
 allowed:</p>
 
 <pre>tokens = (('0..9')+ @1token)*
@@ -1374,11 +1373,11 @@ number of output items produced is fixed. For example:</p>
 times <code>x</code> calls itself recursively. So this is reported as an
 error.</p>
 
-<p>A second check is that the stack never underflows. To check this, for each
-expression, the number of items which need to be on the stack when the
-expression is executed is calculated. For example, the expression
-<code>('0..9')+ @1token</code> needs one item to be on the stack. There are
-situations where the needed number can't be calculated, for example:</p>
+<p>A further check is related to stack underflow. For each expression, the
+number of items which need to be on the stack when the expression is executed is
+calculated. For example, the expression <code>('0..9')+ @1token</code> needs one
+item to be on the stack. There are situations where the needed number can't be
+calculated, for example:</p>
 
 <pre>x = 'a' / 'b' @2c x @d
 </pre>
@@ -1387,13 +1386,53 @@ situations where the needed number can't be calculated, for example:</p>
 on the stack, even though the net effect of <code>x</code> is zero. Such a
 situation is reported as an error.</p>
 
-<p>Any situation where the net effect or the needed number can't be calculated
-as a fixed integer is reported. For a complete grammar which is about to be
-compiled, the first rule is checked to make sure its net effect is one, and its
-needed number is zero, so that stack underflow is impossible.</p>
+<h3 id="final">Final checks</h3>
 
-<p>These checks are conservative, i.e. there could be pathological grammars
-which always work correctly in practice, but which don't pass the checks.</p>
+<p>There are a few checks that are not made until a grammar is compiled. One is
+that the first rule in the grammar produces exactly one output item. For
+example:</p>
+
+<pre>first = "a" @b @c
+</pre>
+
+<p>This produces two items, so is reported as an error. A second check is that
+the first rule needs no items to be on the stack before it starts. For
+example:</p>
+
+<pre>first = "a" @1b @c
+</pre>
+
+<p>Although overall this produces one output item, it needs an output item to be
+on the stack before parsing starts. The check ensures that parsing of the entire
+grammar can never cause a stack underflow.</p>
+
+<p>These two issues are not reported during development of a grammar, so that a
+grammar with no actions, or a self-contained fragment of a grammar, are legal
+and can be tested.</p>
+
+<p>A further check is that any left hand alternative of a choice can fail with
+no progress. For example:
+
+<pre>x = "" / "a"
+</pre>
+
+<p>The first alternative can't fail, so the second alternative is inaccessible,
+i.e. parsing can never reach it. Another check is that a left hand alternative
+doesn't start with an action. For example:</p>
+
+<pre>x = @a "b" / y
+</pre>
+
+<p>This is to guard against ambiguity. The action <code>@a</code> is executed
+whether or not the first alternative succeeds, which is probably not what is
+intended. If it is what is intended, it should be rewritten as:</p>
+
+<pre>x = @a ("b" / y)
+</pre>
+
+<p>These issues concerning choices are not reported during development of a
+grammar, because they can temporarily arise naturally during
+transformations.</p>
 
 <h2 id="compile">Compilation</h2>
 
@@ -1442,12 +1481,13 @@ general, <code>x / y</code> is compiled into something like:</p>
 </pre>
 
 <p>Here <code>tx</code>, <code>ty</code> represent the translations of
-<code>x</code>, <code>y</code>. The <code>go</code> function pushes the current
-input position on a stack before <code>tx</code> is executed, the
-<code>ok</code> function checks for progress, and the <code>alt</code> function
-pops the saved position off the stack after the choice has been completed. The
-<code>go</code> function is also used in the compilation of other Pecan
-features. For example, an expression <code>x&amp;</code> is compiled to:</p>
+<code>x</code>, <code>y</code> into boolean expressions. The <code>go</code>
+function pushes the current input position onto a stack before <code>tx</code>
+is executed, the <code>ok</code> function checks for progress, and the
+<code>alt</code> function pops the saved position off the stack after the choice
+has been completed. The <code>go</code> function is also used in the compilation
+of other Pecan features. For example, an expression <code>x&amp;</code> is
+compiled to:</p>
 
 <pre>has(go() &amp;&amp; tx)
 </pre>
@@ -1466,12 +1506,12 @@ target language for the given application:</p>
 
 <pre>// &lt;pecan
 //     comment = "// %s"
-//     declare = "bool %l(parser *p);"
-//     define  = "bool %l(parser *p) { %n%treturn %r; %n}"
+//     declare = "bool %s(parser *p);"
+//     define  = "bool %s(parser *p) { %n return %r; %n}"
 //     call    = "%s(p)"
-//     escape1 = "\%03o"
-//     escape2 = "\u%04x"
-//     escape4 = "\U%08x"
+//     escape1 = "\%3o"
+//     escape2 = "\u%4x"
+//     escape4 = "\U%8x"
 // >
 ...
 // &lt;/pecan>
@@ -1489,22 +1529,23 @@ generated for a specific Pecan feature.</p>
 for specifiers. There are no backslash escape conventions. Each specifier
 determines what to extract and print from the current construct.</p>
 
-<p>The specifier <code>%n</code> followed by spaces indicates that if an
-expression does not fit on the current line, a newline and indent are printed,
-and any space at the end of the previous line is deleted. The specifier
-<code>%t</code> increases the indent, temporarily. The specifiers
-<code>%l</code>, <code>%r</code> indicate that a left or right subexpression is
-to be compiled and printed. The specifier <code>%s</code> indicates that a
-string or name should be printed. Identifier names with hyphens
-are translated to <a href="https://en.wikipedia.org/wiki/Camel_case">camel
-case</a>. The specifier <code>%S</code> indicates additionally that the first
-letter of names should be upper case. A character can be printed directly using
-<code>%c</code>, or its integer code can be printed using <code>%d</code> for
-decimal, <code>%o</code> for octal, or <code>%x</code> for hexadecimal. A fixed
-number of digits can be specified for <code>%d</code>, <code>%o</code> or
-<code>%x</code>, e.g. <code>%4x</code>. When printing a range, two character or
-numeric specifiers are used to refer to the low and high characters, e.g. the
-format for a range might be <code>"range('%c','%c')"</code>.</p>
+<p>The specifier <code>%s</code> indicates that a string or name should be
+printed. Identifier names with hyphens are translated to <a
+href="https://en.wikipedia.org/wiki/Camel_case">camel case</a> and literal names
+are translated as described earlier. The specifiers <code>%l</code>,
+<code>%r</code> indicate that a left or right subexpression is to be compiled
+and printed. The specifier <code>%n</code> indicates that if an expression does
+not fit on the current line, a newline and indent is printed. A space before
+<code>%n</code> is deleted if the newline is printed. A space after
+<code>%n</code> increases the indent temporarily if the newline is printed, or
+is deleted otherwise. A character can be printed directly using <code>%c</code>,
+or its integer code can be printed using <code>%d</code> for decimal,
+<code>%o</code> for octal, or <code>%x</code> for hexadecimal. A fixed number of
+digits can be specified for <code>%d</code>, <code>%o</code> or <code>%x</code>,
+e.g. <code>%4x</code>, with leading zeros being added where necessary. When
+printing a range, two character or numeric specifiers are used to refer to the
+low and high characters, e.g. the format for a range might be
+<code>"range('%c','%c')"</code>.</p>
 
 <p>The attributes that can be specified are:</p>
 
@@ -1524,12 +1565,11 @@ The default is <code>""</code> so that no comments are generated.</p></li>
 
 <li><p><code><b>define</b>:</code> the format for a function definition
 generated from a rule <code>id = e</code>, for example <code
-style="white-space:pre" >"bool %l() { %n%treturn %r; %n}"</code>. The specifier
-<code>%l</code> refers to the identifier name, and <code>%r</code> to the right
+style="white-space:pre" >"bool %s() { %n return %r; %n}"</code>. The specifier
+<code>%s</code> refers to the identifier name, and <code>%r</code> to the right
 hand side expression. There is no default.</p></li>
 
-<li><p><code><b>tab</b></code>: the spacing for <code>%t</code> specifiers and
-for indenting generally. The default is <code
+<li><p><code><b>tab</b></code>: the unit for indenting. The default is <code
 style="white-space:pre">"  "</code> (two spaces).</p></li>
 
 <li><p><code><b>and</b>, <b>or</b>, <b>true</b>, <b>false</b>:</code> the
@@ -1545,26 +1585,27 @@ calls, by printing escape sequences instead of UTF-8. The <b>escape1</b> format
 is for one-byte control characters, <b>escape2</b> is for two-byte Unicode
 characters, and <b>escape4</b> is for four-byte Unicode characters. For example,
 formats <code>"\%3o"</code>, <code>"\u%4x"</code>, <code>"\U%8x"</code> are
-suitable for the C language (with <code>\x%2x</code> being problematic if a
-digit follows). With these formats, a string <code>"ab&#x03c0;"</code> is
-translated as <code>string("ab\u03c0")</code>. The defaults are <code>""</code>,
-which means that all characters are written verbatim into the program.</p></li>
+suitable for the C language. (Note that <code>\x%2x</code> in C is problematic
+if a digit follows.) With these formats, a Pecan string
+<code>"ab&#x03c0;"</code> is translated as <code>string("ab\u03c0")</code>. The
+defaults are <code>""</code>, which means that all characters are written
+verbatim into the program.</p></li>
 
 <li><p><code><b>call</b>:</code> the format for making a call to any parsing
 function. The default is <code>%s()</code>.</p></li>
 
 <li><p><code><b>id</b>:</code> the format for generating a call to represent the
-occurrence of an identifier. This can be used to add an argument or adjust
-identifier names. For example, an id format <code>"p%S(p)"</code> would cause an
-occurrence of an identifier <code>term</code> to be compiled as
-<code>pTerm(p)</code>. The default is to use the call format.</p></li>
+occurrence of an identifier. This can be used to adjust identifier names
+independently of other names. For example, an id format <code>"P%s(p)"</code>
+would cause an occurrence of an identifier <code>term</code> to be compiled as
+<code>Pterm(p)</code>. The default is to use the call format.</p></li>
 
 <li><p><code><b>act</b>, <b>act0</b>, ...:</code> the format for printing
 actions, and formats to override it for specific arities. The default for the
 act format depends on the call format, e.g. <code>"act%d(%s)"</code> where the
 <code>%d</code> refers to the arity and <code>%s</code> refers to the name of
-the action. The defaults for specific arities are to use the act
-format.</p></li>
+the action. The defaults for <code>act0</code>, <code>act1</code> ... are to use
+<code>act</code>.</p></li>
 
 <li><p><code><b>go</b>, <b>ok</b>, <b>alt</b>, <b>opt</b>, <b>see</b>,
 <b>has</b>, <b>not</b>, <b>tag</b>, <b>eot</b>, <b>string</b>, <b>set</b>,
@@ -1572,37 +1613,30 @@ format.</p></li>
 are supporting functions for the various Pecan features. Each can be changed
 individually, if desired. The default in each case is to adapt the call format
 appropriately. For example if the call format is <code>%s(p)</code>, then the
-defaults for <code>go</code>, <code>opt</code>, <code>set</code> and
-<code>range</code> are <code>go(p)</code>, <code>opt(p,%l)</code>,
-<code>set(p,"%s")</code> and <code>range(p,'%c','%c')</code>.</p></li>
+defaults for <code>go</code>, <code>opt</code>, <code>tag</code>,
+<code>set</code> and <code>range</code> are <code>go(p)</code>,
+<code>opt(p,%l)</code>, <code>tag(p,%s)</code>, <code>set(p,"%s")</code> and
+<code>range(p,'%c','%c')</code>. These can be used to change individual function
+names or their calls, or to adjust tag names or marker names independently of
+other names, e.g. if <code>tag</code> is set to <code>tag(T%s)</code> then a
+Pecan tag <code>%id</code> is compiled to <code>tag(Tid)</code>.</p></li>
 
 </ul>
 
-<p>These format strings provide considerable flexibility. For example,
-compilation to Java could be specified by:</p>
+<p>These format strings allow compilation to be adapted to different languages
+or applications. The default act format <code>"act%d(%s)"</code> treats action
+names as enumerated constants. Instead, the act format could be specified
+as:</p>
 
 <pre>// &lt;pecan
-//     comment = "%t// %s"
-//     rule    = "%tboolean %s() { %n%t%treturn %e; %n%t}"
-//     call    = "%s()"
+//   ...
+//   act = "%s()"
+//   ...
 // >
 </pre>
 
-<p>This passes no arguments to parsing functions because the state is implicitly
-made available by the surrounding object.</p>
-<!--
-<p>For <code>go</code>, <code>ok</code>, <code>alt</code>, the format
-can be the empty string <code>""</code> to switch off the special treatment of
-choices. That would suit a functional language such as Haskell, for example,
-where custom operators can be defined with lazy evaluation, so the resulting
-code would be equivalent to using a parser combinator library.</p>
--->
-
-<p>The default act format <code>"act%d(%s)"</code> treats action names as
-enumerated constants. Instead, the act format could be specified as
-<code>"%s()"</code> so that each action has its own function with implicit
-arity. Alternatively, the formats for actions of each arity could be specified
-as:</p>
+<p>Then each action has its own function with implicit arity. Alternatively, the
+formats for actions of each arity could be specified as:</p>
 
 <pre>// &lt;pecan
 //   ...
@@ -1613,12 +1647,12 @@ as:</p>
 // >
 </pre>
 
-<p>Then the handling of the output stack is covered by the generated code and
-only pure external action functions need to be provided. Here
-<code>text()</code> forms a string from the recently matched characters,
-<code>top(n)</code> returns the n'th item from the top of the output stack and
-<code>act(n,x)</code> pops n items from the output stack, pushes
-<code>x</code>, and discards any recently matched characters.</p>
+<p>Then the handling of the output stack is done by the generated code and only
+pure external action functions need to be provided. Here <code>text()</code>
+forms a string from the recently matched characters, <code>top(n)</code> returns
+the n'th item from the top of the output stack and <code>act(n,x)</code> pops n
+items from the output stack, pushes <code>x</code>, and discards any recently
+matched characters.</p>
 
 <h3 id="bytecode">Bytecode</h3>
 

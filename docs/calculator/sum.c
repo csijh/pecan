@@ -6,10 +6,6 @@
 
 // Change this section for different applications.
 
-// Error marker constants, and spellings.
-enum marker { integer, operator, bracket, newline };
-char *names[] = { "integer", "operator", "bracket", "newline" };
-
 // The input type should be char for a scanner or text-based parser, otherwise
 // it should be a token structure or token pointer.
 typedef char input;
@@ -27,6 +23,10 @@ output add(output x, output y) { return x + y; }
 output subtract(output x, output y) { return x - y; }
 output multiply(output x, output y) { return x * y; }
 output divide(output x, output y) { return x / y; }
+
+// Error marker constants, and spellings.
+enum marker { integer, operator, bracket, newline };
+char *names[] = { "integer", "operator", "bracket", "newline" };
 
 // Forward declarations of parser structure and functions.
 struct parser;
@@ -66,13 +66,13 @@ enum category {
 // <pecan
 //   comment  = "// %s"
 //   declare  = "bool %s(parser *p);"
-//   define   = "bool %l(parser *p) { %n%treturn %r; %n}"
+//   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
 //   act0     = "act(p,0,%s(length(p),start(p)))"
 //   act2     = "act(p,2,%s(top(p,1),top(p,0)))"
-//   escape1  = "\%03o"
-//   escape2  = "\u%04x"
-//   escape4  = "\U%08x"
+//   escape1  = "\%3o"
+//   escape2  = "\u%4x"
+//   escape4  = "\U%8x"
 // >
 
 bool sum(parser *p);

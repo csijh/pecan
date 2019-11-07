@@ -8,6 +8,20 @@ x = 'a' @1a @b
 ----------
 Error: first rule can cause underflow
 ==========
+-- Late warning: inaccessible alternative
+x = ("" / "a") @a
+----------
+Error in tests/Compiler.txt, line 12: inaccessible alternative
+x = ("" / "a") @a
+          ^^^
+==========
+-- Late warning: alternative starts with action
+x = @a "a" / "b" @b
+----------
+Error in tests/Compiler.txt, line 19: left alternative starts with action
+x = @a "a" / "b" @b
+    ^^^^^^
+==========
 -- Simple rule
 x = @a
 ----------

@@ -19,12 +19,12 @@ progress". Nodes are annotated with the flags:
 
 These are calculated by iterating to a fixed point.
 
-Some errors are deferred and given as warnings just before compiling. This is
-for uniformity and consistency, especially where transformations are concerned.
-Specifically, if a left hand alternative always progresses when it fails, so
-that the right hand alternative is inaccessible, that becomes a late warning. If
-there is an action at the start of the left hand item in a choice, as in (@a x /
-y), that also becomes a late warning. There are some further flag annotations:
+Some errors are deferred until just before compiling. This is for uniformity and
+consistency, especially where transformations are concerned. Specifically, if a
+left hand alternative always progresses when it fails, so that the right hand
+alternative is inaccessible, that becomes a late warning. If there is an action
+at the start of the left hand item in a choice, as in (@a x / y), that also
+becomes a late warning. There are some further flag annotations:
 
   EE   =   contains marker
   AA   =   contains action (or discard)

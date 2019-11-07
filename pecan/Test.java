@@ -222,6 +222,7 @@ public class Test {
         String path = in.path();
         if (s1.equals(s2)) return null;
         String result = "";
+System.out.println("chk " + s1.length() + " " + s2.length());
         result += "Fail test on line " + lineNo + " of " + path + ":\n";
         result += "---------- Expected ----------\n";
         result += s2;
