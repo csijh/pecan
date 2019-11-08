@@ -265,7 +265,7 @@ class Compiler implements Testable {
         compile(node.left());
         if (node.left().has(FP)) {
             bracket(Or, node.left());
-            prefix(go, node.left(), true);
+            prefix(go, node.left(), false);
             node.format(opt.replace("%l","%n%t%l%n"));
         }
         else {

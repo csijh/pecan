@@ -67,13 +67,13 @@ class Run {
         }
         if (sourcefile == null) usage();
         Source grammar = new Source(new File(sourcefile));
-        List<String> lines = read(outfile);
         if (bytecode) {
             Generator generator = new Generator();
-            String bytes = generator.run(grammar);
-            write(outfile, lines, bytes);
+            generator.run(grammar);
+            writeBinary(outfile, generator.getBytes());
         }
         else {
+            List<String> lines = read(outfile);
             Formats formats = extract(lines);
             Compiler compiler = new Compiler();
             compiler.formats(formats);
@@ -87,7 +87,10 @@ class Run {
         List<String> lines = null;
         Path p = Paths.get(outfile);
         try { lines = Files.readAllLines(p, StandardCharsets.UTF_8); }
-        catch (Exception e) { throw new Error(e); }
+        catch (Exception e) {
+            System.err.println("Error: can't read file " + e.getMessage());
+            System.exit(1);
+        }
         return lines;
     }
 
@@ -128,6 +131,15 @@ class Run {
                 out.println();
                 out.println(functions);
             }
+        }
+    }
+
+    private void writeBinary(String outfile, byte[] bytes) {
+        Path path = Paths.get(outfile);
+        try { Files.write(path, bytes); }
+        catch (Exception e) {
+            System.err.println("Error: can't write file " + e.getMessage());
+            System.exit(1);
         }
     }
 /*

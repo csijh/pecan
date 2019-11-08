@@ -215,14 +215,12 @@ public class Test {
     // Check the given actual output against the expected output. Return an
     // error message, or null for success.
     private String check(String s) {
-//        String s1 = escape(s);
         String s1 = s;
         String s2 = out.text();
         int lineNo = in.lineNumber();
         String path = in.path();
         if (s1.equals(s2)) return null;
         String result = "";
-System.out.println("chk " + s1.length() + " " + s2.length());
         result += "Fail test on line " + lineNo + " of " + path + ":\n";
         result += "---------- Expected ----------\n";
         result += s2;

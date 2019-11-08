@@ -22,7 +22,7 @@ class Node {
 
     // Flag and count constants.
     public static enum Flag { TI, SN, FN, SP, FP, WF, AA, EE, AB; }
-    public static enum Count { NET, NEED, PC, LEN; }
+    public static enum Count { NET, NEED, PC, LEN, SEQ; }
 
     // Construct a node with any number of subnodes and a source,
     Node(Op o, Node x, Node y, Source s) { op=o; left=x; right=y; source=s; }

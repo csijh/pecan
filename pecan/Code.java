@@ -1,31 +1,22 @@
-// Pecan 1.0 opcodes. Free and open source. See licence.txt.
+// Pecan 1.0 interpreter opcodes. Free and open source. See licence.txt.
 
 package pecan;
 
-/* Code constants represent bytecode ops. See Generator for translations. */
+/* Code constants represent bytecode ops, in alphabetical order. See Generator
+for translations. */
 
 public enum Code {
-    START, STOP, GO, BACK,
-    EITHER, OR, BOTH, AND, MAYBE, ONE, MANY, DO, LOOK, SEE, HAS, NOT,
-    DROP, ACT, MARK, TAG,
-    CAT, STRING, LESS, LOW, HIGH, SET, EOT;
+    ACT, AND, ARITY, BACK, BOTH, CAT, DO, DROP, EITHER, EOT, GO, HAS, HIGH,
+    LOOK, LOW, MANY, MARK, MAYBE, NOT, ONE, OR, SEE, SET, SPLIT, START, STOP,
+    STRING, TAG;
 
-    // Codes such as STRING followed by characters have a compact version such
-    // as STRING1 to avoid an operand when the number of bytes is one.
-    boolean hasText() {
-        switch (this) {
-            case STRING: case LESS: case LOW: case HIGH: case SET: return true;
-            default: return false;
-        }
-    }
-
-    // Codes such as GO with an arbitrary offset have an extended version such
-    // as GOL with a two-byte operand, when it is greater than 255.
-    boolean hasOffset() {
-        return this == GO || this == BACK;
-    }
-
+    // Check alphabetical order.
     public static void main(String[] args) {
+        Code[] values = Code.values();
+        assert(values.length <= 32);
+        for (int i = 0; i < values.length - 1; i++) {
+            assert(values[i].toString().compareTo(values[i+1].toString()) < 0);
+        }
         System.out.println("Code class OK");
     }
 }

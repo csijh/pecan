@@ -6,7 +6,7 @@ TODO:
 + escape 124
 + %s versus %l for declare/define, and how adapt id names.
 + in compiler, two more warnings (see checker)
-- in compiler, 'or' versus 'and' when go()&&... (too many brackets?)
++ in compiler, 'or' versus 'and' when go()&&... (too many brackets?)
 
 - extend the calculator tutorial to include bytecode generation.
 - extend the manual to include a discussion of the C interpreter.
