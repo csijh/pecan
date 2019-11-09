@@ -135,7 +135,7 @@ class Parser implements Testable {
     }
 
     // atom = bracketed / see / act / mark / tag / split / range / set /
-    //     string / category / id
+    //     string / point / category / id
     private boolean atom() {
         switch (NEXT()) {
             case '(': return bracketed();
@@ -146,6 +146,7 @@ class Parser implements Testable {
             case '<': return split();
             case '\'': return ALT(GO() && range() || OK() && set());
             case '"': return string();
+            case '.': return point();
             default: return ALT(
                 GO() && category() ||
                 OK() && id()
@@ -278,6 +279,11 @@ class Parser implements Testable {
         return MARK(BRACKET) && CHAR(']') && ACT(Bracket) && blank();
     }
 
+    // point = "." @point blank
+    private boolean point() {
+        return CHAR('.') && ACT(Point) && blank();
+    }
+
     // category = [cat alpha!] @cat blank
     private boolean category() {
         return TRY(
@@ -285,8 +291,8 @@ class Parser implements Testable {
         ) && ACT(Cat) && blank();
     }
 
-    // cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" /
-    //    "Lt" / "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" /
+    // cat = Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
+    //    "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" /
     //    "Pe" / "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" /
     //    "Zp" / "Zs"
     // Hand optimised.
@@ -348,9 +354,9 @@ class Parser implements Testable {
         return OPT(GO() && literal() && literals());
     }
 
-    // visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+    // visible = (Cc/Cn/Co/Cs/Zl/Zp)! .
     private boolean visible() {
-        return NOT(GO() && CATS(Cc,Cn,Co,Cs,Zl,Zp)) && CATS(Uc);
+        return NOT(GO() && CATS(Cc,Cn,Co,Cs,Zl,Zp)) && POINT();
     }
 
     // visibles = visible* = (visible visibles)&
@@ -520,8 +526,16 @@ class Parser implements Testable {
         int ch = input.nextChar(in, len);
         Category cat = Category.get(ch);
         boolean ok = false;
-        for (Category c : cs) if (cat == c || c == Uc) ok = true;
+        for (Category c : cs) if (cat == c) ok = true;
         if (! ok) return false;
+        in += len;
+        return true;
+    }
+
+    // Any character
+    private boolean POINT() {
+        if (in >= input.length()) return false;
+        int len = input.nextLength(in);
         in += len;
         return true;
     }

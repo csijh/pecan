@@ -80,7 +80,7 @@ class Binder implements Testable {
         case And: case Or: case Opt: case Any: case Some: case Drop: break;
         case Has: case Not: case See: case Mark: case Tag: break;
         case Success: case Fail: break;
-        case Cat: scanCat(node); break;
+        case Point: case Cat: scanCat(node); break;
         case Rule: scanRule(node); break;
         case Id: scanId(node); break;
         case Text: case Char: scanText(node); break;

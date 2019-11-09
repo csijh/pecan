@@ -344,6 +344,10 @@ static void reportColumn(lineInfo *li) {
   fprintf(stderr, "^\n");
 }
 
+// Print a report on stderr using s0 if there are no markers, or s if there are,
+// with s containing two copies of %s as an example print string for two
+// markers. Print the line containing the error on stderr. Print spaces followed
+// by a ^ character to report the error column on stderr.
 void report(parser *p, char *s0, char *s, char *names[]) {
   lineInfo liData;
   lineInfo *li = &liData;

@@ -26,7 +26,7 @@ class Formats {
         ACT5("s"), ACT6("s"), ACT7("s"), ACT8("s"), ACT9("s"),
         GO(""), OK(""), ALT("l"), OPT("l"), SEE("l"),
         HAS("l"), NOT("l"), TAG("s"), EOT(""), STRING("s"), SET("s"),
-        SPLIT("s"), RANGE("cd"), CAT("s"), MARK("s"), DROP("d");
+        SPLIT("s"), RANGE("cd"), POINT(""), CAT("s"), MARK("s"), DROP("d");
         String allowed;
         Attribute(String a) { allowed = a; }
     }
@@ -167,6 +167,7 @@ class Formats {
         if (get(SET) == null) set(SET, call(f, "set", "\"%s\""));
         if (get(SPLIT) == null) set(SPLIT, call(f, "split", "\"%s\""));
         if (get(RANGE) == null) set(RANGE, call(f, "range", "'%c','%c'"));
+        if (get(POINT) == null) set(POINT, call(f, "point"));
         if (get(CAT) == null) set(CAT, call(f, "cat", "%s"));
         if (get(MARK) == null) set(MARK, call(f, "mark", "%s"));
         if (get(DROP) == null) set(DROP, call(f, "drop", "%d"));

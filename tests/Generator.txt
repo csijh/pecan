@@ -1,244 +1,20 @@
 x = @x
 ----------
-START2, ARITY0, ACT0, STOP
+START2 ARITY0 ACT0 STOP
 ==========
 x = @x ("x" / "y")
 ----------
-STARTa, 10, BOTH2, ARITY0, ACT0, AND, EITHER2, STRING1, 120, OR, STRING1, 121,
-STOP
+START 10 BOTH2 ARITY0 ACT0 AND EITHER2 STRING1 120 OR STRING1 121 STOP
 ==========
 -- Calculator tutorial step 1
 digit = '0..9' @value
 ----------
-STARTa, 8, BOTH4, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT0, STOP
+START 8 BOTH4 LOW1 48 HIGH1 57 AND ARITY0 ACT0 STOP
 ==========
 -- Step 2
 number = ('0..9')+ @value
 ----------
-STARTa, 13, BOTHa, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ARITY0,
-ACT0, STOP
-==========
--- Step 3
-sum = number / number '+' number @2add
-number = ('0..9')+ @value
-----------
-STARTa, 18, EITHER2, GOa, 18, OR, BOTH2, GOa, 14, AND, BOTH2, STRING1, 43, AND,
-BOTH2, GOa, 6, AND, ARITY2, ACT0, STOP, STARTa, 13, BOTHa, 8, DO, AND, MAYBE,
-MANY, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT1, STOP
-==========
--- Step 4
-sum = number '+' number @2add / number
-number = ('0..9')+ @value
-----------
-STARTa, 18, EITHERa, 14, BOTH2, GOa, 16, AND, BOTH2, STRING1, 43, AND, BOTH2,
-GOa, 8, AND, ARITY2, ACT0, OR, GO3, STOP, STARTa, 13, BOTHa, 8, DO, AND, MAYBE,
-MANY, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT1, STOP
-==========
--- Step 5
-sum = [number '+'] number @2add / number
-number = ('0..9')+ @value
-----------
-STARTa, 21, EITHERa, 17, BOTHa, 8, LOOK, SEE, BOTH2, GOa, 15, AND, STRING1, 43,
-AND, BOTH2, GOa, 8, AND, ARITY2, ACT0, OR, GO3, STOP, STARTa, 13, BOTHa, 8, DO,
-AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT1, STOP
-==========
--- Step 6
-sum = number ('+' number @2add)?
-number = ('0..9')+ @value
-----------
-STARTa, 16, BOTH2, GOa, 16, AND, MAYBE, ONE, BOTH2, STRING1, 43, AND, BOTH2,
-GOa, 6, AND, ARITY2, ACT0, STOP, STARTa, 13, BOTHa, 8, DO, AND, MAYBE, MANY,
-LOW1, 48, HIGH1, 57, AND, ARITY0, ACT1, STOP
-==========
--- Step 7
-sum = number ('+' @ number @2add)?
-number = ('0..9')+ @value
-----------
-STARTa, 19, BOTH2, GOa, 19, AND, MAYBE, ONE, BOTH2, STRING1, 43, AND, BOTH1,
-DROP, AND, BOTH2, GOa, 6, AND, ARITY2, ACT0, STOP, STARTa, 13, BOTHa, 8, DO,
-AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT1, STOP
-==========
--- Step 8
-sum = number ('+' @ number @2add)? end
-number = ('0..9')+ @value
-end = '\13'? '\10' @
-----------
-STARTa, 24, BOTH2, GOa, 24, AND, BOTHa, 15, MAYBE, ONE, BOTH2, STRING1, 43, AND,
-BOTH1, DROP, AND, BOTH2, GOa, 9, AND, ARITY2, ACT0, AND, GOa, 19, STOP, STARTa,
-13, BOTHa, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT1,
-STOP, STARTa, 11, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2, STRING1, 10, AND,
-DROP, STOP
-==========
--- Step 9
-sum = number ('+' @ number @2add)* end
-number = ('0..9')+ @value
-end = '\13'? '\10' @
-----------
-STARTa, 24, BOTH2, GOa, 24, AND, BOTHa, 15, MAYBE, MANY, BOTH2, STRING1, 43,
-AND, BOTH1, DROP, AND, BOTH2, GOa, 9, AND, ARITY2, ACT0, AND, GOa, 19, STOP,
-STARTa, 13, BOTHa, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1, 57, AND, ARITY0,
-ACT1, STOP, STARTa, 11, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2, STRING1, 10,
-AND, DROP, STOP
-==========
--- Step 10
-sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
-number = ('0..9')+ @value
-end = '\13'? '\10' @
-----------
-STARTa, 40, BOTH2, GOa, 40, AND, BOTHa, 31, MAYBE, MANY, EITHERa, 13, BOTH2,
-STRING1, 43, AND, BOTH1, DROP, AND, BOTH2, GOa, 23, AND, ARITY2, ACT0, OR,
-BOTH2, STRING1, 45, AND, BOTH1, DROP, AND, BOTH2, GOa, 9, AND, ARITY2, ACT1,
-AND, GOa, 19, STOP, STARTa, 13, BOTHa, 8, DO, AND, MAYBE, MANY, LOW1, 48, HIGH1,
-57, AND, ARITY0, ACT2, STOP, STARTa, 11, BOTH4, MAYBE, ONE, STRING1, 13, AND,
-BOTH2, STRING1, 10, AND, DROP, STOP
-==========
--- Step 11
-sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
-number = (#digit '0..9')+ @value
-end = #newline '\13'? '\10' @
-----------
-STARTa, 40, BOTH2, GOa, 40, AND, BOTHa, 31, MAYBE, MANY, EITHERa, 13, BOTH2,
-STRING1, 43, AND, BOTH1, DROP, AND, BOTH2, GOa, 23, AND, ARITY2, ACT0, OR,
-BOTH2, STRING1, 45, AND, BOTH1, DROP, AND, BOTH2, GOa, 9, AND, ARITY2, ACT1,
-AND, GOa, 22, STOP, STARTa, 16, BOTHa, 11, DO, AND, MAYBE, MANY, BOTH1, MARK0,
-AND, LOW1, 48, HIGH1, 57, AND, ARITY0, ACT2, STOP, STARTa, 14, BOTH1, MARK1,
-AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2, STRING1, 10, AND, DROP, STOP
-==========
--- Step 12
-sum = number (plus number @2add / minus number @2subtract)* end
-number = digit+ @value
-plus = #operator '+' @
-minus = #operator '-' @
-digit = #digit '0..9'
-end = #newline '\13'? '\10' @
-----------
-STARTa, 34, BOTH2, GOa, 34, AND, BOTHa, 25, MAYBE, MANY, EITHERa, 10, BOTH2,
-GOa, 38, AND, BOTH2, GOa, 20, AND, ARITY2, ACT0, OR, BOTH2, GOa, 38, AND, BOTH2,
-GOa, 9, AND, ARITY2, ACT1, AND, GOa, 49, STOP, STARTa, 11, BOTHa, 6, DO, AND,
-MAYBE, MANY, GOa, 28, AND, ARITY0, ACT2, STOP, STARTa, 8, BOTH1, MARK2, AND,
-BOTH2, STRING1, 43, AND, DROP, STOP, STARTa, 8, BOTH1, MARK2, AND, BOTH2,
-STRING1, 45, AND, DROP, STOP, STARTa, 7, BOTH1, MARK0, AND, LOW1, 48, HIGH1, 57,
-STOP, STARTa, 14, BOTH1, MARK1, AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2,
-STRING1, 10, AND, DROP, STOP
-==========
--- Step 13
-sum = term (plus term @2add / minus term @2subtract)* end
-term = number (times number @2multiply / over number @2divide)*
-number = digit+ @value
-plus = #operator '+' @
-minus = #operator '-' @
-times = #operator '*' @
-over = #operator '/' @
-digit = #digit '0..9'
-end = #newline '\13'? '\10' @
-----------
-STARTa, 34, BOTH2, GOa, 34, AND, BOTHa, 25, MAYBE, MANY, EITHERa, 10, BOTH2,
-GOa, 70, AND, BOTH2, GOa, 20, AND, ARITY2, ACT0, OR, BOTH2, GOa, 70, AND, BOTH2,
-GOa, 9, AND, ARITY2, ACT3, AND, GOa, 103, STOP, STARTa, 29, BOTH2, GOa, 29, AND,
-MAYBE, MANY, EITHERa, 10, BOTH2, GOa, 57, AND, BOTH2, GOa, 17, AND, ARITY2,
-ACT2, OR, BOTH2, GOa, 57, AND, BOTH2, GOa, 6, AND, ARITY2, ACT1, STOP, STARTa,
-11, BOTHa, 6, DO, AND, MAYBE, MANY, GOa, 50, AND, ARITY0, ACT4, STOP, STARTa, 8,
-BOTH1, MARK2, AND, BOTH2, STRING1, 43, AND, DROP, STOP, STARTa, 8, BOTH1, MARK2,
-AND, BOTH2, STRING1, 45, AND, DROP, STOP, STARTa, 8, BOTH1, MARK2, AND, BOTH2,
-STRING1, 42, AND, DROP, STOP, STARTa, 8, BOTH1, MARK2, AND, BOTH2, STRING1, 47,
-AND, DROP, STOP, STARTa, 7, BOTH1, MARK0, AND, LOW1, 48, HIGH1, 57, STOP,
-STARTa, 14, BOTH1, MARK1, AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2,
-STRING1, 10, AND, DROP, STOP
-==========
--- Step 14
-sum = term (plus term @2add / minus term @2subtract)* end
-term = atom (times atom @2multiply / over atom @2divide)*
-atom = number / open sum close
-number = digit+ @value
-plus = #operator '+' @
-minus = #operator '-' @
-times = #operator '*' @
-over = #operator '/' @
-open = #bracket '(' @
-close = #bracket ')' @
-digit = #digit '0..9'
-end = #newline '\13'? '\10' @
-----------
-STARTa, 34, BOTH2, GOa, 34, AND, BOTHa, 25, MAYBE, MANY, EITHERa, 10, BOTH2,
-GOa, 87, AND, BOTH2, GOa, 20, AND, ARITY2, ACT0, OR, BOTH2, GOa, 87, AND, BOTH2,
-GOa, 9, AND, ARITY2, ACT3, AND, GOa, 142, STOP, STARTa, 29, BOTH2, GOa, 29, AND,
-MAYBE, MANY, EITHERa, 10, BOTH2, GOa, 74, AND, BOTH2, GOa, 17, AND, ARITY2,
-ACT2, OR, BOTH2, GOa, 74, AND, BOTH2, GOa, 6, AND, ARITY2, ACT1, STOP, STARTa,
-14, EITHER2, GOa, 14, OR, BOTH2, GOa, 68, AND, BOTH2, BACKa, 80, AND, GOa, 72,
-STOP, STARTa, 11, BOTHa, 6, DO, AND, MAYBE, MANY, GOa, 72, AND, ARITY0, ACT4,
-STOP, STARTa, 8, BOTH1, MARK3, AND, BOTH2, STRING1, 43, AND, DROP, STOP, STARTa,
-8, BOTH1, MARK3, AND, BOTH2, STRING1, 45, AND, DROP, STOP, STARTa, 8, BOTH1,
-MARK3, AND, BOTH2, STRING1, 42, AND, DROP, STOP, STARTa, 8, BOTH1, MARK3, AND,
-BOTH2, STRING1, 47, AND, DROP, STOP, STARTa, 8, BOTH1, MARK0, AND, BOTH2,
-STRING1, 40, AND, DROP, STOP, STARTa, 8, BOTH1, MARK0, AND, BOTH2, STRING1, 41,
-AND, DROP, STOP, STARTa, 7, BOTH1, MARK1, AND, LOW1, 48, HIGH1, 57, STOP,
-STARTa, 14, BOTH1, MARK2, AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2,
-STRING1, 10, AND, DROP, STOP
-==========
--- Step 15
-sum = expression end
-expression = term (plus term @2add / minus term @2subtract)*
-term = atom (times atom @2multiply / over atom @2divide)*
-atom = number / open expression close
-number = digit+ @value
-plus = #operator '+' @
-minus = #operator '-' @
-times = #operator '*' @
-over = #operator '/' @
-open = #bracket '(' @
-close = #bracket ')' @
-digit = #digit '0..9'
-end = #newline '\13'? '\10' @
-----------
-STARTa, 6, BOTH2, GOa, 6, AND, GOa, 174, STOP, STARTa, 29, BOTH2, GOa, 29, AND,
-MAYBE, MANY, EITHERa, 10, BOTH2, GOa, 84, AND, BOTH2, GOa, 17, AND, ARITY2,
-ACT0, OR, BOTH2, GOa, 84, AND, BOTH2, GOa, 6, AND, ARITY2, ACT3, STOP, STARTa,
-29, BOTH2, GOa, 29, AND, MAYBE, MANY, EITHERa, 10, BOTH2, GOa, 74, AND, BOTH2,
-GOa, 17, AND, ARITY2, ACT2, OR, BOTH2, GOa, 74, AND, BOTH2, GOa, 6, AND, ARITY2,
-ACT1, STOP, STARTa, 14, EITHER2, GOa, 14, OR, BOTH2, GOa, 68, AND, BOTH2, BACKa,
-75, AND, GOa, 72, STOP, STARTa, 11, BOTHa, 6, DO, AND, MAYBE, MANY, GOa, 72,
-AND, ARITY0, ACT4, STOP, STARTa, 8, BOTH1, MARK3, AND, BOTH2, STRING1, 43, AND,
-DROP, STOP, STARTa, 8, BOTH1, MARK3, AND, BOTH2, STRING1, 45, AND, DROP, STOP,
-STARTa, 8, BOTH1, MARK3, AND, BOTH2, STRING1, 42, AND, DROP, STOP, STARTa, 8,
-BOTH1, MARK3, AND, BOTH2, STRING1, 47, AND, DROP, STOP, STARTa, 8, BOTH1, MARK0,
-AND, BOTH2, STRING1, 40, AND, DROP, STOP, STARTa, 8, BOTH1, MARK0, AND, BOTH2,
-STRING1, 41, AND, DROP, STOP, STARTa, 7, BOTH1, MARK1, AND, LOW1, 48, HIGH1, 57,
-STOP, STARTa, 14, BOTH1, MARK2, AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2,
-STRING1, 10, AND, DROP, STOP
-==========
--- Step 16
-sum = gap expression end
-expression = term (plus term @2add / minus term @2subtract)*
-term = atom (times atom @2multiply / over atom @2divide)*
-atom = number / open expression close
-number = digit+ @value gap
-plus = #operator '+' gap
-minus = #operator '-' gap
-times = #operator '*' gap
-over = #operator '/' gap
-open = #bracket '(' gap
-close = #bracket ')' gap
-digit = #digit '0..9'
-gap = (#space ' ')* @
-end = #newline '\13'? '\10' @
-----------
-STARTa, 10, BOTH2, GOa, 191, AND, BOTH2, GOa, 6, AND, GOa, 198, STOP, STARTa,
-29, BOTH2, GOa, 29, AND, MAYBE, MANY, EITHERa, 10, BOTH2, GOa, 88, AND, BOTH2,
-GOa, 17, AND, ARITY2, ACT0, OR, BOTH2, GOa, 89, AND, BOTH2, GOa, 6, AND, ARITY2,
-ACT3, STOP, STARTa, 29, BOTH2, GOa, 29, AND, MAYBE, MANY, EITHERa, 10, BOTH2,
-GOa, 80, AND, BOTH2, GOa, 17, AND, ARITY2, ACT2, OR, BOTH2, GOa, 81, AND, BOTH2,
-GOa, 6, AND, ARITY2, ACT1, STOP, STARTa, 14, EITHER2, GOa, 14, OR, BOTH2, GOa,
-76, AND, BOTH2, BACKa, 75, AND, GOa, 81, STOP, STARTa, 15, BOTHa, 6, DO, AND,
-MAYBE, MANY, GOa, 82, AND, BOTH2, ARITY0, ACT4, AND, GOa, 85, STOP, STARTa, 9,
-BOTH1, MARK3, AND, BOTH2, STRING1, 43, AND, GOa, 73, STOP, STARTa, 9, BOTH1,
-MARK3, AND, BOTH2, STRING1, 45, AND, GOa, 61, STOP, STARTa, 9, BOTH1, MARK3,
-AND, BOTH2, STRING1, 42, AND, GOa, 49, STOP, STARTa, 9, BOTH1, MARK3, AND,
-BOTH2, STRING1, 47, AND, GOa, 37, STOP, STARTa, 9, BOTH1, MARK0, AND, BOTH2,
-STRING1, 40, AND, GOa, 25, STOP, STARTa, 9, BOTH1, MARK0, AND, BOTH2, STRING1,
-41, AND, GOa, 13, STOP, STARTa, 7, BOTH1, MARK1, AND, LOW1, 48, HIGH1, 57, STOP,
-STARTa, 11, BOTHa, 7, MAYBE, MANY, BOTH1, MARK4, AND, STRING1, 32, AND, DROP,
-STOP, STARTa, 14, BOTH1, MARK2, AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2,
-STRING1, 10, AND, DROP, STOP
+START 13 BOTH 8 DO AND MAYBE MANY LOW1 48 HIGH1 57 AND ARITY0 ACT0 STOP
 ==========
 -- Step 17
 sum = gap expression end
@@ -256,35 +32,26 @@ digit = '0..9'
 gap = (' ')* @
 end = #newline '\13'? '\10' @
 ----------
-STARTa, 10, BOTH2, GOa, 190, AND, BOTH2, GOa, 6, AND, GOa, 193, STOP, STARTa,
-29, BOTH2, GOa, 29, AND, MAYBE, MANY, EITHERa, 10, BOTH2, GOa, 91, AND, BOTH2,
-GOa, 17, AND, ARITY2, ACT0, OR, BOTH2, GOa, 92, AND, BOTH2, GOa, 6, AND, ARITY2,
-ACT3, STOP, STARTa, 29, BOTH2, GOa, 29, AND, MAYBE, MANY, EITHERa, 10, BOTH2,
-GOa, 83, AND, BOTH2, GOa, 17, AND, ARITY2, ACT2, OR, BOTH2, GOa, 84, AND, BOTH2,
-GOa, 6, AND, ARITY2, ACT1, STOP, STARTa, 14, EITHER2, GOa, 14, OR, BOTH2, GOa,
-79, AND, BOTH2, BACKa, 75, AND, GOa, 84, STOP, STARTa, 18, BOTH1, MARK1, AND,
-BOTHa, 6, DO, AND, MAYBE, MANY, GOa, 81, AND, BOTH2, ARITY0, ACT4, AND, GOa, 81,
-STOP, STARTa, 9, BOTH1, MARK3, AND, BOTH2, STRING1, 43, AND, GOa, 69, STOP,
-STARTa, 9, BOTH1, MARK3, AND, BOTH2, STRING1, 45, AND, GOa, 57, STOP, STARTa, 9,
-BOTH1, MARK3, AND, BOTH2, STRING1, 42, AND, GOa, 45, STOP, STARTa, 9, BOTH1,
-MARK3, AND, BOTH2, STRING1, 47, AND, GOa, 33, STOP, STARTa, 9, BOTH1, MARK0,
-AND, BOTH2, STRING1, 40, AND, GOa, 21, STOP, STARTa, 9, BOTH1, MARK0, AND,
-BOTH2, STRING1, 41, AND, GOa, 9, STOP, START4, LOW1, 48, HIGH1, 57, STOP,
-STARTa, 7, BOTH4, MAYBE, MANY, STRING1, 32, AND, DROP, STOP, STARTa, 14, BOTH1,
-MARK2, AND, BOTH4, MAYBE, ONE, STRING1, 13, AND, BOTH2, STRING1, 10, AND, DROP,
+START 10 BOTH2 GO 190 AND BOTH2 GO 6 AND GO 193 STOP
+START 29 BOTH2 GO 29 AND MAYBE MANY EITHER 10 BOTH2 GO 91 AND BOTH2 GO 17 AND
+ARITY2 ACT0 OR BOTH2 GO 92 AND BOTH2 GO 6 AND ARITY2 ACT3 STOP
+START 29 BOTH2 GO 29 AND MAYBE MANY EITHER 10 BOTH2 GO 83 AND BOTH2 GO 17 AND
+ARITY2 ACT2 OR BOTH2 GO 84 AND BOTH2 GO 6 AND ARITY2 ACT1 STOP
+START 14 EITHER2 GO 14 OR BOTH2 GO 79 AND BOTH2 BACK 75 AND GO 84 STOP
+START 18 BOTH1 MARK1 AND BOTH 6 DO AND MAYBE MANY GO 81 AND BOTH2 ARITY0 ACT4
+AND GO 81 STOP
+START 9 BOTH1 MARK3 AND BOTH2 STRING1 43 AND GO 69 STOP
+START 9 BOTH1 MARK3 AND BOTH2 STRING1 45 AND GO 57 STOP
+START 9 BOTH1 MARK3 AND BOTH2 STRING1 42 AND GO 45 STOP
+START 9 BOTH1 MARK3 AND BOTH2 STRING1 47 AND GO 33 STOP
+START 9 BOTH1 MARK0 AND BOTH2 STRING1 40 AND GO 21 STOP
+START 9 BOTH1 MARK0 AND BOTH2 STRING1 41 AND GO 9 STOP START4 LOW1 48 HIGH1 57
 STOP
+START 7 BOTH4 MAYBE MANY STRING1 32 AND DROP STOP
+START 14 BOTH1 MARK2 AND BOTH4 MAYBE ONE STRING1 13 AND BOTH2 STRING1 10 AND
+DROP STOP
 ==========
 -- Test category recognition
 ch = Ll @letter
 ----------
-STARTa, 5, BOTH1, CAT2, AND, ARITY0, ACT0, STOP
-==========
--- First rule producing two output items.
-x = 'a' @one @two
-----------
-Error: first rule produces 2 items
-==========
--- First rule underflows the output stack.
-x = 'a' @1one @two
-----------
-Error: first rule can cause underflow
+START 6 BOTH2 CAT 5 AND ARITY0 ACT0 STOP

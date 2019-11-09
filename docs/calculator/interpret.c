@@ -16,22 +16,22 @@ typedef int output;
 // Action constants.
 enum action { value, add, subtract, multiply, divide };
 
-// Action: create a number from given text (argument a is always 'value')
-output act0(int a, int n, char s[n]) {
-  output x = 0;
-  for (int i = 0; i < n; i++) x = x * 10 + s[i] - '0';
-  return x;
-}
-
-// Actions: arithmetic operations.
-output act2(int a, output x, output y) {
+// Handle actions.
+output act(int a, int n, char *s, output *xs) {
     switch (a) {
-        case add: return x + y;
-        case subtract: return x - y;
-        case multiply: return x * y;
-        case divide: return x / y;
+        case value:
+            output x = 0;
+            for (int i = 0; i < n; i++) x = x * 10 + s[i] - '0';
+            return x;
+        case add: return xs[0] + xs[1];
+        case subtract: return xs[0] - xs[1];
+        case multiply: return xs[0] * xs[1];
+        case divide: return xs[0] / xs[1];
     }
 }
+
+// Get tag of i'th token (not needed for text-based parsing).
+int tag(int i) { return -1; }
 
 // Error marker constants, and spellings.
 enum marker { integer, operator, bracket, newline };
@@ -61,13 +61,13 @@ int main() {
   freeParser(p);
 }
 
-// -----------------------------------------------------------------------------
-// Forward declarations of supporting constants, structures and functions.
+// ----- Parsing support ------------------------------------------------------
 
 // The opcodes, in alphabetical order.
 enum op {
-    ACT, AND, BACK, BOTH, CAT, DO, DROP, EITHER, EOT, GO, HAS, HIGH, LESS, LOOK,
-    LOW, MANY, MARK, MAYBE, NOT, ONE, OR, SEE, SET, START, STOP, STRING, TAG;
+    ACT, AND, ARITY, BACK, BOTH, CAT, DO, DROP, EITHER, EOT, GO, HAS, HIGH,
+    SPLIT, LOOK, LOW, MANY, MARK, MAYBE, NOT, ONE, OR, SEE, SET, START, STOP,
+    STRING, TAG;
 };
 
 // Unicode category codes, in the order used in the lookup tables.
@@ -76,34 +76,15 @@ enum category {
     Cf, Uc, Co, Cs, Pd, Ps, Pe, Pc, Po, Sm, Sc, Sk, So, Pi, Pf
 };
 
-//==============================================================================
-
-// The operands. A0..A5 are immediate, B indicates operand in next byte, and C
-// indicates operand in next couple of bytes, in big-endian format.
-enum arg { A0=0, A1=0x20, A2=0x40, A3=0x60, A4=0x80, A5=0xA0, B=0xC0, C=0xE0 };
-
-// Bytecode array for testing.
-byte bytecode[] = {
-    START+B, 12, BOTH+A2, GO+B, 226, AND, BOTH+A2, GO+A6, AND, GO+B, 229, STOP,
-    START+B, 34, BOTH+A2, GO+B, 33, AND, MAYBE, MANY, EITHER, 12, BOTH, 2, GO, 100, AND,
-    BOTH, 2, GO, 19, AND, ACT, add, OR, BOTH, 2, GO, 102, AND, BOTH, 2, GO, 6,
-    AND, ACT, subtract, STOP, START, 34, BOTH, 2, GO, 33, AND, MAYBE, MANY,
-    EITHER, 12, BOTH, 2, GO, 93, AND, BOTH, 2, GO, 19, AND, ACT, multiply, OR,
-    BOTH, 2, GO, 95, AND, BOTH, 2, GO, 6, AND, ACT, divide, STOP, START, 17,
-    EITHER, 2, GO, 16, OR, BOTH, 2, GO, 90, AND, BOTH, 2, BACK, 88, AND, GO, 97,
-    STOP, START, 16, BOTH, 6, DO, AND, MAYBE, MANY, GO, 101, AND, BOTH, 2, ACT,
-    number, AND, GO, 105, STOP, START, 12, BOTH, 2, MARK, operator, AND, BOTH,
-    2, SET1, 43, AND, GO, 90, STOP, START, 12, BOTH, 2, MARK, operator, AND,
-    BOTH, 2, SET1, 45, AND, GO, 75, STOP, START, 12, BOTH, 2, MARK, operator,
-    AND, BOTH, 2, SET1, 42, AND, GO, 60, STOP, START, 12, BOTH, 2, MARK,
-    operator, AND, BOTH, 2, SET1, 47, AND, GO, 45, STOP, START, 12, BOTH, 2,
-    MARK, bracket, AND, BOTH, 2, SET1, 40, AND, GO, 30, STOP, START, 12, BOTH,
-    2, MARK, bracket, AND, BOTH, 2, SET1, 41, AND, GO, 15, STOP, START, 9, BOTH,
-    2, MARK, digit, AND, LOW1, 48, HIGH1, 57, STOP, START, 8, BOTH, 4, MAYBE,
-    MANY, SET1, 32, AND, DROP, STOP, START, 18, BOTH, 2, MARK, newline, AND,
-    BOTH, 4, MAYBE, ONE, STRING1, 13, AND, BOTH, 2, STRING1, 10, AND, DROP, STOP
+// Structure to hold input, stack of outputs, saved bytecode addresses and input
+// positions, depth of lookahead, error markers, and bytecode, during parsing.
+struct parser {
+  int in, start, end; input *ins;
+  int out, nouts; output *outs;
+  int save, nsaves; int *saves;
+  int look, marked; long markers;
+  byte *code; int pc, arity, tagpos, tag; bool ok;
 };
-
 
 // Read in a binary file.
 byte *readFile(char *filename) {
@@ -119,100 +100,84 @@ byte *readFile(char *filename) {
   return content;
 }
 
+// Create new parser object from given input.
+parser *newParser(byte[] bytecode, int n, input ins[n]) {
+  parser *p = malloc(sizeof(parser));
+  *p = (parser) {
+    .in = 0, .start = 0, .end = n, .ins = ins,
+    .out = 0, .nouts = 8, .outs = malloc(8 * sizeof(output)),
+    .save = 0, .nsaves = 8, .saves = malloc(8 * sizeof(int)),
+    .look = 0, .marked = 0, .markers = 0L,
+    .code = bytecode, .pc = 0, .arity = 0, .tagpos = -1, .tag = 0, .ok = true
+  };
+  return p;
+}
 
-// The type of a parsing result. If ok is true, 'at' holds how far parsing
-// reached. Otherwise, it is where the error occurred. In the case of token
-// parsing, 'at' is the index in the token array.
-struct result { bool ok; int at; uint64_t markers; };
-typedef struct result result;
+// Free parser and its data.
+void freeParser(parser *p) {
+  free(p->outs);
+  free(p->saves);
+  free(p);
+}
 
-// Parse character input according to the provided bytecode. Use function f to
-// carry out actions, passing it x as an argument. Fill in the given result
-// structure. There is no automatic recovery. Since all offsets within bytecode
-// sequences are relative, the first argument can be a pointer to an alternative
-// rule in the grammar, other than the first.
-void parseText(byte code[], char in[], doAct *f, void *x, result *r);
+// Return final output item.
+output answer(parser *p) {
+  return p->outs[--p->out];
+}
 
-// Parse tokens according to the provided bytecode. Use function g to find the
-// tags of tokens, and f to carry out actions, passing x as an argument to
-// either function. Fill in the result structure provided.
-void parseTokens(byte code[], doTag *g, doAct *f, void *x, result *r);
+// Return a pointer to the text for an action.
+static inline input *start(parser *p) {
+  return &p->ins[p->start];
+}
+
+// Return the length of the text for an action.
+static inline int length(parser *p) {
+  return p->in - p->start;
+}
+
+static void reportLine(char *in, lineInfo *li) {
+    fprintf(stderr, "%.*s\n", li->end - li->start, in + li->start);
+}
+
+static void reportColumn(lineInfo *li) {
+    for (int i = 0; i < li->column; i++) fprintf(stderr, " ");
+    fprintf(stderr, "^\n");
+}
 
 // Print a report on stderr using s0 if there are no markers, or s if there are,
 // with s containing two copies of %s as an example print string for two
 // markers. Print the line containing the error on stderr. Print spaces followed
 // by a ^ character to report the error column on stderr.
-void report(char *input, result *e, char *s0, char *s, char *names[]);
-
-
-
-// Names of opcodes for tracing.
-#ifdef TRACE
-static char *opNames[] = {
-    [STOP]="STOP", [OR]="OR", [AND]="AND", [MAYBE]="MAYBE", [ONE]="ONE",
-    [MANY]="MANY", [DO]="DO", [LOOK]="LOOK", [SEE]="SEE", [HAS]="HAS",
-    [NOT]="NOT", [DROP]="DROP", [STRING1]="STRING1", [LOW1]="LOW1",
-    [HIGH1]="HIGH1", [LESS1]="LESS1", [SET1]="SET1", [START]="START", [GO]="GO",
-    [BACK]="BACK", [EITHER]="EITHER", [BOTH]="BOTH", [STRING]="STRING",
-    [LOW]="LOW", [HIGH]="HIGH", [LESS]="LESS", [SET]="SET", [ACT]="ACT",
-    [MARK]="MARK", [CAT]="CAT", [TAG]="TAG", [GOL]="GOL", [BACKL]="BACKL",
-};
-#endif
-
-// Structure to hold input, stack of outputs, saved input positions, depth of
-// lookahead, and error marking info, during parsing.
-struct parser {
-  int in, start, end; input *ins;
-  int out, nouts; output *outs;
-  int save, nsaves; int *saves;
-  int look, marked; long markers;
-};
-
-// The parsing state.
-// code:    the bytecode.
-// ins:   the text to be parsed.
-// pc:      the next byte in the code.
-// start:   the first input byte not yet processed.
-// in:      the current input byte.
-// marked:  high water mark in input which has markers.
-// markers: a bitmap of expected items for reporting errors.
-// ok:      boolean to say whether the most recent parsing expression succeeded.
-// act:     an external function to call to carry out an action.
-// tag:     an external function to call to get the tag of the i'th token.
-// arg:     an argument to pass to the act or tag function.
-// look:    the nesting depth inside lookahead constructs.
-// top:     the number of items on the call stack.
-// stack:   the call stack, i.e. return addresses and saved in/out values.
-struct parser {
-    byte *code;
-    char *ins;
-    int pc, start, in, marked;
-    uint64_t markers;
-    bool ok;
-    doAct *act;
-    doTag *tag;
-    void *arg;
-    int look, top;
-    int stack[1000];
-};
-typedef struct parser parser;
-
-// Unicode category lookup tables, read in lazily.
-static byte *table1 = NULL, *table2 = NULL;
-
-// Read in a binary file.
-static byte *readFile(char *filename) {
-    FILE *fp = fopen(filename, "rb");
-    if (fp == NULL) { printf("Can't read %s\n", filename); exit(1); }
-    fseek(fp, 0, SEEK_END);
-    long size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    byte *content = malloc(size);
-    int n = fread(content, 1, size, fp);
-    if (n != size) { printf("Can't read %s\n", filename); exit(1); }
-    fclose(fp);
-    return content;
+void report(parser *p, char *s0, char *s, char *names[]) {
+    lineInfo liData;
+    lineInfo *li = &liData;
+    findLine(p->ins, p->in, li);
+    if (p->markers == 0L) fprintf(stderr, "%s", s0);
+    else {
+      char text[100];
+      strcpy(text, s);
+      int n = strstr(text, "%s") - text;
+      text[n] = '\0';
+      fprintf(stderr, "%s", text);
+      strcpy(text, text + n + 2);
+      n = strstr(text, "%s") - text;
+      text[n] = '\0';
+      bool first = true;
+      for (int i = 0; i < 64; i++) {
+        if ((p->markers & (1L << i)) == 0) continue;
+        if (! first) fprintf(stderr, "%s", text);
+        first = false;
+        fprintf(stderr, "%s", names[i]);
+      }
+      strcpy(text, text + n + 2);
+      fprintf(stderr, "%s", text);
+    }
+    reportLine(p->ins, li);
+    reportColumn(li);
 }
+
+// Unicode category lookup tables, read in lazily in case not needed.
+static byte *table1 = NULL, *table2 = NULL;
 
 // Read in lookup tables.
 static void readTables() {
@@ -220,25 +185,12 @@ static void readTables() {
     table2 = readFile("table2.bin");
 }
 
-// Initialize the parsing state.
-static void new(
-    parser *p, byte c[], char in[], doTag *tag, doAct *act, void *arg)
-{
-    p->code = c;
-    p->ins = in;
-    p->pc = p->start = p->in = p->marked = 0;
-    p->markers = 0L;
-    p->ok = false;
-    p->act = act;
-    p->arg = arg;
-    p->tag = tag;
-    p->look = p->top = 0;
-}
+// ----- Functions for each opcode ----------
 
-// {id = x}  =  START, nx, {x}, STOP
+// {id = x}  =  START(nx) {x} STOP
 // Call {x} returning to STOP.
 static inline void doSTART(parser *p, int arg) {
-    p->stack[p->top++] = p->pc + arg;
+    p->saves[p->nsaves++] = p->pc + arg;
 }
 
 // {id = x}  =  ... STOP
@@ -250,132 +202,143 @@ static inline void doSTOP(parser *p, result *r) {
     r->markers = p->markers;
 }
 
-// {id}  =  GO, n   or   BACK, n
+// {id}  =  GO(n)   or   BACK(n)
 // Skip forwards or backwards in the code, to tail-call a remote rule.
 static inline void doGO(parser *p, int arg) {
     p->pc = p->pc + arg;
 }
 
-// {x / y}  =  EITHER, nx, {x}, OR, {y}
+// {x / y}  =  EITHER(nx) {x} OR {y}
 // Save in, call x, returning to OR.
 static inline void doEITHER(parser *p, int arg) {
-    p->stack[p->top++] = p->in;
-    p->stack[p->top++] = p->pc + arg;
+    p->saves[p->nsaves++] = p->in;
+    p->saves[p->nsaves++] = p->pc + arg;
 }
 
-// {x / y}  =  EITHER, nx, {x}, OR, {y}
+// {x / y}  =  EITHER(nx) {x} OR {y}
 // After x, check success and progress, return or continue with y.
 static inline void doOR(parser *p) {
-    int saveIn = p->stack[--p->top];
-    if (p->ok || p->in > saveIn) p->pc = p->stack[--p->top];
+    int saveIn = p->saves[--p->nsaves];
+    if (p->ok || p->in > saveIn) p->pc = p->saves[--p->nsaves];
 }
 
-// {x y}  =  BOTH, nx, {x}, AND, {y}
+// {x y}  =  BOTH(nx) {x} AND {y}
 // Call x, returning to AND.
 static inline void doBOTH(parser *p, int arg) {
-    p->stack[p->top++] = p->pc + arg;
+    p->saves[p->nsaves++] = p->pc + arg;
 }
 
-// {x y}  =  ...AND, {y}
+// {x y}  =  ...AND {y}
 // After x, check success, continue with y or return.
 static inline void doAND(parser *p) {
-    if (! p->ok) p->pc = p->stack[--p->top];
+    if (! p->ok) p->pc = p->saves[--p->nsaves];
 }
 
-// {x?}  =  MAYBE, ONE, {x},   and similarly for x*, x+
+// {x?}  =  MAYBE ONE {x}   and similarly for x*, x+
 // Save in and call x, returning to ONE or MANY.
 static inline void doMAYBE(parser *p) {
-    p->stack[p->top++] = p->in;
-    p->stack[p->top++] = p->pc;
+    p->saves[p->nsaves++] = p->in;
+    p->saves[p->nsaves++] = p->pc;
     p->pc++;
 }
 
-// {x?}  =  MAYBE, ONE, {x}
+// {x?}  =  MAYBE ONE {x}
 // After x, check success or no progress and return.
 static inline void doONE(parser *p) {
-    int saveIn = p->stack[--p->top];
+    int saveIn = p->saves[--p->nsaves];
     if (! p->ok && p->in == saveIn) {
         p->ok = true;
     }
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {x*}  =  MAYBE, MANY, {x}
+// {x*}  =  MAYBE MANY {x}
 // After x, check success and re-try x or return.
 static inline void doMANY(parser *p) {
-    int saveIn = p->stack[--p->top];
+    int saveIn = p->saves[--p->nsaves];
     if (p->ok) {
-        p->stack[p->top++] = p->in;
-        p->stack[p->top++] = p->pc - 1;
+        p->saves[p->nsaves++] = p->in;
+        p->saves[p->nsaves++] = p->pc - 1;
     }
     else {
         if (! p->ok && p->in == saveIn) {
             p->ok = true;
         }
-        p->pc = p->stack[--p->top];
+        p->pc = p->saves[--p->nsaves];
     }
 }
 
-// {x+}  =  DO, AND, MAYBE, MANY, {x}
+// {x+}  =  DO AND MAYBE MANY {x}
 // Call x, returning to AND.
 static inline void doDO(parser *p) {
-    p->stack[p->top++] = p->pc;
+    p->saves[p->nsaves++] = p->pc;
     p->pc = p->pc + 3;
 }
 
-// {[x]}  =  LOOK, SEE, x,   and similarly for x& and x!
+// {[x]}  =  LOOK SEE x   and similarly for x& and x!
 // Save in and call x as a lookahead, returning to SEE or HAS or NOT.
 static inline void doLOOK(parser *p) {
-    p->stack[p->top++] = p->in;
+    p->saves[p->nsaves++] = p->in;
     p->look++;
-    p->stack[p->top++] = p->pc;
+    p->saves[p->nsaves++] = p->pc;
     p->pc++;
 }
 
-// {[x]}  =  LOOK, SEE, x
+// {[x]}  =  LOOK SEE x
 // After x, backtrack, and if successfull, tail-call x for actions/markers.
 static inline void doSEE(parser *p) {
-    int saveIn = p->stack[--p->top];
+    int saveIn = p->saves[--p->nsaves];
     p->look--;
     p->in = saveIn;
-    if (! p->ok) p->pc = p->stack[--p->top];
+    if (! p->ok) p->pc = p->saves[--p->nsaves];
 }
 
-// {x&}  =  LOOK, HAS, x
+// {x&}  =  LOOK HAS x
 // After x, backtrack and return.
 static inline void doHAS(parser *p) {
-    p->in = p->stack[--p->top];
+    p->in = p->saves[--p->nsaves];
     p->look--;
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {x!}  =  LOOK, NOT, x
+// {x!}  =  LOOK NOT x
 // After x, backtrack, invert the result, and return.
 static inline void doNOT(parser *p) {
-    p->in = p->stack[--p->top];
+    p->in = p->saves[--p->nsaves];
     p->look--;
     p->ok = ! p->ok;
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {@}  =  DROP
-static inline void doDROP(parser *p) {
-    if (p->look == 0) p->start = p->in;
+// {@n}  =  DROP(n)      discard matched text and n outputs
+static inline void doDROP(parser *p, int arg) {
+    if (p->look == 0) {
+        p->start = p->in;
+        p->nouts = p->nouts - arg;
+    }
     p->ok = true;
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {@2add}  =  ACT, add
+// {@2add}  =  ARITY(2) ACT(add)
+static inline void doARITY(parser *p, int arg) {
+    p->arity = arg;
+}
+
+// {@2add}  =  ARITY(2) ACT(add)
 static inline void doACT(parser *p, int arg) {
     if (p->look == 0) {
-        p->act(p->arg, arg, p->start, p->in - p->start);
+        output *array = &p->outs[p->nouts - p->arity];
+        output x = act(arg, p->in - p->start, p->start, array);
+        p->nouts = p->nouts - p->arity;
+        p->outs[p->nouts++] = x;
         p->start = p->in;
     }
     p->ok = true;
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {#item}  =  MARK, item
+// {#m}  =  MARK(m)
 // Record an error marker. Assume 0 <= arg <= 62.
 static inline void doMARK(parser *p, int arg) {
     if (p->look == 0) {
@@ -386,10 +349,10 @@ static inline void doMARK(parser *p, int arg) {
         p->markers = p->markers | (1L << arg);
     }
     p->ok = true;
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {"abc"}  =  STRING, 3, 'a', 'b', 'c'
+// {"abc"}  =  STRING(3) 'a' 'b' 'c'
 // Match string and return success or failure.
 static inline void doSTRING(parser *p, int arg) {
     p->ok = true;
@@ -400,10 +363,10 @@ static inline void doSTRING(parser *p, int arg) {
     if (p->ok) {
         p->in = p->in + arg;
     }
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {'a..z'}  =  LOW, n, 'a', HIGH, n, 'z'
+// {'a..z'}  =  LOW(n) 'a' HIGH(n) 'z'
 // Check >= 'a', continue with HIGH or return failure
 static inline void doLOW(parser *p, int arg) {
     p->ok = true;
@@ -413,11 +376,11 @@ static inline void doLOW(parser *p, int arg) {
     }
     if (p->ok) p->pc = p->pc + arg;
     else {
-        p->pc = p->stack[--p->top];
+        p->pc = p->saves[--p->nsaves];
     }
 }
 
-// {'a..z'}  =  ...HIGH, n, 'z'
+// {'a..z'}  =  ...HIGH(n) 'z'
 // Check <= 'z', return success or failure
 static inline void doHIGH(parser *p, int arg) {
     p->ok = true;
@@ -429,18 +392,21 @@ static inline void doHIGH(parser *p, int arg) {
         p->pc = p->pc + arg;
         p->in = p->in + arg;
     }
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {<abc>}  =  LESS, 3, 'a', 'b', 'c'
-// Check if input < "abc", return.
-static inline void doLESS(parser *p, int arg) {
+// {<abc>}  =  SPLIT(3) 'a' 'b' 'c'
+// Check if input <= "abc", return.
+static inline void doSPLIT(parser *p, int arg) {
     p->ok = true;
-    for (int i = 0; i < arg; i++) {
-        byte b = p->ins[p->in + i];
-        if (b == '\0' || b >= p->code[p->pc + i]) p->ok = false;
+    for (int i = 0; i < arg && p->ok; i++) {
+        if (p->in + i == p->end) p->ok = false;
+        else {
+            byte b = p->ins[p->in + i];
+            if (b > p->code[p->pc + i]) p->ok = false;
+        }
     }
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
 // Find the length of a UTF-8 character from its first byte.
@@ -463,7 +429,7 @@ static inline int getUTF8(char const *s, int *plength) {
     return ch;
 }
 
-// {'abc'}  =  SET, 3, 'a', 'b', 'c'
+// {'abc'}  =  SET(3) 'a' 'b' 'c'
 // Check for one of the characters in a set, and return.
 static inline void doSET(parser *p, int arg) {
     p->ok = false;
@@ -472,30 +438,32 @@ static inline void doSET(parser *p, int arg) {
         byte b = p->code[p->in + i];
         n = lengthUTF8(b);
         bool oki = true;
-        for (int j = 0; j < n && oki; j++) {
+        if (p->in + n > p->end) oki = false;
+        else for (int j = 0; j < n && oki; j++) {
             if (p->ins[p->in + j] != p->code[p->pc + i + j]) oki = false;
         }
         if (oki) p->ok = true;
     }
-    if (p->ok) {
-        p->in = p->in + n;
-    }
-    p->pc = p->stack[--p->top];
+    if (p->ok) p->in = p->in + n;
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {%t} == TAG, t
+// {%t} == TAG(t)
 // Check if tag of next token is t and return.
-// TODO: cache next tag instead of making repeated calls.
 static inline void doTAG(parser *p, int t) {
-    int nextTag = p->tag(p->arg, p->in);
-    p->ok = (nextTag == t);
-    if (p->ok) {
-        p->in++;
+    int nextTag;
+    if (p->in == p->tagpos) nextTag = p->tag;
+    else {
+        nextTag = tag(p->in);
+        p->tag = nextTag;
+        p->tagpos = p->in;
     }
-    p->pc = p->stack[--p->top];
+    p->ok = (nextTag == t);
+    if (p->ok) p->in++;
+    p->pc = p->saves[--p->nsaves];
 }
 
-// {Nd}  =  CAT, Nd
+// {Nd}  =  CAT(Nd)
 // Check if next character is in given category.
 static inline void doCAT(parser *p, int arg) {
     if (p->ins[p->in] == '\0') { p->ok = false; return; }
@@ -508,7 +476,7 @@ static inline void doCAT(parser *p, int arg) {
     if (p->ok) {
         p->in += len;
     }
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
 // {<>}  =  END
@@ -516,7 +484,7 @@ static inline void doCAT(parser *p, int arg) {
 static inline void doEND(parser *p) {
     if (p->ins != NULL) p->ok = p->ins[p->in] == '\0';
     else p->ok = p->tag(p->arg, p->in) < 0;
-    p->pc = p->stack[--p->top];
+    p->pc = p->saves[--p->nsaves];
 }
 
 static inline void getOpArg(parser *p, int *op, int *arg) {
@@ -565,7 +533,7 @@ static void execute(parser *p, result *r) {
             case STRING: case STRING1: case SET1: doSTRING(p, arg); break;
             case LOW: case LOW1: doLOW(p, arg); break;
             case HIGH: case HIGH1: doHIGH(p, arg); break;
-            case LESS: case LESS1: doLESS(p, arg); break;
+            case SPLIT: case SPLIT1: doSPLIT(p, arg); break;
             case SET: doSET(p, arg); break;
             case TAG: doTAG(p, arg); break;
             case CAT: doCAT(p, arg); break;
@@ -611,42 +579,6 @@ static void findLine(char *input, int at, lineInfo *li) {
     li->column = at - li->start;
 }
 
-static void reportLine(char *in, lineInfo *li) {
-    fprintf(stderr, "%.*s\n", li->end - li->start, in + li->start);
-}
-
-static void reportColumn(lineInfo *li) {
-    for (int i = 0; i < li->column; i++) fprintf(stderr, " ");
-    fprintf(stderr, "^\n");
-}
-
-void report(char *in, result *r, char *s0, char *s, char *names[]) {
-    lineInfo liData;
-    lineInfo *li = &liData;
-    findLine(in, r->at, li);
-    if (r->markers == 0L) { fprintf(stderr, "%s", s0); }
-    else {
-        char text[100];
-        strcpy(text, s);
-        int n = strstr(text, "%s") - text;
-        text[n] = '\0';
-        fprintf(stderr, "%s", text);
-        strcpy(text, text + n + 2);
-        n = strstr(text, "%s") - text;
-        text[n] = '\0';
-        bool first = true;
-        for (int i = 0; i < 64; i++) {
-            if ((r->markers & (1L << i)) == 0) continue;
-            if (! first) fprintf(stderr, "%s", text);
-            first = false;
-            fprintf(stderr, "%s", names[i]);
-        }
-        strcpy(text, text + n + 2);
-        fprintf(stderr, "%s", text);
-    }
-    reportLine(in, li);
-    reportColumn(li);
-}
 
 #ifdef interpretTest
 

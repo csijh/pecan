@@ -7,8 +7,8 @@ for translations. */
 
 public enum Code {
     ACT, AND, ARITY, BACK, BOTH, CAT, DO, DROP, EITHER, EOT, GO, HAS, HIGH,
-    LOOK, LOW, MANY, MARK, MAYBE, NOT, ONE, OR, SEE, SET, SPLIT, START, STOP,
-    STRING, TAG;
+    LOOK, LOW, MANY, MARK, MAYBE, NOT, ONE, OR, POINT, SEE, SET, SPLIT, START,
+    STOP, STRING, TAG;
 
     // Check alphabetical order.
     public static void main(String[] args) {

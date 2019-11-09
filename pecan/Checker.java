@@ -113,7 +113,7 @@ class Checker implements Testable {
             case Some: scanSome(node); break;
             case See: scanSee(node); break;
             case Tag: case Char: case Text: case Set: scanMatch(node); break;
-            case Cat: case Range: scanMatch(node); break;
+            case Point: case Cat: case Range: scanMatch(node); break;
             case Success: scanSuccess(node); break;
             case Fail: scanFail(node); break;
             case Split: case Eot: scanSplit(node); break;
@@ -178,8 +178,8 @@ class Checker implements Testable {
         node.set(WF);
     }
 
-    // Tag, Char, Text, Set, Cat, Range.
-    // A string has implicit backtracking, e.g. "xy" == ['x' 'y']
+    // Tag, Char, Text, Set, Point, Cat, Range.
+    // A text string has implicit backtracking, e.g. "xy" == ['x' 'y']
     private void scanMatch(Node node) {
         if (switchTest) return;
         node.set(SP);

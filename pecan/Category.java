@@ -13,9 +13,8 @@ Pecan independent of the version of Java used to compile it.
 
 Constants are provided for the Unicode general categories. The name of each
 category is its two letter abbreviation, as defined by the Unicode standard and
-as used in grammars. Its ordinal is the same as its Java type code, as in
-Character.getType. One further constant is added, namely Uc representing all
-Unicode characters. Each category has a bitset giving its ascii content.
+as used in grammars. The names are in alphabetic order. Each category has a
+bitset giving its ascii content.
 
 The main method with no command line arguments carries out tests. The main
 method with argument -g generates two arrays of bytes, as binary files
@@ -40,8 +39,8 @@ The first is for languages like Java which have only signed bytes, the second is
 for languages where the bytes can be declared as unsigned. */
 
 enum Category {
-    Cn, Lu, Ll, Lt, Lm, Lo, Mn, Me, Mc, Nd, Nl, No, Zs, Zl, Zp, Cc,
-    Cf, Uc, Co, Cs, Pd, Ps, Pe, Pc, Po, Sm, Sc, Sk, So, Pi, Pf;
+    Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl, No, Pc, Pd, Pe,
+    Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs;
 
     final BitSet ascii;
     private static byte[] table1, table2;
@@ -87,10 +86,9 @@ enum Category {
         catch (Exception err) { }
     }
 
-    // Type 17 is unallocated in Java. Use it for Uc.
-    private static int type(Category cat) {
+    // Convert a category into a Java type.
+    private static int javaType(Category cat) {
         switch (cat) {
-        case Uc: return 17;
         case Cc: return CONTROL;
         case Cf: return FORMAT;
         case Cn: return UNASSIGNED;
@@ -134,20 +132,21 @@ enum Category {
         catch (Exception e) { throw new Error(e); }
     }
 
-    // Check that the ordinals correspond to Character.getType. Check the
-    // generated tables against the Java library, for some early characters
-    // where the Unicode version isn't a problem.
+    // Check the symbols are in alphabetical order. Check the generated tables
+    // against the Java library, for some early characters where the Unicode
+    // version isn't a problem.
     private static void test() {
-        for (Category cat : Category.values()) {
-            if (cat.ordinal() != type(cat)) throw new Error("Bad sequence");
+        Category[] values = Category.values();
+        for (int i = 0; i < values.length - 1; i++) {
+            assert(values[i].toString().compareTo(values[i+1].toString()) < 0);
         }
         if (table1 == null) {
             throw new Error(
                 "Files not found: use java pecan.Category -g to generate.");
         }
         for (int ch = 0; ch < 512; ch++) {
-            Category cat1 = get(ch);
-            Category cat2 = values()[Character.getType(ch)];
+            int cat1 = javaType(get(ch));
+            int cat2 = Character.getType(ch);
             if (cat1 != cat2) throw new Error("Bad tables " + ch);
         }
         System.out.println("Category class OK");

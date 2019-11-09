@@ -53,7 +53,7 @@
 <li><a href="#compile">Compilation</a>
 <ul>
 <li><a href="#functions">Recursive functions</a></li>
-<li><a href="#code">Bytecode</a></li>
+<li><a href="#bytecode">Bytecode</a></li>
 </ul>
 </li>
 </li>
@@ -570,16 +570,15 @@ better to write <code>"é" / "è"</code> to avoid problems.</p>
 <p>There must be one character (code point) either side of the two dots.</p>
 
 <p>Common sets of characters can be specified using Unicode general categories.
-The names <code>Uc, Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl,
-No, Pc, Pd, Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided.
-The name <code>Uc</code> represents all Unicode code points. The others are the
-standard two-letter abbreviations for the Unicode general categories which
-partition all the code points. For example:</p>
+The standard two-letter abbreviations for the Unicode general categories
+<code>Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl, No, Pc, Pd,
+Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs</code> are provided. In addition,
+a dot <code>.</code> stands for any Unicode code point. For example:</p>
 
 <pre>letter = Lu / Ll / Lt / Lm / Lo
 digit = Nd
 connector = '_'! Pc
-visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+visible = (Cc/Cn/Co/Cs/Zl/Zp)! .
 </pre>
 
 <p>The Unicode categories starting with <code>L</code> are letters. The letter
@@ -1129,7 +1128,8 @@ characters, and a range must be non-empty.</p>
 <p>Many parsing expressions are equivalent, which considerably reduces the
 number of cases that need to be discussed. For example:</p>
 
-<pre>'\32'     &#8801;  ' '
+<pre>.         &#8801;  '\0..\1114111'
+'\32'     &#8801;  ' '
 'a'       &#8801;  "a"
 "ab"      &#8801;  ['a' 'b']
 'ab'      &#8801;  'a' / 'b'
@@ -1143,7 +1143,7 @@ x&amp;        &#8801;  x!!
 ''        &#8801;  ""!
 &lt;bd>      &#8801;  &lt;> / ('\0..a' / 'b' &lt;d>)&amp;
 &lt;b>       &#8801;  &lt;> / '\0..a'&amp;
-&lt;>        &#8801;  Uc!
+&lt;>        &#8801;  .!
 </pre>
 
 <p>The core features remaining are:</p>

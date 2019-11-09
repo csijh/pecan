@@ -116,6 +116,7 @@ public class Evaluator implements Testable {
             case Set: parseSet(node); break;
             case Range: parseRange(node); break;
             case Split: parseSplit(node); break;
+            case Point: parsePoint(node); break;
             case Cat: parseCat(node); break;
             case Mark: parseMark(node); break;
             case Drop: parseDrop(node); break;
@@ -335,6 +336,18 @@ public class Evaluator implements Testable {
         ok = rest.compareTo(text) <= 0;
     }
 
+    // Parse .
+    private void parsePoint(Node node) {
+        if (switchTest) return;
+        if (in < input.length()) {
+            ok = true;
+            int ch = input.codePointAt(in);
+            in += Character.charCount(ch);
+            if (tracing) traceInput();
+        }
+        else ok = false;
+    }
+
     // Parse Nd
     private void parseCat(Node node) {
         if (switchTest) return;
@@ -343,7 +356,7 @@ public class Evaluator implements Testable {
         if (in < input.length()) {
             int ch = input.codePointAt(in);
             Category c = Category.get(ch);
-            ok = c == cat || cat == Category.Uc;
+            ok = c == cat;
             if (ok) {
                 in += Character.charCount(ch);
                 if (tracing) traceInput();

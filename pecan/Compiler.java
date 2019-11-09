@@ -145,6 +145,7 @@ class Compiler implements Testable {
             case Set: compileSet(node); break;
             case Range: compileRange(node); break;
             case Split: compileSplit(node); break;
+            case Point: compilePoint(node); break;
             case Cat: compileCat(node); break;
             case Mark: compileMark(node); break;
             case Drop: compileDrop(node); break;
@@ -359,6 +360,12 @@ class Compiler implements Testable {
     private void compileSplit(Node node) {
         if (switchTest) return;
         node.format(formats.get(SPLIT));
+    }
+
+    // Compile .
+    private void compilePoint(Node node) {
+        if (switchTest) return;
+        node.format(formats.get(POINT));
     }
 
     // Compile Nd

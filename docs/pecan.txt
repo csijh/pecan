@@ -12,7 +12,7 @@ term = factor (term @2and)?
 factor = #atom atom postop*
 postop = opt @2opt / any @2any / some @2some / has @2has / not @2not
 atom = bracketed / see / act / mark / tag / split / range / set /
-    string / category / id
+    string / point / category / id
 
 -- Atoms. Categories and ids are made mutually exclusive.
 -- Brackets produce output items, to help with text ranges of parse tree nodes.
@@ -38,8 +38,9 @@ open = "(" @bracket gap
 sopen = "[" @bracket gap
 close = #bracket ")" @bracket blank
 sclose = #bracket "]" @bracket blank
+point = "." @point blank
 category = [cat alpha!] @cat blank
-cat = "Uc" / "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
+cat = "Cc" / "Cf" / "Cn" / "Co" / "Cs" / "Ll" / "Lm" / "Lo" / "Lt" /
     "Lu" / "Mc" / "Me" / "Mn" / "Nd" / "Nl" / "No" / "Pc" / "Pd" / "Pe" /
     "Pf" / "Pi" / "Po" / "Ps" / "Sc" / "Sk" / "Sm" / "So" / "Zl" / "Zp" / "Zs"
 
@@ -56,7 +57,7 @@ space = ' '
 spaces = space*
 literal = escape / visible
 literals = literal*
-visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc
+visible = (Cc/Cn/Co/Cs/Zl/Zp)! .
 escape = backslash (digits ';'? / 'rnqdb')
 backslash = '\92'
 alpha = letter / Nd / '-' / '_'

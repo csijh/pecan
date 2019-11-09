@@ -18,8 +18,7 @@ the next byte. If the operand value is 6, that indicates an operand of 0..65535
 in the next two bytes in big-endian order. If the operand value is 7, that
 indicates a big-endian operand in the next three bytes.
 
-For testing, the bytes are produced as text, in the form OP or OP0, OP1, OP2,
-... OP5, OPa, OPb, OPc. */
+To test, the bytes are printed as text in the form OP or OP0...OP5 or OP, 6 */
 
 class Generator implements Testable {
     private boolean switchTest, testing;
@@ -157,6 +156,7 @@ class Generator implements Testable {
             case Act:       encodeAct(node);    break;
             case Mark:      encodeMark(node);   break;
             case Tag:       encodeTag(node);    break;
+            case Point:     encodePoint(node);  break;
             case Cat:       encodeCat(node);    break;
             case Text:      encodeText(node);   break;
             case Success:   encodeSuccess(node); break;
@@ -285,6 +285,12 @@ class Generator implements Testable {
         add(MARK, node.get(SEQ));
     }
 
+    // {.}  =  POINT
+    private void encodePoint(Node node) {
+        if (switchTest) return;
+        add(POINT);
+    }
+
     // {%id}  =  TAG(n)
     private void encodeTag(Node node) {
         if (switchTest) return;
@@ -380,7 +386,7 @@ class Generator implements Testable {
             pc++;
         }
         else if (arg < 256) {
-            print(op.toString() + "a");
+            print(op.toString());
             print(arg);
             bytes.write(op.ordinal() + (5 << 5));
             bytes.write(arg);
@@ -388,7 +394,7 @@ class Generator implements Testable {
         }
         else if (arg < 65536) {
             int b1 = arg / 256, b2 = arg % 256;
-            print(op.toString() + "b");
+            print(op.toString());
             print(b1);
             print(b2);
             bytes.write(op.ordinal() + (6 << 5));
@@ -398,7 +404,7 @@ class Generator implements Testable {
         }
         else {
             int b1 = arg / 65536, b2 = (arg / 256) % 256, b3 = arg % 256;
-            print(op.toString() + "c");
+            print(op.toString());
             print(b1);
             print(b2);
             print(b3);
@@ -424,11 +430,11 @@ class Generator implements Testable {
 
     // Add a string to the text, with possible preceding comma and newline.
     private void print(String s) {
-        String prefix = ", ";
+        String prefix = " ";
         if (text.length() == 0) prefix = "";
         int extra = prefix.length() + s.length();
-        if (line + extra >= 80) {
-            text.append(",\n");
+        if (line + extra >= 80 || (line > 0 && s.equals("START"))) {
+            text.append("\n");
             text.append(s);
             line = s.length();
         }

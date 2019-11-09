@@ -25,6 +25,7 @@ public enum Op {
     Set,       // Choice of characters, 'abc'
     Split,     // Lookahead for text less than or equal to string, <...>
     Char,      // Single character, "a" or 'a'
+    Point,     // Any Unicode character (code point)
     Success,   // Always succeed, ""
     Fail,      // Always fail, ''
     Eot,       // End of text or tokens, <>
