@@ -51,10 +51,7 @@
 <li><a href="#final">Final checks</a></li>
 </ul>
 <li><a href="#compile">Compilation</a>
-<ul>
-<li><a href="#functions">Recursive functions</a></li>
 <li><a href="#bytecode">Bytecode</a></li>
-</ul>
 </li>
 </li>
 <li><a href="#transforms">Transforms</a></li>
@@ -1436,23 +1433,15 @@ transformations.</p>
 
 <h2 id="compile">Compilation</h2>
 
-<p>A grammar can be compiled either to a set of recursive functions, or to a
-bytecode array, in almost any desired target programming language. Compilation
-to recursive functions is more intuitive, but compilation to bytecode can be
-used in more dynamic situations, e.g. where grammars need to be executed 'live'
-without external compilation and dynamic loading.</p>
-
-<h3 id="functions">Recursive functions</h3>
-
-<p>A grammar is compiled into recursive functions using a command of the
-form:</p>
+<p>A grammar can be compiled to a set of recursive functions, in almost any
+desired target programming language. A grammar is compiled using a command of
+the form:</p>
 
 <pre>pecan grammar -c program
 </pre>
 
 <p>The option <code>-c program</code> specifies a template program file. The
-file must already exist, and can be written in any desired target programming
-language. It must contain a placeholder such as:</p>
+program file must already exist, and it must contain a placeholder such as:</p>
 
 <pre>// &lt;pecan ...
 // >
@@ -1465,17 +1454,24 @@ with attributes as described below, and ends with a commented out close tag
 <code>&lt;/pecan></code>. Lines in between the two tags, if any, are removed,
 and the result of compiling the grammar is inserted in their place.</p>
 
+<p>An example template program in the C language, with two supporting data
+files, is:</p>
+
+<p class="indent"><a href="tutorial/parse.c">parse.c</a><br/>
+<a href="tutorial/table1.bin">table1.bin</a><br/>
+<a href="tutorial/table2.bin">table2.bin</a></p>
+
 <p>Very few restrictions are placed on the target programming language when
-compiling to recursive functions. The main assumption is that the language has
-two binary and/or operators which are guaranteed to use short-circuit
-evaluation, i.e. they do not evaluate their right hand arguments
-unnecessarily. In many languages, the symbols <code>&amp;&amp;</code> and
-<code>||</code> are suitable. The <code>&amp;&amp;</code> operator does exactly
-what is required for a sequence <code>x y</code>, evaluating <code>x</code> and
-then, only if <code>x</code> succeeds, continuing with <code>y</code>. A choice
-<code>x / y</code> is complicated by the need to test whether <code>x</code> has
-progressed or not before deciding whether to try <code>y</code> instead. So, in
-general, <code>x / y</code> is compiled into something like:</p>
+compiling. The main assumption is that the language has two binary and/or
+operators which are guaranteed to use short-circuit evaluation, i.e. they do not
+evaluate their right hand arguments unnecessarily. In many languages, the
+symbols <code>&amp;&amp;</code> and <code>||</code> are suitable. The
+<code>&amp;&amp;</code> operator does exactly what is required for a sequence
+<code>x y</code>, evaluating <code>x</code> and then, only if <code>x</code>
+succeeds, continuing with <code>y</code>. A choice <code>x / y</code> is
+complicated by the need to test whether <code>x</code> has progressed or not
+before deciding whether to try <code>y</code> instead. So, in general, <code>x /
+y</code> is compiled into something like:</p>
 
 <pre>alt((go() &amp;&amp; tx) || (ok() &amp;&amp; ty))
 </pre>
@@ -1654,95 +1650,71 @@ the n'th item from the top of the output stack and <code>act(n,x)</code> pops n
 items from the output stack, pushes <code>x</code>, and discards any recently
 matched characters.</p>
 
-<h3 id="bytecode">Bytecode</h3>
+<h2 id="bytecode">Bytecode</h2>
 
-<p>Compilation of a grammar into bytecode is provided, along similar lines to
-compilation into recursive functions. An interpreted bytecode is somewhat
-similar to the table-driven techniques used in bottom-up CFG-based parser
-generators.</p>
-
-<p>This bytecode facility is provided mainly for demonstration purposes. The
-real advantage of a bytecode approach would be in a library setting. For
-example, one could imagine an editor or IDE which uses a variant of Pecan as a
-library. It could dynamically load a Pecan language description file, according
-to the language of the source file it is editing, convert the description to a
-bytecode, and interpret the bytecode to parse the source file. This would be
-preferable to writing out a parser program, compiling it, then dynamically
-loading it on the fly. The process of loading a language description and
-compiling it to bytecode could bypass much of the processing currently built
-into Pecan, assuming that the description was previously developed and tested
-offline.</p>
+<p>Instead of compiling a grammar to recursive functions, a grammar can instead
+be translated into an interpretive bytecode. This is suitable for dynamic
+situations. For example, suppose that a programmer's editor or IDE needs a
+scanner or parser for each of a large number of different programming languages.
+It may be desirable to load up the scanner or parser on demand for any specific
+language, by reading in a bytecode file and running a generic bytecode
+interpreter.</p>
 
 <p>A grammar is compiled into bytecode using a command of the form:</p>
 
-<pre>pecan grammar -b program
+<pre>pecan grammar -b file
 </pre>
 
-<p>The option <code>-b program</code> specifies a template program file
-containing an interpreter for the bytecode. The file must already exist, as a
-source file template, written in any desired target programming language. It
-must contain a placeholder such as:</p>
+<p>The option <code>-b file</code> specifies the name of a binary file into
+which to write the bytecode. As well as creating the file, the command prints
+out the integer values used for opcodes, actions, markers, tags and/or Unicode
+categories used in the bytecode. For example:</p>
 
-<pre>// &lt;pecan>
-    ...
-// &lt;/pecan>
+<pre>pecan grammar.txt -b out.bin
+Opcodes: {ACT=0, AND=1, ARITY=2, BACK=3, BOTH=4, CAT=5, DO=6, DROP=7, EITHER=8,
+EOT=9, GO=10, HAS=11, HIGH=12, LOOK=13, LOW=14, MANY=15, MARK=16, MAYBE=17,
+NOT=18, ONE=19, OR=20, POINT=21, SEE=22, SET=23, SPLIT=24, START=25, STOP=26,
+STRING=27, TAG=28}
+Actions: {add=0, divide=1, multiply=2, subtract=3, value=4}
+Markers: {bracket=0, integer=1, newline=2, operator=3}
+Categories: {Cc=0, Cf=1, Cn=2, Co=3, Cs=4, Ll=5, Lm=6, Lo=7, Lt=8, Lu=9, Mc=10,
+Me=11, Mn=12, Nd=13, Nl=14, No=15, Pc=16, Pd=17, Pe=18, Pf=19, Pi=20, Po=21,
+Ps=22, Sc=23, Sk=24, Sm=25, So=26, Zl=27, Zp=28, Zs=29}
+Bytecode file sum.bin written.
 </pre>
 
-<p>The placeholder begins with an open tag <code>&lt;pecan></code> in a
-target-language comment and ends with a close tag <code>&lt;/pecan></code>, also
-embedded in a comment. Lines in between, if any, are removed, and the result of
-compiling the grammar is inserted.</p>
+<p>The names of each type are put into alphabetical order and sequence numbers
+are assigned. The information printed out can be used to set up or confirm the
+values of enumerated constants in the interpreter. An example interpreter in the
+C language is:</p>
 
-<p>The bytecode sequence is printed as text, as a comma-separated list of
-unsigned byte values. Those values which are opcodes, categories, tags, actions
-or error markers are represented symbolically. Suppose the grammar file
-contains:</p>
-
-<pre>digit = '0..9' @number
-</pre>
-
-<p>Then the bytecode sequence generated might be:</p>
-
-<pre>START, 6, LOW, 1, 48, HIGH, 1, 57, ACT, number, STOP
-</pre>
-
-<p>The values of the symbols are specified by the surrounding interpreter, eg.
-using enumerations to define each symbol as a number in the range <code>0</code>
-to <code>255</code>. By default, the same names are used as in the grammar,
-after removing the prefix character. That means the names of actions, error
-markers and tags must normally all be distinct.</p>
-
-<p>In a library setting, values for opcodes and names in the grammar would be
-passed to the Pecan compiler, and an array of bytes returned.</p>
+<p class="indent"><a href="tutorial/interpret.c">interpret.c</a></p>
 
 <p>An interpreter can be constructed by taking the example interpreter provided,
 translating it into the desired programming language, and adapting it to a
-particular application by customising tags, actions and error handling as
+particular application by customising constants and functions as
 appropriate.</p>
 
 <p>The bytecode produced from a grammar is a fairly simple flattening of the
-parse tree for the grammar. Examples are given of how every construct is
-translated into bytecode:</p>
+parse tree for the grammar. A rule is translated into a bytecode sequence of the
+form:</p>
 
-<pre>{id = x}    =   START, nx, {x}, STOP
+<pre>{id = x}    =   START +nx {x} STOP
 </pre>
 
-<p>A rule is translated using the <code>START</code> and <code>STOP</code>
-opcodes. The notation <code>{x}</code> means "the bytecode sequence generated
-for expression x" and <code>nx</code> stands for the number of bytes in
-<code>{x}</code>. The <code>START</code> opcode takes a one-byte operand in the
-range 0..255, whereas <code>STOP</code> needs no operand.</p>
-
-<p>If any instruction needs an operand which is greater than 255, a variant of
-the opcode can be used which takes a two-byte operand. There may also be
-variants which allows a one-byte operand to be omitted for some small
-values.</p>
+<p>In these descriptions, the notation <code>{x}</code> means "the bytecode
+sequence generated for expression x" and <code>nx</code> stands for the number
+of bytes in <code>{x}</code>. The instruction <code>START +nx</code> is a
+sequence of one or more bytes with opcode <code>START</code> and operand
+<code>nx</code>. For small values of <code>nx</code>, the operand may be
+included in the opcode byte. For larger values, one or more extension bytes may
+be needed. The <code>STOP</code> opcode needs no operand.</p>
 
 <p>The <code>START</code> opcode creates a call to <code>{x}</code>, setting up
 the address of <code>STOP</code> as the return address. The <code>STOP</code>
 instruction ends parsing. The operand <code>nx</code> to <code>START</code> can
-be thought of as a relative offset in the code, from the position after the
-<code>START</code> instruction to the <code>STOP</code> instruction.</p>
+be thought of as a relative offset in the code to the <code>STOP</code>
+instruction.</p>
 
 <p><code>START</code> and <code>STOP</code> opcodes are generated for every
 rule, even though they are only executed once for the overall call to the
@@ -1750,64 +1722,63 @@ parser. This is so that any rule can be used as an entry point, if desired. The
 bytecode can be scanned, skipping the body <code>{x}</code> of each rule using
 the number <code>nx</code>, to find the start of the next rule.</p>
 
-<pre>{id}        =   GO, px
-{id}        =   BACK, px
+<pre>{id}        =   GO +px
+{id}        =   BACK -px
 </pre>
 
 <p>When the name <code>id</code> of a rule such as <code>id = x</code> is used
 elsewhere in the grammar, it is translated using <code>GO</code> or
-<code>BACK</code>. The number <code>px</code> is an offset in the code to the
-body <code>{x}</code> of the relevant rule, relative to the end of the
-instruction. The <code>GO</code> opcode is used when the offset is positive, and
-<code>BACK</code> is used, with a positive operand, when the offset is
-negative.</p>
+<code>BACK</code>. The operand of <code>GO</code> is a relative offset to the
+address <code>px</code> in the code of the body <code>{x}</code> of the relevant
+rule. The <code>BACK</code> opcode is used, with a positive argument, when the
+offset is negative.</p>
 
-<pre>{"a"}       =   STRING, 1, 97
-{97}        =   STRING, 1, 97
-{128}       =   STRING, 2, 194, 128
-{"ab"}      =   STRING, 2, 97, 98
-{""}        =   STRING, 0
-{"&#960;"}       =   STRING, 2, 207, 128
-{"a&#960;"}      =   STRING, 3, 97, 207, 128
-{'&#960;'}       =   STRING, 2, 207, 128
-{&lt;a>}       =   LESS, 1, 97
-{&lt;ab>}      =   LESS, 2, 97, 98
-{'a..z'}    =   LOW, 1, 97, HIGH, 1, 122
-{'&#945;..&#969;'}    =   LOW, 2, 206, 177, HIGH, 2, 207, 137
-{''}        =   SET, 0
-{'a'}       =   SET, 1, 97
-{'ab'}      =   SET, 2, 97, 98
-{'&#945;&#946;'}      =   SET, 4, 206, 177, 206, 178</pre>
+<pre>{"a"}       =   STRING 1 97
+{97}        =   STRING 1 97
+{128}       =   STRING 2 194 128
+{"ab"}      =   STRING 2 97 98
+{""}        =   STRING 0
+{"&#960;"}       =   STRING 2 207 128
+{"a&#960;"}      =   STRING 3 97 207 128
+{'&#960;'}       =   STRING 2 207 128
+{&lt;a>}       =   SPLIT 1 97
+{&lt;ab>}      =   SPLIT 2 97 98
+{'a..z'}    =   LOW 1 97 HIGH 1 122
+{'&#945;..&#969;'}    =   LOW 2 206 177 HIGH 2 207 137
+{''}        =   SET 0
+{'a'}       =   SET 1 97
+{'ab'}      =   SET 2 97 98
+{'&#945;&#946;'}      =   SET 4 206 177 206 178</pre>
 
-<p>A character matching opcode is followed by a one-byte count, and then that
-number of bytes in UTF-8 format. For opcodes other than <code>SET</code>, a byte
-sequence containing characters of mixed UTF-8 lengths causes no problem, because
-UTF-8 text can be compared byte by byte, without taking account of character
-boundaries. With the <code>SET</code> opcode, a sequence with mixed UTF-8 byte
-lengths cannot be handled byte by byte, but the first byte of each character can
-be used to find the character's length.</p>
+<p>A character matching opcode has a count as an operand, and is followed by
+that number of bytes in UTF-8 format. For opcodes other than <code>SET</code>, a
+byte sequence containing characters of mixed UTF-8 lengths causes no problem,
+because UTF-8 text can be compared byte by byte, without taking account of
+character boundaries. With the <code>SET</code> opcode, a sequence with mixed
+UTF-8 byte lengths cannot be handled byte by byte, but the first byte of each
+character can be used to find the character's length.</p>
 
-<pre>{@a}        =   ACT, a
-{@}         =   DROP
-{#e}        =   MARK, e
-{%id}       =   TAG, id
-{Nd}        =   CAT, Nd
+<pre>{@a}        =   ACT a
+{@2a}       =   ARITY 2 ACT a
+{@}         =   DROP 0
+{@2}        =   DROP 2
+{#e}        =   MARK e
+{%id}       =   TAG id
+{Nd}        =   CAT Nd
 </pre>
 
-<p>An action is translated using the <code>ACT</code> opcode. Actions need to be
-switched off during has <code>x&amp;</code> or not <code>x!</code> expressions.
-An integer keeps track of the depth of nesting of lookahead constructs, and
-actions are only performed if the integer is zero. For see <code>[x]</code>
-expressions, if <code>x</code> contains actions, it is transformed to
-<code>(x&amp; x)</code> before compiling.</p>
+<p>An action is translated using the <code>ACT</code> opcode. Actions and error
+markers are switched off during has <code>x&amp;</code> or not <code>x!</code>
+expressions. An integer in the interpreter keeps track of the depth of nesting
+of lookahead constructs, and actions are only performed if the integer is zero.
+For see <code>[x]</code> expressions, <code>x</code> is executed once with
+actions and markers switched off, then again with them switched back on, in line
+with the identity <code>[x] &equiv; x& x</code>.</p>
 
 <p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
 set, and cleared whenever a new marker is found further on in the input. Tags
 are used only in token-based parsers. They cause a call to external code to find
-the tag of a particular token. Currently, there is a limit of 256 different
-action names, 256 marker names, and 256 tag names, so that only one-byte
-operands are needed. If the interpreter uses a 64-bit integer as a bitset of
-markers, then there is a limit of 64 marker names.</p>
+the tag of a particular token.</p>
 
 <p>A category is translated using the <code>CAT</code> opcode. The target
 programming language may not have a facility for finding the category of a
@@ -1817,8 +1788,8 @@ two-stage lookup table in the two files <code>table1.bin</code> and
 <code>table2.bin</code> which may be read into memory by the target
 language.</p>
 
-<pre>{x/y}       =   EITHER, nx, {x}, OR, {y}
-{x y}       =   BOTH, nx, {x}, AND, {y}
+<pre>{x/y}       =   EITHER +nx {x} OR {y}
+{x y}       =   BOTH +nx {x} AND {y}
 </pre>
 
 <p>The <code>EITHER</code> opcode initializes a choice, and <code>OR</code>
@@ -1826,15 +1797,15 @@ checks what happens after <code>{x}</code> to decide whether or not to continue
 with <code>{y}</code>. Similarly, the <code>BOTH</code> and <code>AND</code>
 opcodes handle a sequence. The <code>EITHER</code> or <code>BOTH</code> opcode
 can be thought of as causing a call to <code>{x}</code> returning to
-<code>OR</code> or <code>AND</code>, which causes a tail-call to
+<code>OR</code> or <code>AND</code>, which may cause a tail-call to
 <code>{y}</code>.</p>
 
-<pre>{x?}        =   MAYBE, ONE, {x}
-{x*}        =   MAYBE, MANY, {x}
-{x+}        =   DO, AND, MAYBE, MANY, {x}
-{[x]}       =   LOOK, TRY, {x}
-{x&amp;}        =   LOOK, HAS, {x}
-{x!}        =   LOOK, NOT, {x}
+<pre>{x?}        =   MAYBE ONE {x}
+{x*}        =   MAYBE MANY {x}
+{x+}        =   DO AND MAYBE MANY {x}
+{[x]}       =   LOOK SEE {x}
+{x&amp;}        =   LOOK HAS {x}
+{x!}        =   LOOK NOT {x}
 </pre>
 
 <p>The <code>MAYBE</code> opcode initializes a repetition, then causes a call to
@@ -1849,28 +1820,37 @@ x*</code>, except that the <code>DO</code> opcode avoids the need for a second
 copy of <code>{x}</code> by jumping forwards to <code>{x}</code>, and arranging
 for the call to return to <code>AND</code>. The <code>LOOK</code> opcode
 initializes any of the lookahead constructs, arranging to return to
-<code>TRY</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
+<code>SEE</code> or <code>HAS</code> or <code>NOT</code> which sorts out the
 result.</p>
 
+<p>To give a concrete example, suppose a grammar consists of the rule:</p>
 
-<!--, and a tag is translated using the
-<code>TAG</code> opcode-->
+<pre>digit = '0..9' @value
+</pre>
 
-<p>Further details of what each opcode does can be gleaned from the provided
-interpreters and their comments.</p>
+<p>The bytecode sequence generated from this has the form:</p>
 
-<p>The main example interpreter currently provided is in C. It can be used as
-starting point for developing interpreters in other languages:</p>
+<pre>START +5 LOW 1 '0' HIGH 1 '9' ACT 0 STOP
+</pre>
 
-<p class="indent"><a href="interpret.h">interpret.h</a><br/>
-<a href="interpret.c">interpret.c</a></p>
+<p>The sequence might also be represented in a form resembling an assembly
+language:</p>
 
-<p>There is an array of characters or tokens as input, and two indexes
-<code>start</code> and <code>in</code> into it. The items up to
-<code>start</code> have been processed, and <code>in</code> is the current
-position. So when an action is performed, the items between <code>start</code>
-and <code>in</code> are processed, and <code>start</code> is updated to be equal
-to <code>in</code>.</p>
+<pre>0: START 7
+2: LOW 1 '0'
+4: HIGH 1 '9'
+6: ACT 0
+7: STOP
+</pre>
+
+<p>In this form, each line represents one instruction, preceded by its address
+in the bytecode. The offset operand <code>+5</code> to the <code>START</code>
+instruction is displayed as an actual bytecode address <code>7</code>. The
+opcodes <code>LOW</code>, <code>HIGH</code>, <code>ACT</code> have operands
+small enough to be included in the opcode byte.</p>
+
+<p>Further details of how instructions are encoded and what each opcode does can
+be gleaned from an interpreter program and its comments.</p>
 
 <h2 id="transforms">Transforms</h2>
 

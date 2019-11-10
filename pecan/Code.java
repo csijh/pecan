@@ -10,6 +10,28 @@ public enum Code {
     LOOK, LOW, MANY, MARK, MAYBE, NOT, ONE, OR, POINT, SEE, SET, SPLIT, START,
     STOP, STRING, TAG;
 
+    // Whether an opcode has an operand.
+    boolean hasArg() {
+        switch (this) {
+            case ACT: case ARITY: case BACK: case BOTH: case CAT: case DROP:
+            case EITHER: case GO: case HIGH: case LOW: case MARK: case SET:
+            case SPLIT: case START: case STRING: case TAG:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // Whether the operand is relative.
+    boolean relative() {
+        switch (this) {
+            case BACK: case BOTH: case EITHER: case GO: case START:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     // Check alphabetical order.
     public static void main(String[] args) {
         Code[] values = Code.values();

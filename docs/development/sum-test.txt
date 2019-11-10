@@ -1,0 +1,73 @@
+{sum.txt}
+==========
+2
+----------
+value 2
+==========
+42
+----------
+value 42
+==========
+2+40
+----------
+value 2
+value 40
+add
+==========
+2+40%
+----------
+Error in sum-test.txt, line 17: expecting newline, operator
+2+40%
+    ^
+==========
+2+10+12+18
+----------
+value 2
+value 10
+add
+value 12
+add
+value 18
+add
+==========
+2-10+53-3
+----------
+value 2
+value 10
+subtract
+value 53
+add
+value 3
+subtract
+==========
+2+
+----------
+Error in sum-test.txt, line 43: expecting bracket, integer
+2+
+  ^
+==========
+5*8+12/6
+----------
+value 5
+value 8
+multiply
+value 12
+value 6
+divide
+add
+==========
+2*(20+1)
+----------
+value 2
+value 20
+value 1
+add
+multiply
+==========
+ 2 * ( 20 + 1 )
+----------
+value 2
+value 20
+value 1
+add
+multiply

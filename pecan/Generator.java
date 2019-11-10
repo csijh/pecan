@@ -11,18 +11,17 @@ import static pecan.Node.Flag.*;
 import static pecan.Node.Count.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-/* Convert a grammar into bytecode. Each byte is an opcode, plus an operand in
-the top three bits. The operand represents a non-negative integer in the range
-0..4. If the operand bits have value 5, that indicates an operand of 0.255 in
-the next byte. If the operand value is 6, that indicates an operand of 0..65535
-in the next two bytes in big-endian order. If the operand value is 7, that
-indicates a big-endian operand in the next three bytes.
+/* Convert a grammar into bytecode. Each op consists of a sequence of bytes
+where the top bit is set on all but the last. The first byte contains two bits
+of operand and a 5-bit opcode, and each further byte contains 7 more bits of
+operand, in big-endian order.
 
-To test, the bytes are printed as text in the form OP or OP0...OP5 or OP, 6 */
+To test, the bytes are printed in an assembly language format, with offset
+operands being converted to addresses. */
 
 class Generator implements Testable {
     private boolean switchTest, testing;
-    private Map<String,Integer> actions, markers, tags;
+    private Map<String,Integer> codes, actions, markers, tags, cats;
     private boolean hasCats;
     private StringBuilder text;
     private ByteArrayOutputStream bytes;
@@ -74,10 +73,16 @@ class Generator implements Testable {
 
     // Gather names, in alphabetical order, then allocate numbers.
     private void gather(Node root) {
+        codes = new TreeMap<>();
         actions = new TreeMap<>();
         markers = new TreeMap<>();
         tags = new TreeMap<>();
+        cats = new TreeMap<>();
         hasCats = false;
+        for (Code c : Code.values()) codes.put(c.toString(), c.ordinal());
+        for (Category c : Category.values()) {
+            cats.put(c.toString(), c.ordinal());
+        }
         gatherNode(root);
         int i = 0;
         for (String k : actions.keySet()) actions.put(k, i++);
@@ -101,7 +106,7 @@ class Generator implements Testable {
 
     // Print out name info.
     private void printNames() {
-        System.out.println("Opcodes: " + Arrays.toString(Code.values()));
+        System.out.println("Opcodes: " + codes.toString());
         if (! actions.isEmpty()) {
             System.out.println("Actions: " + actions.toString());
         }
@@ -112,7 +117,7 @@ class Generator implements Testable {
             System.out.println("Tags: " + tags.toString());
         }
         if (hasCats) {
-            System.out.println("Cats: " + Arrays.toString(Category.values()));
+            System.out.println("Categories: " + cats.toString());
         }
     }
 
@@ -275,7 +280,7 @@ class Generator implements Testable {
     // {@a}  =  ARITY(n), ACT(a)
     private void encodeAct(Node node) {
         if (switchTest) return;
-        add(ARITY, node.arity());
+        if (node.arity() > 0) add(ARITY, node.arity());
         add(ACT, node.get(SEQ));
     }
 
@@ -308,8 +313,7 @@ class Generator implements Testable {
     private void encodeText(Node node) {
         if (switchTest) return;
         byte[] bs = node.rawText().getBytes(UTF_8);
-        add(STRING, bs.length);
-        add(bs);
+        add(STRING, bs.length, bs);
     }
 
     // {""}  =  STRING(0)
@@ -322,8 +326,7 @@ class Generator implements Testable {
     private void encodeChar(Node node) {
         if (switchTest) return;
         byte[] bs = node.rawText().getBytes(UTF_8);
-        add(STRING, bs.length);
-        add(bs);
+        add(STRING, bs.length, bs);
     }
 
     // {<a>}  =  LESS(1), 97
@@ -331,8 +334,7 @@ class Generator implements Testable {
     private void encodeSplit(Node node) {
         if (switchTest) return;
         byte[] bs = node.rawText().getBytes(UTF_8);
-        add(SPLIT, bs.length);
-        add(bs);
+        add(SPLIT, bs.length, bs);
     }
 
     // {'a..z'}  =  LOW(1), 97, HIGH(1), 122
@@ -343,10 +345,8 @@ class Generator implements Testable {
         int n = s.indexOf("..");
         byte[] bs1 = s.substring(0,n).getBytes(UTF_8);
         byte[] bs2 = s.substring(n+2).getBytes(UTF_8);
-        add(LOW, bs1.length);
-        add(bs1);
-        add(HIGH, bs2.length);
-        add(bs2);
+        add(LOW, bs1.length, bs1);
+        add(HIGH, bs2.length, bs2);
     }
 
     // {'a'}  =  STRING(1), 97
@@ -355,8 +355,7 @@ class Generator implements Testable {
     private void encodeSet(Node node) {
         if (switchTest) return;
         byte[] bs = node.rawText().getBytes(UTF_8);
-        add(SET, bs.length);
-        add(bs);
+        add(SET, bs.length, bs);
     }
 
     // {''}  =   SET 0
@@ -373,49 +372,68 @@ class Generator implements Testable {
 
     // Encode an op with no arg.
     private void add(Code op) {
-        print(op.toString());
+        print(pc, op);
         bytes.write(op.ordinal());
         pc++;
     }
 
     // Encode an op and arg.
     private void add(Code op, int arg) {
-        if (arg <= 4) {
-            print(op.toString() + arg);
-            bytes.write(op.ordinal() + (arg << 5));
-            pc++;
-        }
-        else if (arg < 256) {
-            print(op.toString());
-            print(arg);
-            bytes.write(op.ordinal() + (5 << 5));
-            bytes.write(arg);
-            pc += 2;
-        }
-        else if (arg < 65536) {
-            int b1 = arg / 256, b2 = arg % 256;
-            print(op.toString());
-            print(b1);
-            print(b2);
-            bytes.write(op.ordinal() + (6 << 5));
-            bytes.write(b1);
-            bytes.write(b2);
-            pc += 3;
-        }
-        else {
-            int b1 = arg / 65536, b2 = (arg / 256) % 256, b3 = arg % 256;
-            print(op.toString());
-            print(b1);
-            print(b2);
-            print(b3);
-            bytes.write(op.ordinal() + (7 << 5));
-            bytes.write(b1);
-            bytes.write(b2);
-            bytes.write(b3);
-            pc += 4;
-        }
+        int start = pc;
+        write(op, arg);
+        print(start, pc, op, arg);
     }
 
+    // Encode an op, arg, and byte array.
+    private void add(Code op, int arg, byte[] bs) {
+        int start = pc;
+        write(op, arg);
+        print(start, pc, op, arg, bs);
+        for (byte b : bs) bytes.write(b & 0xFF);
+        pc += bs.length;
+    }
+
+    // Write bytes for an op and arg.
+    private void write(Code op, int arg) {
+        int[] suffixes = new int[5];
+        int n = arg, ns = 0;
+        while (n >= 4) {
+            suffixes[ns++] = n & 0x7F;
+            n = n >> 7;
+        }
+        int first = op.ordinal() + (n << 5);
+        if (ns > 0) first = 0x80 | first;
+        bytes.write(first);
+        for (int i = ns - 1; i >= 0; i--) {
+            if (i > 0) bytes.write(0x80 | suffixes[i]);
+            else bytes.write(suffixes[i]);
+        }
+        pc += ns+1;
+    }
+
+    // Print an op with no arg.
+    private void print(int start, Code op) {
+        text.append("" + start + ": " + op.toString() + "\n");
+    }
+
+    // Print an op and arg.
+    private void print(int start, int end, Code op, int arg) {
+        text.append("" + start + ": " + op.toString());
+        if (op == BACK) text.append(" " + (end - arg));
+        else if (op.relative()) text.append(" " + (end + arg) + "\n");
+        else text.append(" " + arg + "\n");
+    }
+
+    // Print an op, arg and byte array.
+    private void print(int start, int end, Code op, int arg, byte[] bs) {
+        text.append("" + start + ": " + op.toString());
+        if (op == BACK) text.append(" " + (end - arg));
+        else if (op.relative()) text.append(" " + (end + arg));
+        else text.append(" " + arg);
+        for (byte b : bs) text.append(" " + (b & 0xFF));
+        text.append("\n");
+    }
+/*
     // Encode a byte.
     private void add(int b) {
         print(b);
@@ -430,10 +448,16 @@ class Generator implements Testable {
 
     // Add a string to the text, with possible preceding comma and newline.
     private void print(String s) {
+
+        if (op == BACK) arg = pc - arg;
+        else if (relative[op]) arg = pc + arg;
+        if (hasArg[op]) printf("%s %d\n", opnames[op], arg);
+        else printf("%s\n", opnames[op]);
+
         String prefix = " ";
         if (text.length() == 0) prefix = "";
         int extra = prefix.length() + s.length();
-        if (line + extra >= 80 || (line > 0 && s.equals("START"))) {
+        if (line + extra >= 80 || (line > 0 && s.startsWith("START"))) {
             text.append("\n");
             text.append(s);
             line = s.length();
@@ -447,29 +471,6 @@ class Generator implements Testable {
 
     private void print(int n) {
         print("" + n);
-    }
-/*
-    private void add(byte[] bytes) {
-//        add(bytes.length);
-        for (byte b : bytes) add(b);
-    }
-
-    private void add(char[] text) {
-        byte[] bytes;
-        try { bytes = new String(text).getBytes("UTF8"); }
-        catch (Exception e) { throw new Error(e); }
-        add(bytes.length);
-        for (byte b : bytes) add(b);
-    }
-
-    private void add(Code op, byte[] bytes) {
-        add(op, bytes.length);
-        add(bytes);
-    }
-
-    private void add(Code op, char[] text) {
-        add(op.toString());
-        add(text);
     }
     */
 }

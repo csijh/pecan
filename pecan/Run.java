@@ -71,6 +71,7 @@ class Run {
             Generator generator = new Generator();
             generator.run(grammar);
             writeBinary(outfile, generator.getBytes());
+            System.out.println("Bytecode file " + outfile + " written.");
         }
         else {
             List<String> lines = read(outfile);

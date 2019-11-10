@@ -103,10 +103,10 @@ bool expression(parser *p) { return term(p) && expression1(p); }
 // expression1 = ((plus term @2add / minus term @2subtract) expression1)?
 bool expression1(parser *p) {
   return opt(p,
-    (go(p) && (alt(p,
+    go(p) && (alt(p,
       (go(p) && plus(p) && term(p) && act(p,2,add(top(p,1),top(p,0)))) ||
       (ok(p) && minus(p) && term(p) && act(p,2,subtract(top(p,1),top(p,0))))
-    )) && expression1(p))
+    )) && expression1(p)
   );
 }
 
@@ -116,10 +116,10 @@ bool term(parser *p) { return atom(p) && term1(p); }
 // term1 = ((times atom @2multiply / over atom @2divide) term1)?
 bool term1(parser *p) {
   return opt(p,
-    (go(p) && (alt(p,
+    go(p) && (alt(p,
       (go(p) && times(p) && atom(p) && act(p,2,multiply(top(p,1),top(p,0)))) ||
       (ok(p) && over(p) && atom(p) && act(p,2,divide(top(p,1),top(p,0))))
-    )) && term1(p))
+    )) && term1(p)
   );
 }
 
