@@ -24,8 +24,5 @@ Run = pecan/Run.java $(Evaluator) $(Compiler) $(Generator)
 	javac $($@)
 	java -ea pecan.$@
 
-Run: pecan/Run.java $(Evaluator)
-	javac pecan/Run.java $(Evaluator)
-
 jar: pecan/Run.class
 	jar -cef pecan.Run docs/pecan.jar pecan

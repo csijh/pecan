@@ -21,8 +21,17 @@ class Run {
     private Evaluator evaluator;
 
     public static void main(String[] args) {
-        Run program = new Run();
-        program.run(args);
+        boolean testing = false;
+        assert(testing = true);
+        if (testing) {
+            Evaluator.main(args);
+            Compiler.main(args);
+            Generator.main(args);
+        }
+        else {
+            Run program = new Run();
+            program.run(args);
+        }
     }
 
     private void run(String[] args) {
@@ -143,60 +152,7 @@ class Run {
             System.exit(1);
         }
     }
-/*
-    // compile grammar, write program
-    // back out with compiled grammar inserted.
-    private void fill(Source grammar, String outfile) {
-            if (reading && line.indexOf('=') < 0) {
-                if (line.indexOf('>') < 0) err(i+1, outfile, "expecting >");
-                reading = false;
-                skipping = true;
-                pretty.fillDefaults(i+1, outfile);
-                Compiler compiler = new Compiler();
-                compiler.formats(pretty);
-                String functions = compiler.run(grammar);
-                out.println();
-                out.println(functions);
-            }
-            if (reading) pretty.readLine(i+1, outfile, line);
-            if (! reading && ! skipping && line.indexOf("<pecan") >= 0) {
-                if (line.indexOf("<pecan>") >= 0) {
-                    if (! bytecode) err(i+1, outfile, "expecting attributes");
-                    skipping = true;
-                    // PRINT BYTES
-                }
-                else {
-                    if (bytecode) err(i+1, outfile, "expecting <pecan>");
-                    reading = true;
-                }
-            }
-        }
-        if (skipping) err(lines.size(), outfile, "expecting <pecan>");
-        out.close();
-    }
 
-    // Insert the code into the output file.
-    private void insert(String code) {
-        List<String> lines = null;
-        Path p = Paths.get(outfile);
-        PrintStream out = null;
-        try {
-            lines = Files.readAllLines(p, StandardCharsets.UTF_8);
-            out = new PrintStream(new File(outfile));
-        }
-        catch (Exception e) { throw new Error(e); }
-        boolean skipping = false;
-        for (String line : lines) {
-            if (line.indexOf("</pecan>") >= 0) skipping = false;
-            if (! skipping) out.println(line);
-            if (line.indexOf("<pecan>") >= 0) {
-                skipping = true;
-                out.print(code);
-            }
-        }
-        out.close();
-    }
-*/
     // Give a usage message and stop.
     private static void usage() {
         System.err.println(

@@ -100,11 +100,11 @@ keyword
 = ["alignof" k] @1alignof
 / ["auto" k] @1auto
 ...
-/ ["_Thread_local" k] @1_Thread_local
+/ ["_Thread_local" k] @1`_Thread_local`
 </pre>
 
 <p>The rule <code>k</code> checks that there is no following letter or digit. A
-try construct <code>[...]</code> is used to backtrack if a keyword is not
+see construct <code>[...]</code> is used to backtrack if a keyword is not
 properly matched. Keywords are used as names for their own tags, as tokens.</p>
 
 <p>A direct translation of this grammar into a scanner function as a series of
@@ -154,7 +154,7 @@ other = Lu / Ll / Lt / Lm / Lo
 
 <p>The rules for universal character names are easily transformed:</p>
 
-<pre class="pecan">universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
+<pre class="pecan">universal-character-name = "\bu" hex-quad / "\bU" hex-quad hex-quad
 
 hex-quad =
     hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
@@ -289,7 +289,7 @@ encoding-prefix = "u8" | "u" | "U" | "L"
 encoding-prefix = "u8" / "u" / "U" / "L"
 </pre>
 
-<p>The try construct <code class="pecan">[encoding-prefix? '"']</code> deals
+<p>The see construct <code class="pecan">[encoding-prefix? '"']</code> deals
 with the overlap between prefixes and identifiers.</p>
 
 <h2>Punctuators</h2>
@@ -301,13 +301,13 @@ according to the greedy convention. Perhaps the easiest way to be sure of that
 is to list them in order of length.</p>
 
 <pre class="pecan">punctuator
-= "%:%:" @1"%:%:"
-/ "<<=" @1"<<="
-/ ">>=" @1">>="
-/ "..." @1"..."
-/ "->" @1"->"
+= "%:%:" @1`%:%:`
+/ "<<=" @1`<<=`
+/ ">>=" @1`>>=`
+/ "..." @1`...`
+/ "->" @1`->`
 ...
-/ "#" @1"#"
+/ "#" @1`#`
 </pre>
 
 <p>Literal names are used here so that the tag for a token has the same name as

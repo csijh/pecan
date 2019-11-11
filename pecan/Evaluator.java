@@ -10,7 +10,10 @@ import static pecan.Node.Flag.*;
 nodes, and can be used for testing, and for tracing. It also effectively defines
 the operational semantics of the grammar language.
 
-The input is text, or tag names representing tokens separated by white space.
+For a token parser, the input consists of tag names representing tokens,
+separated by white space. The tokens are translated according to the literal
+name rules.
+
 The output describes the external calls generated, with one line per call. */
 
 public class Evaluator implements Testable {
@@ -234,7 +237,8 @@ public class Evaluator implements Testable {
     // Parse %t
     private void parseTag(Node node) {
         if (switchTest) return;
-        String tag = node.rawText();
+        String tag = node.text().substring(1);
+        if (tag.startsWith("`")) tag = tag.substring(1, tag.length() - 1);
         ok = input.startsWith(tag, in);
         if (ok) {
             start = in;
@@ -390,7 +394,9 @@ public class Evaluator implements Testable {
         if (switchTest) return;
         ok = true;
         if (lookahead > 0) return;
-        String s = node.rawText();
+        String s = node.text().substring(1);
+        while ('0' <= s.charAt(0) && s.charAt(0) <= '9') s = s.substring(1);
+        if (s.startsWith("`")) s = s.substring(1, s.length() - 1);
         if (charInput && in > start) s += " " + input.substring(start, in);
         s = escape(s);
         s += "\n";

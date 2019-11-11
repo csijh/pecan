@@ -10,103 +10,103 @@ string-literal = #atom %string-literal @string-literal
 typedef-name = #atom %typedef-name @typedef-name
 
 -- Synonyms for keywords.
-"alignof" = %alignof
-"auto" = #type %auto
-"break" = %break
-"case" = #case %case
-"char" = #type %char
-"const" = #type %const
-"continue" = %continue
-"default" = %default
-"do" = #do %do
-"double" = #type %double
-"else" = #else %else
-"enum" = #type %enum
-"extern" = #type %extern
-"float" = #type %float
-"for" = %for
-"goto" = %goto
-"if" = %if
-"inline" = #type %inline
-"int" = #type %int
-"long" = #type %long
-"register" = %register
-"restrict" = %restrict
-"return" = %return
-"short" = #type %short
-"signed" = #type %signed
-"sizeof" = %sizeof
-"static" = #type %static
-"struct" = #type %struct
-"switch" = %switch
-"typedef" = #type %typedef
-"union" = #type %union
-"unsigned" = #type %unsigned
-"void" = #type %void
-"volatile" = #type %volatile
-"while" = %vhile
-"_Alignas" = %"_Alignas"
-"_Atomic" = #type %"_Atomic"
-"_Bool" = #type %"_Bool"
-"_Complex" = #type %"_Complex"
-"_Generic" = #type %"_Generic"
-"_Imaginary" = #type %"_Imaginary"
-"_Noreturn" = %"_Noreturn"
-"_Static_assert" = %"_Static_assert"
-"_Thread_local" = %"_Thread_local"
+`alignof` = %alignof
+`auto` = #type %auto
+`break` = %break
+`case` = #case %case
+`char` = #type %char
+`const` = #type %const
+`continue` = %continue
+`default` = %default
+`do` = #do %do
+`double` = #type %double
+`else` = #else %else
+`enum` = #type %enum
+`extern` = #type %extern
+`float` = #type %float
+`for` = %for
+`goto` = %goto
+`if` = %if
+`inline` = #type %inline
+`int` = #type %int
+`long` = #type %long
+`register` = %register
+`restrict` = %restrict
+`return` = %return
+`short` = #type %short
+`signed` = #type %signed
+`sizeof` = %sizeof
+`static` = #type %static
+`struct` = #type %struct
+`switch` = %switch
+`typedef` = #type %typedef
+`union` = #type %union
+`unsigned` = #type %unsigned
+`void` = #type %void
+`volatile` = #type %volatile
+`while` = %vhile
+`_Alignas` = %`_Alignas`
+`_Atomic` = #type %`_Atomic`
+`_Bool` = #type %`_Bool`
+`_Complex` = #type %`_Complex`
+`_Generic` = #type %`_Generic`
+`_Imaginary` = #type %`_Imaginary`
+`_Noreturn` = %`_Noreturn`
+`_Static_assert` = %`_Static_assert`
+`_Thread_local` = %`_Thread_local`
 
 -- Literal synonyms for punctuators.
-"%:%:" = #op %"%:%:"
-"<<=" = #op %"<<="
-">>=" = #op %">>="
-"..." = #op %"..."
-"->" = #op %"->"
-"++" = #op %"++"
-"--" = #op %"--"
-"<<" = #op %"<<"
-">>" = #op %">>"
-"<=" = #op %"<="
-">=" = #op %">="
-"==" = #op %"=="
-"!=" = #op %"!="
-"&&" = #op %"&&"
-"||" = #op %"||"
-"*=" = #op %"*="
-"/=" = #op %"/="
-"%=" = #op %"%="
-"+=" = #op %"+="
-"-=" = #op %"-="
-"&=" = #op %"&="
-"^=" = #op %"^="
-"|=" = #op %"|="
-"##" = #op %"##"
-"<:" = #op %"<:"
-":>" = #op %":>"
-"<%" = #op %"<%"
-"%>" = #op %"%>"
-"%:" = #op %"%:"
-"[" = #bracket %"["
-"]" = #close %"]"
-"(" = #bracket %"("
-")" = #close %")"
-"{" = #bracket %"{"
-"}" = #close %"}"
-"." = #op %"."
-"&" = #op %"&"
-"*" = #op %"*"
-"+" = #op %"+"
-"-" = #op %"-"
-"~" = #op %"~"
-"!" = #op %"!"
-"/" = #op %"/"
-"%" = #op %"%"
-"<" = #op %"<"
-">" = #op %">"
-"^" = #op %"^"
-"|" = #op %"|"
-"?" = #op %"?"
-":" = #colon %":"
-";" = #semi %";"
-"=" = #op %"="
-"," = #comma %","
-"#" = %"#"
+`%:%:` = #op %`%:%:`
+`<<=` = #op %`<<=`
+`>>=` = #op %`>>=`
+`...` = #op %`...`
+`->` = #op %`->`
+`++` = #op %`++`
+`--` = #op %`--`
+`<<` = #op %`<<`
+`>>` = #op %`>>`
+`<=` = #op %`<=`
+`>=` = #op %`>=`
+`==` = #op %`==`
+`!=` = #op %`!=`
+`&&` = #op %`&&`
+`||` = #op %`||`
+`*=` = #op %`*=`
+`/=` = #op %`/=`
+`%=` = #op %`%=`
+`+=` = #op %`+=`
+`-=` = #op %`-=`
+`&=` = #op %`&=`
+`^=` = #op %`^=`
+`|=` = #op %`|=`
+`##` = #op %`##`
+`<:` = #op %`<:`
+`:>` = #op %`:>`
+`<%` = #op %`<%`
+`%>` = #op %`%>`
+`%:` = #op %`%:`
+`[` = #bracket %`[`
+`]` = #close %`]`
+`(` = #bracket %`(`
+`)` = #close %`)`
+`{` = #bracket %`{`
+`}` = #close %`}`
+`.` = #op %`.`
+`&` = #op %`&`
+`*` = #op %`*`
+`+` = #op %`+`
+`-` = #op %`-`
+`~` = #op %`~`
+`!` = #op %`!`
+`/` = #op %`/`
+`%` = #op %`%`
+`<` = #op %`<`
+`>` = #op %`>`
+`^` = #op %`^`
+`|` = #op %`|`
+`?` = #op %`?`
+`:` = #colon %`:`
+`;` = #semi %`;`
+`=` = #op %`=`
+`,` = #comma %`,`
+`#` = %`#`

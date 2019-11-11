@@ -36,21 +36,21 @@ identifier intx
 [](){}+ ++ +++ < << <<< %:%:
 ----------
 tokens
-Os [
-Cs ]
-Ob (
-Cb )
-Oc {
-Cc }
-Pl +
-PlPl ++
-PlPl ++
-Pl +
-Lt <
-LtLt <<
-LtLt <<
-Lt <
-PcClPcCl %:%:
+[ [
+] ]
+( (
+) )
+{ {
+} }
++ +
+++ ++
+++ ++
++ +
+< <
+<< <<
+<< <<
+< <
+%:%: %:%:
 ==========
 // Character constants
 'a' L'a' '\b\q'

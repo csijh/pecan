@@ -8,110 +8,110 @@ primary-expression =
     identifier /
     constant /
     string-literal /
-    "(" expression ")" /
+    `(` expression `)` /
     generic-selection
 
 generic-selection =
-    "_Generic" "(" (assignment-expression "," generic-assoc-list ")" @2generic)
+    `_Generic` `(` (assignment-expression `,` generic-assoc-list `)` @2generic)
 
 generic-assoc-list = generic-association (generic-association @2pair)*
 
 generic-association =
-    type-name ":" assignment-expression @2assoc /
-    "default" @nil ":" assignment-expression @2assoc
+    type-name `:` assignment-expression @2assoc /
+    `default` @nil `:` assignment-expression @2assoc
 
 postfix-expression =
-    ["(" type-name ")" "{"] initializer-list ","? "}" @2compound /
+    [`(` type-name `)` `{`] initializer-list `,`? `}` @2compound /
     primary-expression (
-        "[" expression "]" @2index /
-        "(" (argument-expression-list / @nil) ")" @2apply /
-        "." identifier @2field /
-        "->" identifier @2arrow /
-        "++" @1postInc /
-        "--" @1postDec
+        `[` expression `]` @2index /
+        `(` (argument-expression-list / @nil) `)` @2apply /
+        `.` identifier @2field /
+        `->` identifier @2arrow /
+        `++` @1postInc /
+        `--` @1postDec
     )*
 
 argument-expression-list =
-    assignment-expression ("," assignment-expression @2pair)*
+    assignment-expression (`,` assignment-expression @2pair)*
 
 unary-expression  =
     postfix-expression /
-    "++" unary-expression @1preInc /
-    "--" unary-expression @1preDec /
+    `++` unary-expression @1preInc /
+    `--` unary-expression @1preDec /
     unary-operator cast-expression @2preOp /
-    ["sizeof" "(" type-name ")"] @1sizeofType /
-    "sizeof" unary-expression @1sizeofVar /
-    "alignof" "(" type-name ")" @1align
+    [`sizeof` `(` type-name `)`] @1sizeofType /
+    `sizeof` unary-expression @1sizeofVar /
+    `alignof` `(` type-name `)` @1align
 
 unary-operator =
-    "&" @address / "*" @star / "+" @pos / "-" @neg  / "~" @tilde /
-    "!" @not
+    `&` @address / `*` @star / `+` @pos / `-` @neg  / `~` @tilde /
+    `!` @not
 
 cast-expression =
-    ["(" type-name ")" "{"!] cast-expression @2cast /
+    [`(` type-name `)` `{`!] cast-expression @2cast /
     unary-expression
 
 multiplicative-expression =
     cast-expression (
-        "*" cast-expression @2multiply /
-        "/" cast-expression @2divide /
-        "%" cast-expression @2remainder
+        `*` cast-expression @2multiply /
+        `/` cast-expression @2divide /
+        `%` cast-expression @2remainder
     )*
 
 additive-expression =
     multiplicative-expression (
-        "+" multiplicative-expression @2add /
-        "-" multiplicative-expression @2subtract
+        `+` multiplicative-expression @2add /
+        `-` multiplicative-expression @2subtract
     )*
 
 shift-expression =
     additive-expression (
-        "<<" additive-expression @2shiftL /
-        ">>" additive-expression @2shiftR
+        `<<` additive-expression @2shiftL /
+        `>>` additive-expression @2shiftR
     )*
 
 relational-expression =
     shift-expression (
-        "<" shift-expression @2lt /
-        ">" shift-expression @2gt /
-        "<=" shift-expression @2le /
-        ">=" shift-expression @2ge
+        `<` shift-expression @2lt /
+        `>` shift-expression @2gt /
+        `<=` shift-expression @2le /
+        `>=` shift-expression @2ge
     )*
 
 equality-expression =
     relational-expression (
-        "==" relational-expression @2equals /
-        "!=" relational-expression @2notEquals
+        `==` relational-expression @2equals /
+        `!=` relational-expression @2notEquals
     )*
 
 AND-expression =
-    equality-expression ("&" equality-expression @2bitAnd)*
+    equality-expression (`&` equality-expression @2bitAnd)*
 
 exclusive-OR-expression =
-    AND-expression ("^" AND-expression @2xor)*
+    AND-expression (`^` AND-expression @2xor)*
 
 inclusive-OR-expression =
-    exclusive-OR-expression ("|" exclusive-OR-expression @2bitOr)*
+    exclusive-OR-expression (`|` exclusive-OR-expression @2bitOr)*
 
 logical-AND-expression =
-    inclusive-OR-expression ("&&" inclusive-OR-expression @2boolAnd)*
+    inclusive-OR-expression (`&&` inclusive-OR-expression @2boolAnd)*
 
 logical-OR-expression =
-    logical-AND-expression ("||" logical-AND-expression @2boolOr)*
+    logical-AND-expression (`||` logical-AND-expression @2boolOr)*
 
 conditional-expression =
-    logical-OR-expression ("?" expression ":" conditional-expression @3ifExp)?
+    logical-OR-expression (`?` expression `:` conditional-expression @3ifExp)?
 
 assignment-expression =
     [unary-expression assignment-operator] assignment-expression @3assign /
     conditional-expression
 
 assignment-operator =
-    "=" @becomes / "*=" @mulEq / "/=" @divEq / "%=" @remEq /
-    "+=" @PlusEq / "-=" @minusEq / "<<=" @shiftLEq /
-    ">>=" @shiftREq / "&=" @andEq / "^=" @xorEq / "|=" @orEq
+    `=` @becomes / `*=` @mulEq / `/=` @divEq / `%=` @remEq /
+    `+=` @PlusEq / `-=` @minusEq / `<<=` @shiftLEq /
+    `>>=` @shiftREq / `&=` @andEq / `^=` @xorEq / `|=` @orEq
 
 expression =
-    assignment-expression ("," assignment-expression @2comma)*
+    assignment-expression (`,` assignment-expression @2comma)*
 
 constant-expression = conditional-expression
