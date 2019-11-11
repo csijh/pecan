@@ -2,7 +2,7 @@
 ==========
 -- Single rule
 x = y
-..........
+----------
 id x
 id y
 rule
@@ -12,7 +12,7 @@ list
 -- Inclusion
 {other.txt}
 x = y
-..........
+----------
 string {other.txt}
 include
 id x
@@ -24,7 +24,7 @@ list
 ==========
 -- Choice
 x = y / z
-..........
+----------
 id x
 id y
 id z
@@ -35,7 +35,7 @@ list
 ==========
 -- Bracket
 x = (y / z)
-..........
+----------
 id x
 bracket (
 id y
@@ -48,22 +48,22 @@ empty
 list
 ==========
 -- Empty grammar
-..........
+----------
 Error in pecan-test.txt, line 51: expecting id, newline
-..........
+----------
 ^
 ==========
 -- Expecting =
 x
-..........
+----------
 Error in pecan-test.txt, line 57: expecting equals
 x
  ^
 ==========
--- Two rules, normal \n line endings
+-- Two rules, normal \bn line endings
 x = x
 y = y
-..........
+----------
 id x
 id x
 rule
@@ -78,7 +78,7 @@ list
 
 
 x = x
-..........
+----------
 id x
 id x
 rule
@@ -90,7 +90,7 @@ x = x
 y = y
 
 
-..........
+----------
 id x
 id x
 rule
@@ -110,7 +110,7 @@ x = y
 y = z
 
 -- end comment
-..........
+----------
 id x
 id y
 rule
@@ -123,35 +123,35 @@ list
 ==========
 -- Illegal end of line comment
 x = y -- comment
-..........
+----------
 Error in pecan-test.txt, line 125: expecting atom, newline, operator
 x = y -- comment
       ^
 ==========
 -- Unexpected character
 x = |y|
-..........
+----------
 Error in pecan-test.txt, line 132: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
-..........
+----------
 Error in pecan-test.txt, line 139: expecting quote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
-..........
+----------
 Error in pecan-test.txt, line 146: expecting quote
 x = 'abc
         ^
 ==========
 -- Expecting atom
 x = /
-..........
+----------
 Error in pecan-test.txt, line 153: expecting atom, newline
 x = /
     ^
@@ -159,28 +159,23 @@ x = /
 -- Missing close bracket
 x = (y
 y = z
-..........
+----------
 Error in pecan-test.txt, line 160: expecting atom, bracket, operator
 x = (y
       ^
 ==========
--- Dot in the wrong place
+-- Dot as any character
 x = .
-..........
-Error in pecan-test.txt, line 168: expecting atom, newline
-x = .
-    ^
-==========
--- Dot outside of a range
-x = 0.
-..........
-Error in pecan-test.txt, line 175: expecting atom, newline
-x = 0.
-    ^
+----------
+id x
+point .
+rule
+empty
+list
 ==========
 -- Discard action
 x = @3
-..........
+----------
 id x
 act @3
 rule
@@ -190,7 +185,7 @@ list
 -- Long id and id extending category name
 longIdentifier = longIdentifier
 x = Ndx
-..........
+----------
 id longIdentifier
 id longIdentifier
 rule
@@ -203,14 +198,14 @@ list
 ==========
 -- Definition of category
 Nd = "x"
-..........
-Error in pecan-test.txt, line 205: expecting id, newline
+----------
+Error in pecan-test.txt, line 200: expecting id, newline
 Nd = "x"
 ^
 ==========
 -- Tag
 x = %x
-..........
+----------
 id x
 tag %x
 rule
@@ -219,14 +214,14 @@ list
 ==========
 -- Bad tag
 x = %
-..........
-Error in pecan-test.txt, line 221: expecting name
+----------
+Error in pecan-test.txt, line 216: expecting name
 x = %
      ^
 ==========
 -- Marker
 x = #m
-..........
+----------
 id x
 mark #m
 rule
@@ -235,15 +230,15 @@ list
 ==========
 -- Bad marker
 x = 'x' #3
-..........
-Error in pecan-test.txt, line 237: expecting name
+----------
+Error in pecan-test.txt, line 232: expecting name
 x = 'x' #3
          ^
 ==========
 -- Brackets
 exp = (exp) end
 exp = [exp] end
-..........
+----------
 id exp
 bracket (
 id exp
@@ -279,7 +274,7 @@ x
 = y (a
 ) [c
 ]
-..........
+----------
 id x
 id y
 id z
@@ -322,7 +317,7 @@ list
 ==========
 -- The + * ? postfix operators
 exp = exp* exp+ exp? end
-..........
+----------
 id exp
 id exp
 postop *
@@ -342,9 +337,9 @@ empty
 list
 ==========
 -- Ranges
-r1 = '\0..\127'
+r1 = '\b0..\b127'
 r2 = 'a..z'
-..........
+----------
 id r1
 range '\0..\127'
 rule
@@ -357,7 +352,7 @@ list
 ==========
 -- Literal id
 `->` = %arrow
-..........
+----------
 id `->`
 tag %arrow
 rule
@@ -366,7 +361,7 @@ list
 ==========
 -- Error marker
 assignment = left #equals "=" right
-..........
+----------
 id assignment
 id left
 mark #equals
@@ -382,17 +377,17 @@ list
 -- Double operator
 x = y /
 z / /
-..........
-Error in pecan-test.txt, line 384: expecting atom, newline
+----------
+Error in pecan-test.txt, line 379: expecting atom, newline
 z / /
     ^
 ==========
 -- Actions, tests, escapes and errors
 x = %x @0x @1x @ @x
-y = '\0' '\1' '\2' '\10' '\12' '\123'
-z = '\0ffff' '\01ABCDEF23' '\0FG'
+y = '\b0' '\b1' '\b2' '\b10' '\b12' '\b123'
+z = '\b0ffff' '\b01ABCDEF23' '\b0FG'
 u = #err ''
-..........
+----------
 id x
 tag %x
 act @0x
@@ -438,13 +433,13 @@ list
 -- Unicode letters and digits in identifiers, maximum codes
 x = abcπ
 y = d123٤
-z = '\1114111\010ffff'
-..........
+z = '\b1114111\b010ffff'
+----------
 id x
-id abcπ
+id abc\960
 rule
 id y
-id d123٤
+id d123\1636
 rule
 id z
 set '\1114111\010ffff'
@@ -458,7 +453,7 @@ list
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
 pi = "\960"
-..........
+----------
 id x
 string "abc"
 string " !#$%^&*()_-=+[]`{};:'@#~"
@@ -482,7 +477,7 @@ x = (y / z) / y?
 x = (y/z)+ / y*
 x = y z w ! / y
 x = [y z] / w
-..........
+----------
 id x
 bracket (
 id y
@@ -540,7 +535,7 @@ list
 keyword = <do> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
-..........
+----------
 id keyword
 split <do>
 id keyword1
@@ -579,7 +574,7 @@ list
 ==========
 -- End of input
 end = #end <>
-..........
+----------
 id end
 mark #end
 split <>
@@ -590,7 +585,7 @@ list
 ==========
 -- Underscore
 a_b = xy_
-..........
+----------
 id a_b
 id xy_
 rule
@@ -599,7 +594,7 @@ list
 ==========
 -- Hyphen
 a-b = xy-
-..........
+----------
 id a-b
 id xy-
 rule
@@ -607,8 +602,8 @@ empty
 list
 ==========
 -- Escapes
-bs = '\r\n\q\d\b\960;;'
-..........
+bs = '\br\bn\bq\bd\bb\b960;;'
+----------
 id bs
 set '\r\n\q\d\b\960;;'
 rule

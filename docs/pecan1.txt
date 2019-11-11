@@ -13,7 +13,7 @@ factor = #atom atom (repeat / lookahead)*
 repeat = opt @2opt / any @2any / some @2some
 lookahead = has @2has / not @2not
 atom = bracketed / see / id / act / mark / tag /
-    range / set / string / split
+    range / set / string / split / point
 
 -- Atoms
 bracketed = open expression close @3bracketed
@@ -37,6 +37,7 @@ open = "(" @bracket gap
 sopen = "[" @bracket gap
 close = #bracket ")" @bracket blank
 sclose = #bracket "]" @bracket blank
+point = "." @point blank
 
 -- White space and continuations.
 blank = space* [endline space* '=/)]' &]? @
@@ -48,7 +49,7 @@ newline = #newline endline @
 -- Character sets and sequences
 space = ' '
 literal = escape / ' ..~'
-escape = '\92' #digit (hex / decimal)
+escape = '\b' #digit (hex / decimal)
 alpha = letter / '0..9' / '-'
 letter = 'a..z' / 'A..Z' / '_'
 name = letter alpha*
@@ -57,12 +58,12 @@ decimal = '0' / ('1..9' '0..9'*)
 noquote = "'"! literal
 nodquote = '"'! literal
 noangle = '>'! literal
-endline = '\13'? '\10'
+endline = '\r'? '\n'
 
 ==========
 -- Single rule
 x = y
-..........
+----------
 nil
 id x
 id y
@@ -71,7 +72,7 @@ list
 ==========
 -- Choice
 x = y / z
-..........
+----------
 nil
 id x
 id y
@@ -82,7 +83,7 @@ list
 ==========
 -- Bracket
 x = (y / z)
-..........
+----------
 nil
 id x
 bracket (
@@ -95,22 +96,22 @@ rule
 list
 ==========
 -- Empty grammar
-..........
-Error in pecan1.txt, line 98: expecting id, newline
-..........
+----------
+Error in pecan1.txt, line 99: expecting id, newline
+----------
 ^
 ==========
 -- Expecting =
 x
-..........
-Error in pecan1.txt, line 104: expecting equals
+----------
+Error in pecan1.txt, line 105: expecting equals
 x
  ^
 ==========
--- Two rules, normal \n line endings
+-- Two rules, normal \bn line endings
 x = x
 y = y
-..........
+----------
 nil
 id x
 id x
@@ -122,9 +123,9 @@ rule
 list
 ==========
 -- Windows line endings
-x=x\13\10\
-y=y\13\10\
-..........
+x=x\r\n
+y=y\r\n
+----------
 nil
 id x
 id x
@@ -139,7 +140,7 @@ list
 
 
 x = x
-..........
+----------
 nil
 id x
 id x
@@ -147,10 +148,10 @@ rule
 list
 ==========
 -- Trailing spaces
-x = x    \10
-         \10
-y = y    \10
-..........
+x = x    \n
+         \n
+y = y    \n
+----------
 nil
 id x
 id x
@@ -166,7 +167,7 @@ x = x
 y = y
 
 
-..........
+----------
 nil
 id x
 id x
@@ -179,29 +180,21 @@ list
 ==========
 -- No final newline
 x = x
-y = y\
-..........
-nil
-id x
-id x
-rule
-list
-id y
-id y
-rule
-list
+y = \121
+----------
+Error in pecan1.txt, line 183: expecting atom, newline, operator
+y = \121
+     ^
 ==========
 -- No final newline
 x = x
--- comment\
-..........
-nil
-id x
-id x
-rule
-list
+-- comment\32
+----------
+Error in pecan1.txt, line 191: expecting newline
+-- comment\32
+           ^
 ==========
--- Varied comments and nil lines
+-- Varied comments and empty lines
 -- initial comment
 
 x = y
@@ -210,7 +203,7 @@ x = y
 y = z
 
 -- end comment
-..........
+----------
 nil
 id x
 id y
@@ -223,64 +216,68 @@ list
 ==========
 -- Illegal end of line comment
 x = y -- comment
-..........
-Error in pecan1.txt, line 225: expecting atom, newline, operator
+----------
+Error in pecan1.txt, line 218: expecting atom, newline, operator
 x = y -- comment
       ^
 ==========
 -- Unexpected character
 x = |y|
-..........
-Error in pecan1.txt, line 232: expecting atom, newline
+----------
+Error in pecan1.txt, line 225: expecting atom, newline
 x = |y|
     ^
 ==========
 -- Incomplete string
 x = "abc
-..........
-Error in pecan1.txt, line 239: expecting quote
+----------
+Error in pecan1.txt, line 232: expecting dquote
 x = "abc
         ^
 ==========
 -- Incomplete set
 x = 'abc
-..........
-Error in pecan1.txt, line 246: expecting quote
+----------
+Error in pecan1.txt, line 239: expecting squote
 x = 'abc
         ^
 ==========
 -- Expecting atom
 x = /
-..........
-Error in pecan1.txt, line 253: expecting atom, newline
+----------
+Error in pecan1.txt, line 246: expecting atom, newline
 x = /
     ^
 ==========
 -- Missing close bracket
 x = (y
 y = z
-..........
-Error in pecan1.txt, line 260: expecting atom, bracket, operator
+----------
+Error in pecan1.txt, line 253: expecting atom, bracket, operator
 x = (y
       ^
 ==========
--- Dot in the wrong place
+-- Dot as any character
 x = .
-..........
-Error in pecan1.txt, line 268: expecting atom, newline
-x = .
-    ^
+----------
+nil
+id x
+point .
+rule
+list
 ==========
 -- Incomplete dot dot
-x = 0.
-..........
-Error in pecan1.txt, line 275: expecting dot
-x = 0.
-      ^
+x = '0.'
+----------
+nil
+id x
+set '0.'
+rule
+list
 ==========
 -- Drop input and output items.
 x = @3
-..........
+----------
 nil
 id x
 act @3
@@ -290,7 +287,7 @@ list
 -- Long id and id extending category name
 longIdentifier = longIdentifier
 x = Ndx
-..........
+----------
 nil
 id longIdentifier
 id longIdentifier
@@ -303,7 +300,7 @@ list
 ==========
 -- Tag
 x = %x
-..........
+----------
 nil
 id x
 tag %x
@@ -312,14 +309,14 @@ list
 ==========
 -- Bad tag
 x = %
-..........
-Error in pecan1.txt, line 314: expecting name
+----------
+Error in pecan1.txt, line 311: expecting name
 x = %
      ^
 ==========
 -- Marker
 x = #m
-..........
+----------
 nil
 id x
 mark #m
@@ -328,15 +325,15 @@ list
 ==========
 -- Bad marker
 x = 'x' #3
-..........
-Error in pecan1.txt, line 330: expecting name
+----------
+Error in pecan1.txt, line 327: expecting name
 x = 'x' #3
          ^
 ==========
 -- Brackets
 exp = (exp) end
 exp = [exp] end
-..........
+----------
 nil
 id exp
 bracket (
@@ -372,7 +369,7 @@ x
 = y (a
 ) [c
 ]
-..........
+----------
 nil
 id x
 id y
@@ -415,7 +412,7 @@ list
 ==========
 -- The + * ? postfix operators
 exp = exp* exp+ exp? end
-..........
+----------
 nil
 id exp
 id exp
@@ -435,12 +432,12 @@ rule
 list
 ==========
 -- Ranges
-r1 = 0..127
+r1 = '\b0..\b127'
 r2 = 'a..z'
-..........
+----------
 nil
 id r1
-codes 0..127
+range '\0..\127'
 rule
 list
 id r2
@@ -450,7 +447,7 @@ list
 ==========
 -- Error marker
 assignment = left #equals "=" right
-..........
+----------
 nil
 id assignment
 id left
@@ -466,16 +463,16 @@ list
 -- Double operator
 x = y /
 z / /
-..........
-Error in pecan1.txt, line 468: expecting atom, newline
+----------
+Error in pecan1.txt, line 465: expecting atom, newline
 z / /
     ^
 ==========
 -- Actions, tests, codes and errors
 x = %x @0x @1x @ @x
-y = 0 1 2 10 12 123
+y = '\b0' '\b1' '\b2' '\b10' '\b12' '\b123'
 u = #err ''
-..........
+----------
 nil
 id x
 tag %x
@@ -490,12 +487,12 @@ and
 rule
 list
 id y
-code 0
-code 1
-code 2
-code 10
-code 12
-code 123
+set '\0'
+set '\1'
+set '\2'
+set '\10'
+set '\12'
+set '\123'
 and
 and
 and
@@ -513,7 +510,7 @@ list
 -- Strings, character sets
 x = "abc" " !#$%^&*()_-=+[]`{};:'@#~"
 y = 'abc' ' !#$%^&*()_-=+[]`{};:"@#~'
-..........
+----------
 nil
 id x
 string "abc"
@@ -533,7 +530,7 @@ x = (y / z) / y?
 x = (y/z)+ / y*
 x = y z w ! / y
 x = [y z] / w
-..........
+----------
 nil
 id x
 bracket (
@@ -591,7 +588,7 @@ list
 keyword = <df> keyword1 / keyword2
 keyword1 = "break" / "case" / "catch" / "continue" / "default"
 keyword2 = "do" / "else" / "for" / "if" / "switch" / "while"
-..........
+----------
 nil
 id keyword
 split <df>
@@ -630,7 +627,7 @@ list
 ==========
 -- End of input
 end = #end <>
-..........
+----------
 nil
 id end
 mark #end
@@ -641,7 +638,7 @@ list
 ==========
 -- Underscore
 a_b = xy_
-..........
+----------
 nil
 id a_b
 id xy_
@@ -650,20 +647,9 @@ list
 ==========
 -- Hyphen
 a-b = xy-
-..........
+----------
 nil
 id a-b
 id xy-
-rule
-list
-==========
--- Single backslash in quotes (escaped using test file conventions)
-bs = '\\n' "\\n"
-..........
-nil
-id bs
-set '\\n'
-string "\\n"
-and
 rule
 list

@@ -2,7 +2,7 @@
 ==========
 x // comment
 y
-..........
+----------
 tokens
 identifier x
 identifier y
@@ -10,23 +10,23 @@ identifier y
 x /*
 comment
 */ y
-..........
+----------
 tokens
 identifier x
 identifier y
 ==========
-// String literals: note escaped backslashes in input and expected output
-"abc" L"abc" "\\"" "abc\\"xyz"
-..........
+// String literals (with escaped input)
+"abc" L"abc" "\b\d" "abc\b\dxyz"
+----------
 tokens
 stringLiteral "abc"
 stringLiteral L"abc"
-stringLiteral "\\""
-stringLiteral "abc\\"xyz"
+stringLiteral "\""
+stringLiteral "abc\"xyz"
 ==========
 // Keywords and identifiers
 int x intx
-..........
+----------
 tokens
 int int
 identifier x
@@ -34,36 +34,36 @@ identifier intx
 ==========
 // Punctuators
 [](){}+ ++ +++ < << <<< %:%:
-..........
+----------
 tokens
-"[" [
-"]" ]
-"(" (
-")" )
-"{" {
-"}" }
-"+" +
-"++" ++
-"++" ++
-"+" +
-"<" <
-"<<" <<
-"<<" <<
-"<" <
-"%:%:" %:%:
+Os [
+Cs ]
+Ob (
+Cb )
+Oc {
+Cc }
+Pl +
+PlPl ++
+PlPl ++
+Pl +
+Lt <
+LtLt <<
+LtLt <<
+Lt <
+PcClPcCl %:%:
 ==========
 // Character constants
-'a' L'a' '\\''
-..........
+'a' L'a' '\b\q'
+----------
 tokens
 constant 'a'
 constant L'a'
-constant '\\''
+constant '\''
 ==========
 // Integer constants
 0 4 42 42u 42U 42l 42LL
 0123 0128 0x12abCD
-..........
+----------
 tokens
 constant 0
 constant 4
@@ -80,7 +80,7 @@ constant 0x12abCD
 // Floating constants
 0.0 0. .0 1e10 1E10 1.23e10 1e-10 e10
 0x0.0p10 0x0.p10 0x.0p10 0x1p10 0x1P10
-..........
+----------
 tokens
 constant 0.0
 constant 0.

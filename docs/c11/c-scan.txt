@@ -1,8 +1,8 @@
 -- A scanner for C11. It is assumed that the implementation-defined source
 -- character set is Unicode in the UTF-8 encoding, and that the source text has
--- been prepared by converting newlines to \n, expanding trigraphs, splicing
--- lines ending with \, eliding consecutive string literals, and carrying out
--- preprocessing. The definition for enumeration-constant is handled later in
+-- been preprocessed by converting newlines to \n, expanding trigraphs, splicing
+-- lines ending with \, eliding consecutive string literals, and expanding
+-- macros. The definition for enumeration-constant is handled later in
 -- c-tokens.txt.
 
 -- A.1.1 Tokens ---------------
@@ -15,15 +15,15 @@ token =
     identifier / punctuator
 
 gap = (' ' / newline / tab / vtab / formfeed)+ @
-newline = 10
-tab = 9
-vtab = 11
-formfeed = 12
+newline = '\n'
+tab = '\8'
+vtab = '\11'
+formfeed = '\12'
 
 comment =
     "//" (newline! visible)* @ /
     "/*" ("*/"! visible)* "*/" @
-visible = (Cc/Cn/Co/Cs/Zl/Zp)! Uc / newline
+visible = (Cc/Cn/Co/Cs/Zl/Zp)! . / newline
 
 -- A.1.2 Keywords -------------
 
@@ -66,15 +66,15 @@ keyword
 / ["void" k] @1void
 / ["volatile" k] @1volatile
 / ["while" k] @1while
-/ ["_Alignas" k] @1"_Alignas"
-/ ["_Atomic" k] @1"_Atomic"
-/ ["_Bool" k] @1"_Bool"
-/ ["_Complex" k] @1"_Complex"
-/ ["_Generic" k] @1"_Generic"
-/ ["_Imaginary" k] @1"_Imaginary"
-/ ["_Noreturn" k] @1"_Noreturn"
-/ ["_Static_assert" k] @1"_Static_assert"
-/ ["_Thread_local" k] @1"_Thread_local"
+/ ["_Alignas" k] @1`_Alignas`
+/ ["_Atomic" k] @1`_Atomic`
+/ ["_Bool" k] @1`_Bool`
+/ ["_Complex" k] @1`_Complex`
+/ ["_Generic" k] @1`_Generic`
+/ ["_Imaginary" k] @1`_Imaginary`
+/ ["_Noreturn" k] @1`_Noreturn`
+/ ["_Static_assert" k] @1`_Static_assert`
+/ ["_Thread_local" k] @1`_Thread_local`
 
 -- A.1.3 Identifiers ---------------
 
@@ -92,7 +92,7 @@ other = Lu / Ll / Lt / Lm / Lo
 
 -- A.1.4 Universal character names ----------------
 
-universal-character-name = "\u" hex-quad / "\U" hex-quad hex-quad
+universal-character-name = "\bu" hex-quad / "\bU" hex-quad hex-quad
 
 hex-quad =
     hexadecimal-digit hexadecimal-digit hexadecimal-digit hexadecimal-digit
@@ -177,19 +177,19 @@ character-constant =
 
 c-char-sequence = c-char+
 
-c-char = ("'" / '\' / newline)! visible / escape-sequence
+c-char = ("'" / '\b' / newline)! visible / escape-sequence
 
 escape-sequence =
     simple-escape-sequence / octal-escape-sequence /
     hex-escape-sequence / universal-character-name
 
 simple-escape-sequence =
-    "\'" / ["\" '"'] / "\?" / "\\" /
-    "\a" / "\b" / "\f" / "\n" / "\r" / "\t" / "\v"
+    "\b'" / "\b\d" / "\b?" / "\b\b" /
+    "\ba" / "\bb" / "\bf" / "\bn" / "\br" / "\bt" / "\bv"
 
-octal-escape-sequence = ["\" octal-digit] (octal-digit octal-digit?)?
+octal-escape-sequence = ["\b" octal-digit] (octal-digit octal-digit?)?
 
-hex-escape-sequence = "\x" hexadecimal-digit+
+hex-escape-sequence = "\bx" hexadecimal-digit+
 
 -- A.1.6 String literals -----------------
 
@@ -200,62 +200,62 @@ encoding-prefix = "u8" / "u" / "U" / "L"
 
 s-char-sequence = s-char+
 
-s-char = ('"' / '\' / newline)! visible / escape-sequence
+s-char = ('"' / '\b' / newline)! visible / escape-sequence
 
 -- A.1.7 Punctuators -----------------
 
 punctuator
-= "%:%:" @1"%:%:"
-/ "<<=" @1"<<="
-/ ">>=" @1">>="
-/ "..." @1"..."
-/ "->" @1"->"
-/ "++" @1"++"
-/ "--" @1"--"
-/ "<<" @1"<<"
-/ ">>" @1">>"
-/ "<=" @1"<="
-/ ">=" @1">="
-/ "==" @1"=="
-/ "!=" @1"!="
-/ "&&" @1"&&"
-/ "||" @1"||"
-/ "*=" @1"*="
-/ "/=" @1"/="
-/ "%=" @1"%="
-/ "+=" @1"+="
-/ "-=" @1"-="
-/ "&=" @1"&="
-/ "^=" @1"^="
-/ "|=" @1"|="
-/ "##" @1"##"
-/ "<:" @1"<:"
-/ ":>" @1":>"
-/ "<%" @1"<%"
-/ "%>" @1"%>"
-/ "%:" @1"%:"
-/ "[" @1"["
-/ "]" @1"]"
-/ "(" @1"("
-/ ")" @1")"
-/ "{" @1"{"
-/ "}" @1"}"
-/ "." @1"."
-/ "&" @1"&"
-/ "*" @1"*"
-/ "+" @1"+"
-/ "-" @1"-"
-/ "~" @1"~"
-/ "!" @1"!"
-/ "/" @1"/"
-/ "%" @1"%"
-/ "<" @1"<"
-/ ">" @1">"
-/ "^" @1"^"
-/ "|" @1"|"
-/ "?" @1"?"
-/ ":" @1":"
-/ ";" @1";"
-/ "=" @1"="
-/ "," @1","
-/ "#" @1"#"
+= "%:%:" @1`%:%:`
+/ "<<=" @1`<<=`
+/ ">>=" @1`>>=`
+/ "..." @1`...`
+/ "->" @1`->`
+/ "++" @1`++`
+/ "--" @1`--`
+/ "<<" @1`<<`
+/ ">>" @1`>>`
+/ "<=" @1`<=`
+/ ">=" @1`>=`
+/ "==" @1`==`
+/ "!=" @1`!=`
+/ "&&" @1`&&`
+/ "||" @1`||`
+/ "*=" @1`*=`
+/ "/=" @1`/=`
+/ "%=" @1`%=`
+/ "+=" @1`+=`
+/ "-=" @1`-=`
+/ "&=" @1`&=`
+/ "^=" @1`^=`
+/ "|=" @1`|=`
+/ "##" @1`##`
+/ "<:" @1`<:`
+/ ":>" @1`:>`
+/ "<%" @1`<%`
+/ "%>" @1`%>`
+/ "%:" @1`%:`
+/ "[" @1`[`
+/ "]" @1`]`
+/ "(" @1`(`
+/ ")" @1`)`
+/ "{" @1`{`
+/ "}" @1`}`
+/ "." @1`.`
+/ "&" @1`&`
+/ "*" @1`*`
+/ "+" @1`+`
+/ "-" @1`-`
+/ "~" @1`~`
+/ "!" @1`!`
+/ "/" @1`/`
+/ "%" @1`%`
+/ "<" @1`<`
+/ ">" @1`>`
+/ "^" @1`^`
+/ "|" @1`|`
+/ "?" @1`?`
+/ ":" @1`:`
+/ ";" @1`;`
+/ "=" @1`=`
+/ "," @1`,`
+/ "#" @1`#`
