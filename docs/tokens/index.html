@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<img src="pecan.png" width="300" height="65" />
+<img src="../pecan.png" width="300" height="65" />
 <hr/>
 
 <h1>Tokens and trees</h1>
@@ -35,25 +35,23 @@ times = '*' @1times gap
 over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
-bad = ('\r' / '\n')! . @1bad
+bad = '\r\n'! . @1bad
 end = '\r'? '\n' / @1bad
 gap = (' ')* @
 </pre>
 
 <p>This grammar recognises a sequence of tokens, possibly separated by spaces.
-With the exception of <code>tokens</code>, each action creates a token. The name
-of the action will be used as the token's tag.</p>
+The action <code>@tokens</code> creates a list, and each of the other actions
+creates a token and adds it to the list. The name of each action will be used as
+the token's tag.</p>
 
 <p>There are no error markers. If an illegal character or lack of line ending is
 encountered, a token with tag <code>bad</code> is created for it. That means the
 scanner never fails, and errors are passed on to the parser for reporting. A
 parse error early on in the text is thus reported in preference to a scan error
 later on, creating the illusion for the user of the final program that scanning
-and parsing are done together.</p>
-
-<p>In the previous tutorial, the grammar under development and its tests were
-stored in a single file. This time, the grammar is in one file and the tests are
-in a separate file:</p>
+and parsing are done together. Files containing the grammar and its tests
+are:</p>
 
 <p class="indent"><a href="scan.txt">scan.txt</a><br/>
 <a href="scan-test.txt">scan-test.txt</a></p>
@@ -64,7 +62,7 @@ the tests through Pecan shows that all is well:</p>
 <pre>pecan scan-test.txt
 Pass 10 tests.
 </pre>
-
+<!--
 <p>The next task is to turn the grammar into a program. A skeleton program is
 written, using the generic bytecode interpreter as before:</p>
 
@@ -100,7 +98,7 @@ number 0 1
 plus 1 1
 number 2 1
 </pre>
-
+-->
 <h3>The parser</h3>
 
 <p>A token-based parser for sums can be developed from the full calculator in
@@ -142,6 +140,7 @@ done on the tree.</p>
 Pass 7 tests
 </pre>
 
+<!--
 <p>In the tests, when an error is reported, its token index is given. In the
 real parser, with the original text available, the token index can be converted
 into a text position, to produce a conventional error message. The next step is
@@ -158,6 +157,6 @@ bytecode interpreter:</p>
 indenting to indicate the tree structure. The actions only ever take account of
 the most recently matched tokens. Thus, in the grammar, there is no need to
 discard unwanted tokens using the <code>@</code> symbol.</p>
-
+-->
 </body>
 </html>

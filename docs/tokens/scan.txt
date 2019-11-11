@@ -7,6 +7,6 @@ times = '*' @1times gap
 over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
-bad = ('\r' / '\n')! . @1bad
+bad = '\r\n'! . @1bad
 end = '\r'? '\n' / @1bad
 gap = (' ')* @

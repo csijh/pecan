@@ -1,17 +1,17 @@
 {parse.txt}
 ==========
 number
-..........
+----------
 value
 ==========
 number plus number
-..........
+----------
 value
 value
 add
 ==========
 number times number plus number
-..........
+----------
 value
 value
 multiply
@@ -19,7 +19,7 @@ value
 add
 ==========
 number plus number times number
-..........
+----------
 value
 value
 value
@@ -27,7 +27,7 @@ multiply
 add
 ==========
 number plus open number close plus number
-..........
+----------
 value
 value
 add
@@ -35,13 +35,13 @@ value
 add
 ==========
 number plus
-..........
+----------
 Error in parse-test.txt, line 38: expecting bracket, digit
-
+----------
 ^
 ==========
 number plus bad
-..........
+----------
 Error in parse-test.txt, line 43: expecting bracket, digit
 number plus bad
             ^
