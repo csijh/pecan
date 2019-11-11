@@ -6,8 +6,18 @@ start = statement <>
 {c-statements.txt}
 
 ==========
-_Static_assert ( constant , string-literal ) ;
-..........
+if ( identifier < constant ) identifier = - identifier ;
+----------
+nil
+identifier
 constant
-string-literal
-staticAssert
+lt
+identifier
+becomes
+neg
+identifier
+preOp
+assign
+statement
+nil
+if

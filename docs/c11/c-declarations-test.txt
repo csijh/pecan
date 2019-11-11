@@ -7,7 +7,7 @@ start = declaration <>
 
 ==========
 _Static_assert ( constant , string-literal ) ;
-..........
+----------
 constant
 string-literal
 staticAssert

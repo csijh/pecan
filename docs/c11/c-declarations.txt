@@ -5,7 +5,7 @@
 {c-expressions.txt}
 
 declaration =
-    declaration-specifiers (init-declarator-list @2declaration)? ";" /
+    declaration-specifiers (init-declarator-list @2declaration)? `;` /
     static_assert-declaration
 
 declaration-specifier =
@@ -19,102 +19,102 @@ declaration-specifiers =
     declaration-specifier (declaration-specifier @2declaration-specifiers)*
 
 init-declarator-list =
-    init-declarator ("," init-declarator @2init-declarators)*
+    init-declarator (`,` init-declarator @2init-declarators)*
 
 init-declarator =
-    declarator ("=" initializer @2initialize)?
+    declarator (`=` initializer @2initialize)?
 
 storage-class-specifier =
-    "typedef" @typedef / "extern" @extern / "static" @static /
-    "_Thread_local" @threadLocal / "auto" @auto / "register" @register
+    `typedef` @typedef / `extern` @extern / `static` @static /
+    `_Thread_local` @threadLocal / `auto` @auto / `register` @register
 
 type-specifier =
-    "void" @void / "char" @char / "short" @short / "int" @int / "long" @long /
-    "float" @float / "double" @double / "signed" @signed /
-    "unsigned" @unsigned / "_Bool" @bool / "_Complex" @complex /
+    `void` @void / `char` @char / `short` @short / `int` @int / `long` @long /
+    `float` @float / `double` @double / `signed` @signed /
+    `unsigned` @unsigned / `_Bool` @bool / `_Complex` @complex /
     atomic-type-specifier / struct-or-union-specifier /
     enum-specifier / typedef-name
 
 struct-or-union-specifier =
-    "struct" struct-or-union-body @2struct /
-    "union" struct-or-union-body @2union
+    `struct` struct-or-union-body @2struct /
+    `union` struct-or-union-body @2union
 
 struct-or-union-body =
-    identifier ("{" struct-declaration-list "}" / @nil) /
-    @nil "{" struct-declaration-list "}"
+    identifier (`{` struct-declaration-list `}` / @nil) /
+    @nil `{` struct-declaration-list `}`
 
 struct-declaration-list = struct-declaration (struct-declaration @2pair)*
 
 struct-declaration =
-    specifier-qualifier-list (struct-declarator-list / @nil) ";" @2pair /
+    specifier-qualifier-list (struct-declarator-list / @nil) `;` @2pair /
     static_assert-declaration
 
 specifier-qualifier-list = type-item (type-item @2pair)*
 
 type-item = type-specifier / type-qualifier
 
-struct-declarator-list = struct-declarator ("," struct-declarator @2pair)*
+struct-declarator-list = struct-declarator (`,` struct-declarator @2pair)*
 
 struct-declarator =
-    declarator (":" constant-expression @2bitField)? /
-    @nil ":" constant-expression @2bitField
+    declarator (`:` constant-expression @2bitField)? /
+    @nil `:` constant-expression @2bitField
 
-enum-specifier = "enum" (
-    identifier ("{" enumerator-list ","? "}" / @nil) @2enum /
-    @nil "{" enumerator-list ","? "}" @2enum
+enum-specifier = `enum` (
+    identifier (`{` enumerator-list `,`? `}` / @nil) @2enum /
+    @nil `{` enumerator-list `,`? `}` @2enum
 )
 
-enumerator-list = enumerator (("," "}")! "," enumerator @2pair)*
+enumerator-list = enumerator ((`,` `}`)! `,` enumerator @2pair)*
 
-enumerator = enumeration-constant ("=" constant-expression @2define)?
+enumerator = enumeration-constant (`=` constant-expression @2define)?
 
-atomic-type-specifier = "_Atomic" "(" type-name ")" @1atomicType
+atomic-type-specifier = `_Atomic` `(` type-name `)` @1atomicType
 
 type-qualifier =
-    "const" @const / "restrict" @restrict /
-    "volatile" @volatile / "_Atomic" @atomic
+    `const` @const / `restrict` @restrict /
+    `volatile` @volatile / `_Atomic` @atomic
 
-function-specifier = "inline" @inline / "_Noreturn" @noreturn
+function-specifier = `inline` @inline / `_Noreturn` @noreturn
 
 alignment-specifier =
-    "_Alignas" "(" (type-name / constant-expression) ")" @1alignas
+    `_Alignas` `(` (type-name / constant-expression) `)` @1alignas
 
 declarator = (pointer / @nil) direct-declarator @2declarator
 
 direct-declarator =
-    (identifier / "(" declarator ")") dd-bracket*
+    (identifier / `(` declarator `)`) dd-bracket*
 
 dd-bracket =
-    "(" (dd-parameters / @nil) ")" @2function /
-    "[" (dd-array-size / @nil) "]" @2array
+    `(` (dd-parameters / @nil) `)` @2function /
+    `[` (dd-array-size / @nil) `]` @2array
 
 dd-parameters =
     identifier& identifier-list / parameter-type-list
 
 dd-array-size =
-    "*" @star /
-    "static" type-qualifiers assignment-expression @2pair @1staticSize /
+    `*` @star /
+    `static` type-qualifiers assignment-expression @2pair @1staticSize /
     type-qualifier-list (dd-simple-array-size / @nil) @2typeSize /
     assignment-expression @1size
 
 dd-simple-array-size =
-    "*" @star /
-    "static" assignment-expression @1staticSize /
+    `*` @star /
+    `static` assignment-expression @1staticSize /
     assignment-expression @1size
 
 type-qualifiers = type-qualifier-list / @nil
 
 pointer =
-    ("*" type-qualifiers @1pointer) (
-        "*" type-qualifiers @1pointer @2pair
+    (`*` type-qualifiers @1pointer) (
+        `*` type-qualifiers @1pointer @2pair
     )*
 
 type-qualifier-list = type-qualifier (type-qualifier @2pair)*
 
-parameter-type-list = parameter-list ("," "..." @dots @2pair)?
+parameter-type-list = parameter-list (`,` `...` @dots @2pair)?
 
 parameter-list =
-    parameter-declaration (("," "...")! "," parameter-declaration @2pair)*
+    parameter-declaration ((`,` `...`)! `,` parameter-declaration @2pair)*
 
 parameter-declaration = declaration-specifiers (
     has-identifier declarator @2declarator /
@@ -122,9 +122,9 @@ parameter-declaration = declaration-specifiers (
 )
 
 has-identifier =
-    (("*" / type-qualifier / "(")* "identifier") &
+    ((`*` / type-qualifier / `(`)* `identifier`) &
 
-identifier-list = identifier ("," identifier @2pair)*
+identifier-list = identifier (`,` identifier @2pair)*
 
 type-name = specifier-qualifier-list (abstract-declarator @2typeName)?
 
@@ -133,42 +133,42 @@ abstract-declarator =
     direct-abstract-declarator
 
 direct-abstract-declarator =
-    has-declarator "(" abstract-declarator ")" (dad-bracket @2dad)* /
+    has-declarator `(` abstract-declarator `)` (dad-bracket @2dad)* /
     dad-bracket (dad-bracket @2dad)*
 
-has-declarator = ("(" ("*" / "(" / "[")) &
+has-declarator = (`(` (`*` / `(` / `[`)) &
 
 dad-bracket =
-    "(" parameter-type-list / @nil ")" @1parameters /
-    "[" dad-array-size / @nil "]" @1arraySize
+    `(` parameter-type-list / @nil `)` @1parameters /
+    `[` dad-array-size / @nil `]` @1arraySize
 
 dad-array-size =
-    "*" @star /
-    "static" type-qualifiers assignment-expression @2pair @1staticSize /
+    `*` @star /
+    `static` type-qualifiers assignment-expression @2pair @1staticSize /
     type-qualifier-list (dad-simple-array-size / @nil) @2pair /
     assignment-expression
 
 dad-simple-array-size =
-    assignment-expression / "static" assignment-expression @1staticSize
+    assignment-expression / `static` assignment-expression @1staticSize
 
 initializer =
     assignment-expression /
-    "{" initializer-list ","? "}" @1initializer
+    `{` initializer-list `,`? `}` @1initializer
 
 initializer-list =
     (designation / @nil) initializer @2init (
-    "," (designation / @nil) initializer @2init @2pair)*
+    `,` (designation / @nil) initializer @2init @2pair)*
 
 designation =
-    designator-list "="
+    designator-list `=`
 
 designator-list =
     designator (designator @2pair)*
 
 designator =
-    "[" constant-expression "]" @1arrayIndex /
-    "." identifier @1fieldAccess
+    `[` constant-expression `]` @1arrayIndex /
+    `.` identifier @1fieldAccess
 
 static_assert-declaration =
-    "_Static_assert" "(" constant-expression "," (
-    string-literal ")" @2staticAssert ";")
+    `_Static_assert` `(` constant-expression `,` (
+    string-literal `)` @2staticAssert `;`)

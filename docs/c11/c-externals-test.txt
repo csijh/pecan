@@ -3,8 +3,22 @@
 {c-externals.txt}
 
 ==========
-_Static_assert ( constant , string-literal ) ;
-..........
-constant
-string-literal
-staticAssert
+void identifier ( identifier ) { return identifier ; }
+----------
+nil
+void
+nil
+identifier
+identifier
+function
+declarator
+nil
+nil
+identifier
+return
+nil
+nil
+list
+block
+definition
+list
