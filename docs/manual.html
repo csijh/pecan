@@ -623,20 +623,20 @@ or to represent Unicode characters using plain text. A summary of the escape
 conventions is:</p>
 
 <table class="char">
-<tr><th>Escape</th><th>Code</th><th>Character</th>
-<tr><td><code>\r</code></td><td>13</td><td>return</td>
-<tr><td><code>\n</code></td><td>10</td><td>newline</td>
-<tr><td><code>\q</code></td><td>39</td><td>single quote</td>
-<tr><td><code>\d</code></td><td>34</td><td>double quote</td>
-<tr><td><code>\b</code></td><td>92</td><td>backslash</td>
+<tr><th>Escape</th><th>Code</th><th>Character</th></tr>
+<tr><td><code>\r</code></td><td>13</td><td>return</td></tr>
+<tr><td><code>\n</code></td><td>10</td><td>newline</td></tr>
+<tr><td><code>\q</code></td><td>39</td><td>single quote</td></tr>
+<tr><td><code>\d</code></td><td>34</td><td>double quote</td></tr>
+<tr><td><code>\b</code></td><td>92</td><td>backslash</td></tr>
 </table>
 
 <p></p>
 
 <table>
-<tr><th>Escape</th><th>Meaning</th>
-<tr><td><code>\ddd...;</code></td><td>character with decimal code</td>
-<tr><td><code>\0hhh...;</code></td><td>character with hexadecimal code</td>
+<tr><th>Escape</th><th>Meaning</th></tr>
+<tr><td><code>\ddd...;</code></td><td>character with decimal code</td></tr>
+<tr><td><code>\0hhh...;</code></td><td>character with hexadecimal code</td></tr>
 </table>
 
 <p>Some conventional escape sequences are not supported, e.g. <code>\a</code>,
@@ -1310,6 +1310,7 @@ end = '' @end
 <p>This does cause an error, because after recognising the end of text, the
 scanner could continue to look for more tokens.</p>
 -->
+
 <h3 id="output">Output checks</h3>
 
 <p>Actions are assumed to treat output items in a stack-like manner. Restrictive
@@ -1408,7 +1409,7 @@ grammar with no actions, or a self-contained fragment of a grammar, are legal
 and can be tested.</p>
 
 <p>A further check is that any left hand alternative of a choice can fail with
-no progress. For example:
+no progress. For example:</p>
 
 <pre>x = "" / "a"
 </pre>
@@ -1773,7 +1774,7 @@ expressions. An integer in the interpreter keeps track of the depth of nesting
 of lookahead constructs, and actions are only performed if the integer is zero.
 For see <code>[x]</code> expressions, <code>x</code> is executed once with
 actions and markers switched off, then again with them switched back on, in line
-with the identity <code>[x] &equiv; x& x</code>.</p>
+with the identity <code>[x] &#8801; x&amp; x</code>.</p>
 
 <p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
 set, and cleared whenever a new marker is found further on in the input. Tags
@@ -1895,15 +1896,6 @@ same output effect and error handling properties as the original.</p>
 <li>one test file can be called from within another</li>
 <li>compilation to recursive functions and bytecode is supported</li>
 </ul>
-
-<!--
-<h2>Tutorial Topics</h2>
-
-<p>Topics: grammar operators, left recursion, right recursion, iteration.
-Stack-based actions. Actions not done and undone if backtrack. Actions can do
-stuff or build trees. Built-in scanning and drawbacks. Separate scanner. How
-to join them up.</p>
--->
 
 </body>
 </html>
