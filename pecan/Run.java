@@ -157,9 +157,9 @@ class Run {
     private static void usage() {
         System.err.println(
             "Usage:\n" +
-            "    pecan [-t | -trace] [line] tests\n" +
-            "Or:\n" +
-            "    pecan grammar -o output\n");
+            "    pecan [-t | -trace] [line] testfile\n" +
+            "    pecan grammar -c programfile\n" +
+            "    pecan grammar -b binaryfile\n");
         System.exit(1);
     }
 

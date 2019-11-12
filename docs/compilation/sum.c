@@ -38,7 +38,7 @@ void report(parser *p, char *ds, char *f, char *names[]);
 static input *start(parser *p);
 static int length(parser *p);
 static output top(parser *p, int n);
-static bool act(parser *p, int n, output x);
+static bool push(parser *p, int n, output x);
 static bool go(parser *p);
 static bool ok(parser *p);
 static bool alt(parser *p, bool b);
@@ -68,8 +68,8 @@ enum category {
 //   declare  = "bool %s(parser *p);"
 //   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
-//   act0     = "act(p,0,%s(length(p),start(p)))"
-//   act2     = "act(p,2,%s(top(p,1),top(p,0)))"
+//   act0     = "push(p,0,%s(length(p),start(p)))"
+//   act2     = "push(p,2,%s(top(p,1),top(p,0)))"
 //   escape1  = "\%3o"
 //   escape2  = "\u%4x"
 //   escape4  = "\U%8x"
@@ -104,8 +104,8 @@ bool expression(parser *p) { return term(p) && expression1(p); }
 bool expression1(parser *p) {
   return opt(p,
     go(p) && (alt(p,
-      (go(p) && plus(p) && term(p) && act(p,2,add(top(p,1),top(p,0)))) ||
-      (ok(p) && minus(p) && term(p) && act(p,2,subtract(top(p,1),top(p,0))))
+      (go(p) && plus(p) && term(p) && push(p,2,add(top(p,1),top(p,0)))) ||
+      (ok(p) && minus(p) && term(p) && push(p,2,subtract(top(p,1),top(p,0))))
     )) && expression1(p)
   );
 }
@@ -117,8 +117,8 @@ bool term(parser *p) { return atom(p) && term1(p); }
 bool term1(parser *p) {
   return opt(p,
     go(p) && (alt(p,
-      (go(p) && times(p) && atom(p) && act(p,2,multiply(top(p,1),top(p,0)))) ||
-      (ok(p) && over(p) && atom(p) && act(p,2,divide(top(p,1),top(p,0))))
+      (go(p) && times(p) && atom(p) && push(p,2,multiply(top(p,1),top(p,0)))) ||
+      (ok(p) && over(p) && atom(p) && push(p,2,divide(top(p,1),top(p,0))))
     )) && term1(p)
   );
 }
@@ -130,7 +130,7 @@ bool atom(parser *p) {
 
 // number = #integer digit+ @value gap
 bool number(parser *p) {
-  return mark(p,integer) && number1(p) && act(p,0,value(length(p),start(p))) &&
+  return mark(p,integer) && number1(p) && push(p,0,value(length(p),start(p))) &&
   gap(p);
 }
 
@@ -231,7 +231,7 @@ static inline int length(parser *p) {
 }
 
 // Push output item onto stack, after popping n items. Discard characters.
-static inline bool act(parser *p, int n, output x) {
+static inline bool push(parser *p, int n, output x) {
   if (n == 0 && p->out >= p->nouts) {
     p->nouts = p->nouts * 2;
     p->outs = realloc(p->outs, p->nouts);
@@ -439,6 +439,10 @@ static void reportColumn(lineInfo *li) {
   fprintf(stderr, "^\n");
 }
 
+// Print a report on stderr using s0 if there are no markers, or s if there are,
+// with s containing two copies of %s as an example print string for two
+// markers. Print the line containing the error on stderr. Print spaces followed
+// by a ^ character to report the error column on stderr.
 void report(parser *p, char *s0, char *s, char *names[]) {
   lineInfo liData;
   lineInfo *li = &liData;

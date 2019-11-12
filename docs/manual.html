@@ -1599,7 +1599,9 @@ defaults are <code>""</code>, which means that all characters are written
 verbatim into the program.</p></li>
 
 <li><p><code><b>call</b>:</code> the format for making a call to any parsing
-function. The default is <code>%s()</code>.</p></li>
+function. For example, <code>%s(p)</code> could be used if an argument
+<code>p</code> is to be passed to every call. The default is
+<code>%s()</code>.</p></li>
 
 <li><p><code><b>id</b>:</code> the format for generating a call to represent the
 occurrence of an identifier. This can be used to adjust identifier names
@@ -1609,10 +1611,10 @@ would cause an occurrence of an identifier <code>term</code> to be compiled as
 
 <li><p><code><b>act</b>, <b>act0</b>, ...:</code> the format for printing
 actions, and formats to override it for specific arities. The default for the
-act format depends on the call format, e.g. <code>"act%d(%s)"</code> where the
-<code>%d</code> refers to the arity and <code>%s</code> refers to the name of
-the action. The defaults for <code>act0</code>, <code>act1</code> ... are to use
-<code>act</code>.</p></li>
+act format is <code>act%d(%s)</code>, adjusted according to the call format. The
+specifier <code>%d</code> refers to the arity and <code>%s</code> refers to the
+name of the action. The defaults for <code>act0</code>, <code>act1</code> ...
+are to use <code>act</code>.</p></li>
 
 <li><p><code><b>go</b>, <b>ok</b>, <b>alt</b>, <b>opt</b>, <b>see</b>,
 <b>has</b>, <b>not</b>, <b>tag</b>, <b>eot</b>, <b>string</b>, <b>set</b>,
@@ -1642,24 +1644,40 @@ as:</p>
 // >
 </pre>
 
-<p>Then each action has its own function with implicit arity. Alternatively, the
-formats for actions of each arity could be specified as:</p>
+<p>Then each action has its own function with implicit arity. Action functions
+of this kind would need access to the parsing state and would be responsible for
+stack handling, and for marking matched characters as used. An alternative is to
+define:</p>
 
 <pre>// &lt;pecan
 //   ...
-//   act0 = "act(0,%s(text()))"
-//   act1 = "act(1,%s(top(0)))"
-//   act2 = "act(2,%s(top(1),top(0)))"
+//   act = "push(%s(text(),pop(%d)))"
 //   ...
 // >
 </pre>
 
-<p>Then the handling of the output stack is done by the generated code and only
-pure external action functions need to be provided. Here <code>text()</code>
-forms a string from the recently matched characters, <code>top(n)</code> returns
-the n'th item from the top of the output stack and <code>act(n,x)</code> pops n
-items from the output stack, pushes <code>x</code>, and discards any recently
-matched characters.</p>
+<p>The <code>text()</code> call forms a string from the recently matched
+characters and marks them as used, the <code>pop(n)</code> call pops
+<code>n</code> output items from the stack and returns them as an array, and the
+<code>push</code> call pushes the output item returned from the action function
+onto the stack (returning <code>true</code>). This means that the action
+functions no longer need access to the parsing state. To go further, the formats
+for actions of each arity could be specified as:</p>
+
+<pre>// &lt;pecan
+//   ...
+//   act0 = "push(0,%s(text()))"
+//   act1 = "push(1,%s(top(0)))"
+//   act2 = "push(2,%s(top(1),top(0)))"
+//   ...
+// >
+</pre>
+
+<p>Now each action function is passed only what it needs. The
+<code>text()</code> call forms a string from the recently matched characters,
+<code>top(n)</code> returns the n'th item from the top of the output stack, and
+<code>push(n,x)</code> pushes <code>x</code> onto the output stack to replace
+the top n items and marks any recently matched characters as used.</p>
 
 <h2 id="bytecode">Bytecode</h2>
 
@@ -1773,9 +1791,6 @@ character can be used to find the character's length.</p>
 {@2a}       =   ARITY 2 ACT a
 {@}         =   DROP 0
 {@2}        =   DROP 2
-{#e}        =   MARK e
-{%id}       =   TAG id
-{Nd}        =   CAT Nd
 </pre>
 
 <p>An action is translated using the <code>ACT</code> opcode. Actions and error
@@ -1786,10 +1801,17 @@ For see <code>[x]</code> expressions, <code>x</code> is executed once with
 actions and markers switched off, then again with them switched back on, in line
 with the identity <code>[x] &#8801; x&amp; x</code>.</p>
 
+<pre>{#e}        =   MARK e
+{%id}       =   TAG id
+</pre>
+
 <p>Error markers, signalled by the <code>MARK</code> opcode, are collected as a
 set, and cleared whenever a new marker is found further on in the input. Tags
 are used only in token-based parsers. They cause a call to external code to find
 the tag of a particular token.</p>
+
+<pre>{Nd}        =   CAT Nd
+</pre>
 
 <p>A category is translated using the <code>CAT</code> opcode. The target
 programming language may not have a facility for finding the category of a
@@ -1901,10 +1923,10 @@ same output effect and error handling properties as the original.</p>
 <li>error markers are no longer postfix</li>
 <li>the splitter notation <code>&lt;abc></code> and end notation
     <code>&lt;></code> have been added</li>
-<li>backquoted tags have been replaced by literal names</li>
+<li>backquoted tags have been generalized to literal names</li>
 <li>separate grammar and test files are supported</li>
 <li>one test file can be called from within another</li>
-<li>compilation to recursive functions and bytecode is supported</li>
+<li>compilation to recursive functions is supported</li>
 </ul>
 
 </body>

@@ -56,10 +56,10 @@ value 2
 
 <p>The test file is divided into two parts by a line of equal signs. The first
 part imports the grammar to be used for subsequent tests. The second part is a
-test, divided by a line of dots into the input and the expected output. The
-output produced represents the external calls which would be made by the final
-parser, in this case a call to a function <code>value</code> with an argument
-which represents the substring <code>"2"</code> of the input text.</p>
+test, divided by a line of minus signs into the input and the expected output.
+The output produced represents the external calls which would be made by the
+final parser, in this case a call to a function <code>value</code> with an
+argument which represents the substring <code>"2"</code> of the input text.</p>
 
 <p>If we don't know exactly what output we are expecting, we can put in a guess
 and correct it later. Then we can run the test like this:</p>
@@ -190,15 +190,16 @@ The <code style="white-space: nowrap">-trace</code> (or <code
 style="white-space: nowrap">-t</code>) option switches on trace output. Although
 verbose, this can sometimes be used to resolve difficult issues. Each line in
 the trace starts with <code>I</code>, <code>P</code> or <code>O</code> and a
-line number, representing information about a change in the input position,
-parser expression, or output.  A line starting with <code>I</code> marks a
-change of input position with a vertical bar. A line starting with
-<code>P</code> reports the current parse expression being executed. A line
-starting with <code>O</code> reports an output action.</p>
+line number. A line starting with <code>I</code> marks a change of input
+position with a vertical bar. A line starting with <code>P</code> reports the
+current parse expression being executed. A line starting with <code>O</code>
+reports an output action. The trace shows that in the choice:</p>
 
-<p>The trace shows that the parser has a choice <code>number / number '+'
-...</code>, and the first alternative succeeds, so the second alternative isn't
-tried. The choice operator <code>/</code> is sequential, as in PEG grammars, not
+<pre>number / number '+' number @2add
+</pre>
+
+<p>the first alternative succeeds, so the second alternative isn't tried. The
+choice operator <code>/</code> is sequential, as in PEG grammars, not
 symmetrical like the <code>|</code> operator in CFG grammars. Also, our parser
 doesn't yet specify that parsing must reach the end of the input, so recognising
 just the first number from the input gives a successful result.</p>
@@ -226,13 +227,16 @@ Error in sum-test.txt, line 3:
 
 <p>We have broken the first test, which used to work. It is very common to break
 old tests, which is why we are keeping all the tests and re-running them in
-every development step.</p>
+every development step. The reason the first test now fails is that the parser
+has made a start on the first alternative:</p>
 
-<p>The reason the first test now fails is that the parser has made a start on
-the first alternative <code>number '+' number @2add</code>, and the initial
-part, <code>number</code>, has succeeded. The parser is now committed to this
-first alternative, which then fails because there is no plus sign. By default,
-a parser is committed to an alternative as soon as any progress is made.</p>
+<pre>number '+' number @2add
+</pre>
+
+<p>and the initial part, <code>number</code>, has succeeded. The parser is now
+committed to this first alternative, which then fails because there is no plus
+sign. By default, a parser is committed to an alternative as soon as any
+progress is made.</p>
 
 <h3>Step 5</h3>
 
@@ -439,7 +443,7 @@ Error... expecting '0','1','2','3','4','5','6','7','8','9','+','-','\r','\n'
 </pre>
 
 <p>Messages like this are too long and detailed to be very useful. We need to
-form a summary. To do that, we can add error handlers to the parser:</p>
+form a summary. To do that, we can add error markers to the parser:</p>
 
 <pre>sum = number ('+' @ number @2add / '-' @ number @2subtract)* end
 number = (#digit '0..9')+ @value
@@ -460,12 +464,12 @@ Error in sum-test.txt, line 17: expecting digit, newline
     ^
 </pre>
 
-<p>When an error handler such as <code>#digit</code> is encountered, it is
+<p>When an error marker such as <code>#digit</code> is encountered, it is
 attached as a marker to the current position in the input. If progress is made
 beyond that position, the marker is removed. If parsing fails, the markers
 associated with the current input position are reported. In the example here,
-the <code>#digit</code> handler summarises the set of digits which are expected,
-and the handler <code>#newline</code> summarises the line endings.</p>
+the <code>#digit</code> marker summarises the set of digits which are expected,
+and the marker <code>#newline</code> summarises the line endings.</p>
 
 <p>If the error message is changed in the test file to match what is actually
 reported, the tests all pass. A further test can be added to cover the case
@@ -492,7 +496,7 @@ sure it is accurate.</p>
 <h3>Step 12</h3>
 
 <p>The operators <code>+</code> and <code>-</code> are not being reported
-because there is no handler for them. Although it is often reasonable to leave
+because there is no marker for them. Although it is often reasonable to leave
 out relatively unimportant items from the 'expected' list, the operators ought
 to be reported in our case. For uniformity, let's make sure that whenever a
 character is matched in the input, there is a marker associated with it which
@@ -507,7 +511,7 @@ end = #newline '\r'? '\n' @
 </pre>
 
 <p>Each expression where a character is recognised has been pulled out into its
-own definition, with an error handler included. This is a rather minor example
+own definition, with an error marker included. This is a rather minor example
 of the transformation approach to parser development. We started with a
 parser:</p>
 
@@ -539,11 +543,11 @@ Error in sum-test.txt, line 17: expecting digit, newline, operator
 </pre>
 
 <p>This shows that operators are now being reported. If we upgrade the error
-message in the test file, the tests pass. Note that the error handler
+message in the test file, the tests pass. Note that the error marker
 <code>#operator</code> is encountered twice while parsing, once for each
 operator, but is only reported once. Also note that the error markers are
-reported in alphabetical order. In the compiled parser, a different order can be
-specified.</p>
+reported in alphabetical order. In the compiled parser, the order of the items,
+and the text printed, can be customised.</p>
 
 <h3>Step 13</h3>
 
