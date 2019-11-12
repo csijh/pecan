@@ -49,11 +49,11 @@ newline = #newline endline @
 -- Character sets and sequences
 space = ' '
 literal = escape / ' ..~'
-escape = '\b' #digit (hex / decimal)
+escape = '\b' (decimal ';'? / hex ';'? / 'rnqdgb')
 alpha = letter / '0..9' / '-'
 letter = 'a..z' / 'A..Z' / '_'
 name = letter alpha*
-hex = '0' ('0..9' / 'a..f' / 'A..F')*
+hex = '0' ('0..9' / 'a..f' / 'A..F')+
 decimal = '0' / ('1..9' '0..9'*)
 noquote = "'"! literal
 nodquote = '"'! literal

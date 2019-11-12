@@ -82,7 +82,7 @@ has these features:</p>
 
 <li>compilation can be direct or via bytecode</li>
 
-<li>compilation can be to almost any target language</li>
+<li>compilation can be to almost any target programming language</li>
 
 </ul>
 
@@ -95,8 +95,8 @@ reasons, Pecan has explicit support for test-driven grammar development.</p>
 
 <p>The Pecan system is written in Java, so the first step is to make sure that
 version 8 or better of Java is available. Pecan is provided as an executable jar
-file <code>pecan.jar</code>. The jar file contains both the compiled program and
-also the source code. If this jar file is downloaded, it can be run with:</p>
+file <code>pecan.jar</code>. If this jar file is downloaded, it can be run
+with:</p>
 
 <pre>java -jar pecan.jar ...
 </pre>
@@ -107,27 +107,30 @@ an alias or equivalent, so that the program can be run just by typing:</p>
 <pre>pecan ...
 </pre>
 
-<p>The way to do this differs from system to system.</p>
-
-<p>To run tests on a grammar, type a command of the form:</p>
+<p>The way to do this differs from system to system, so isn't described here. To
+run tests on a grammar, type a command of the form:</p>
 
 <pre>pecan [-t | -trace] [line] tests
 </pre>
 
-<p>To generate a bytecode version of a grammar, type a command with one of the
-forms:</p>
+<p>To compile a grammar, type a command of the form:</p>
 
 <pre>pecan grammar -c program
-
-pecan grammar -b program
 </pre>
 
 <p>The option <code>-c program</code> indicates that the grammar is to be
-compiled to a set of recursive descent functions. The option <code>-b
-program</code> indicates that the grammar is to be compiled into a bytecode
-array. Either way, the program is a template in the desired target programming
-language, into which the result of the compilation is embedded, to form a parser
-or application program.</p>
+compiled to a set of recursive descent functions. The program is a template in
+the desired target programming language, into which the functions are embedded,
+to form a parser or application program. To translate a grammar to bytecode,
+type a command:</p>
+
+<pre>pecan grammar -b file
+</pre>
+
+<p>The option <code>-b file</code> indicates that the grammar is to be compiled
+into a bytecode array in the given binary file. This can then be loaded into an
+interpreter program in any desired language to form a parser or application
+program.</p>
 
 <h2 id="intro">Background</h2>
 
@@ -232,12 +235,21 @@ applications such as full programming languages.</p>
 
 <p>There is also a relatively minor problem with PEG grammars, which is that
 they don't support left recursion. There have been attempts to add it, but the
-results are not compelling. It is worth noting, though, that left recursion is
-arguably unintuitive, that it would probably never have become common if it
-weren't for the prevalence of CFG grammars, and that it is well known how to
-transform it away. Most uses of left recursion are very simple, of the kind
-<code>a = x | a y</code> which can be translated easily into <code>a = x
-y*</code>.</p>
+results are not compelling. Most uses of left recursion are very simple, of the
+kind:</p>
+
+<pre>a = x | a y
+</pre>
+
+<p>This can be translated very easily into:</p>
+
+<pre>a = x y*
+</pre>
+
+<p>It is well known how to transform away any cases of left recursion.  It is
+worth noting that left recursion is arguably unintuitive, and that it would
+probably never have become common if it weren't for the prevalence of CFG
+grammars.</p>
 
 <h3 id="pecan">Pecan grammars</h3>
 
@@ -257,14 +269,10 @@ parsers.</p>
 grammars into Pecan grammars or improve efficiency, and these preserve the
 actions and error handling properties of generated parsers.</p>
 
-<p>Once a grammar has been developed, it can either be used to guide the manual
-construction of a parser, or to generate a parser automatically. A grammar can
-be compiled into a collection of recursive descent functions, with very few
-restrictions on the target language. Support for a new target language can be
-constructed easily. A parser can also be generated as bytecode, with even fewer
-restrictions on the target language. An interpreter for a new language can be
-constructed fairly easily by translating one of the example interpreters
-provided.</p>
+<p>Once a grammar has been developed, it can be compiled into a set of recursive
+descent functions in almost any desired target programming language. A grammar
+can alternatively be translated into a bytecode, so that it can be dynamically
+loaded into an application.</p>
 
 <h2 id="notation">Notation</h2>
 
@@ -335,7 +343,7 @@ separate rule to be tried on the remaining input.</p>
 example:</p>
 
 <pre>-- A number is a sequence of one or more digits.
-number = '0123456789'+
+number = '0..9'+
 </pre>
 
 <p>There is no multi-line comment convention.</p>
@@ -583,8 +591,8 @@ rule allows any kind of letters: upper case, lower case, title case, modifier
 and other. Categories starting with <code>N</code> are number characters, of
 which <code>Nd</code> is the set of decimal digits. The connector rule uses the
 <code>Pc</code> connector punctuation category, but excludes the underscore
-character. The rule for <code>visible</code> excludes character code points
-which are unassigned, private, surrogate, controls, or line or paragraph
+character. The <code>visible</code> rule matches any character, excluding code
+points which are unassigned, private, surrogate, controls, or line or paragraph
 separators.</p>
 
 <p>A splitter is a string in angle brackets such as <code>&lt;abc></code> which
@@ -615,6 +623,8 @@ fail = ''
 end = &lt;>
 </pre>
 
+<p>These can be particularly useful during transformations.</p>
+
 <h3 id="escapes">Escapes</h3>
 
 <p>There are escape conventions within sets, strings, ranges, splitters and
@@ -628,6 +638,7 @@ conventions is:</p>
 <tr><td><code>\n</code></td><td>10</td><td>newline</td></tr>
 <tr><td><code>\q</code></td><td>39</td><td>single quote</td></tr>
 <tr><td><code>\d</code></td><td>34</td><td>double quote</td></tr>
+<tr><td><code>\g</code></td><td>96</td><td>grave/backquote</td></tr>
 <tr><td><code>\b</code></td><td>92</td><td>backslash</td></tr>
 </table>
 
@@ -639,11 +650,11 @@ conventions is:</p>
 <tr><td><code>\0hhh...;</code></td><td>character with hexadecimal code</td></tr>
 </table>
 
-<p>Some conventional escape sequences are not supported, e.g. <code>\a</code>,
-<code>\b</code> for backspace, <code>\e</code>, <code>\f</code>,
-<code>\t</code>, <code>\v</code> because they are or should be obsolete, or
-<code>\\</code>, <code>\'</code>, <code>\"</code> because they cause visual
-confusion. A numerical escape is a backslash followed by digits, with an
+<p>Escape sequences such as <code>\a</code>, <code>\e</code>, <code>\f</code>,
+<code>\t</code>, <code>\v</code> are not supported because they are, or should
+be, obsolete. Escape sequences such or <code>\\</code>, <code>\'</code>,
+<code>\"</code> are not supported because they complicate scanning and cause
+visual confusion. A numerical escape is a backslash followed by digits, with an
 optional semicolon terminator. It is used to represent a single character, using
 its decimal character code. For example:</p>
 

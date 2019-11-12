@@ -25,4 +25,4 @@ Run = pecan/Run.java $(Evaluator) $(Compiler) $(Generator)
 	java -ea pecan.$@
 
 jar: pecan/Run.class
-	jar -cef pecan.Run docs/pecan.jar pecan
+	jar -cef pecan.Run docs/pecan.jar pecan/*.class pecan/*.bin

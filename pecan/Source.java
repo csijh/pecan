@@ -183,6 +183,7 @@ class Source {
             case 'n': return '\n';
             case 'q': return '\'';
             case 'd': return '"';
+            case 'g': return '`';
             case 'b': return '\\';
         }
         length--;

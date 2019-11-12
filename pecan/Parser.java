@@ -364,10 +364,10 @@ class Parser implements Testable {
         return OPT(GO() && visible() && visibles());
     }
 
-    // escape = backslash (digits ';'? / 'rnqdb')
+    // escape = backslash (digits ';'? / 'rnqdgb')
     private boolean escape() {
         return backslash() && (
-        (digits() && (CHAR(';') || true)) || SET("rnqdb"));
+        (digits() && (CHAR(';') || true)) || SET("rnqdgb"));
     }
 
     // backslash = '\'
