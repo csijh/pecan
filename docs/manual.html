@@ -110,27 +110,27 @@ an alias or equivalent, so that the program can be run just by typing:</p>
 <p>The way to do this differs from system to system, so isn't described here. To
 run tests on a grammar, type a command of the form:</p>
 
-<pre>pecan [-t | -trace] [line] tests
+<pre>pecan [-t | -trace] [line] testfile
 </pre>
 
 <p>To compile a grammar, type a command of the form:</p>
 
-<pre>pecan grammar -c program
+<pre>pecan grammar -c programfile
 </pre>
 
-<p>The option <code>-c program</code> indicates that the grammar is to be
+<p>The option <code>-c programfile</code> indicates that the grammar is to be
 compiled to a set of recursive descent functions. The program is a template in
 the desired target programming language, into which the functions are embedded,
 to form a parser or application program. To translate a grammar to bytecode,
 type a command:</p>
 
-<pre>pecan grammar -b file
+<pre>pecan grammar -b binaryfile
 </pre>
 
-<p>The option <code>-b file</code> indicates that the grammar is to be compiled
-into a bytecode array in the given binary file. This can then be loaded into an
-interpreter program in any desired language to form a parser or application
-program.</p>
+<p>The option <code>-b binaryfile</code> indicates that the grammar is to be
+compiled into a bytecode array in the given binary file. This can then be loaded
+into an interpreter program in any desired language to form a parser or
+application program.</p>
 
 <h2 id="intro">Background</h2>
 
@@ -675,7 +675,7 @@ encountered. If an escape sequence is to be followed by a digit or a semicolon,
 then it should be terminated by a semicolon, e.g.</p>
 
 <pre>pi3 = "\960;3"
-piSemicolon = "\960;;"
+pi-semicolon = "\960;;"
 </pre>
 
 <h3 id="errors">Errors</h3>
@@ -713,7 +713,7 @@ and <code>"-"</code> both fail, so the error message produced becomes:</p>
 
 <p>When a marker is encountered, it is associated with the current position in
 the input. It records something that the parser is expecting at that point. If
-progress is made past that input position, the markers are cleared. When the
+progress is made past that input position, the marker is cleared. When the
 parser encounters an error, the set of things that the parser was expecting at
 that point is reported. Duplicates are removed, for example suppose the rule
 is changed to:</p>
@@ -728,34 +728,27 @@ is changed to:</p>
   ^
 </pre>
 
-<p>During testing, the order in which markers are reported is alphabetical. When
-a grammar is compiled, the order is determined by the external code, and the
-text produced can be customised.</p>
+<p>During testing and development, markers are reported in alphabetical order.
+When a grammar is compiled, the order, and the text produced, can be
+customised.</p>
 
 <p>One way to ensure that all the items which could possibly allow parsing to
 continue are reported is to write separate rules to describe low level features
-of a grammar involving primitive character matchers, i.e. strings, sets,
-character codes, or Unicode identifiers, and begin each with a marker. For
-example, a parser for a programming language might contain rules such as:</p>
+of a grammar involving primitive character matchers, i.e. strings, sets, etc.,
+and begin each with a marker. For example, a parser for a programming language
+might contain rules such as:</p>
 
 <pre>plus = #operator "+" @
 letter = #letter (Lu / Ll / Lt / Lm / Lo)
-number = #number ('0'..'9')+ @number
-newline = #newline 13? 10 @
+number = #number ('0'..'9')+ @value
+newline = #newline '\r'? '\n' @
 end = #end &lt;>
 </pre>
 
 <p>The <code>plus</code> rule specifies that the plus sign is to be described as
-an operator in error messages, that it may be followed by optional spaces, and
-that the plus sign and spaces are discarded. The <code>letter</code> rule
-applies an error marker to a choice of Unicode categories, to avoid having to
-attach a marker to each one individually.</p>
-
-<p>With these rules, an incorrect operator might lead to an error message which
-says that an operator is expected. The fact that an extra digit on the preceding
-number, or a space, could also have allowed parsing to continue is not reported.
-That is because individual digits and spaces in the rules haven't been given
-markers.</p>
+an operator in error messages. The <code>letter</code> rule applies an error
+marker to a choice of Unicode categories, to avoid having to attach a marker to
+each one individually.</p>
 
 <h3 id="actions">Actions</h3>
 
@@ -799,10 +792,10 @@ action is simply printed out.</p>
 <p>An action has access to the characters or tokens from the input which have
 been matched since the previous action. For example:</p>
 
-<pre>number = digit+ @number
+<pre>number = digit+ @value
 </pre>
 
-<p>The action <code>@number</code> creates a new item from the digits which
+<p>The action <code>@value</code> creates a new item from the digits which
 have just been matched, and pushes it onto the stack. There is a further
 convention which allows matched characters to be discarded. For example:</p>
 
@@ -843,7 +836,7 @@ self-contained fragment of a grammar is legal.</p>
 Pecan, even a scanner must produce a fixed number of output items. A scanner
 can be defined like this:</p>
 
-<pre>tokens = @tokens token+ end
+<pre>scan = @tokens token+ end
 token = number @1number / id @1id / ...
 </pre>
 
@@ -882,10 +875,11 @@ left hand alternative which begins with an action, for example:</p>
 </pre>
 
 <p>The action <code>@a</code> is performed whether or not <code>x</code>
-succeeds. This is not completely intuitive, and probably not what was intended.
-It is not reported during development, so that transformations remain valid, but
-is reported as a warning when compilation is requested. A similar situation
-arises with error markers:</p>
+succeeds. This is not completely intuitive, and probably not what was intended
+since <code>@a (x / y)</code> would express the intention better. This issue is
+not reported during development, so that transformations remain valid, but is
+reported when compilation is requested. A similar situation arises with error
+markers:</p>
 
 <pre>#m x / y
 </pre>
@@ -908,11 +902,11 @@ calculator with no brackets might look like this:</p>
 
 <pre>sum = term (%plus term @2add / %minus term @2subtract)* end
 term = number (%times number @2multiply / %over number @2divide)*
-number = %number @number
+number = %int @value
 end = &lt;>
 </pre>
 
-<p>In this case, the input is an array of tokens with tags <code>%number</code>,
+<p>In this case, the input is an array of tokens with tags <code>%int</code>,
 <code>%plus</code>, <code>%minus</code>, <code>%times</code> or
 <code>%over</code>.</p>
 
@@ -926,8 +920,8 @@ names to be recognised separately from other identifiers, and that typedef
 constructs have to be parsed to provide that information. This can be achieved
 by classifying both types of token as identifiers in the scanner. Then, in the
 parser, the actions carry out sufficient symbol table construction to represent
-typedef constructs. Then, when the external tag function is executed, it uses
-the symbol table to decide whether to return an identifier tag or typedef
+typedef constructs. Then, when the external tag function is called, it uses
+the symbol table to decide whether to return an identifier tag or a typedef
 tag.</p>
 
 <h3 id="literals">Literals</h3>
@@ -971,7 +965,12 @@ identifiers. For example:</p>
 <p>For an alphanumeric literal, the quotes have no effect, so <code>`int`</code>
 is equivalent to <code>int</code>, making the quotes unnecessary, but using
 <code>`int`</code> may still be desirable to emphasize that the identifier
-stands for a keyword token with a fixed spelling.</p>
+stands for a keyword token with a fixed spelling. Whether backquotes are used or
+not, hyphens are translated to <a
+href="https://en.wikipedia.org/wiki/Camel_case">camel case</a> to make it more
+likely that the result is a valid identifier in the target programming language.
+For example, a tag <code>%string-literal</code> is translated to
+<code>stringLiteral</code>.</p>
 
 <p>When a grammar is compiled to produce a parser, custom adjustments can be
 specified for each different type of name, to prevent name clashes. The same
@@ -1000,22 +999,22 @@ which is used for subsequent tests, until another grammar is given. For
 example:</p>
 
 <pre>// Match one digit
-number = ("0".."9") @number
+number = ("0".."9") @value
 ==========
 2
 ----------
-number 2
+value 2
 ==========
 42
 ----------
-number 4
+value 4
 ==========
 // Match any number of digits
-number = ("0".."9") @number
+number = ("0".."9") @value
 ==========
 42
 ----------
-number 42
+value 42
 </pre>
 
 <p>The first section of this file sets up a grammar, then there are two tests
@@ -1058,20 +1057,16 @@ pecan -trace 24 tests.txt
 </pre>
 
 <p>A grammar in a test file can have an inclusion. For example, a file
-<code>tests.txt</code> of tests for a grammar in <code>grammar.txt</code> can
-start with:</p>
+<code>tests.txt</code> might start with:</p>
 
 <pre>{grammar.txt}
 ==========
 ...
 </pre>
 
-<p>The grammar fragment containing the inclusion can for example, specify a
-particular rule to test and add <code>&lt;></code> to ensure that the rule
-parses all of the input supplied in each test. It may also provide definitions
-for any undefined identifiers in the grammar file, which could be necessary if
-the grammar file contains one module of a modular grammar, which depends on
-another module. For example, a test file could begin:</p>
+<p>This is the usual way to arrange for  a grammar to be in one file,
+<code>grammar.txt</code> in this case, and the tests in another. A test file
+might also begin with something like:</p>
 
 <pre>start = expression &lt;>
 {expressions.txt}
@@ -1080,9 +1075,13 @@ statement = ...
 ...
 </pre>
 
-<p>The expression rule is the one to be tested, each test provides a complete
-expression, and the file <code>expressions.txt</code> has a forward reference to
-a module defining statements.</p>
+<p>In this case, the file <code>expressions.txt</code> contains one module of a
+multi-module grammar. The <code>start</code> rule specifies that it is the
+<code>expression</code> rule that is under test, and <code>&lt;></code> is used
+to ensure that the <code>expression</code> rule parses all of the input supplied
+in each test. The <code>statement</code> rule provides a simplified version of a
+rule from another module, which the file <code>expressions.txt</code> makes a
+forward reference to.</p>
 
 <p>If a grammar fragment consists of a single line which is an inclusion, then
 the included file can be another test file, rather than just a grammar, allowing
@@ -1103,7 +1102,7 @@ a test file which sets up a grammar, but contains no tests.</p>
 avoid common visual ambiguity problems, by changing all line endings to
 <code>\n</code>, removing trailing spaces at the ends of lines, and removing
 trailing blank lines at the very end of the test file. The escape sequences
-described earlier are recognised anywhere in the test input, and are used to
+described earlier are recognised anywhere in the test input, and can be used to
 express control characters and Unicode characters beyond ASCII in the output. To
 allow edge cases to be tested, there is a further convention that if an input
 line ends in an escape sequence, the newline is cancelled. For example:</p>
@@ -1149,8 +1148,7 @@ x+        &#8801;  x x*
 [x]       &#8801;  x&amp; x
 x&amp;        &#8801;  x!!
 ''        &#8801;  ""!
-&lt;bd>      &#8801;  &lt;> / ('\0..a' / 'b' &lt;d>)&amp;
-&lt;b>       &#8801;  &lt;> / '\0..a'&amp;
+&lt;b...>    &#8801;  &lt;> / '\0..a'&amp; / ('b' &lt;...>)&amp;
 &lt;>        &#8801;  .!
 </pre>
 
@@ -1201,7 +1199,7 @@ being matched, and therefore an infinite loop ensues.</p>
 calculated for each expression. The <code>SP</code>, <code>SN</code> properties
 mean the expression can succeed with or without progress being made in the
 input, and <code>FP</code>, <code>FN</code> mean that an expression can fail,
-with or without progress. These are very similar way to the properties used in
+with or without progress. These are very similar to the properties used in
 the analysis of PEG grammars, though there <code>FP</code> and <code>FN</code>
 are not distinguished.</p>
 
@@ -1449,10 +1447,10 @@ transformations.</p>
 desired target programming language. A grammar is compiled using a command of
 the form:</p>
 
-<pre>pecan grammar -c program
+<pre>pecan grammar -c programfile
 </pre>
 
-<p>The option <code>-c program</code> specifies a template program file. The
+<p>The option <code>-c programfile</code> specifies a template program file. The
 program file must already exist, and it must contain a placeholder such as:</p>
 
 <pre>// &lt;pecan ...
@@ -1464,14 +1462,15 @@ program file must already exist, and it must contain a placeholder such as:</p>
 <p>The placeholder begins with a commented out open tag <code>&lt;pecan></code>,
 with attributes as described below, and ends with a commented out close tag
 <code>&lt;/pecan></code>. Lines in between the two tags, if any, are removed,
-and the result of compiling the grammar is inserted in their place.</p>
+and the result of compiling the grammar is inserted in their place. That means
+compiling can be carried out repeatedly using the same program file.</p>
 
 <p>An example template program in the C language, with two supporting data
 files, is:</p>
 
-<p class="indent"><a href="tutorial/parse.c">parse.c</a><br/>
-<a href="tutorial/table1.bin">table1.bin</a><br/>
-<a href="tutorial/table2.bin">table2.bin</a></p>
+<p class="indent"><a href="compilation/parse.c">parse.c</a><br/>
+<a href="compilation/table1.bin">table1.bin</a><br/>
+<a href="compilation/table2.bin">table2.bin</a></p>
 
 <p>Very few restrictions are placed on the target programming language when
 compiling. The main assumption is that the language has two binary and/or
@@ -1700,7 +1699,7 @@ are assigned. The information printed out can be used to set up or confirm the
 values of enumerated constants in the interpreter. An example interpreter in the
 C language is:</p>
 
-<p class="indent"><a href="tutorial/interpret.c">interpret.c</a></p>
+<p class="indent"><a href="translation/interpret.c">interpret.c</a></p>
 
 <p>An interpreter can be constructed by taking the example interpreter provided,
 translating it into the desired programming language, and adapting it to a
