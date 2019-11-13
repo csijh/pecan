@@ -38,7 +38,7 @@ void report(parser *p, char *ds, char *f, char *names[]);
 static input *start(parser *p);
 static int length(parser *p);
 static output top(parser *p, int n);
-static bool act(parser *p, int n, output x);
+static bool push(parser *p, int n, output x);
 static bool go(parser *p);
 static bool ok(parser *p);
 static bool alt(parser *p, bool b);
@@ -68,8 +68,8 @@ enum category {
 //   declare  = "bool %s(parser *p);"
 //   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
-//   act0     = "act(p,0,%s(length(p),start(p)))"
-//   act2     = "act(p,2,%s(top(p,1),top(p,0)))"
+//   act0     = "push(p,0,%s(length(p),start(p)))"
+//   act2     = "push(p,2,%s(top(p,1),top(p,0)))"
 //   escape1  = "\%3o"
 //   escape2  = "\u%4x"
 //   escape4  = "\U%8x"
@@ -136,7 +136,7 @@ static inline int length(parser *p) {
 }
 
 // Push output item onto stack, after popping n items. Discard characters.
-static inline bool act(parser *p, int n, output x) {
+static inline bool push(parser *p, int n, output x) {
   if (n == 0 && p->out >= p->nouts) {
     p->nouts = p->nouts * 2;
     p->outs = realloc(p->outs, p->nouts);

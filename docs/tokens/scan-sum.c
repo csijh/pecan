@@ -1,17 +1,15 @@
-// Parsing template in C. Public domain.
+// Scanner for sums. Public domain.
+#include "scan-sum.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Change this section for different applications.
-
-// The input type should be char for a scanner or text-based parser, otherwise
-// it should be a token structure or token pointer.
+// The input is characters, the output is token structures.
 typedef char input;
-typedef int output;
+typedef token output;
 
-// Action: create a number from given text.
+// Action @tokens: do nothing
 output value(int n, char s[n]) {
   output x = 0;
   for (int i = 0; i < n; i++) x = x * 10 + s[i] - '0';
@@ -68,8 +66,8 @@ enum category {
 //   declare  = "bool %s(parser *p);"
 //   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
-//   act0     = "act(p,0,%s(length(p),start(p)))"
-//   act2     = "act(p,2,%s(top(p,1),top(p,0)))"
+//   act0     = "true"
+//   act1     = "act(p,2,%s(top(p,1),top(p,0)))"
 //   escape1  = "\%3o"
 //   escape2  = "\u%4x"
 //   escape4  = "\U%8x"
