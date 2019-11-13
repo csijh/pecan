@@ -14,8 +14,8 @@
 
 <h1>Tokens and trees</h1>
 
-<p>In this tutorial, the calculator example will be changed in two ways. First,
-a scanner will be defined separately from the parser, so that the parser works
+<p>In this tutorial, let's change the calculator example in two ways. First, a
+scanner will be defined separately from the parser, so that the parser works
 with tokens. Second, the program produced will generate a parse tree from an
 arithmetic expression and print it out, rather than calculate its value. The
 example will thus be closer to what is needed for practical parsing in larger
@@ -139,7 +139,21 @@ done on the tree.</p>
 <pre>pecan parse-sum-test.txt
 Pass 7 tests
 </pre>
+<!--
+<h3>Compiling</h3>
 
+<p>To compile the scan grammar into a module in C, we start with the template
+parse program:</p>
+
+<p class="indent"><a href="../compilation/parse.c">parse.c</a></p>
+
+<p>We make a copy in a file <code>scan-sum.c</code> and then adapt it. The
+result is a module with a header file and an implementation file:</p>
+
+<p class="indent"><a href="scan-sum.h">scan-sum.h</a><br/>
+<a href="scan-sum.c">scan-sum.c</a>
+</p>
+-->
 <!--
 <p>In the tests, when an error is reported, its token index is given. In the
 real parser, with the original text available, the token index can be converted

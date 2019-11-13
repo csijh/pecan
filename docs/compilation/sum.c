@@ -1,13 +1,10 @@
-// Parsing template in C. Public domain.
+// Parser for arithmetic sums. Public domain.
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Change this section for different applications.
-
-// The input type should be char for a scanner or text-based parser, otherwise
-// it should be a token structure or token pointer.
+// The input is text, and the output items are integers.
 typedef char input;
 typedef int output;
 
@@ -54,10 +51,10 @@ static bool set(parser *p, char *s);
 static bool drop(parser *p, int n);
 static bool eot(parser *p);
 
-// Unicode category codes, in the order used in the lookup tables.
+// Unicode category codes, in the alphabetical order used in the lookup tables.
 enum category {
-  Cn, Lu, Ll, Lt, Lm, Lo, Mn, Me, Mc, Nd, Nl, No, Zs, Zl, Zp, Cc,
-  Cf, Uc, Co, Cs, Pd, Ps, Pe, Pc, Po, Sm, Sc, Sk, So, Pi, Pf
+    Cc, Cf, Cn, Co, Cs, Ll, Lm, Lo, Lt, Lu, Mc, Me, Mn, Nd, Nl, No, Pc, Pd,
+    Pe, Pf, Pi, Po, Ps, Sc, Sk, Sm, So, Zl, Zp, Zs
 };
 
 // The parsing functions, compiled from a Pecan grammar. The attributes of this
