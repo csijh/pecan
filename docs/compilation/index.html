@@ -81,12 +81,13 @@ typedef int output;
 <p>This defines the input and output types for parsing. The input type is the
 type of each item in the input array. It should be a byte for parsers based on
 UTF-8 text. In C, it is normal to use <code>char</code> for text bytes, even
-though they may be signed or unsigned depending on the platform. For a
-token-based parser, the input type should be a token structure, or a pointer to
-a token structure, depending on whether structure or structure pointers are
-stored in the input array. The output can be anything which can be passed to and
-from functions, e.g. a numerical type or a pointer to a tree node. The next part
-of the program is:</p>
+though they may be signed or unsigned depending on the platform, and to cast or
+mask each byte when it is retrieved from the array. For a token-based parser,
+the input type should be a token structure, or a pointer to a token structure,
+depending on whether structures or structure pointers are stored in the input
+array. The output can be anything which can be passed to and from functions,
+e.g. a numerical type or a pointer to a tree node. The next part of the program
+is:</p>
 
 <pre>output value(int n, char s[n]) { ... }
 output add(output x, output y) { return x + y; }
@@ -114,8 +115,7 @@ to generic parsing support and Unicode category codes, which need to appear in C
 before the generated functions. There should be no need to change these.  The
 next part of the program is:</p>
 
-<pre>
-// &lt;pecan
+<pre>// &lt;pecan
 //   comment  = "// %s"
 //   declare  = "bool %s(parser *p);"
 //   define   = "bool %s(parser *p) { %n return %r; %n}"
@@ -131,11 +131,11 @@ next part of the program is:</p>
 </pre>
 
 <p>When a grammar is compiled, the generated functions are inserted between the
-<code>&lt;pecan></code> and <code>&lt;/pecan></code> tags. Any text already
-present is deleted. That means compiling can be repeated as necessary. The two
-tags are commented out using C comments. The <code>&lt;pecan></code> tag
-contains attributes. These define print formats that are used to generate the
-parsing functions from the grammar rules.</p>
+<code>&lt;pecan></code> and <code>&lt;/pecan></code> tags, in a similar style to
+HTML. Any text already present between the tags is deleted. That means compiling
+can be repeated as necessary. The two tags are commented out using C comments.
+The <code>&lt;pecan></code> tag contains attributes. These define print formats
+that are used to generate the parsing functions from the grammar rules.</p>
 
 <p>The attributes shown here establish the C conventions for one-line comments,
 forward declarations of functions allowing them to be recursive, definitions of
@@ -174,8 +174,9 @@ by a following digit.</p>
 would be prefixed by <code>P</code>, all support function names by
 <code>S</code>, all action function names by <code>A</code>, all tag names by
 <code>T</code>, all error marker names by <code>M</code> and all Unicode
-category names by <code>C</code>, thus guarding against any possible name
-clash.</p>
+category names by <code>C</code>, thus guarding against any possible name clash,
+either between the different types of name, or between the names and language
+keywords or library functions.</p>
 
 <p>The data files <code>table1.bin</code> and <code>table2.bin</code> can be
 used in any programming language to form a two-stage table for looking up the
@@ -187,14 +188,14 @@ the target programming language. The files are used by reading them into byte
 arrays in memory, and then looking up the category of an integer character code
 <code>ch</code> using one of:</p>
 
-<pre>table2[table1[ch>>8]*256+(ch&255)];
-table2[(table1[ch>>8]&255)*256+(ch&255)];
+<pre>table2[table1[ch>>8]*256+(ch&amp;255)];
+table2[(table1[ch>>8]&amp;255)*256+(ch&amp;255)];
 </pre>
 
 <p>The first version is for languages which support unsigned bytes, and the
 second is for languages which only support signed bytes. The category
-enumeration in the template program defines the categories in the order used in
-these tables.</p>
+enumeration in the template program defines the categories in alphabetical
+order, which is the order used in these tables.</p>
 
 </body>
 </html>
