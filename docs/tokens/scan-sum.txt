@@ -1,4 +1,4 @@
-tokens = gap @tokens token* end
+tokens = gap @array token* end
 token = number / plus / minus / times / over / open / close / bad
 number = ('0..9')+ @1number gap
 plus = '+' @1plus gap

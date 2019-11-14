@@ -17,13 +17,13 @@ typedef char input;
 typedef int output;
 
 // Action constants, in alphabetical order.
-enum action { add, divide, multiply, subtract, value };
+enum action { add, divide, multiply, read, subtract };
 
 // Handle actions.
 output act(int a, int n, char *s, output *xs) {
     output x;
     switch (a) {
-        case value:
+        case read:
             x = 0;
             for (int i = 0; i < n; i++) x = x * 10 + s[i] - '0';
             return x;

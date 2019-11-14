@@ -740,7 +740,7 @@ might contain rules such as:</p>
 
 <pre>plus = #operator "+" @
 letter = #letter (Lu / Ll / Lt / Lm / Lo)
-number = #number ('0'..'9')+ @value
+number = #number ('0'..'9')+ @read
 newline = #newline '\r'? '\n' @
 end = #end &lt;>
 </pre>
@@ -792,10 +792,10 @@ action is simply printed out.</p>
 <p>An action has access to the characters or tokens from the input which have
 been matched since the previous action. For example:</p>
 
-<pre>number = digit+ @value
+<pre>number = digit+ @read
 </pre>
 
-<p>The action <code>@value</code> creates a new item from the digits which
+<p>The action <code>@read</code> creates a new item from the digits which
 have just been matched, and pushes it onto the stack. There is a further
 convention which allows matched characters to be discarded. For example:</p>
 
@@ -902,7 +902,7 @@ calculator with no brackets might look like this:</p>
 
 <pre>sum = term (%plus term @2add / %minus term @2subtract)* end
 term = number (%times number @2multiply / %over number @2divide)*
-number = %int @value
+number = %int @read
 end = &lt;>
 </pre>
 
@@ -999,22 +999,22 @@ which is used for subsequent tests, until another grammar is given. For
 example:</p>
 
 <pre>// Match one digit
-number = ("0".."9") @value
+number = ("0".."9") @read
 ==========
 2
 ----------
-value 2
+read 2
 ==========
 42
 ----------
-value 4
+read 4
 ==========
 // Match any number of digits
-number = ("0".."9") @value
+number = ("0".."9") @read
 ==========
 42
 ----------
-value 42
+read 42
 </pre>
 
 <p>The first section of this file sets up a grammar, then there are two tests
@@ -1030,14 +1030,14 @@ or discard are displayed.</p>
 separated by white space:</p>
 
 <pre>// Match a list of numbers.
-list = %number @value (%comma %number @value @2and)*
+list = %number @read (%comma %number @read @2and)*
 ==========
 number comma number comma number
 ----------
-value
-value
+read
+read
 and
-value
+read
 and
 </pre>
 
@@ -1704,7 +1704,7 @@ Opcodes: {ACT=0, AND=1, ARITY=2, BACK=3, BOTH=4, CAT=5, DO=6, DROP=7, EITHER=8,
 EOT=9, GO=10, HAS=11, HIGH=12, LOOK=13, LOW=14, MANY=15, MARK=16, MAYBE=17,
 NOT=18, ONE=19, OR=20, POINT=21, SEE=22, SET=23, SPLIT=24, START=25, STOP=26,
 STRING=27, TAG=28}
-Actions: {add=0, divide=1, multiply=2, subtract=3, value=4}
+Actions: {add=0, divide=1, multiply=2, read=3, subtract=4}
 Markers: {bracket=0, integer=1, newline=2, operator=3}
 Categories: {Cc=0, Cf=1, Cn=2, Co=3, Cs=4, Ll=5, Lm=6, Lo=7, Lt=8, Lu=9, Mc=10,
 Me=11, Mn=12, Nd=13, Nl=14, No=15, Pc=16, Pd=17, Pe=18, Pf=19, Pi=20, Po=21,
@@ -1858,7 +1858,7 @@ result.</p>
 
 <p>To give a concrete example, suppose a grammar consists of the rule:</p>
 
-<pre>digit = '0..9' @value
+<pre>digit = '0..9' @read
 </pre>
 
 <p>The bytecode sequence generated from this has the form:</p>

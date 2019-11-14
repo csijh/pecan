@@ -2,16 +2,16 @@
 ==========
 2
 ----------
-value 2
+read 2
 ==========
 42
 ----------
-value 42
+read 42
 ==========
 2+40
 ----------
-value 2
-value 40
+read 2
+read 40
 add
 ==========
 2+40%
@@ -22,22 +22,22 @@ Error in sum-test.txt, line 17: expecting newline, operator
 ==========
 2+10+12+18
 ----------
-value 2
-value 10
+read 2
+read 10
 add
-value 12
+read 12
 add
-value 18
+read 18
 add
 ==========
 2-10+53-3
 ----------
-value 2
-value 10
+read 2
+read 10
 subtract
-value 53
+read 53
 add
-value 3
+read 3
 subtract
 ==========
 2+
@@ -48,26 +48,26 @@ Error in sum-test.txt, line 43: expecting bracket, integer
 ==========
 5*8+12/6
 ----------
-value 5
-value 8
+read 5
+read 8
 multiply
-value 12
-value 6
+read 12
+read 6
 divide
 add
 ==========
 2*(20+1)
 ----------
-value 2
-value 20
-value 1
+read 2
+read 20
+read 1
 add
 multiply
 ==========
  2 * ( 20 + 1 )
 ----------
-value 2
-value 20
-value 1
+read 2
+read 20
+read 1
 add
 multiply

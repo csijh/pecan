@@ -1,11 +1,9 @@
 // Scanner module for sums. Public domain.
+#include "parse.h"
 
 // Token tags.
-enum tag { number, plus, minus, times, over, open, close, bad, eot };
+enum tag { number, plus, minus, times, over, open, close, bad };
 
-// Token structure: tag, plus position and length of source text.
-struct token { int tag, at, length; };
-typedef struct token token;
-
-// Scan a sum. Return an array of tokens, terminated with an eot token.
-token *scan(char *input);
+// Scan a sum. Return an array of tokens, and provide the length in *pn.
+// Scanning never fails. Instead, error tokens are included with tag 'bad'.
+token *scan(int n, char input[n], int *pn);

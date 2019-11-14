@@ -17,7 +17,7 @@ x = @x ("x" / "y")
 11: STOP
 ==========
 -- Calculator tutorial step 1
-digit = '0..9' @value
+digit = '0..9' @read
 ----------
 0: START 10
 2: BOTH 8
@@ -28,7 +28,7 @@ digit = '0..9' @value
 10: STOP
 ==========
 -- Step 2
-number = ('0..9')+ @value
+number = ('0..9')+ @read
 ----------
 0: START 14
 2: BOTH 12
@@ -47,7 +47,7 @@ sum = gap expression end
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
-number = #integer digit+ @value gap
+number = #integer digit+ @read gap
 plus = #operator '+' gap
 minus = #operator '-' gap
 times = #operator '*' gap
@@ -67,9 +67,9 @@ end = #newline '\r'? '\n' @
 9: AND
 10: GO 207
 12: STOP
-13: START 44
+13: START 45
 15: BOTH 18
-16: GO 47
+16: GO 48
 18: AND
 19: MAYBE
 20: MANY
@@ -78,7 +78,7 @@ end = #newline '\r'? '\n' @
 24: GO 117
 26: AND
 27: BOTH 30
-28: GO 47
+28: GO 48
 30: AND
 31: ARITY 2
 32: ACT 0
@@ -87,60 +87,60 @@ end = #newline '\r'? '\n' @
 35: GO 129
 37: AND
 38: BOTH 41
-39: GO 47
+39: GO 48
 41: AND
 42: ARITY 2
-43: ACT 3
-44: STOP
-45: START 76
-47: BOTH 50
-48: GO 79
-50: AND
-51: MAYBE
-52: MANY
-53: EITHER 65
-55: BOTH 58
-56: GO 141
-58: AND
-59: BOTH 62
-60: GO 79
-62: AND
-63: ARITY 2
-64: ACT 2
-65: OR
-66: BOTH 69
-67: GO 153
-69: AND
-70: BOTH 73
-71: GO 79
-73: AND
-74: ARITY 2
-75: ACT 1
-76: STOP
-77: START 93
-79: EITHER 82
-80: GO 96
-82: OR
-83: BOTH 86
-84: GO 165
-86: AND
-87: BOTH 90
-88: BACK 1590: AND
-91: GO 177
-93: STOP
-94: START 114
-96: BOTH 98
-97: MARK 1
-98: AND
-99: BOTH 107
-101: DO
-102: AND
-103: MAYBE
-104: MANY
-105: GO 189
-107: AND
-108: BOTH 111
-109: ACT 4
+43: ACT 4
+45: STOP
+46: START 77
+48: BOTH 51
+49: GO 80
+51: AND
+52: MAYBE
+53: MANY
+54: EITHER 66
+56: BOTH 59
+57: GO 141
+59: AND
+60: BOTH 63
+61: GO 80
+63: AND
+64: ARITY 2
+65: ACT 2
+66: OR
+67: BOTH 70
+68: GO 153
+70: AND
+71: BOTH 74
+72: GO 80
+74: AND
+75: ARITY 2
+76: ACT 1
+77: STOP
+78: START 94
+80: EITHER 83
+81: GO 97
+83: OR
+84: BOTH 87
+85: GO 165
+87: AND
+88: BOTH 91
+89: BACK 1591: AND
+92: GO 177
+94: STOP
+95: START 114
+97: BOTH 99
+98: MARK 1
+99: AND
+100: BOTH 108
+102: DO
+103: AND
+104: MAYBE
+105: MANY
+106: GO 189
+108: AND
+109: BOTH 111
+110: ACT 3
 111: AND
 112: GO 196
 114: STOP

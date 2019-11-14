@@ -26,7 +26,7 @@ scale situations such as compilers for programming languages.</p>
 <p>A scanner for sums can be developed from the full calculator in the previous
 tutorial by extracting and adapting the low level rules:</p>
 
-<pre>tokens = gap @tokens token* end
+<pre>scan = gap @tokens token* end
 token = number / plus / minus / times / over / open / close / bad
 number = ('0..9')+ @1number gap
 plus = '+' @1plus gap
@@ -107,7 +107,7 @@ the previous tutorial, replacing the low level rules by tags:</p>
 <pre>sum = exp #newline &lt;>
 exp = term (#op %plus term @2add / #op %minus term @2subtract)*
 term = atom (#op %times atom @2multiply / #op %over atom @2divide)*
-atom = #digit %number @value / #bracket %open exp #bracket %close
+atom = #digit %number @read / #bracket %open exp #bracket %close
 </pre>
 
 <p>The grammar avoids name clashes between actions, tags and markers. The

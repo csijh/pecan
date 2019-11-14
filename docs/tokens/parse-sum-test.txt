@@ -2,36 +2,36 @@
 ==========
 number
 ----------
-value
+read
 ==========
 number plus number
 ----------
-value
-value
+read
+read
 add
 ==========
 number times number plus number
 ----------
-value
-value
+read
+read
 multiply
-value
+read
 add
 ==========
 number plus number times number
 ----------
-value
-value
-value
+read
+read
+read
 multiply
 add
 ==========
 number plus open number close plus number
 ----------
-value
-value
+read
+read
 add
-value
+read
 add
 ==========
 number plus

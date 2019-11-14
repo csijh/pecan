@@ -21,7 +21,7 @@ translate it into bytecode. The grammar is:</p>
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
-number = #integer digit+ @value gap
+number = #integer digit+ @read gap
 plus = #operator '+' gap
 minus = #operator '-' gap
 times = #operator '*' gap
@@ -51,7 +51,7 @@ Opcodes: {ACT=0, AND=1, ARITY=2, BACK=3, BOTH=4, CAT=5, DO=6, DROP=7, EITHER=8,
 EOT=9, GO=10, HAS=11, HIGH=12, LOOK=13, LOW=14, MANY=15, MARK=16, MAYBE=17,
 NOT=18, ONE=19, OR=20, POINT=21, SEE=22, SET=23, SPLIT=24, START=25, STOP=26,
 STRING=27, TAG=28}
-Actions: {add=0, divide=1, multiply=2, subtract=3, value=4}
+Actions: {add=0, divide=1, multiply=2, read=3, subtract=4}
 Markers: {bracket=0, integer=1, newline=2, operator=3}
 Bytecode file sum.bin written.
 </pre>
@@ -106,7 +106,7 @@ stored in the input array. The output can be anything which can be passed to and
 from functions, e.g. a numerical type or a pointer to a tree node. The next part
 of the program is:</p>
 
-<pre>output value(int n, char s[n]) { ... }
+<pre>output read(int n, char s[n]) { ... }
 output add(output x, output y) { return x + y; }
 output subtract(output x, output y) { return x - y; }
 output multiply(output x, output y) { return x * y; }

@@ -21,7 +21,7 @@ compile it to form a calculator program. The grammar is:</p>
 expression = term (plus term @2add / minus term @2subtract)*
 term = atom (times atom @2multiply / over atom @2divide)*
 atom = number / open expression close
-number = #integer digit+ @value gap
+number = #integer digit+ @read gap
 plus = #operator '+' gap
 minus = #operator '-' gap
 times = #operator '*' gap
@@ -34,21 +34,20 @@ end = #newline '\r'? '\n' @
 </pre>
 
 <p>We will illustrate with a program in C, but in principle the program could be
-created in almost any programming language. Here is a skeleton parser program in
-C, with two supporting data files:</p>
+created in almost any programming language. Here is a module in C to provide the
+parsing state and its supporting functions, together with two data files:</p>
 
-<p class="indent"><a href="parse.c">parse.c</a><br/>
+<p class="indent"><a href="parse.h">parse.h</a><br/>
+<a href="parse.c">parse.c</a><br/>
 <a href="table1.bin">table1.bin</a><br/>
 <a href="table2.bin">table2.bin</a></p>
 
-<p>To compile the grammar, store it in a file <code>sum.txt</code>, say. Copy
-the template program <code>parse.c</code> to <code>sum.c</code>, say. Adapt the
-program for the current application. In this particular case, the program is
-already suitable for our calculator:</p>
+<p>A program can be written to parse sums, described in detail below:</p>
 
 <p class="indent"><a href="sum.c">sum.c</a></p>
 
-<p>Compile the grammar with:</p>
+<p>Suppose the grammar is stored in a file <code>sum.txt</code>. It can be
+compiled with:</p>
 
 <pre>pecan sum.txt -c sum.c
 </pre>
@@ -58,74 +57,86 @@ which specify how rules are to be compiled to C functions, and the compiled
 functions are inserted into the program. The program can now be compiled with a
 C compiler such as <code>gcc</code> or <code>clang</code> and run:</p>
 
-<pre>gcc -std=c11 -Wall sum.c -o sum
+<pre>gcc -std=c11 -Wall -O3 -flto sum.c parse.c -o sum
 ./sum
 Type a sum: 2+3*4
 14
 </pre>
 
+<p>The <code>-std=c11</code> option specifies the 2011 standard for the C
+language. The <code>-Wall</code> option switches on all common compiler
+warnings. The <code>-O3</code> option (with a capital letter O) asks for a good
+level of optimisation. The <code>-flto</code> option enables link time
+optimisation, which allows the small functions in <code>parse.c</code> to be
+inlined into the compiled functions in <code>sum.c</code>.</p>
+
 <p>In this case, we have been a bit fortunate, because there are no name
-clashes. In fact, two parsing functions have been generated called
-<code>open</code> and <code>close</code>. Their names clash with standard C
-library functions, which could cause problems in some circumstances. Below, we
-will see how the generated names can be adjusted to avoid name clashes.</p>
+clashes. In fact, the program contains three functions called <code>open</code>,
+<code>close</code> and <code>read</code> which could clash with standard C
+library functions in some circumstances. Below, we will see how the generated
+names can be adjusted to avoid name clashes.</p>
 
-<h2>The skeleton program</h2>
+<h2>The program</h2>
 
-<p>The program <code>parse.c</code> can be adapted for most applications. It can
-also be used as a starting point for writing a similar template for another
-programming language. It has two sections. The first section is intended to be
-adapted as required. The second section consists of generic parsing support
-functions which need not be changed. The first part of the program is:</p>
+<p>The program <code>sum.c</code> begins with:</p>
 
-<pre>typedef char input;
-typedef int output;
-</pre>
-
-<p>This defines the input and output types for parsing. The input type is the
-type of each item in the input array. It should be a byte for parsers based on
-UTF-8 text. In C, it is normal to use <code>char</code> for text bytes, even
-though they may be signed or unsigned depending on the platform, and to cast or
-mask each byte when it is retrieved from the array. For a token-based parser,
-the input type should be a token structure, or a pointer to a token structure,
-depending on whether structures or structure pointers are stored in the input
-array. The output can be anything which can be passed to and from functions,
-e.g. a numerical type or a pointer to a tree node. The next part of the program
-is:</p>
-
-<pre>output value(int n, char s[n]) { ... }
-output add(output x, output y) { return x + y; }
-output subtract(output x, output y) { return x - y; }
-output multiply(output x, output y) { return x * y; }
-output divide(output x, output y) { return x / y; }
-</pre>
-
-<p>These are the action functions, either creating an output item from text, or
-constructing one from previous output items. They should be adapted according to
-the needs of the application and should match the action names used in the
-grammar. The next part of the program is:</p>
-
-<pre>enum marker { integer, operator, bracket, newline };
+<pre>// Error marker constants, and spellings.
+enum marker { integer, operator, bracket, newline };
 char *names[] = { "integer", "operator", "bracket", "newline" };
 </pre>
 
-<p>This should be adapted to provide an enumerated constant for each error
-marker mentioned in the grammar, together with text to be printed for each
-constant. The order of the constants in this definition determines the order in
-which the items are listed in error messages.</p>
+<p>These are enumerated constants for each error marker mentioned in the
+grammar, together with text to be printed for each constant. Their names must
+match the marker names in the grammar, so that they can be referenced from the
+compiled functions. The order of the constants in this definition determines the
+order in which the items are listed in error messages. The support module
+<code>parse.c</code> assumes that the constants are in the range
+<code>0..63</code> so that a long integer can be used to store the current
+marker bits. The next part of the program is:</p>
 
-<p>The next part of the program consists of some forward declarations relating
-to generic parsing support and Unicode category codes, which need to appear in C
-before the generated functions. There should be no need to change these.  The
-next part of the program is:</p>
+<pre>int read(int n, char s[n]) { ... }
+int add(int x, int y) { return x + y; }
+int subtract(int x, int y) { return x - y; }
+int multiply(int x, int y) { return x * y; }
+int divide(int x, int y) { return x / y; }
+</pre>
+
+<p>These are the action functions, either creating an output item from text, or
+constructing one from previous output items. Their names should match the action
+names in the grammar. The next part of the program is:</p>
+
+<pre>bool sum(parser *p);
+</pre>
+
+<p>This is a forward declaration of the first compiled function, which acts as
+an entry point for parsing. The main function comes next:</p>
+
+<pre>int main() {
+  char in[100];
+  printf("Type a sum: ");
+  char *r = fgets(in, 100, stdin);
+  if (r == NULL) printf("Can't read stdin\n");
+  parser *p = newCharParser(strlen(in), in);
+  bool ok = sum(p);
+  if (ok) printf("%d\n", topI(p,0));
+  else report(p, "Syntax error:\n", "Error: expecting %s, %s\n", names);
+  freeParser(p);
+}
+</pre>
+
+<p>This reads an arithmetic expression from the user, creates a parser
+structure, and calls the <code>sum</code> function. After parsing, the
+<code>topI</code> function extracts the top integer from the stack, i.e. the
+result. There is a call to the support function <code>report</code> to print a
+suitable error message if parsing fails. The final part of the program is:</p>
 
 <pre>// &lt;pecan
 //   comment  = "// %s"
 //   declare  = "bool %s(parser *p);"
 //   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
-//   act0     = "act(p,0,%s(length(p),start(p)))"
-//   act2     = "act(p,2,%s(top(p,1),top(p,0)))"
+//   act0     = "pushI(p,0,%s(matched(p),match(p)))"
+//   act2     = "pushI(p,2,%s(topI(p,1),topI(p,0)))"
 //   escape1  = "\%3o"
 //   escape2  = "\u%4x"
 //   escape4  = "\U%8x"
@@ -135,24 +146,24 @@ next part of the program is:</p>
 </pre>
 
 <p>When a grammar is compiled, the generated functions are inserted between the
-<code>&lt;pecan></code> and <code>&lt;/pecan></code> tags, in a similar style to
-HTML. Any text already present between the tags is deleted. That means compiling
-can be repeated as necessary. The two tags are commented out using C comments.
-The <code>&lt;pecan></code> tag contains attributes. These define print formats
-that are used to generate the parsing functions from the grammar rules.</p>
+<code>&lt;pecan></code> and <code>&lt;/pecan></code> tags. The tags have a
+similar style to HTML and are commented out using C comments. Any text already
+present between the tags is deleted. That means compiling can be repeated as
+necessary. The <code>&lt;pecan></code> tag contains attributes. These define
+print formats that are used to generate the parsing functions from the grammar
+rules.</p>
 
 <p>The attributes shown here establish the C conventions for one-line comments,
 forward declarations of functions allowing them to be recursive, definitions of
 functions, and calls to functions. The <code>act0</code> and <code>act2</code>
 attributes cover the compilation of actions for the calculator, using support
-functions <code>length</code>, <code>start</code>, <code>top</code>, and
-<code>act</code> to deal with the changes to the parser state such as stack
-handling. That allows the hand-written action functions to consist of pure
-manipulation of output values. The escape attributes specify how control
-characters or Unicode characters appear in the generated functions. Note that
-<code>escape1</code> is not defined as <code>\x%2x</code> because in C a
-<code>\x</code> escape is variable-length with no terminator, so can be damaged
-by a following digit.</p>
+functions to deal with the changes to the parser state such as stack handling,
+and calling the action functions provided earlier. The support functions allow
+the hand-written action functions to consist of pure manipulation of output
+values. The escape attributes specify how control characters or Unicode
+characters appear in the generated functions. Note that <code>escape1</code> is
+not defined as <code>\x%2x</code> because in C a <code>\x</code> escape is
+variable-length with no terminator, so can be damaged by a following digit.</p>
 
 <p>Suppose the attributes were changed to:</p>
 
@@ -161,13 +172,12 @@ by a following digit.</p>
 //   comment  = "// %s"
 //   declare  = "bool P%s(parser *p);"
 //   define   = "bool P%s(parser *p) { %n return %r; %n}"
-//   call     = "S%s(p)"
+//   call     = "%s(p)"
 //   id       = "P%s(p)"
-//   act0     = "act(p,0,A%s(length(p),start(p)))"
-//   act2     = "act(p,2,A%s(top(p,1),top(p,0)))"
-//   tag      = "Stag(p,T%s)"
-//   mark     = "Smark(p,M%s)"
-//   cat      = "Scat(p,C%s)"
+//   act0     = "pushI(p,0,A%s(matched(p),match(p)))"
+//   act2     = "pushI(p,2,A%s(topI(p,1),topI(p,0)))"
+//   tag      = "tag(p,T%s)"
+//   mark     = "mark(p,M%s)"
 //   escape1  = "\%3o"
 //   escape2  = "\u%4x"
 //   escape4  = "\U%8x"
@@ -175,12 +185,11 @@ by a following digit.</p>
 </pre>
 
 <p>These changes would mean that the names of all generated parsing functions
-would be prefixed by <code>P</code>, all support function names by
-<code>S</code>, all action function names by <code>A</code>, all tag names by
-<code>T</code>, all error marker names by <code>M</code> and all Unicode
-category names by <code>C</code>, thus guarding against any possible name clash,
-either between the different types of name, or between the names and language
-keywords or library functions.</p>
+would be prefixed by <code>P</code>, all action function names by
+<code>A</code>, all tag names by <code>T</code>, all error marker names by
+<code>M</code>, thus guarding against any possible name clash, either between
+the different types of name, or between the names and language keywords or
+library functions.</p>
 
 <p>The data files <code>table1.bin</code> and <code>table2.bin</code> can be
 used in any programming language to form a two-stage table for looking up the
@@ -198,8 +207,8 @@ table2[(table1[ch>>8]&amp;255)*256+(ch&amp;255)];
 
 <p>The first version is for languages which support unsigned bytes, and the
 second is for languages which only support signed bytes. The category
-enumeration in the template program defines the categories in alphabetical
-order, which is the order used in these tables.</p>
+enumeration in the <code>parse.h</code> header defines the categories in
+alphabetical order, which is the order used in these tables.</p>
 
 </body>
 </html>
