@@ -1,33 +1,37 @@
-{scan-sum.txt}
+{scan.txt}
 ==========
 2
 ----------
-tokens
+array
 number 2
+end \10
 ==========
 42
 ----------
-tokens
+array
 number 42
+end \10
 ==========
 2+40
 ----------
-tokens
+array
 number 2
 plus +
 number 40
+end \10
 ==========
 2+40%
 ----------
-tokens
+array
 number 2
 plus +
 number 40
 bad %
+end \10
 ==========
 2+10+12+18
 ----------
-tokens
+array
 number 2
 plus +
 number 10
@@ -35,10 +39,11 @@ plus +
 number 12
 plus +
 number 18
+end \10
 ==========
 2-10+53-3
 ----------
-tokens
+array
 number 2
 minus -
 number 10
@@ -46,16 +51,18 @@ plus +
 number 53
 minus -
 number 3
+end \10
 ==========
 2+
 ----------
-tokens
+array
 number 2
 plus +
+end \10
 ==========
 5*8+12/6
 ----------
-tokens
+array
 number 5
 times *
 number 8
@@ -63,10 +70,11 @@ plus +
 number 12
 over /
 number 6
+end \10
 ==========
 2*(20+1)
 ----------
-tokens
+array
 number 2
 times *
 open (
@@ -74,10 +82,11 @@ number 20
 plus +
 number 1
 close )
+end \10
 ==========
  2 * ( 20 + 1 )
 ----------
-tokens
+array
 number 2
 times *
 open (
@@ -85,3 +94,4 @@ number 20
 plus +
 number 1
 close )
+end \10

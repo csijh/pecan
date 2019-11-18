@@ -8,5 +8,5 @@ over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
 bad = '\r\n'! . @1bad
-end = '\r'? '\n' / @1bad
+end = '\r'? '\n' @1end / @1bad
 gap = (' ')* @

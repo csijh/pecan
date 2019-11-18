@@ -1,0 +1,47 @@
+{sum.txt}
+==========
+number end
+----------
+integer
+==========
+number plus number end
+----------
+integer
+integer
+add
+==========
+number times number plus number end
+----------
+integer
+integer
+multiply
+integer
+add
+==========
+number plus number times number end
+----------
+integer
+integer
+integer
+multiply
+add
+==========
+number plus open number close plus number end
+----------
+integer
+integer
+add
+integer
+add
+==========
+number plus end
+----------
+Error in sum-test.txt, line 37: expecting bracket, digit
+number plus end
+            ^
+==========
+number plus bad end
+----------
+Error in sum-test.txt, line 43: expecting bracket, digit
+number plus bad end
+            ^

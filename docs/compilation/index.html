@@ -37,8 +37,8 @@ end = #newline '\r'? '\n' @
 created in almost any programming language. Here is a module in C to provide the
 parsing state and its supporting functions, together with two data files:</p>
 
-<p class="indent"><a href="parse.h">parse.h</a><br/>
-<a href="parse.c">parse.c</a><br/>
+<p class="indent"><a href="parser.h">parser.h</a><br/>
+<a href="parser.c">parser.c</a><br/>
 <a href="table1.bin">table1.bin</a><br/>
 <a href="table2.bin">table2.bin</a></p>
 
@@ -68,7 +68,8 @@ language. The <code>-Wall</code> option switches on all common compiler
 warnings. The <code>-O3</code> option (with a capital letter O) asks for a good
 level of optimisation. The <code>-flto</code> option enables link time
 optimisation, which allows the small functions in <code>parse.c</code> to be
-inlined into the compiled functions in <code>sum.c</code>.</p>
+inlined into the compiled functions in <code>sum.c</code>, so there is no loss
+in defining the parser state in a separate module.</p>
 
 <p>In this case, we have been a bit fortunate, because there are no name
 clashes. In fact, the program contains three functions called <code>open</code>,
@@ -94,7 +95,7 @@ order in which the items are listed in error messages. The support module
 <code>0..63</code> so that a long integer can be used to store the current
 marker bits. The next part of the program is:</p>
 
-<pre>int read(int n, char s[n]) { ... }
+<pre>int read(char *s, int start, int end) { ... }
 int add(int x, int y) { return x + y; }
 int subtract(int x, int y) { return x - y; }
 int multiply(int x, int y) { return x * y; }
@@ -116,9 +117,9 @@ an entry point for parsing. The main function comes next:</p>
   printf("Type a sum: ");
   char *r = fgets(in, 100, stdin);
   if (r == NULL) printf("Can't read stdin\n");
-  parser *p = newCharParser(strlen(in), in);
+  parser *p = newParser(strlen(in), in);
   bool ok = sum(p);
-  if (ok) printf("%d\n", topI(p,0));
+  if (ok) printf("%ld\n", topI(p,0));
   else report(p, "Syntax error:\n", "Error: expecting %s, %s\n", names);
   freeParser(p);
 }
@@ -135,7 +136,7 @@ suitable error message if parsing fails. The final part of the program is:</p>
 //   declare  = "bool %s(parser *p);"
 //   define   = "bool %s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
-//   act0     = "pushI(p,0,%s(matched(p),match(p)))"
+//   act0     = "pushI(p,0,%s(text(p),start(p),at(p)))"
 //   act2     = "pushI(p,2,%s(topI(p,1),topI(p,0)))"
 //   escape1  = "\%3o"
 //   escape2  = "\u%4x"
@@ -158,12 +159,12 @@ forward declarations of functions allowing them to be recursive, definitions of
 functions, and calls to functions. The <code>act0</code> and <code>act2</code>
 attributes cover the compilation of actions for the calculator, using support
 functions to deal with the changes to the parser state such as stack handling,
-and calling the action functions provided earlier. The support functions allow
-the hand-written action functions to consist of pure manipulation of output
-values. The escape attributes specify how control characters or Unicode
-characters appear in the generated functions. Note that <code>escape1</code> is
-not defined as <code>\x%2x</code> because in C a <code>\x</code> escape is
-variable-length with no terminator, so can be damaged by a following digit.</p>
+and calling the action functions. The support functions allow the hand-written
+action functions to consist of pure manipulation of output values. The escape
+attributes specify how control characters or Unicode characters appear in the
+generated functions. Note that <code>escape1</code> is not defined as
+<code>\x%2x</code> because in C a <code>\x</code> escape is variable-length with
+no terminator, so can be damaged by a following digit.</p>
 
 <p>Suppose the attributes were changed to:</p>
 
@@ -174,7 +175,7 @@ variable-length with no terminator, so can be damaged by a following digit.</p>
 //   define   = "bool P%s(parser *p) { %n return %r; %n}"
 //   call     = "%s(p)"
 //   id       = "P%s(p)"
-//   act0     = "pushI(p,0,A%s(matched(p),match(p)))"
+//   act0     = "pushI(p,0,A%s(text(p),start(p),at(p)))"
 //   act2     = "pushI(p,2,A%s(topI(p,1),topI(p,0)))"
 //   tag      = "tag(p,T%s)"
 //   mark     = "mark(p,M%s)"

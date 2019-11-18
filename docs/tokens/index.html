@@ -26,7 +26,7 @@ scale situations such as compilers for programming languages.</p>
 <p>A scanner for sums can be developed from the full calculator in the previous
 tutorial by extracting and adapting the low level rules:</p>
 
-<pre>scan = gap @tokens token* end
+<pre>tokens = gap @array token* end
 token = number / plus / minus / times / over / open / close / bad
 number = ('0..9')+ @1number gap
 plus = '+' @1plus gap
@@ -36,141 +36,184 @@ over = '/' @1over gap
 open = '(' @1open gap
 close = ')' @1close gap
 bad = '\r\n'! . @1bad
-end = '\r'? '\n' / @1bad
+end = '\r'? '\n' @1end / @1bad
 gap = (' ')* @
 </pre>
 
 <p>This grammar recognises a sequence of tokens, possibly separated by spaces.
-The action <code>@tokens</code> creates a list, and each of the other actions
-creates a token and adds it to the list. The name of each action will be used as
-the token's tag.</p>
+The action <code>@array</code> creates an array, and each of the other actions
+creates a token and adds it to the array. The name of each action will be used
+as the token's tag. A final sentinel token is added at the end. Although not
+strictly necessary, this avoids the need to carry around the array length, and
+avoids the need for special cases such as when reporting an error, and marks the
+position of the end of the source text to make error messages more accurate.</p>
 
-<p>There are no error markers. If an illegal character or lack of line ending is
-encountered, a token with tag <code>bad</code> is created for it. That means the
-scanner never fails, and errors are passed on to the parser for reporting. A
-parse error early on in the text is thus reported in preference to a scan error
-later on, creating the illusion for the user of the final program that scanning
-and parsing are done together. Files containing the grammar and its tests
-are:</p>
+<p>There are no error markers in the grammar. If an illegal character or lack of
+line ending is encountered, a token with tag <code>bad</code> is created for it.
+That means the scanner never fails, and errors are passed on to the parser for
+reporting. A parse error early on in the text is thus reported in preference to
+a scan error later on, creating the illusion for the user that parsing is done
+in one pass rather than two. Files containing the grammar and its tests are:</p>
 
-<p class="indent"><a href="scan-sum.txt">scan-sum.txt</a><br/>
-<a href="scan-sum-test.txt">scan-sum-test.txt</a></p>
+<p class="indent"><a href="scan.txt">scan.txt</a><br/>
+<a href="scan-test.txt">scan-test.txt</a></p>
 
 <p>The test file begins with a line which specifies the grammar file. Running
 the tests through Pecan shows that all is well:</p>
 
-<pre>pecan scan-sum-test.txt
+<pre>pecan scan-test.txt
 Pass 10 tests.
 </pre>
-<!--
-<p>The next task is to turn the grammar into a program. A skeleton program is
-written, using the generic bytecode interpreter as before:</p>
 
-<p class="indent"><a href="scan.h">scan.h</a><br/>
-<a href="scan.c">scan.c</a><br/>
-<a href="interpret.h">interpret.h</a><br/>
-<a href="interpret.c">interpret.c</a></p>
-
-<p>The <code>scan</code> program is written as a reusable module. If the
-<code>scanTest</code> conditional compilation flag is used, a <code>main</code>
-function is provided, so that the <code>scan</code> module can be interactively
-tested on its own. The module provides a <code>scan</code> function which
-returns an array of token structures. There is a final sentinel structure with a
-negative tag, so that the length of the array does not need to be passed around
-with the array. The grammar is compiled into bytecode within the skeleton
-program:</p>
-
-<pre>pecan scan.txt -o scan.c
-</pre>
-
-<p>Then the program is compiled, with the conditional compilation flag:</p>
-
-<pre>gcc -std=c11 -Wall -O2 -DscanTest scan.c interpret.c -o scan
-</pre>
-
-<p>The program reads in a line of text from the user, breaks it into an array of
-tokens, then prints out their tags, and their positions and lengths in the
-source text:</p>
-
-<pre>./scan
-Type a sum: 2+2
-number 0 1
-plus 1 1
-number 2 1
-</pre>
--->
 <h3>The parser</h3>
 
 <p>A token-based parser for sums can be developed from the full calculator in
 the previous tutorial, replacing the low level rules by tags:</p>
 
-<pre>sum = exp #newline &lt;>
-exp = term (#op %plus term @2add / #op %minus term @2subtract)*
-term = atom (#op %times atom @2multiply / #op %over atom @2divide)*
-atom = #digit %number @read / #bracket %open exp #bracket %close
+<pre>sum = exp #newline %end
+exp = term (#operator %plus term @2add / #operator %minus term @2subtract)*
+term = atom (#operator %times atom @2multiply / #operator %over atom @2divide)*
+atom = #digit %number @integer / #bracket %open exp #bracket %close
 </pre>
 
-<p>The grammar avoids name clashes between actions, tags and markers. The
-intention is that in the final program, each action will form a tree node with
-some constituent subnodes as children, according to its arity. The grammar is
-stored in a file, and its tests are stored in a separate file:</p>
+<p>The grammar avoids name clashes between actions, tags and markers. When
+tokens are recognised, <code>@</code> isn't used to discard them. Instead, the
+compiled parser will use the convention that all matched tokens will be ignored
+and implicitly discarded by the next action, except that the
+<code>@integer</code> action will use the most recently matched token to form a
+leaf node. Each of the other actions will form a branch node with two children.
+The grammar is stored in a file, and its tests are stored in a separate
+file:</p>
 
-<!--
-<p>In the <code>bracket</code> rule, open and close brackets are converted into
-nodes and pushed onto the output stack, and then discarded by the
-<code>group</code> action, which creates a tree node for the bracketed
-expression, with the inner expression as its only child. This allows the text
-extent of the bracketed expression, i.e. its start and end in the input text, to
-be calculated accurately. Moreover, other tree nodes which include the bracketed
-expression will also have their text extents calculated accurately. The text
-extent of every node is simply the union of the text extents of its
-constituents. The bracketed expression nodes can be discarded after tree
-construction, if desired. The remaining nodes will have accurate text extents,
-which can be used to form good quality error messages in any further processing
-done on the tree.</p>
--->
-
-
-<p class="indent"><a href="parse-sum.txt">parse-sum.txt</a><br/>
-<a href="parse-sum-test.txt">parse-sum-test.txt</a></p>
+<p class="indent"><a href="sum.txt">sum.txt</a><br/>
+<a href="sum-test.txt">sum-test.txt</a></p>
 
 <p>The tests are checked with Pecan as usual:</p>
 
 <pre>pecan parse-sum-test.txt
 Pass 7 tests
 </pre>
-<!--
-<h3>Compiling</h3>
 
-<p>To compile the scan grammar into a module in C, we start with the template
-parse program:</p>
+<h3>Compiling the scanner</h3>
 
-<p class="indent"><a href="../compilation/parse.c">parse.c</a></p>
+<p>To compile the grammars into a scanner and parser in C, we will again make
+use of the provided parser support module:</p>
 
-<p>We make a copy in a file <code>scan-sum.c</code> and then adapt it. The
-result is a module with a header file and an implementation file:</p>
+<p class="indent"><a href="parser.h">parser.h</a><br/>
+<a href="parser.c">parser.c</a></p>
 
-<p class="indent"><a href="scan-sum.h">scan-sum.h</a><br/>
-<a href="scan-sum.c">scan-sum.c</a>
-</p>
--->
-<!--
-<p>In the tests, when an error is reported, its token index is given. In the
-real parser, with the original text available, the token index can be converted
-into a text position, to produce a conventional error message. The next step is
-to write a skeleton parser, which uses both the scanner module and the provided
-bytecode interpreter:</p>
+<p>The scanner can be written as a module like this:</p>
 
-<p class="indent"><a href="parse.c">parse.c</a><br/>
-<a href="scan.h">scan.h</a><br/>
-<a href="scan.c">scan.c</a><br/>
-<a href="interpret.h">interpret.h</a><br/>
-<a href="interpret.c">interpret.c</a></p>
+<p class="indent"><a href="scan.h">scan.h</a><br/>
+<a href="scan.c">scan.c</a></p>
 
-<p>The <code>parse</code> program creates a parse tree, and prints it out using
-indenting to indicate the tree structure. The actions only ever take account of
-the most recently matched tokens. Thus, in the grammar, there is no need to
-discard unwanted tokens using the <code>@</code> symbol.</p>
--->
+<p>The header defines the token tags and a <code>scan</code> function for the
+main program to call. The type for a token structure is provided in
+<code>parser.h</code>. The token structure refers to a token's text in the
+original source rather than storing a copy, because then tokens have a fixed
+size, and error messages can be made in context. An index into the original
+text, rather than a pointer, is used for compactness.</p>
+
+<p>The <code>scan</code> function uses the simple object allocation mechanism
+provided in the parser module. The tokens form an array which is reallocated as
+necessary. The array holds token structures, not pointers to tokens. Token
+pointers must not be stored anywhere between actions, because reallocation of
+the array invalidates any pointers into it. At the end, <code>getStore</code> is
+used to extract the final array.</p>
+
+<p>The parsing functions are compiled from the grammar using print formats:</p>
+
+<pre>//   comment  = "// %s"
+//   declare  = "static bool P%s(parser *p);"
+//   define   = "static bool P%s(parser *p) { %n return %r; %n}"
+//   call     = "%s(p)"
+//   id       = "P%s(p)"
+//   act0     = "pushR(p,0,%s(p))"
+//   act1     = "pushR(p,1,add(p,topR(p,0),%s,start(p),at(p)))"
+//   escape1  = "\%3o"
+//   escape2  = "\u%4x"
+//   escape4  = "\U%8x"
+</pre>
+
+<p>The command for compiling the grammar is:</p>
+
+<pre>pecan scan.txt -c scan.c
+</pre>
+
+<p>The functions are declared and defined as <code>static</code> to make sure
+that their names can't clash with functions defined elsewhere. They are also
+defined with prefix <code>P</code> so they don't clash with anything else in the
+same module. The <code>@array</code> action pushes the token array on the stack,
+and the other actions each add a token to it. In actual fact, the array stored
+on the stack isn't really needed, because <code>new</code> allocates each token
+in the right place, and the array is extracted at the end using
+<code>getStore</code>, but this approach matches the grammar.</p>
+
+<h3>Compiling the parser</h3>
+
+<p>The parser and main program can be written like this:</p>
+
+<p class="indent"><a href="sum.c">sum.c</a></p>
+
+<p>This uses the parser module's simple allocation mechanism for nodes. That
+means nodes cannot contain pointers to child nodes during parsing, because of
+the risk of them being invalidated. One way round this would be to use some
+completely different mechanism for allocating nodes in permanent locations, and
+use the parser only to hold pointers to them in its stack. However, an
+attractive and compact alternative is to use relative references.</p>
+
+<p>In language implementations, a relative reference is often an offset relative
+to a base address. That requires the base address to be always available when
+needed, e.g. as a global variable. With tree nodes in the parser, it is more
+convenient to use node-relative references, where a reference is an offset from
+one node to another, and zero can be used for <code>NULL</code> since tree nodes
+never need to point to themselves. The parser's allocation mechanism keeps the
+nodes contiguous, so <code>int</code> offsets can be used. If these offsets are
+in byte units, the nodes can vary in size. However, in <code>sum.c</code>, all
+nodes are the same size, so the offset can be in node-size units, which makes
+relative addresses particularly simple to use. If <code>p1</code> and
+<code>p2</code> are pointers of type <code>node *</code> then a relative
+reference from node <code>p1</code> to node <code>p2</code> is simply
+<code>p2-p1</code>.</p>
+
+<p>In <code>sum.c</code>, the node type is defined as a union. Effectively, a
+node has fields <code>p->tag</code>, <code>p->leaf.number</code>,
+<code>p->branch.left</code> and <code>p->branch.right</code> with the leaf field
+and branch fields sharing the same space. Nodes are always used with type
+<code>node</code>. The types <code>struct leaf</code> and <code>struct
+branch</code> are available, but they are only intended for convenience in
+initialising a node in one line.</p>
+
+<p>After parsing, <code>getStore</code> is called first, before
+<code>topR</code>, because it may cause one last reallocation to reduce the
+store to the size of its contents.</p>
+
+<p>The parsing functions are compiled using the print formats:</p>
+
+<pre>//   comment  = "// %s"
+//   declare  = "static bool P%s(parser *p);"
+//   define   = "static bool P%s(parser *p) { %n return %r; %n}"
+//   call     = "%s(p)"
+//   id       = "P%s(p)"
+//   act0     = "pushR(p,0,act0(p,%s,at(p)))"
+//   act2     = "pushR(p,2,act2(p,%s,topR(p,1),topR(p,0)))"
+//   escape1  = "\%3o"
+//   escape2  = "\u%4x"
+//   escape4  = "\U%8x"
+</pre>
+
+<p>The command for compiling the grammar, and then compiling the resulting
+program with <code>gcc</code> or <code>clang</code>, are:</p>
+
+<pre>pecan sum.txt -c sum.c
+gcc -std=c11 -Wall -O3 -flto scan.c sum.c parser.c -o sum
+</pre>
+
+<p>The parser module provides a lot of small functions for operating on the
+state structure. For effective optimisation, the functions are declared as
+<code>extern inline</code> and the <code>-flto</code> option is used. This
+switches on cross-module optimization, including inlining, so that there is no
+loss in defining the functions in a separate module.</p>
+
 </body>
 </html>

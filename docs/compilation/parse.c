@@ -2,6 +2,7 @@
 #include "parse.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 typedef unsigned char byte;
@@ -13,7 +14,7 @@ struct parser {
     int in, start, end; byte *input;
     int out, outLength; byte *output;
     int save, nsaves; int *saves;
-    int look, marked; long markers;
+    int look, marked; int64_t markers;
     node *nodes; int textLength; char *text;
 };
 
