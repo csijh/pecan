@@ -1,4 +1,4 @@
--- A scanner for C11. It is assumed that the implementation-defined source
+-- A scanner for C18. It is assumed that the implementation-defined source
 -- character set is Unicode in the UTF-8 encoding, and that the source text has
 -- been preprocessed by converting newlines to \n, expanding trigraphs, splicing
 -- lines ending with \, eliding consecutive string literals, and expanding
@@ -31,8 +31,7 @@ visible = (Cc/Cn/Co/Cs/Zl/Zp)! . / newline
 k = (identifier-nondigit / digit)!
 
 keyword
-= ["alignof" k] @1alignof
-/ ["auto" k] @1auto
+= ["auto" k] @1auto
 / ["break" k] @1break
 / ["case" k] @1case
 / ["char" k] @1char
@@ -67,6 +66,7 @@ keyword
 / ["volatile" k] @1volatile
 / ["while" k] @1while
 / ["_Alignas" k] @1`_Alignas`
+/ ["_Alignof" k] @1`_Alignof`
 / ["_Atomic" k] @1`_Atomic`
 / ["_Bool" k] @1`_Bool`
 / ["_Complex" k] @1`_Complex`
@@ -101,27 +101,32 @@ hex-quad =
 
 -- Omit enumeration constants.
 constant =
-    is-float! integer-constant @1constant /
-    floating-constant @1constant /
+    hexadecimal-number @1constant /
+    decimal-number @1constant /
     character-constant @1constant
 
--- Look ahead to see if a number is floating or not
-is-float = "0x" ('.' / hexadecimal-digit+ '.pP') / ('.' / digit+ '.eE')
+hexadecimal-number =
+    hexadecimal-prefix (
+        '.' hexadecimal-digit* binary-exponent-part floating-suffix? /
+        hexadecimal-digit+ hexadecimal-tail?
+    )
 
-integer-constant =
-    hexadecimal-constant integer-suffix? /
-    octal-constant integer-suffix? /
-    decimal-constant integer-suffix?
+hexadecimal-tail =
+    integer-suffix /
+    '.' hexadecimal-digit* binary-exponent-part floating-suffix? /
+    binary-exponent-part floating-suffix?
 
-decimal-constant = nonzero-digit digit*
 
-octal-constant = '0' octal-digit*
+decimal-number =
+    '.' digit+ exponent-part? floating-suffix? /
+    digit+ decimal-tail?
 
-hexadecimal-constant = hexadecimal-prefix hexadecimal-digit+
+decimal-tail =
+    integer-suffix /
+    exponent-part floating-suffix? /
+    '.' digit* exponent-part? floating-suffix?
 
 hexadecimal-prefix = "0x" / "0X"
-
-nonzero-digit = '123456789'
 
 octal-digit = '01234567'
 

@@ -1,5 +1,5 @@
 -- A parser for C external definitions, building on statements, covering section
--- A.2.4 of the C11 standard.
+-- A.2.4 of the standard.
 
 start = translation-unit
 

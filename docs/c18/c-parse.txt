@@ -1,11 +1,11 @@
-// A parser for C11, assuming the source has been pre-processed and scanned.
-// The rules are presented in the order given in appendix A of the standard.
-// with the starting point set to the translation unit rule.
+-- A parser for C, assuming the source has been pre-processed and scanned.
+-- The rules are presented in the order given in appendix A of the standard.
+-- with the starting point set to the translation unit rule.
 
 start = translation-unit @translation-unit
 
-// It is assumed that keywords and punctuators are passed with types which match
-// their names, and that the remaining tokens are passed with these types.
+-- It is assumed that keywords and punctuators are passed with types which match
+-- their names, and that the remaining tokens are passed with these types.
 
 identifier = `identifier`
 constant = `constant`
@@ -13,7 +13,7 @@ string-literal = `string-literal`
 typedef-name = `typedef-name`
 enumeration-constant = `identifier`
 
-// ----- A.2.1 Expressions -----
+----- A.2.1 Expressions -----
 
 primary-expression =
     identifier /
@@ -31,7 +31,7 @@ generic-association =
     type-name `:` assignment-expression /
     DEFAULT `:` assignment-expression
 
-// Look ahead to the open curly bracket of a compound literal.
+-- Look ahead to the open curly bracket of a compound literal.
 is-compound-literal = `(`type-name `)` `{`
 
 postfix-expression =
@@ -109,7 +109,7 @@ expression =
 constant-expression =
     conditional-expression
 
-// ----- A.2.2 Declarations -----
+----- A.2.2 Declarations -----
 
 declaration =
     static_assert-declaration /
@@ -258,7 +258,7 @@ designator =
 static_assert-declaration =
     `_Static_assert` `(` constant-expression `,` string-literal `)` `;`
 
-// ----- A.2.3 Statements -----
+----- A.2.3 Statements -----
 
 statement =
     labeled-statement /
@@ -279,7 +279,7 @@ block-item = declaration / statement
 
 expression-statement = expression? `;`
 
-// Note: the dangling else problem doesn't arise with the / operator
+-- Note: the dangling else problem doesn't arise with the / operator
 selection-statement =
     IF `(` expression `)` statement (ELSE statement)? /
     `switch` `(` expression `)` statement
@@ -297,11 +297,11 @@ jump-statement =
     Break `;` /
     RETURN expression? `;`
 
-// ----- A.2.4 External definitions -----
+-- ----- A.2.4 External definitions -----
 
 translation-unit = external-declaration+ ``
 
-// Combine declarations and function definitions to avoid lookahead
+-- Combine declarations and function definitions to avoid lookahead
 external-declaration = declaration-specifiers (
     `;` /
     declarator (

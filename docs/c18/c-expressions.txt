@@ -1,5 +1,4 @@
--- A grammar fragment for C expressions, covering section A.2.1 of the C11
--- standard.
+-- A grammar fragment for C expressions, covering section A.2.1 of the standard.
 
 -- Import the grammar fragment for C tokens
 {c-tokens.txt}
@@ -41,7 +40,7 @@ unary-expression  =
     unary-operator cast-expression @2preOp /
     [`sizeof` `(` type-name `)`] @1sizeofType /
     `sizeof` unary-expression @1sizeofVar /
-    `alignof` `(` type-name `)` @1align
+    `_Alignof` `(` type-name `)` @1align
 
 unary-operator =
     `&` @address / `*` @star / `+` @pos / `-` @neg  / `~` @tilde /

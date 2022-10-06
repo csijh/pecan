@@ -1,4 +1,4 @@
-Notes on the C11 Standard
+Notes on the C18 Standard
 =========================
 
 These notes mostly relate to scanning and parsing, rather than execution.

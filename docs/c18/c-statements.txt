@@ -1,5 +1,5 @@
 -- A parser for C statements, building on declarations, covering section A.2.3
--- of the C11 standard.
+-- of the standard.
 
 {c-declarations.txt}
 

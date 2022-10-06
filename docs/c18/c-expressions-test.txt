@@ -123,7 +123,7 @@ sizeof ( identifier )
 identifier
 sizeofVar
 ==========
-alignof ( type-name )
+_Alignof ( type-name )
 ----------
 type-name
 align

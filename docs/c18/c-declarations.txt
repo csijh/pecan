@@ -1,5 +1,5 @@
 -- A parser for C declarations, building on expressions, covering section A.2.2
--- of the C11 standard.
+-- of the standard.
 
 -- Include the grammar for expressions
 {c-expressions.txt}

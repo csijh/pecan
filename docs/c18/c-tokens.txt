@@ -1,6 +1,6 @@
 -- A grammar fragment for C tokens, as produced by the scanner in c-scan.txt
 
--- Definition taken from lexical grammar in A.1.1 of the C11 standard
+-- Definition taken from lexical grammar in A.1.1 of the standard.
 enumeration-constant = identifier
 
 -- Token types with variable spellings.
@@ -10,7 +10,6 @@ string-literal = #atom %string-literal @string-literal
 typedef-name = #atom %typedef-name @typedef-name
 
 -- Synonyms for keywords.
-`alignof` = %alignof
 `auto` = #type %auto
 `break` = %break
 `case` = #case %case
@@ -46,6 +45,7 @@ typedef-name = #atom %typedef-name @typedef-name
 `volatile` = #type %volatile
 `while` = %vhile
 `_Alignas` = %`_Alignas`
+`_Alignof` = %`_Alignof`
 `_Atomic` = #type %`_Atomic`
 `_Bool` = #type %`_Bool`
 `_Complex` = #type %`_Complex`

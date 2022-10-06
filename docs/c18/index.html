@@ -5,7 +5,7 @@
 <style>
     body { font-size: 120%; }
     pre, .indent { margin-left: 40px; }
-    pre.c11, code.c11 { color: #00a; }
+    pre.std, code.std { color: #00a; }
     pre.pecan, code.pecan { color: #060; }
 </style>
 </head>
@@ -16,14 +16,14 @@
 
 <h1>A parser for C</h1>
 
-<p>The development of a scanner and parser for C presented here is based on
-the <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf">C11
+<p>The development of a scanner and parser for C presented here is based on the
+<a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2310.pdf">C18
 standard</a>. It demonstrates the use of Pecan and, in particular, the use of
 manual grammar transformation as a way of developing parsers.</p>
 
-<p>The result is simply a literal translation of the official C11 grammar into
+<p>The result is simply a literal translation of the official C18 grammar into
 the Pecan notation.  It does not take into account common extensions or other
-variations to the C11 language such as implementation-defined aspects.
+variations to the C18 language such as implementation-defined aspects.
 Nor does it attempt to deal with the preprocessing phase or other practical
 issues that arise in real C compilers. It is not intended to be a compiler-grade
 parser, merely a reinterpretation of the official grammar.</p>
@@ -35,7 +35,7 @@ separated into a scanner and a parser, and it is assumed that the external code
 associated with the parser includes some form of symbol table construction, and
 uses the information to provide suitable token tags during parsing.</p>
 
-<p>The development described here amounts to translating the C11 syntax into a
+<p>The development described here amounts to translating the C18 syntax into a
 nearly-recursive-descent form, which has been done before in various compilers.
 The difference here is that a potentially reusable grammar has been produced
 rather than a one-off parser for a specific purpose.</p>

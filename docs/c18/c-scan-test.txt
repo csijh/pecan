@@ -73,8 +73,7 @@ constant 42U
 constant 42l
 constant 42LL
 constant 0123
-constant 012
-constant 8
+constant 0128
 constant 0x12abCD
 ==========
 // Floating constants

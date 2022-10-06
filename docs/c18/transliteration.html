@@ -5,7 +5,7 @@
 <style>
     body { font-size: 120%; }
     pre, .indent { margin-left: 40px; }
-    pre.c11, code.c11 { color: #00a; }
+    pre.std, code.std { color: #00a; }
     pre.pecan, code.pecan { color: #060; }
 </style>
 </head>
@@ -16,12 +16,12 @@
 
 <h1>Transliteration</h1>
 
-<p>The grammar rules from Appendix A of the C11 standard have been extracted,
-and a few obvious cosmetic changes carried out for compatibility with Pecan.
-The result is presented in this file, which acts as a starting point for
+<p>The grammar rules from Appendix A of the standard have been extracted, and a
+few obvious cosmetic changes carried out for compatibility with Pecan. The
+result is presented in this file, which acts as a starting point for
 transformations.</p>
 
-<p class="indent"><a href="c11-grammar.txt">c11-grammar.txt</a></p>
+<p class="indent"><a href="std-grammar.txt">std-grammar.txt</a></p>
 
 <p>Terminal symbols in bold such as <b><code>int</code></b> are quoted as
 <code>"int"</code> instead. Definitions <code>x: y</code> have the colon
@@ -37,7 +37,7 @@ eliminated.</p>
 
 <p>During transformations of the grammar, rules taken from the above file, or
 needing more transformation work, are displayed in <code
-class="c11">blue</code>, whereas final Pecan rules are displayed in <code
+class="std">blue</code>, whereas final Pecan rules are displayed in <code
 class="pecan">green</code>.</p>
 
 </body>
