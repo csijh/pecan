@@ -57,13 +57,13 @@ which specify how rules are to be compiled to C functions, and the compiled
 functions are inserted into the program. The program can now be compiled with a
 C compiler such as <code>gcc</code> or <code>clang</code> and run:</p>
 
-<pre>gcc -std=c11 -Wall -O3 -flto sum.c parse.c -o sum
+<pre>gcc -std=c18 -Wall -O3 -flto sum.c parse.c -o sum
 ./sum
 Type a sum: 2+3*4
 14
 </pre>
 
-<p>The <code>-std=c11</code> option specifies the 2011 standard for the C
+<p>The <code>-std=c18</code> option specifies the 2018 standard for the C
 language. The <code>-Wall</code> option switches on all common compiler
 warnings. The <code>-O3</code> option (with a capital letter O) asks for a good
 level of optimisation. The <code>-flto</code> option enables link time

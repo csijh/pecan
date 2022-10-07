@@ -206,7 +206,7 @@ store to the size of its contents.</p>
 program with <code>gcc</code> or <code>clang</code>, are:</p>
 
 <pre>pecan sum.txt -c sum.c
-gcc -std=c11 -Wall -O3 -flto scan.c sum.c parser.c -o sum
+gcc -std=c18 -Wall -O3 -flto scan.c sum.c parser.c -o sum
 </pre>
 
 <p>The parser module provides a lot of small functions for operating on the

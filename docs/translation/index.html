@@ -60,7 +60,7 @@ Bytecode file sum.bin written.
 program. When the program is compiled and run, it reads in the bytecode file
 <code>sum.bin</code> and interprets it:</p>
 
-<pre>gcc gcc -std=c11 -Wall -o sum sum.c
+<pre>gcc gcc -std=c18 -Wall -o sum sum.c
 ./sum
 Type a sum: 2+2
 4
@@ -72,7 +72,7 @@ which specify how rules are to be compiled to C functions, and the compiled
 functions are inserted into the program. The program can now be compiled with a
 C compiler such as <code>gcc</code> or <code>clang</code> and run:</p>
 
-<pre>gcc -std=c11 -Wall sum.c -o sum
+<pre>gcc -std=c18 -Wall sum.c -o sum
 ./sum
 Type a sum: 2+3*4
 14
